@@ -49,6 +49,12 @@ def main():
             method = "tools/call"
         result = request(method, params, 2)
     print(json.dumps(result, ensure_ascii=True))
+    if isinstance(result, dict):
+        payload = result.get("result", {})
+        details = payload.get("structuredContent", {})
+        details = details.get("result", details)
+        if result.get("error") or payload.get("isError") or details.get("success") is False:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

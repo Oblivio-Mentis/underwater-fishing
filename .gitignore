@@ -49,3 +49,8 @@
 .idea/
 crashlytics-build.properties
 # <<< studioigor:unity
+*.slnx
+.vscode/
+.studioigor/local/
+.studioigor/test-results/
+/steam_appid.txt

@@ -1,40 +1,27 @@
 # Design — Underwater Fishing
 
-A living document. Changes after playtests — with a line in "Changelog".
-
 ## Mechanics
-<!-- Statuses: idea → spec → gym → playtest → locked, or cut. tier: mvp — needed
-for the vertical slice; full — later. Before a mechanic — research research/mech-<id>.md. -->
 | id | mechanic | tier | pillar | status | scene | notes |
 |---|---|---|---|---|---|---|
-
-## Game designer ideas
-<!-- references/gamedesigner.md. Statuses: proposed → approved → M## | rejected (why) | deferred.
-Do not propose rejected ideas again. Do not implement unapproved ones. -->
-| id | idea | why it's fun | cost S/M/L | point (phase) | status |
-|---|---|---|---|---|---|
-
-## Content
-<!-- phase 8 (references/production.md): one line per unit. Statuses: sketch → blockout → art → final. -->
-| id | new | signature moment | difficulty 1–10 | axes of difference from the neighbor | story beat | status |
-|---|---|---|---|---|---|---|
-
-## Progression and meta
-- 
-
-## Economy
-<!-- resource: sources → sinks, rate (a guess is fine) -->
-- 
-
-## Difficulty
-- philosophy: 
-- axes: 
+| M01 | серверное плавание | mvp | кооператив | gym | DivingGym | 2/5 процессов, столкновения, камера; пользовательский плейтест ещё нужен |
+| M02 | кислород и давление | mvp | риск глубины | gym | DivingGym | 23 EditMode проверки; спасение/наблюдение ещё не подключены |
+| M03 | гарпун и сопротивление рыбы | mvp | охота | spec | — | следующий этап RAID-003 |
+| M04 | помощь и завал | mvp | кооператив | spec | — | RAID-004 |
+| M05 | груз и лебёдка | mvp | выбор риска | spec | — | RAID-005 |
+| M06 | экспедиции и дни | mvp | цикл | spec | — | RAID-006 |
+| M07 | ресурсы, улучшения, сонар | mvp | прогрессия | spec | — | RAID-007 |
+| M08 | подношения | mvp | цикл | spec | — | RAID-008 |
 
 ## Mechanic specs
-<!-- ### M01 — Name
-what · why (pillar) · controls · rules · parameters (in data files) ·
-acceptance criteria · "feel" (targets) · research: research/mech-M01.md -->
+Полные правила и приёмка каждой механики утверждены в docs/RAID-SPEC.md; новые неподтверждённые механики не добавляются.
+M01: WASD, Space/Ctrl, Shift, мышь. Только команды клиента; серверный CharacterController, инерция,
+вертикальный лимит до добавления внешних сил. Видимая капсула и визор другим игрокам.
+M02: 1 + depth/10; расход/пополнение кислорода, рост нагрузки от глубины/скорости, снижение в безопасных условиях.
+Баланс Assets/_Game/Data/PrototypeBalance.asset. Критическая нагрузка/кислород обездвиживают, затем смерть.
+
+## Economy
+Материалы экипажа: биоматериал, хитин/редкая органика, металлолом, электроника. Денег нет.
+Рыба расходуется ровно один раз: переработка или подношение.
 
 ## Changelog
-| date | what | why |
-|---|---|---|
+- 17.11.2026: утверждённое ТЗ перенесено в план, Steam обязателен по уточнению пользователя.

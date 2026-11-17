@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "com.coplaydev.unity-mcp": {
-      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
+      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#81542a7e86292b5c4c21b1782c5af23b567f45ce",
       "depth": 0,
       "source": "git",
       "dependencies": {
@@ -16,6 +16,51 @@
         "com.unity.test-framework": "1.1.31"
       },
       "hash": "81542a7e86292b5c4c21b1782c5af23b567f45ce"
+    },
+    "com.firstgeargames.fishnet": {
+      "version": "https://github.com/FirstGearGames/FishNet.git?path=Assets/FishNet#a2e2c3e12f5f4e18c96e402113e14030ae7849f0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.animation": "1.0.0",
+        "com.unity.modules.imgui": "1.0.0",
+        "com.unity.modules.particlesystem": "1.0.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.physics2d": "1.0.0",
+        "com.unity.modules.ui": "1.0.0"
+      },
+      "hash": "a2e2c3e12f5f4e18c96e402113e14030ae7849f0"
+    },
+    "com.firstgeargames.fishysteamworks": {
+      "version": "file:com.firstgeargames.fishysteamworks",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
+    "com.obliviomentis.presentation": {
+      "version": "https://github.com/Oblivio-Mentis/Unity-UniversalFSMPresentation-Public.git#337e03b78bdd1617f198050d4c028a17000f9642",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.obliviomentis.universalfsm": "0.2.0"
+      },
+      "hash": "337e03b78bdd1617f198050d4c028a17000f9642"
+    },
+    "com.obliviomentis.universalfsm": {
+      "version": "https://github.com/Oblivio-Mentis/Unity-UniversalFSM-Public.git#97ac969a9ecc853ba0110fd0c64939ef7db63b0f",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "97ac969a9ecc853ba0110fd0c64939ef7db63b0f"
+    },
+    "com.rlabrecque.steamworks.net": {
+      "version": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net#ea51b029a5dbcb47a99d3c1fac930b811672ed32",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "ea51b029a5dbcb47a99d3c1fac930b811672ed32"
     },
     "com.unity.ai.navigation": {
       "version": "2.0.14",

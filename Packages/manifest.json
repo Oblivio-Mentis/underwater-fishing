@@ -48,6 +48,7 @@
     "com.unity.modules.xr": "1.0.0",
     "com.firstgeargames.fishnet": "https://github.com/FirstGearGames/FishNet.git?path=Assets/FishNet#a2e2c3e12f5f4e18c96e402113e14030ae7849f0",
     "com.obliviomentis.universalfsm": "https://github.com/Oblivio-Mentis/Unity-UniversalFSM-Public.git#97ac969a9ecc853ba0110fd0c64939ef7db63b0f",
-    "com.obliviomentis.presentation": "https://github.com/Oblivio-Mentis/Unity-UniversalFSMPresentation-Public.git#337e03b78bdd1617f198050d4c028a17000f9642"
+    "com.obliviomentis.presentation": "https://github.com/Oblivio-Mentis/Unity-UniversalFSMPresentation-Public.git#337e03b78bdd1617f198050d4c028a17000f9642",
+    "com.rlabrecque.steamworks.net": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net#ea51b029a5dbcb47a99d3c1fac930b811672ed32"
   }
 }
