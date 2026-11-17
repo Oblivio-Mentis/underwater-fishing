@@ -57,14 +57,16 @@ namespace UnderwaterFishing.Cargo.Network
             previousState = station.State.State;
             int requiredCycles = cyclesRequiredOverride > 0 ? cyclesRequiredOverride : fishOnly ? 1 : 2;
             int requiredHold = requiredCycles;
-            if (cycles >= requiredCycles && station.State.HoldCount >= requiredHold && (!fishOnly || depositedFish))
+            if (cycles >= requiredCycles && station.State.HoldCount >= requiredHold && !cargo.HasLoot && !fishing.HasCatch && (!fishOnly || depositedFish))
             {
                 var ids = new System.Collections.Generic.HashSet<ulong>();
                 bool fishSeen = false;
                 foreach (var item in station.ProtectedHold) { if (!ids.Add(item.Id)) { Debug.LogError("RAID_CARGO_DUPLICATE"); finished = true; return; } fishSeen |= item.IsFish; }
-                if (ids.Count != station.State.HoldCount || (fishOnly && !fishSeen)) return;
-                Debug.Log($"RAID_CARGO_BOT_PASS cycles={cycles} hold={ids.Count} fish={fishSeen} unique=true");
-                Capture("delivered"); finished = true; Move(Vector3.zero, station.State.Position); return;
+                if (ids.Count == station.State.HoldCount && (!fishOnly || fishSeen))
+                {
+                    Debug.Log($"RAID_CARGO_BOT_PASS cycles={cycles} hold={ids.Count} fish={fishSeen} unique=true");
+                    Capture("delivered"); finished = true; Move(Vector3.zero, station.State.Position); return;
+                }
             }
             Vector3 movement = Vector3.zero, look = station.State.Position;
             bool request = false;

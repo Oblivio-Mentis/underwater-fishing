@@ -223,6 +223,7 @@ namespace UnderwaterFishing.Editor
             ConfigureCargoDiver(go);
             ConfigureExpeditionDiver(go);
             ConfigureProgressionDiver(go);
+            go.AddComponent<UnderwaterFishing.Debugging.CoreLoopTestBot>();
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
