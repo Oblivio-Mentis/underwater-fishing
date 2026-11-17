@@ -1,0 +1,8 @@
+﻿{
+    "name": "UnderwaterFishing.Tether.Tests",
+    "rootNamespace": "UnderwaterFishing.Fishing.Tether.Tests",
+    "references": ["UnderwaterFishing.Tether"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "autoReferenced": false
+}

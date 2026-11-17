@@ -1,0 +1,8 @@
+﻿{
+    "name": "UnderwaterFishing.Tether",
+    "rootNamespace": "UnderwaterFishing.Fishing.Tether",
+    "references": [],
+    "autoReferenced": true,
+    "allowUnsafeCode": false,
+    "noEngineReferences": false
+}
