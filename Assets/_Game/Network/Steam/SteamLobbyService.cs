@@ -47,7 +47,6 @@ namespace UnderwaterFishing.Network.Steam
 
         private readonly List<SteamLobbyInfo> _lobbies = new();
         private FishNet.Transporting.Transport _offlineTransport;
-        private bool _transportInitialized;
         private bool _ownsSteamApi;
         private bool _networkSubscribed;
         private bool _closing;
@@ -328,15 +327,14 @@ namespace UnderwaterFishing.Network.Steam
         private bool SelectSteamTransport()
         {
             if (!NetworkIsStopped()) return false;
-            FishNet.Transporting.Transport previous = Manager.TransportManager.Transport;
-            if (previous != Transport) _offlineTransport = previous;
-            if (!_transportInitialized)
+            if (Manager.TransportManager.Transport is not RoutingTransport router)
             {
-                if (previous != Transport) Transport.Initialize(Manager, 0);
-                _transportInitialized = true;
+                SetStatus("Steam unavailable: configure RoutingTransport on the NetworkManager.");
+                return false;
             }
+            if (router.ActiveTransport != Transport) _offlineTransport = router.ActiveTransport;
+            if (!router.Select(Transport)) return false;
             Transport.SetMaximumClients(MaximumPlayers);
-            Manager.TransportManager.Transport = Transport;
             SubscribeNetwork();
             return true;
         }
@@ -389,7 +387,8 @@ namespace UnderwaterFishing.Network.Steam
             if (_closing) return;
             _closing = true;
             bool ownedSession = _networkRequested || (CurrentLobby != 0 && Manager != null
-                && Manager.Initialized && Manager.TransportManager.Transport == Transport);
+                && Manager.Initialized && Manager.TransportManager.Transport is RoutingTransport router
+                && router.ActiveTransport == Transport);
             _created?.Cancel();
             _joined?.Cancel();
             _found?.Cancel();
@@ -420,8 +419,9 @@ namespace UnderwaterFishing.Network.Steam
         private void RestoreOfflineTransportIfStopped()
         {
             if (CurrentLobby == 0 && _offlineTransport != null && Manager != null && Manager.Initialized
-                && Manager.TransportManager.Transport == Transport && NetworkIsStopped())
-                Manager.TransportManager.Transport = _offlineTransport;
+                && Manager.TransportManager.Transport is RoutingTransport router
+                && router.ActiveTransport == Transport && NetworkIsStopped())
+                router.Select(_offlineTransport);
         }
 
         private uint ResolveAppId()
