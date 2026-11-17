@@ -62,6 +62,7 @@ namespace UnderwaterFishing.Editor
                 AssetDatabase.CreateAsset(balance, Root + "/Data/PrototypeBalance.asset");
             }
             var fishing = PrepareFishing(balance);
+            var collapseTrap = PrepareCooperation();
             var controls = Controls();
             var diver = DiverPrefab(balance, fishing);
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -130,24 +131,27 @@ namespace UnderwaterFishing.Editor
             if (prefabs == null) { prefabs = ScriptableObject.CreateInstance<SinglePrefabObjects>(); AssetDatabase.CreateAsset(prefabs, Root + "/Data/SpawnablePrefabs.asset"); }
             prefabs.Clear(); prefabs.AddObject(diver, true);
             prefabs.AddObject(fishing.Small, true); prefabs.AddObject(fishing.Large, true);
+            prefabs.AddObject(collapseTrap, true);
             manager.SpawnablePrefabs = prefabs;
             EditorUtility.SetDirty(prefabs);
             var input = root.AddComponent<DiverInput>(); input.Configure(controls);
             var session = root.AddComponent<NetworkSession>(); session.Manager = manager; session.DiverPrefab = diver; session.LanTransport = lan;
             var fishWorld = root.AddComponent<UnderwaterFishing.Fishing.Network.FishingWorld>();
             fishWorld.SmallFish = fishing.Small; fishWorld.LargeFish = fishing.Large;
+            root.AddComponent<UnderwaterFishing.Cooperation.CooperationWorld>().TrapPrefab = collapseTrap;
             var steamTransport = root.AddComponent<FishySteamworks.FishySteamworks>();
             var steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
             steamSettings.FindProperty("_maximumClients").intValue = 5; steamSettings.ApplyModifiedPropertiesWithoutUndo();
             var steam = root.AddComponent<SteamLobbyService>(); steam.Manager = manager; steam.Transport = steamTransport;
+            root.AddComponent<SteamSmokeTest>();
             root.AddComponent<SessionUI>();
             var camera = new GameObject("Lobby Camera", typeof(Camera)).GetComponent<Camera>();
             camera.transform.position = new Vector3(0, -6.5f, -9); camera.transform.rotation = Quaternion.Euler(0, 0, 0);
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = RenderSettings.fogColor;
             session.LobbyCamera = camera;
             PlayerSettings.companyName = "Oblivio Mentis"; PlayerSettings.productName = "Underwater Fishing";
-            PlayerSettings.bundleVersion = "0.0.1-raid003";
+            PlayerSettings.bundleVersion = "0.0.1-raid004";
             PlayerSettings.runInBackground = true;
             PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -192,6 +196,8 @@ namespace UnderwaterFishing.Editor
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.02f, .1f, .14f); camera.enabled = false;
             go.AddComponent<NetworkObject>();
             go.AddComponent<NetworkDiver>().Configure(balance, camera, mesh);
+            go.AddComponent<UnderwaterFishing.Cooperation.DiverRescue>();
+            go.AddComponent<UnderwaterFishing.Cooperation.CooperationTestBot>();
             ConfigureHarpoon(go, camera, fishing);
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();

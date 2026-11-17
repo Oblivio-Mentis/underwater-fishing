@@ -23,5 +23,7 @@ namespace UnderwaterFishing.Data
         public float FishPickupDistance = 2.5f;
         public float CarrySpeedSmall = .9f;
         public float CarrySpeedLarge = .65f;
+        public float OxygenRescueSeconds = 2f;
+        public float DebrisRescueSeconds = 3f;
     }
 }

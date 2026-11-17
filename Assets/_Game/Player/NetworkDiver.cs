@@ -13,6 +13,7 @@ namespace UnderwaterFishing.Player
         public float Yaw, Pitch;
         public DivingState Diving;
         public bool Sheltered;
+        public int PinnedBy;
     }
 
     [RequireComponent(typeof(CharacterController))]
@@ -30,13 +31,17 @@ namespace UnderwaterFishing.Player
         private float yaw, pitch, commandYaw, commandPitch, lastCommand, nextSend;
         private bool sprint;
         private DivingState diving;
+        private DivingSettings divingSettings;
+        private int pinnedBy = -1;
         private bool automationControlled, automationSprint;
         private Vector3 automationMovement;
         private float automationYaw, automationPitch;
         public DiverSnapshot State => snapshot.Value;
         public Vector3 AimOrigin => transform.position + Vector3.up * .6f;
         public Vector3 AimDirection => Quaternion.Euler(commandPitch, commandYaw, 0) * Vector3.forward;
-        public bool IsActive => State.Diving.Life == DiverLife.Active;
+        public bool IsActive => State.Diving.Life == DiverLife.Active && State.PinnedBy < 0;
+        public bool IsPinned => State.PinnedBy >= 0;
+        public DivingSettings DivingSettings => divingSettings ?? balance.Diving;
         public GameBalance Balance => balance;
         public Camera Eyes => eyes;
         public Vector3 ServerVelocity { get; private set; }
@@ -61,7 +66,10 @@ namespace UnderwaterFishing.Player
         public override void OnStopNetwork() { All.Remove(this); if (Local == this) Local = null; }
         public override void OnStartServer()
         {
-            diving = DivingSimulation.Create(balance.Diving);
+            divingSettings = JsonUtility.FromJson<DivingSettings>(JsonUtility.ToJson(balance.Diving));
+            if ((Application.isEditor || Debug.isDebugBuild) && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--raid-fast-diving") >= 0)
+            { divingSettings.OxygenCapacity = 60; divingSettings.OxygenDrain = 2; }
+            diving = DivingSimulation.Create(divingSettings);
             commandYaw = transform.eulerAngles.y;
             Publish();
         }
@@ -112,7 +120,20 @@ namespace UnderwaterFishing.Player
 
         private void LateUpdate()
         {
-            if (IsOwner && IsClientStarted) eyes.transform.rotation = Quaternion.Euler(pitch, yaw, 0);
+            if (IsOwner && IsClientStarted)
+            {
+                NetworkDiver followed = null;
+                if (State.Diving.Life == DiverLife.Dead)
+                    foreach (var other in All) if (other != this && other.State.Diving.Life != DiverLife.Dead) { followed = other; break; }
+                if (followed != null)
+                {
+                    Vector3 behind = followed.transform.position + Vector3.up * 1.5f - followed.transform.forward * 3;
+                    if (Physics.Linecast(followed.AimOrigin, behind, out var wall, ~0, QueryTriggerInteraction.Ignore)) behind = wall.point + wall.normal * .2f;
+                    eyes.transform.position = behind;
+                    eyes.transform.rotation = Quaternion.LookRotation(followed.AimOrigin - behind);
+                }
+                else { eyes.transform.localPosition = Vector3.up * .6f; eyes.transform.rotation = Quaternion.Euler(pitch, yaw, 0); }
+            }
             else if (IsClientStarted) eyes.transform.rotation = Quaternion.Euler(State.Pitch, State.Yaw, 0);
         }
 
@@ -121,36 +142,44 @@ namespace UnderwaterFishing.Player
             if (!IsServerStarted) return;
             float dt = Time.fixedDeltaTime;
             if (Time.unscaledTime - lastCommand > .3f) { command = Vector3.zero; sprint = false; }
-            bool active = diving.Life == DiverLife.Active;
+            bool active = diving.Life == DiverLife.Active && pinnedBy < 0;
             Vector3 target = Quaternion.Euler(0, commandYaw, 0) * command * (balance.SwimSpeed * CarrySpeedMultiplier * (sprint ? balance.SprintMultiplier : 1f));
             if (!active) target = Vector3.zero;
             target.y += active ? balance.Buoyancy : 0;
-            target = SwimMath.ClampVoluntaryVelocity(target, balance.SwimSpeed * balance.SprintMultiplier, balance.Diving.SafeAscentSpeed, balance.Diving.SafeDescentSpeed);
+            target = SwimMath.ClampVoluntaryVelocity(target, balance.SwimSpeed * balance.SprintMultiplier, DivingSettings.SafeAscentSpeed, DivingSettings.SafeDescentSpeed);
             velocity = Vector3.MoveTowards(velocity, target, (command.sqrMagnitude > 0 ? balance.Acceleration : balance.Braking) * dt);
             Vector3 before = transform.position;
+            if (!active) velocity = externalVelocity = Vector3.zero;
             motor.Move((velocity + externalVelocity) * dt);
             ServerVelocity = (transform.position - before) / dt;
             externalVelocity = Vector3.MoveTowards(externalVelocity, Vector3.zero, balance.ExternalDrag * dt);
             transform.rotation = Quaternion.Euler(0, commandYaw, 0);
             bool sheltered = World.SubmarineInterior.Contains(transform.position);
-            DivingSimulation.Step(ref diving, balance.Diving, Mathf.Max(0, -transform.position.y), (transform.position.y - before.y) / dt, sheltered, sprint, dt);
+            DivingSimulation.Step(ref diving, DivingSettings, Mathf.Max(0, -transform.position.y), (transform.position.y - before.y) / dt, sheltered, active && sprint, dt);
             Publish(sheltered);
         }
 
         private void Publish(bool sheltered = true)
         {
-            snapshot.Value = new DiverSnapshot { Position = transform.position, Yaw = commandYaw, Pitch = commandPitch, Diving = diving, Sheltered = sheltered };
+            snapshot.Value = new DiverSnapshot { Position = transform.position, Yaw = commandYaw, Pitch = commandPitch, Diving = diving, Sheltered = sheltered, PinnedBy = pinnedBy };
         }
-        [Server] public void AddExternalVelocity(Vector3 force) { externalVelocity = Vector3.ClampMagnitude(externalVelocity + force, 15); }
+        [Server] public void AddExternalVelocity(Vector3 force) { if (IsActive) externalVelocity = Vector3.ClampMagnitude(externalVelocity + force, 15); }
+        [Server] public void SetPinned(int trapId) { pinnedBy = trapId; velocity = externalVelocity = Vector3.zero; Publish(World.SubmarineInterior.Contains(transform.position)); }
         [Server] public void Relocate(Vector3 position)
         {
             motor.enabled = false;
             transform.position = position;
             motor.enabled = true;
             velocity = externalVelocity = Vector3.zero;
-            diving = DivingSimulation.Create(balance.Diving);
+            pinnedBy = -1;
+            diving = DivingSimulation.Create(DivingSettings);
             Publish();
         }
-        [Server] public bool Rescue() => DivingSimulation.Rescue(ref diving, balance.Diving);
+        [Server] public bool Rescue()
+        {
+            bool rescued = DivingSimulation.Rescue(ref diving, DivingSettings);
+            if (rescued) Publish(World.SubmarineInterior.Contains(transform.position));
+            return rescued;
+        }
     }
 }

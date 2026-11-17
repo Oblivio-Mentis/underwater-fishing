@@ -3,6 +3,8 @@ using UnderwaterFishing.Network.Steam;
 using UnderwaterFishing.Player;
 using UnderwaterFishing.Fishing.Network;
 using UnderwaterFishing.Fishing.Creatures;
+using UnderwaterFishing.Cooperation;
+using UnderwaterFishing.Diving;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -19,7 +21,7 @@ namespace UnderwaterFishing.UI
         private GameObject menu;
         private Text hud, status, fishingHud;
         private RectTransform lobbyList;
-        private InputField address;
+        private InputField address, lobbyId;
 
         private void Start()
         {
@@ -59,7 +61,7 @@ namespace UnderwaterFishing.UI
             menu.transform.SetParent(canvas.transform, false);
             var rect = menu.GetComponent<RectTransform>();
             rect.anchorMin = rect.anchorMax = new Vector2(.5f, .5f);
-            rect.sizeDelta = new Vector2(650, 840);
+            rect.sizeDelta = new Vector2(650, session.AllowsLanDebug ? 870 : 710);
             menu.GetComponent<Image>().color = new Color(.015f, .06f, .08f, .97f);
             var layout = menu.GetComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(28, 28, 20, 20);
@@ -73,13 +75,16 @@ namespace UnderwaterFishing.UI
             Button(menu.transform, "Создать Steam-лобби", () => steam.CreateLobby());
             Button(menu.transform, "Найти Steam-лобби", () => steam.FindLobbies());
             Button(menu.transform, "Пригласить друзей через Steam", () => steam.InviteFriends());
-            lobbyList = new GameObject("Lobbies", typeof(RectTransform), typeof(VerticalLayoutGroup)).GetComponent<RectTransform>();
-            lobbyList.SetParent(menu.transform, false);
-            Fixed(lobbyList.gameObject, 110);
-            Fixed(Label(menu.transform, "Локальная проверка по IP", 16).gameObject, 25);
-            address = CreateAddress(menu.transform);
-            Button(menu.transform, "LAN: создать хоста", () => session.HostLan());
-            Button(menu.transform, "LAN: подключиться", () => session.JoinLan(address.text.Trim()));
+            lobbyList = CreateLobbyList(menu.transform);
+            lobbyId = CreateAddress(menu.transform, "Steam Lobby ID", "");
+            Button(menu.transform, "Войти по Steam Lobby ID", () => { if (ulong.TryParse(lobbyId.text.Trim(), out ulong id)) steam.JoinLobby(id); else steam.JoinLobby(0); });
+            if (session.AllowsLanDebug)
+            {
+                Fixed(Label(menu.transform, "Отладка · LAN по IP", 16).gameObject, 25);
+                address = CreateAddress(menu.transform);
+                Button(menu.transform, "LAN: создать хоста", () => session.HostLan());
+                Button(menu.transform, "LAN: подключиться", () => session.JoinLan(address.text.Trim()));
+            }
             Button(menu.transform, "Продолжить", () => { if (session.Connected) input.SetMenu(false); });
             Button(menu.transform, "Завершить сессию", () => { session.Disconnect(); steam.LeaveLobby(); });
             steam.Changed += RefreshLobbies;
@@ -99,6 +104,15 @@ namespace UnderwaterFishing.UI
             var d = state.Diving;
             hud.text = $"O₂  {d.Oxygen:0}   |   Глубина {d.Depth:0.0} м\nДавление {d.AmbientPressure:0.0} атм   |   Нагрузка {d.Stress:0}%\n{(state.Sheltered ? "ПОДЛОДКА · кислород восстанавливается" : "В ОТКРЫТОЙ ВОДЕ")}\nСостояние: {d.Life}  ·  Экипаж {session.PlayerCount}/5";
             hud.color = d.Stress > 60 || d.Oxygen < 25 ? new Color(1f, .65f, .3f) : new Color(.7f, 1f, .95f);
+            var rescue = diver.GetComponent<DiverRescue>();
+            if (state.PinnedBy >= 0) hud.text += "\nПРИДАВЛЕН · F — подать сигнал. Напарник: удерживать E.";
+            if (d.Life == DiverLife.Incapacitated) hud.text += $"\nБЕЗ СОЗНАНИЯ · до гибели {d.IncapacitatedRemaining:0} с. Напарник: удерживать F.";
+            if (d.Life == DiverLife.Dead) hud.text += "\nНАБЛЮДЕНИЕ · до возвращения экипажа";
+            if (rescue != null)
+            {
+                hud.text += $"\nАварийный кислород: {rescue.State.EmergencyCharges}";
+                if (rescue.State.TargetId >= 0) hud.text += $" · Спасение {rescue.State.Progress:P0}";
+            }
             var fishing = DiverFishing.Local;
             if (fishing == null) return;
             var f = fishing.State; var fish = fishing.CurrentFish;
@@ -116,13 +130,29 @@ namespace UnderwaterFishing.UI
         {
             if (lobbyList == null || steam == null) return;
             foreach (Transform child in lobbyList) Destroy(child.gameObject);
-            int count = 0;
             foreach (var lobby in steam.Lobbies)
             {
-                if (count++ >= 2) break;
                 ulong id = lobby.Id;
                 Button(lobbyList, $"{lobby.Name}  ({lobby.Members}/{lobby.Capacity})", () => steam.JoinLobby(id));
             }
+        }
+        private RectTransform CreateLobbyList(Transform parent)
+        {
+            var scroll = new GameObject("Steam lobbies", typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+            scroll.transform.SetParent(parent, false); Fixed(scroll, 100);
+            scroll.GetComponent<Image>().color = new Color(.025f, .1f, .12f);
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D)).GetComponent<RectTransform>();
+            viewport.SetParent(scroll.transform, false); viewport.anchorMin = Vector2.zero; viewport.anchorMax = Vector2.one;
+            viewport.offsetMin = viewport.offsetMax = Vector2.zero;
+            var content = new GameObject("Lobby results", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter)).GetComponent<RectTransform>();
+            content.SetParent(viewport, false); content.anchorMin = new Vector2(0, 1); content.anchorMax = Vector2.one;
+            content.pivot = new Vector2(.5f, 1); content.anchoredPosition = Vector2.zero; content.sizeDelta = Vector2.zero;
+            var list = content.GetComponent<VerticalLayoutGroup>(); list.spacing = 4; list.childControlWidth = list.childControlHeight = true;
+            list.childForceExpandWidth = true; list.childForceExpandHeight = false;
+            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var view = scroll.GetComponent<ScrollRect>(); view.viewport = viewport; view.content = content;
+            view.horizontal = false; view.scrollSensitivity = 22; view.movementType = ScrollRect.MovementType.Clamped;
+            return content;
         }
         private Text Label(Transform parent, string text, int size)
         {
@@ -146,16 +176,24 @@ namespace UnderwaterFishing.UI
             label.rectTransform.sizeDelta = Vector2.zero;
             Fixed(go, 40);
         }
-        private InputField CreateAddress(Transform parent)
+        private InputField CreateAddress(Transform parent, string name = "Address", string initial = "127.0.0.1")
         {
-            var go = new GameObject("Address", typeof(RectTransform), typeof(Image), typeof(InputField));
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(InputField));
             go.transform.SetParent(parent, false);
             go.GetComponent<Image>().color = new Color(.1f, .17f, .2f);
-            var text = Label(go.transform, "127.0.0.1", 19);
+            var text = Label(go.transform, initial, 19);
             text.rectTransform.anchorMin = Vector2.zero; text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = new Vector2(10, 0); text.rectTransform.offsetMax = new Vector2(-10, 0);
             text.alignment = TextAnchor.MiddleLeft;
-            var field = go.GetComponent<InputField>(); field.textComponent = text; field.text = "127.0.0.1";
+            var field = go.GetComponent<InputField>(); field.textComponent = text; field.text = initial;
+            if (initial.Length == 0)
+            {
+                var placeholder = Label(go.transform, name, 17);
+                placeholder.rectTransform.anchorMin = Vector2.zero; placeholder.rectTransform.anchorMax = Vector2.one;
+                placeholder.rectTransform.offsetMin = new Vector2(10, 0); placeholder.rectTransform.offsetMax = new Vector2(-10, 0);
+                placeholder.alignment = TextAnchor.MiddleLeft; placeholder.color = new Color(.4f, .7f, .7f);
+                field.placeholder = placeholder;
+            }
             Fixed(go, 36);
             return field;
         }

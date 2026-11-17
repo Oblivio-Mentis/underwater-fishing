@@ -19,6 +19,7 @@ namespace UnderwaterFishing.Network
         public string Status { get; private set; } = "Не подключено";
         public bool Connected => Manager.IsClientStarted || Manager.IsServerStarted;
         public int PlayerCount => NetworkDiver.All.Count;
+        public bool AllowsLanDebug => Application.isEditor || Debug.isDebugBuild;
         private float telemetryAt;
 
         private void Start()
@@ -30,31 +31,40 @@ namespace UnderwaterFishing.Network
             Manager.ClientManager.OnClientConnectionState += ClientState;
             Manager.ServerManager.OnRemoteConnectionState += RemoteState;
             string[] args = System.Environment.GetCommandLineArgs();
-            if (System.Array.IndexOf(args, "--raid-host") >= 0) HostLan();
+            bool steamRequested = System.Array.IndexOf(args, "+connect_lobby") >= 0 || System.Array.IndexOf(args, "--raid-steam-smoke") >= 0;
+            if (!steamRequested && System.Array.IndexOf(args, "--raid-host") >= 0) HostLan();
             int join = System.Array.IndexOf(args, "--raid-join");
-            if (join >= 0 && join + 1 < args.Length) JoinLan(args[join + 1]);
+            if (!steamRequested && join >= 0 && join + 1 < args.Length) JoinLan(args[join + 1]);
             int quit = System.Array.IndexOf(args, "--raid-exit-after");
             if (quit >= 0 && quit + 1 < args.Length && float.TryParse(args[quit + 1], out float seconds)) Invoke(nameof(Quit), seconds);
         }
         public void HostLan()
         {
-            if (Connected) return;
+            if (!CanUseLanDebug()) return;
             if (!((RoutingTransport)Manager.TransportManager.Transport).Select(LanTransport)) return;
             Status = "Запуск LAN-хоста…";
             if (Manager.ServerManager.StartConnection()) Manager.ClientManager.StartConnection("127.0.0.1");
         }
         public void JoinLan(string address)
         {
-            if (Connected) return;
+            if (!CanUseLanDebug()) return;
             if (!((RoutingTransport)Manager.TransportManager.Transport).Select(LanTransport)) return;
             Status = "Подключение к " + address;
             Manager.ClientManager.StartConnection(address);
         }
         public void Disconnect()
         {
+            var steam = GetComponent<SteamLobbyService>();
+            if (steam != null && (steam.CurrentLobby != 0 || steam.IsBusy)) steam.LeaveLobby();
             Manager.ClientManager.StopConnection();
             Manager.ServerManager.StopConnection(true);
             Status = "Сессия завершена";
+        }
+        private bool CanUseLanDebug()
+        {
+            if (!AllowsLanDebug) { Status = "LAN доступен только в отладочной сборке. Используйте Steam."; return false; }
+            var steam = GetComponent<SteamLobbyService>();
+            return !Connected && (steam == null || (!steam.IsBusy && steam.CurrentLobby == 0));
         }
         private void Loaded(NetworkConnection connection, bool asServer)
         {

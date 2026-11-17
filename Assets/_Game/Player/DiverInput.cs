@@ -12,6 +12,7 @@ namespace UnderwaterFishing.Player
         public bool MenuOpen { get; private set; } = true;
         private bool Captured => MenuOpen || uiCaptured;
         public bool InteractPressed => !Captured && interact.WasPressedThisFrame();
+        public bool InteractHeld => !Captured && interact.IsPressed();
         public bool HelpHeld => !Captured && help.IsPressed();
         public bool FirePressed => !Captured && fire.WasPressedThisFrame();
         public bool ReelHeld => !Captured && reel.IsPressed();
