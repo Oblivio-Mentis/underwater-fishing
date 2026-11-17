@@ -9,7 +9,8 @@ namespace UnderwaterFishing.Cooperation
     public struct RescueSnapshot
     {
         public int TargetId, EmergencyCharges;
-        public float Progress, SignalUntil;
+        public float Progress;
+        public bool Signalling;
     }
 
     [RequireComponent(typeof(NetworkDiver))]
@@ -20,13 +21,30 @@ namespace UnderwaterFishing.Cooperation
         private DiverInput input;
         private RescueSnapshot current;
         private bool interacting, helping;
-        private float lastInput, nextInput, nextSignal;
+        private float lastInput, nextInput, nextSignal, signalUntil;
+        private TextMesh marker;
         public RescueSnapshot State => snapshot.Value;
         private void Awake() { diver = GetComponent<NetworkDiver>(); }
         public override void OnStartServer() { current.TargetId = -1; current.EmergencyCharges = 1; snapshot.Value = current; }
-        public override void OnStartClient() { if (IsOwner) input = FindFirstObjectByType<DiverInput>(); }
+        public override void OnStartClient()
+        {
+            if (IsOwner) input = FindFirstObjectByType<DiverInput>();
+            else
+            {
+                var label = new GameObject("Crew distress signal", typeof(TextMesh));
+                label.transform.SetParent(transform, false); label.transform.localPosition = Vector3.up * 1.3f;
+                marker = label.GetComponent<TextMesh>(); marker.fontSize = 40; marker.characterSize = .045f;
+                marker.anchor = TextAnchor.LowerCenter; marker.color = new Color(1, .6f, .12f);
+            }
+        }
         private void Update()
         {
+            if (marker != null)
+            {
+                marker.text = diver.State.Diving.Life == DiverLife.Incapacitated ? "НУЖЕН КИСЛОРОД\nУдерживать F" :
+                    diver.IsPinned ? "ПРИДАВЛЕН ОБЛОМКОМ\nУдерживать E" : State.Signalling ? "НУЖНА ПОМОЩЬ" : "";
+                if (NetworkDiver.Local != null) marker.transform.rotation = Quaternion.LookRotation(marker.transform.position - NetworkDiver.Local.Eyes.transform.position);
+            }
             if (!IsOwner || !IsClientStarted || input == null || diver.AutomationControlled || Time.unscaledTime < nextInput) return;
             nextInput = Time.unscaledTime + .1f;
             Actions(input.InteractHeld, input.HelpHeld);
@@ -36,13 +54,14 @@ namespace UnderwaterFishing.Cooperation
             interacting = interact; helping = help; lastInput = Time.unscaledTime;
             if (help && (diver.IsPinned || diver.State.Diving.Life == DiverLife.Incapacitated) && Time.unscaledTime >= nextSignal)
             {
-                current.SignalUntil = Time.time + 4; nextSignal = Time.unscaledTime + 3;
+                signalUntil = Time.unscaledTime + 4; nextSignal = Time.unscaledTime + 3;
                 Debug.Log($"RAID_HELP_SIGNAL diver={ObjectId}");
             }
         }
         private void FixedUpdate()
         {
             if (!IsServerStarted) return;
+            current.Signalling = Time.unscaledTime < signalUntil;
             if (Time.unscaledTime - lastInput > .35f) interacting = helping = false;
             if (diver.State.Sheltered && diver.IsActive) current.EmergencyCharges = 1;
             int targetId = -1;

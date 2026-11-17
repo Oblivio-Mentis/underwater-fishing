@@ -10,10 +10,10 @@ namespace UnderwaterFishing.Cooperation
     {
         private NetworkDiver diver;
         private DiverRescue rescue;
-        private bool helper, finished, sawPinned, sawReleased, sawIncapacitated;
+        private bool helper, finished, sawPinned, sawReleased, sawIncapacitated, movedAfterRelease;
         private int waypoint;
         private float began = -1, nextAction, nextLog;
-        private Vector3 firstPoint;
+        private Vector3 firstPoint, releasePoint;
         private string captureDirectory;
         private void Awake()
         {
@@ -38,11 +38,12 @@ namespace UnderwaterFishing.Cooperation
                 if (victim == null) { Move(Vector3.zero, diver.AimOrigin + Vector3.forward); return; }
             }
             if (victim.IsPinned && !sawPinned) { sawPinned = true; Capture("pinned"); }
-            if (sawPinned && !victim.IsPinned) sawReleased = true;
+            if (sawPinned && !victim.IsPinned && !sawReleased) { sawReleased = true; releasePoint = victim.State.Position; }
+            if (sawReleased && Vector3.Distance(releasePoint, victim.State.Position) > 1.5f) movedAfterRelease = true;
             if (victim.State.Diving.Life == DiverLife.Incapacitated) sawIncapacitated = true;
-            if (sawReleased && sawIncapacitated && victim.State.Diving.Life == DiverLife.Active)
+            if (sawReleased && movedAfterRelease && sawIncapacitated && victim.State.Diving.Life == DiverLife.Active)
             {
-                Debug.Log($"RAID_COOP_BOT_PASS role={(helper ? "helper" : "victim")} trapReleased=true oxygenRescued=true");
+                Debug.Log($"RAID_COOP_BOT_PASS role={(helper ? "helper" : "victim")} trapReleased=true freedMovement=true oxygenRescued=true");
                 Capture("rescued"); finished = true; Move(Vector3.zero, victim.AimOrigin + Vector3.forward); return;
             }
             bool interact = false, help = false;
@@ -63,6 +64,8 @@ namespace UnderwaterFishing.Cooperation
             }
             else if (!sawPinned)
             { var point = new Vector3(16, -12, 10); movement = Toward(point); look = point; }
+            else if (sawReleased && !movedAfterRelease)
+            { var point = releasePoint + Vector3.forward * 2.2f; movement = Toward(point); look = point; }
             else { help = victim.IsPinned || victim.State.Diving.Life == DiverLife.Incapacitated; }
             Move(movement, look);
             if (Time.unscaledTime >= nextAction) { nextAction = Time.unscaledTime + .1f; rescue.Actions(interact, help); }

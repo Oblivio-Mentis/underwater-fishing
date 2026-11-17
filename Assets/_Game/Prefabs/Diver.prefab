@@ -316,6 +316,8 @@ GameObject:
   - component: {fileID: 7576938939282739407}
   - component: {fileID: 1607564505402278593}
   - component: {fileID: 6841842438982003659}
+  - component: {fileID: 3638500498573718491}
+  - component: {fileID: 5652834381811582303}
   - component: {fileID: 3716866095754129754}
   - component: {fileID: 3510296818662800488}
   - component: {fileID: 4650326338220974139}
@@ -443,6 +445,33 @@ MonoBehaviour:
   balance: {fileID: 11400000, guid: a2dec5e2b2f7c224e9c1aecd5ee0aa3b, type: 2}
   eyes: {fileID: 6796139873566015011}
   body: {fileID: 4011866951344365058}
+--- !u!114 &3638500498573718491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da57c5518edef334989e9bd6b552c92f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Cooperation.DiverRescue
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 1607564505402278593}
+  _networkObjectCache: {fileID: 0}
+--- !u!114 &5652834381811582303
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3de02e365eee37c4ca54656451ed2b43, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Cooperation.CooperationTestBot
 --- !u!114 &3716866095754129754
 MonoBehaviour:
   m_ObjectHideFlags: 0
