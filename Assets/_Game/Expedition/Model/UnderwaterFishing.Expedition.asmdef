@@ -1,0 +1,6 @@
+{
+    "name": "UnderwaterFishing.Expedition",
+    "rootNamespace": "UnderwaterFishing.Expedition",
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
