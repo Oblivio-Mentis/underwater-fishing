@@ -1,0 +1,10 @@
+{
+  "name": "com.firstgeargames.fishysteamworks",
+  "version": "4.1.1-raid.1",
+  "displayName": "FishySteamworks (RAID pinned integration)",
+  "description": "FishNet Steam P2P transport, embedded from FirstGearGames/FishySteamworks at 0320459da446a95fc109aef66d42e1337e3b5fff.",
+  "unity": "2021.3",
+  "license": "See LICENSE.txt",
+  "author": { "name": "FirstGearGames", "url": "https://github.com/FirstGearGames" },
+  "dependencies": {}
+}
