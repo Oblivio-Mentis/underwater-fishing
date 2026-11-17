@@ -1,0 +1,8 @@
+{
+    "name": "UnderwaterFishing.Creatures.Tests",
+    "rootNamespace": "UnderwaterFishing.Fishing.Creatures.Tests",
+    "references": ["UnderwaterFishing.Creatures", "OblivioMentis.UniversalFSM.Runtime"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "autoReferenced": false
+}
