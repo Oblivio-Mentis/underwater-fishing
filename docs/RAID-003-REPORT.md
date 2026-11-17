@@ -2,6 +2,8 @@
 
 Реализован играбельный полигон охоты поверх foundation из PR #1. Полный Core Loop остаётся целью следующих этапов.
 
+Git: код `5ff5d8e`; [draft PR #2](https://github.com/Oblivio-Mentis/underwater-fishing/pull/2), база `raid/001-foundation`. main не объединялся.
+
 ## Реализовано
 
 - Два вида рыб с настоящим серверным UniversalFSM: патрулирование, тревога, бегство, захват, рывки, усталость, поимка и побег.
