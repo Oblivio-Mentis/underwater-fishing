@@ -27,7 +27,7 @@ namespace UnderwaterFishing.Editor
                 Electronics = LootPrefab(electronics, "ElectronicsLoot", new Color(.22f, .55f, 1f))
             };
         }
-        private static void ConfigureCargoDiver(GameObject diver) { diver.AddComponent<DiverCargo>(); }
+        private static void ConfigureCargoDiver(GameObject diver) { diver.AddComponent<DiverCargo>(); diver.AddComponent<CargoTestBot>(); }
         private static void AddCargoWorld(GameObject sessionRoot, CargoBuildAssets assets, SinglePrefabObjects prefabs)
         {
             prefabs.AddObject(assets.Station, true); prefabs.AddObject(assets.Scrap, true); prefabs.AddObject(assets.Electronics, true);

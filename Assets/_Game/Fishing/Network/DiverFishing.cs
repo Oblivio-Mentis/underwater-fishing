@@ -4,6 +4,7 @@ using FishNet.Object.Synchronizing;
 using UnderwaterFishing.Fishing.Creatures;
 using UnderwaterFishing.Fishing.Tether;
 using UnderwaterFishing.Player;
+using UnderwaterFishing.Cargo.Network;
 using UnityEngine;
 
 namespace UnderwaterFishing.Fishing.Network
@@ -26,6 +27,7 @@ namespace UnderwaterFishing.Fishing.Network
         private readonly SyncVar<FishingSnapshot> snapshot = new SyncVar<FishingSnapshot>();
         private NetworkDiver diver;
         private DiverInput input;
+        private DiverCargo cargo;
         private NetworkFish fish;
         private TetherState tether;
         private FishingSnapshot current;
@@ -38,7 +40,7 @@ namespace UnderwaterFishing.Fishing.Network
         public bool Reeling => reeling && tether.Connected;
         public float NormalizedTension => tether.Tension / Mathf.Max(.01f, diver.Balance.Tether.BreakTension);
         public bool HasCatch => State.Status == HarpoonStatus.Carried && CurrentFish != null;
-        private void Awake() { diver = GetComponent<NetworkDiver>(); }
+        private void Awake() { diver = GetComponent<NetworkDiver>(); cargo = GetComponent<DiverCargo>(); }
         public override void OnStartNetwork() { All.Add(this); }
         public override void OnStopNetwork() { All.Remove(this); if (Local == this) Local = null; }
         public override void OnStartServer()
@@ -57,8 +59,8 @@ namespace UnderwaterFishing.Fishing.Network
             if (!IsOwner || !IsClientStarted || input == null) return;
             if (diver.AutomationControlled) return;
             if (input.FirePressed) Fire();
-            if (input.ReleasePressed) Release();
-            if (input.InteractPressed) PickUp();
+            if (input.ReleasePressed) { if (cargo != null && cargo.HasLoot) cargo.ReleaseLoot(); else Release(); }
+            if (input.InteractPressed && (cargo == null || !cargo.TryInteract())) PickUp();
             if (Time.unscaledTime >= nextActions)
             {
                 nextActions = Time.unscaledTime + .1f;
@@ -69,7 +71,7 @@ namespace UnderwaterFishing.Fishing.Network
         { reeling = reel && diver.IsActive; helping = help && diver.IsActive; lastActions = Time.unscaledTime; }
         [ServerRpc] public void Fire()
         {
-            if (!diver.IsActive || fish != null || Time.unscaledTime < nextShot) return;
+            if (!diver.IsActive || fish != null || (cargo != null && cargo.HasLoot) || Time.unscaledTime < nextShot) return;
             nextShot = Time.unscaledTime + diver.Balance.HarpoonCooldown;
             current.ShotSequence++;
             current.Status = HarpoonStatus.Miss;
@@ -89,7 +91,7 @@ namespace UnderwaterFishing.Fishing.Network
         [ServerRpc] public void Release() { ReleaseFish(HarpoonStatus.Released); }
         [ServerRpc] public void PickUp()
         {
-            if (!diver.IsActive || current.Status == HarpoonStatus.Carried) return;
+            if (!diver.IsActive || current.Status == HarpoonStatus.Carried || (cargo != null && cargo.HasLoot)) return;
             if (fish == null)
             {
                 if (!Physics.Raycast(diver.AimOrigin, diver.AimDirection, out var hit, diver.Balance.FishPickupDistance, ~0, QueryTriggerInteraction.Collide)) return;
@@ -118,6 +120,7 @@ namespace UnderwaterFishing.Fishing.Network
             current.HelpTargetId = FindHelpTarget();
             diver.CarrySpeedMultiplier = current.Status == HarpoonStatus.Carried && fish != null
                 ? (fish.Species.IsLarge ? diver.Balance.CarrySpeedLarge : diver.Balance.CarrySpeedSmall) : 1;
+            if (cargo != null) diver.CarrySpeedMultiplier = Mathf.Min(diver.CarrySpeedMultiplier, cargo.CarrySpeedMultiplier);
             if (fish != null && tether.Connected)
             {
                 int helpers = 0;

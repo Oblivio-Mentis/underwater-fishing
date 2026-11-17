@@ -5,6 +5,7 @@ using UnderwaterFishing.Fishing.Network;
 using UnderwaterFishing.Fishing.Creatures;
 using UnderwaterFishing.Cooperation;
 using UnderwaterFishing.Diving;
+using UnderwaterFishing.Cargo.Network;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -123,6 +124,10 @@ namespace UnderwaterFishing.UI
             }
             else fishingHud.text = f.Status == HarpoonStatus.Carried ? "Улов в руках · R отпустить" :
                 f.Status == HarpoonStatus.Broken ? "Трос оборвался · ищите рыбу снова" : "Найдите рыбу и наведите прицел · ЛКМ";
+            var cargo = DiverCargo.Local;
+            var station = NetworkCargoStation.Instance;
+            if (station != null) fishingHud.text += $"\nКонтейнер: {station.State.State} · {station.State.UsedCapacity}/{station.State.Capacity} · Отсек {station.State.HoldCount}";
+            if (cargo != null && cargo.InteractionHint.Length > 0) fishingHud.text += "\n" + cargo.InteractionHint;
             if (f.HelpTargetId >= 0) fishingHud.text += "\nПомогаете удерживать напарника";
             fishingHud.color = f.NormalizedTension > .8f ? new Color(1, .5f, .2f) : new Color(.7f, 1, .9f);
         }

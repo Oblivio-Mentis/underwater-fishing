@@ -63,6 +63,7 @@ namespace UnderwaterFishing.Editor
             }
             var fishing = PrepareFishing(balance);
             var collapseTrap = PrepareCooperation();
+            var cargo = PrepareCargo();
             var controls = Controls();
             var diver = DiverPrefab(balance, fishing);
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -139,6 +140,7 @@ namespace UnderwaterFishing.Editor
             var fishWorld = root.AddComponent<UnderwaterFishing.Fishing.Network.FishingWorld>();
             fishWorld.SmallFish = fishing.Small; fishWorld.LargeFish = fishing.Large;
             root.AddComponent<UnderwaterFishing.Cooperation.CooperationWorld>().TrapPrefab = collapseTrap;
+            AddCargoWorld(root, cargo, prefabs);
             var steamTransport = root.AddComponent<FishySteamworks.FishySteamworks>();
             var steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
@@ -151,7 +153,7 @@ namespace UnderwaterFishing.Editor
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = RenderSettings.fogColor;
             session.LobbyCamera = camera;
             PlayerSettings.companyName = "Oblivio Mentis"; PlayerSettings.productName = "Underwater Fishing";
-            PlayerSettings.bundleVersion = "0.0.1-raid004";
+            PlayerSettings.bundleVersion = "0.0.1-raid005";
             PlayerSettings.runInBackground = true;
             PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -199,6 +201,7 @@ namespace UnderwaterFishing.Editor
             go.AddComponent<UnderwaterFishing.Cooperation.DiverRescue>();
             go.AddComponent<UnderwaterFishing.Cooperation.CooperationTestBot>();
             ConfigureHarpoon(go, camera, fishing);
+            ConfigureCargoDiver(go);
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
