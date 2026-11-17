@@ -1,0 +1,7 @@
+{
+    "name": "UnderwaterFishing.Cargo",
+    "rootNamespace": "UnderwaterFishing.Cargo",
+    "references": ["OblivioMentis.UniversalFSM.Runtime"],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}
