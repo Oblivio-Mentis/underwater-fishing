@@ -15,6 +15,12 @@ namespace FishySteamworks
 
         public int Count => t1ToT2Dict.Count;
 
+        public void Clear()
+        {
+            t1ToT2Dict.Clear();
+            t2ToT1Dict.Clear();
+        }
+
         public Dictionary<T1, T2> First => t1ToT2Dict;
         public Dictionary<T2, T1> Second => t2ToT1Dict;
 

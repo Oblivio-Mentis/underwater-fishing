@@ -95,9 +95,12 @@ namespace FishySteamworks.Client
             while (_incoming.Count > 0)
             {
                 LocalPacket packet = _incoming.Dequeue();
-                ArraySegment<byte> segment = new ArraySegment<byte>(packet.Data, 0, packet.Length);
-                base.Transport.HandleClientReceivedDataArgs(new ClientReceivedDataArgs(segment, (Channel)packet.Channel, Transport.Index));
-                ByteArrayPool.Store(packet.Data);
+                try
+                {
+                    ArraySegment<byte> segment = new ArraySegment<byte>(packet.Data, 0, packet.Length);
+                    base.Transport.HandleClientReceivedDataArgs(new ClientReceivedDataArgs(segment, (Channel)packet.Channel, Transport.Index));
+                }
+                finally { ByteArrayPool.Store(packet.Data); }
             }
         }
 
