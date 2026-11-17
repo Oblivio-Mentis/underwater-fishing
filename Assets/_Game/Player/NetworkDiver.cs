@@ -30,10 +30,24 @@ namespace UnderwaterFishing.Player
         private float yaw, pitch, commandYaw, commandPitch, lastCommand, nextSend;
         private bool sprint;
         private DivingState diving;
+        private bool automationControlled, automationSprint;
+        private Vector3 automationMovement;
+        private float automationYaw, automationPitch;
         public DiverSnapshot State => snapshot.Value;
         public Vector3 AimOrigin => transform.position + Vector3.up * .6f;
         public Vector3 AimDirection => Quaternion.Euler(commandPitch, commandYaw, 0) * Vector3.forward;
         public bool IsActive => State.Diving.Life == DiverLife.Active;
+        public GameBalance Balance => balance;
+        public Camera Eyes => eyes;
+        public Vector3 ServerVelocity { get; private set; }
+        public float CarrySpeedMultiplier { get; set; } = 1f;
+        public bool AutomationControlled => automationControlled;
+        public void SetAutomationInput(Vector3 movement, float lookYaw, float lookPitch, bool fast)
+        {
+            if (!IsOwner || (!Application.isEditor && !Debug.isDebugBuild)) return;
+            automationControlled = true; automationMovement = movement;
+            automationYaw = lookYaw; automationPitch = lookPitch; automationSprint = fast;
+        }
 
         public void Configure(GameBalance settings, Camera camera, GameObject mesh)
         { balance = settings; eyes = camera; body = mesh; }
@@ -68,13 +82,13 @@ namespace UnderwaterFishing.Player
         {
             if (IsOwner && IsClientStarted && input != null)
             {
-                yaw += input.Look.x * balance.LookSensitivity;
-                pitch = Mathf.Clamp(pitch - input.Look.y * balance.LookSensitivity, -85, 85);
+                if (automationControlled) { yaw = automationYaw; pitch = automationPitch; }
+                else { yaw += input.Look.x * balance.LookSensitivity; pitch = Mathf.Clamp(pitch - input.Look.y * balance.LookSensitivity, -85, 85); }
                 eyes.transform.rotation = Quaternion.Euler(pitch, yaw, 0);
                 if (Time.unscaledTime >= nextSend)
                 {
                     nextSend = Time.unscaledTime + .033f;
-                    SubmitInput(input.Movement, yaw, pitch, input.Sprint);
+                    SubmitInput(automationControlled ? automationMovement : input.Movement, yaw, pitch, automationControlled ? automationSprint : input.Sprint);
                 }
             }
             if (IsClientStarted && !IsServerStarted)
@@ -107,13 +121,14 @@ namespace UnderwaterFishing.Player
             float dt = Time.fixedDeltaTime;
             if (Time.unscaledTime - lastCommand > .3f) { command = Vector3.zero; sprint = false; }
             bool active = diving.Life == DiverLife.Active;
-            Vector3 target = Quaternion.Euler(0, commandYaw, 0) * command * (balance.SwimSpeed * (sprint ? balance.SprintMultiplier : 1f));
+            Vector3 target = Quaternion.Euler(0, commandYaw, 0) * command * (balance.SwimSpeed * CarrySpeedMultiplier * (sprint ? balance.SprintMultiplier : 1f));
             if (!active) target = Vector3.zero;
             target.y += active ? balance.Buoyancy : 0;
             target = SwimMath.ClampVoluntaryVelocity(target, balance.SwimSpeed * balance.SprintMultiplier, balance.Diving.SafeAscentSpeed, balance.Diving.SafeDescentSpeed);
             velocity = Vector3.MoveTowards(velocity, target, (command.sqrMagnitude > 0 ? balance.Acceleration : balance.Braking) * dt);
             Vector3 before = transform.position;
             motor.Move((velocity + externalVelocity) * dt);
+            ServerVelocity = (transform.position - before) / dt;
             externalVelocity = Vector3.MoveTowards(externalVelocity, Vector3.zero, balance.ExternalDrag * dt);
             transform.rotation = Quaternion.Euler(0, commandYaw, 0);
             bool sheltered = World.SubmarineInterior.Contains(transform.position);

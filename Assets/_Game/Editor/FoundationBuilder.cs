@@ -18,7 +18,7 @@ using UnityEngine.Rendering;
 
 namespace UnderwaterFishing.Editor
 {
-    public static class FoundationBuilder
+    public static partial class FoundationBuilder
     {
         private const string Root = "Assets/_Game";
         [MenuItem("Underwater Fishing/Create Foundation Scenes")]
@@ -35,8 +35,9 @@ namespace UnderwaterFishing.Editor
                 balance = ScriptableObject.CreateInstance<GameBalance>();
                 AssetDatabase.CreateAsset(balance, Root + "/Data/PrototypeBalance.asset");
             }
+            var fishing = PrepareFishing(balance);
             var controls = Controls();
-            var diver = DiverPrefab(balance);
+            var diver = DiverPrefab(balance, fishing);
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             RenderSettings.fog = true;
             RenderSettings.fogColor = new Color(.025f, .13f, .17f);
@@ -102,10 +103,13 @@ namespace UnderwaterFishing.Editor
             var prefabs = AssetDatabase.LoadAssetAtPath<SinglePrefabObjects>(Root + "/Data/SpawnablePrefabs.asset");
             if (prefabs == null) { prefabs = ScriptableObject.CreateInstance<SinglePrefabObjects>(); AssetDatabase.CreateAsset(prefabs, Root + "/Data/SpawnablePrefabs.asset"); }
             prefabs.Clear(); prefabs.AddObject(diver, true);
+            prefabs.AddObject(fishing.Small, true); prefabs.AddObject(fishing.Large, true);
             manager.SpawnablePrefabs = prefabs;
             EditorUtility.SetDirty(prefabs);
             var input = root.AddComponent<DiverInput>(); input.Configure(controls);
             var session = root.AddComponent<NetworkSession>(); session.Manager = manager; session.DiverPrefab = diver; session.LanTransport = lan;
+            var fishWorld = root.AddComponent<UnderwaterFishing.Fishing.Network.FishingWorld>();
+            fishWorld.SmallFish = fishing.Small; fishWorld.LargeFish = fishing.Large;
             var steamTransport = root.AddComponent<FishySteamworks.FishySteamworks>();
             var steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
@@ -123,6 +127,10 @@ namespace UnderwaterFishing.Editor
             var path = Root + "/Scenes/UnderwaterFishing.unity";
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), path);
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), Root + "/Scenes/DivingGym.unity", true);
+            var gym = root.AddComponent<UnderwaterFishing.Fishing.Gym.FishingGym>();
+            EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), Root + "/Scenes/FishingGym.unity", true);
+            Object.DestroyImmediate(gym);
+            EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(), path);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(path, true) };
             AssetDatabase.SaveAssets();
             Debug.Log("RAID_FOUNDATION_CREATED");
@@ -144,7 +152,7 @@ namespace UnderwaterFishing.Editor
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             return AssetDatabase.LoadAssetAtPath<InputActionAsset>(path);
         }
-        private static NetworkObject DiverPrefab(GameBalance balance)
+        private static NetworkObject DiverPrefab(GameBalance balance, FishBuildAssets fishing)
         {
             var go = new GameObject("Diver");
             var controller = go.AddComponent<CharacterController>(); controller.height = 1.7f; controller.radius = .35f; controller.center = Vector3.zero; controller.stepOffset = .1f;
@@ -157,6 +165,7 @@ namespace UnderwaterFishing.Editor
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = new Color(.02f, .1f, .14f); camera.enabled = false;
             go.AddComponent<NetworkObject>();
             go.AddComponent<NetworkDiver>().Configure(balance, camera, mesh);
+            ConfigureHarpoon(go, camera, fishing);
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }

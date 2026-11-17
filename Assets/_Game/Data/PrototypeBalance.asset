@@ -36,3 +36,8 @@ MonoBehaviour:
   InteractionDistance: 3
   ExpeditionSeconds: 420
   DevelopmentMode: 0
+  Tether: {fileID: 11400000, guid: c05bb322d917ab8438eab51e44a863e8, type: 2}
+  HarpoonCooldown: 0.7
+  FishPickupDistance: 2.5
+  CarrySpeedSmall: 0.9
+  CarrySpeedLarge: 0.65

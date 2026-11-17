@@ -1,6 +1,8 @@
 using UnderwaterFishing.Network;
 using UnderwaterFishing.Network.Steam;
 using UnderwaterFishing.Player;
+using UnderwaterFishing.Fishing.Network;
+using UnderwaterFishing.Fishing.Creatures;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -15,7 +17,7 @@ namespace UnderwaterFishing.UI
         private DiverInput input;
         private Font font;
         private GameObject menu;
-        private Text hud, status;
+        private Text hud, status, fishingHud;
         private RectTransform lobbyList;
         private InputField address;
 
@@ -33,6 +35,10 @@ namespace UnderwaterFishing.UI
             var events = new GameObject("UI Input", typeof(EventSystem), typeof(InputSystemUIInputModule));
             events.GetComponent<InputSystemUIInputModule>().AssignDefaultActions();
             hud = Label(canvas.transform, "", 21);
+            fishingHud = Label(canvas.transform, "", 20);
+            fishingHud.rectTransform.anchorMin = fishingHud.rectTransform.anchorMax = new Vector2(1, 0);
+            fishingHud.rectTransform.pivot = new Vector2(1, 0); fishingHud.rectTransform.anchoredPosition = new Vector2(-24, 65);
+            fishingHud.rectTransform.sizeDelta = new Vector2(600, 170); fishingHud.alignment = TextAnchor.LowerRight;
             var hr = hud.rectTransform;
             hr.anchorMin = hr.anchorMax = new Vector2(0, 1);
             hr.pivot = new Vector2(0, 1);
@@ -42,7 +48,7 @@ namespace UnderwaterFishing.UI
             cross.alignment = TextAnchor.MiddleCenter;
             cross.rectTransform.anchorMin = cross.rectTransform.anchorMax = new Vector2(.5f, .5f);
             cross.rectTransform.sizeDelta = new Vector2(50, 50);
-            var hint = Label(canvas.transform, "WASD — плыть    Space / Ctrl — вверх / вниз    Shift — ускорение    Esc — меню", 17);
+            var hint = Label(canvas.transform, "WASD · Space/Ctrl · Shift    ЛКМ — гарпун    ПКМ — катушка    R — отпустить    E — взять рыбу    F — помощь    Esc — меню", 17);
             hint.rectTransform.anchorMin = hint.rectTransform.anchorMax = new Vector2(.5f, 0);
             hint.rectTransform.pivot = new Vector2(.5f, 0);
             hint.rectTransform.anchoredPosition = new Vector2(0, 20);
@@ -88,11 +94,23 @@ namespace UnderwaterFishing.UI
             menu.SetActive(input.MenuOpen || !session.Connected);
             status.text = $"{session.Status} · Экипаж: {session.PlayerCount}/5\nSteam: {steam.Status}";
             var diver = NetworkDiver.Local;
-            if (diver == null) { hud.text = "ПЕЩЕРА · БАЗА ЭКИПАЖА"; return; }
+            if (diver == null) { hud.text = "ПЕЩЕРА · БАЗА ЭКИПАЖА"; fishingHud.text = ""; return; }
             var state = diver.State;
             var d = state.Diving;
             hud.text = $"O₂  {d.Oxygen:0}   |   Глубина {d.Depth:0.0} м\nДавление {d.AmbientPressure:0.0} атм   |   Нагрузка {d.Stress:0}%\n{(state.Sheltered ? "ПОДЛОДКА · кислород восстанавливается" : "В ОТКРЫТОЙ ВОДЕ")}\nСостояние: {d.Life}  ·  Экипаж {session.PlayerCount}/5";
             hud.color = d.Stress > 60 || d.Oxygen < 25 ? new Color(1f, .65f, .3f) : new Color(.7f, 1f, .95f);
+            var fishing = DiverFishing.Local;
+            if (fishing == null) return;
+            var f = fishing.State; var fish = fishing.CurrentFish;
+            if (f.Connected && fish != null)
+            {
+                fishingHud.text = $"{fish.Species.DisplayName} · {fish.State.State}\nТрос {f.Length:0.0} м · Натяжение {f.NormalizedTension:P0} · Помощь {f.Helpers}\nСилы рыбы {fish.State.Stamina:0.0}\n" +
+                    (fish.State.State == FishState.Exhausted ? "Подтяните рыбу ближе · E взять" : "ПКМ — подтягивать · сбрасывайте нагрузку на рывках");
+            }
+            else fishingHud.text = f.Status == HarpoonStatus.Carried ? "Улов в руках · R отпустить" :
+                f.Status == HarpoonStatus.Broken ? "Трос оборвался · ищите рыбу снова" : "Найдите рыбу и наведите прицел · ЛКМ";
+            if (f.HelpTargetId >= 0) fishingHud.text += "\nПомогаете удерживать напарника";
+            fishingHud.color = f.NormalizedTension > .8f ? new Color(1, .5f, .2f) : new Color(.7f, 1, .9f);
         }
         private void RefreshLobbies()
         {

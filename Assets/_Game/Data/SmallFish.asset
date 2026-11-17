@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6feb53e424b7586197964b297ccafa8a, type: 3}
+  m_Name: SmallFish
+  m_EditorClassIdentifier: UnderwaterFishing.Creatures::UnderwaterFishing.Fishing.Creatures.FishSpecies
+  DisplayName: "\u0420\u0438\u0444\u043E\u0432\u0430\u044F \u0440\u044B\u0431\u0430"
+  IsLarge: 0
+  SwimSpeed: 1.1
+  FleeSpeed: 2.5
+  StruggleSpeed: 1.8
+  DetectionRadius: 5
+  EscapeRadius: 9
+  RoamRadius: 4
+  Stamina: 10
+  ReelExhaustionPerSecond: 3
+  StruggleRecoveryPerSecond: 0.5
+  RopeMass: 1
+  CargoSize: 1
+  OfferingValue: 3
+  BioYield: 2
+  RareYield: 0
+  BodyScale: {x: 0.6, y: 0.55, z: 1.5}
+  IdleSeconds: 0.7
+  AlertSeconds: 0.35
+  RoamRetargetSeconds: 2.6
+  StruggleRetargetSeconds: 0.9
+  StrugglePulseSeconds: 2
+  StrugglePulseDuty: 0.4
+  LargeDiveStrength: 0.8
+  StruggleTurnJitter: 0.7
+  BurstSpeedMultiplier: 1.4
+  RestSpeedMultiplier: 0.55
+  TiredSpeedFraction: 0.35
+  MinimumWorkTension: 0.12
+  HookReactionSeconds: 0.15
+  EscapeCooldownSeconds: 3

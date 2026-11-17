@@ -17,6 +17,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         [Min(0f)] public float ReelExhaustionPerSecond = 3f;
         [Min(0f)] public float StruggleRecoveryPerSecond = 0.5f;
         [Min(0.1f)] public float RopeMass = 1f;
+        [Min(0f)] public float RopeDrag = .8f;
         [Min(1)] public int CargoSize = 1;
         [Min(0)] public int OfferingValue = 3;
         [Min(0)] public int BioYield = 2;
