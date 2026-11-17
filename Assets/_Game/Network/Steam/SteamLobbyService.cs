@@ -51,6 +51,12 @@ namespace UnderwaterFishing.Network.Steam
         private bool _networkSubscribed;
         private bool _closing;
         private bool _networkRequested;
+        private bool _creatingLobby;
+        private bool _joiningLobby;
+        private bool _leaveWhenRequestCompletes;
+        private bool _destroying;
+        private ulong _queuedLobby;
+        private float _queuedJoinDeadline;
         private float _connectionDeadline;
         private ulong _hostSteamId;
         private uint _effectiveAppId;
@@ -65,14 +71,22 @@ namespace UnderwaterFishing.Network.Steam
         {
             SubscribeNetwork();
             string[] arguments = Environment.GetCommandLineArgs();
-            for (int i = 0; i + 1 < arguments.Length; i++)
+            for (int i = 0; i < arguments.Length; i++)
             {
-                if (arguments[i].Equals("+connect_lobby", StringComparison.OrdinalIgnoreCase)
-                    && ulong.TryParse(arguments[i + 1], out ulong lobby))
+                if (arguments[i].Equals("+connect_lobby", StringComparison.OrdinalIgnoreCase))
                 {
+                    ulong lobby = 0;
+                    if (i + 1 < arguments.Length) ulong.TryParse(arguments[i + 1], out lobby);
                     JoinLobby(lobby);
-                    break;
+                    return; // Even a malformed invitation must not fall through into hosting or LAN.
                 }
+            }
+            if (Array.Exists(arguments, value => value.Equals("--raid-steam-host", StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!Application.isEditor && !Debug.isDebugBuild)
+                    SetStatus("Automatic Steam hosting is available only in development builds. Use Create Steam Lobby.");
+                else if (!Array.Exists(arguments, value => value.Equals("--raid-steam-smoke", StringComparison.OrdinalIgnoreCase)))
+                    CreateLobby();
             }
         }
 
@@ -89,6 +103,7 @@ namespace UnderwaterFishing.Network.Steam
             if (_connectionDeadline > 0f && Time.realtimeSinceStartup > _connectionDeadline)
                 CloseSession("Steam host connection timed out. Check the host is still online and retry.");
             RestoreOfflineTransportIfStopped();
+            JoinQueuedLobbyWhenStopped();
         }
 
         /// <summary>Optional menu initialization; this does not initialize or select the Steam transport.</summary>
@@ -157,6 +172,8 @@ namespace UnderwaterFishing.Network.Steam
         {
             if (!CanBeginSession() || !TryInitialize()) return;
             IsBusy = true;
+            _creatingLobby = true;
+            _leaveWhenRequestCompletes = false;
             _created.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypePublic, MaximumPlayers));
             SetStatus("Creating Steam lobby...");
         }
@@ -181,6 +198,8 @@ namespace UnderwaterFishing.Network.Steam
             if (id == 0) { SetStatus("Enter a valid Steam lobby ID."); return; }
             if (!CanBeginSession() || !TryInitialize()) return;
             IsBusy = true;
+            _joiningLobby = true;
+            _leaveWhenRequestCompletes = false;
             _joined.Set(SteamMatchmaking.JoinLobby(new CSteamID(id)));
             SetStatus("Joining Steam lobby...");
         }
@@ -188,6 +207,12 @@ namespace UnderwaterFishing.Network.Steam
         public void InviteFriends()
         {
             if (!Available || CurrentLobby == 0) { SetStatus("Create or join a Steam lobby first."); return; }
+            if (!SteamUtils.IsOverlayEnabled())
+            {
+                SetStatus("Steam overlay is not ready or is disabled. Retry shortly, or send your friend Lobby ID "
+                    + CurrentLobby + " and use Join by Steam Lobby ID.");
+                return;
+            }
             SteamFriends.ActivateGameOverlayInviteDialog(new CSteamID(CurrentLobby));
         }
 
@@ -195,13 +220,24 @@ namespace UnderwaterFishing.Network.Steam
 
         private void OnCreated(LobbyCreated_t result, bool failed)
         {
+            _creatingLobby = false;
+            if (_destroying)
+            {
+                // If another component owns SteamAPI, its callback pump can still deliver this result after scene teardown.
+                try { if (!failed && result.m_eResult == EResult.k_EResultOK) SteamMatchmaking.LeaveLobby(new CSteamID(result.m_ulSteamIDLobby)); }
+                finally { _created?.Dispose(); }
+                return;
+            }
             IsBusy = false;
             if (failed || result.m_eResult != EResult.k_EResultOK)
             {
+                _leaveWhenRequestCompletes = false;
                 SetStatus("Steam lobby creation failed: " + result.m_eResult);
                 return;
             }
             CurrentLobby = result.m_ulSteamIDLobby;
+            if (_leaveWhenRequestCompletes)
+            { _leaveWhenRequestCompletes = false; CloseSession("Left Steam lobby after the pending creation completed."); return; }
             _hostSteamId = SteamUser.GetSteamID().m_SteamID;
             CSteamID lobby = new(CurrentLobby);
             bool published = SteamMatchmaking.SetLobbyData(lobby, "game", GameIdentifier)
@@ -229,13 +265,23 @@ namespace UnderwaterFishing.Network.Steam
 
         private void OnJoined(LobbyEnter_t result, bool failed)
         {
+            _joiningLobby = false;
+            if (_destroying)
+            {
+                try { if (!failed && result.m_EChatRoomEnterResponse == (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess) SteamMatchmaking.LeaveLobby(new CSteamID(result.m_ulSteamIDLobby)); }
+                finally { _joined?.Dispose(); }
+                return;
+            }
             IsBusy = false;
             if (failed || result.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             {
+                _leaveWhenRequestCompletes = false;
                 SetStatus("Steam lobby join failed: " + result.m_EChatRoomEnterResponse);
                 return;
             }
             CurrentLobby = result.m_ulSteamIDLobby;
+            if (_leaveWhenRequestCompletes)
+            { _leaveWhenRequestCompletes = false; CloseSession("Left Steam lobby after the pending join completed."); return; }
             CSteamID lobby = new(CurrentLobby);
             if (!IsCompatible(lobby)
                 || !ulong.TryParse(SteamMatchmaking.GetLobbyData(lobby, "host"), out _hostSteamId)
@@ -280,9 +326,29 @@ namespace UnderwaterFishing.Network.Steam
 
         private void OnJoinRequested(GameLobbyJoinRequested_t request)
         {
-            if (CurrentLobby == request.m_steamIDLobby.m_SteamID) return;
-            // Changing an active session requires leaving it from the menu first.
-            JoinLobby(request.m_steamIDLobby.m_SteamID);
+            ulong lobby = request.m_steamIDLobby.m_SteamID;
+            if (_destroying || lobby == 0 || CurrentLobby == lobby) return;
+            if (IsBusy || _creatingLobby || _joiningLobby)
+            {
+                // Do not cancel a create/join whose returned lobby ID is not known yet.
+                SetStatus("Wait for the current Steam request, then accept the invitation again.");
+                return;
+            }
+            _queuedLobby = lobby;
+            _queuedJoinDeadline = Time.realtimeSinceStartup + 30f;
+            CloseSession("Leaving the current session to accept the Steam invitation...", true);
+            IsBusy = true;
+        }
+
+        private void JoinQueuedLobbyWhenStopped()
+        {
+            if (_queuedLobby == 0 || _destroying || _closing) return;
+            if (Time.realtimeSinceStartup > _queuedJoinDeadline)
+            { CloseSession("Could not stop the previous session in time. Accept the Steam invitation again."); return; }
+            if (!NetworkIsStopped()) return;
+            ulong lobby = _queuedLobby;
+            _queuedLobby = 0; _queuedJoinDeadline = 0; IsBusy = false;
+            JoinLobby(lobby);
         }
 
         private void OnMembershipChanged(LobbyChatUpdate_t update)
@@ -355,7 +421,15 @@ namespace UnderwaterFishing.Network.Steam
                 CloseSession("Steam connection closed. Session ended.");
             else if (state.ConnectionState == LocalConnectionState.Started)
             {
+                if (!Available || Transport == null || Manager.TransportManager.Transport is not RoutingTransport router
+                    || router.ActiveTransport != Transport || Transport.GetConnectionState(false) != LocalConnectionState.Started)
+                { CloseSession("Steam connection rejected: the selected transport is not the active FishySteamworks client."); return; }
+                ulong localId = SteamUser.GetSteamID().m_SteamID;
+                if (!SteamUser.BLoggedOn() || localId == 0 || !ulong.TryParse(SteamMatchmaking.GetLobbyData(new CSteamID(CurrentLobby), "host"), out ulong host)
+                    || host == 0 || host != _hostSteamId || SteamMatchmaking.GetLobbyOwner(new CSteamID(CurrentLobby)).m_SteamID != host)
+                { CloseSession("Steam connection rejected: lobby host or signed-in Steam identity changed."); return; }
                 _connectionDeadline = 0f;
+                Debug.Log($"RAID_STEAM_CONNECTED lobby={CurrentLobby} local={localId} host={host} transport=FishySteamworks");
                 SetStatus("Connected to Steam lobby " + CurrentLobby);
             }
         }
@@ -382,15 +456,23 @@ namespace UnderwaterFishing.Network.Steam
                 && !Manager.IsServerStarted && !Manager.IsClientStarted;
         }
 
-        private void CloseSession(string message)
+        private void CloseSession(string message, bool joinAnotherLobby = false)
         {
+            if (!joinAnotherLobby) { _queuedLobby = 0; _queuedJoinDeadline = 0; }
             if (_closing) return;
+            if ((_creatingLobby || _joiningLobby) && !_destroying)
+            {
+                // A canceled CallResult does not cancel Steam's operation. Keep its callback until we can leave the returned lobby.
+                _leaveWhenRequestCompletes = true;
+                SetStatus("Waiting for the pending Steam request to finish, then leaving its lobby.");
+                return;
+            }
             _closing = true;
-            bool ownedSession = _networkRequested || (CurrentLobby != 0 && Manager != null
+            bool ownedSession = joinAnotherLobby || _networkRequested || (CurrentLobby != 0 && Manager != null
                 && Manager.Initialized && Manager.TransportManager.Transport is RoutingTransport router
                 && router.ActiveTransport == Transport);
-            _created?.Cancel();
-            _joined?.Cancel();
+            if (!_creatingLobby) _created?.Cancel();
+            if (!_joiningLobby) _joined?.Cancel();
             _found?.Cancel();
             IsBusy = false;
             if (ownedSession && Manager != null && Manager.Initialized)
@@ -448,6 +530,8 @@ namespace UnderwaterFishing.Network.Steam
 
         private void OnDestroy()
         {
+            _destroying = true;
+            _queuedLobby = 0; _queuedJoinDeadline = 0;
             CloseSession("Steam session closed.");
             if (_networkSubscribed && Manager != null)
             {
@@ -455,8 +539,10 @@ namespace UnderwaterFishing.Network.Steam
                 Manager.ServerManager.OnServerConnectionState -= OnServerConnectionState;
                 Manager.ServerManager.OnRemoteConnectionState -= OnRemoteConnectionState;
             }
-            _created?.Dispose();
-            _joined?.Dispose();
+            // With a shared API, retain only in-flight lobby callbacks so their eventual result can leave the known lobby.
+            // When we own the API, Shutdown below ends this client's Steam API lifetime.
+            if (!_creatingLobby || _ownsSteamApi) _created?.Dispose();
+            if (!_joiningLobby || _ownsSteamApi) _joined?.Dispose();
             _found?.Dispose();
             _joinRequested?.Dispose();
             _membershipChanged?.Dispose();

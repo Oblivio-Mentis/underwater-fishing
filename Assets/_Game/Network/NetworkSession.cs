@@ -31,7 +31,10 @@ namespace UnderwaterFishing.Network
             Manager.ClientManager.OnClientConnectionState += ClientState;
             Manager.ServerManager.OnRemoteConnectionState += RemoteState;
             string[] args = System.Environment.GetCommandLineArgs();
-            bool steamRequested = System.Array.IndexOf(args, "+connect_lobby") >= 0 || System.Array.IndexOf(args, "--raid-steam-smoke") >= 0;
+            bool steamRequested = System.Array.Exists(args, value =>
+                value.Equals("+connect_lobby", System.StringComparison.OrdinalIgnoreCase)
+                || value.Equals("--raid-steam-smoke", System.StringComparison.OrdinalIgnoreCase)
+                || value.Equals("--raid-steam-host", System.StringComparison.OrdinalIgnoreCase));
             if (!steamRequested && System.Array.IndexOf(args, "--raid-host") >= 0) HostLan();
             int join = System.Array.IndexOf(args, "--raid-join");
             if (!steamRequested && join >= 0 && join + 1 < args.Length) JoinLan(args[join + 1]);
