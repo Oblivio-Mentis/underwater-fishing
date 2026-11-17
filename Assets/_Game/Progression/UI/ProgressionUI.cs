@@ -68,6 +68,7 @@ namespace UnderwaterFishing.Progression.UI
         {
             if (actor == null || !actor.IsClientStarted) { Close(); return; }
             var authority = NetworkProgression.Instance;
+            if (hud != null) hud.gameObject.SetActive(input == null || !input.MenuOpen);
             if (authority == null) { Close(); if (hud != null) hud.text = ""; ClearSonar(); return; }
             if (IsOpen && (input != null && input.MenuOpen || terminal == null || !authority.CanUse(actor, terminal.Kind, true))) Close();
             if (authority.State.Phase != ExpeditionPhase.Expedition || !actor.Diver.IsActive) ClearSonar();
@@ -76,7 +77,7 @@ namespace UnderwaterFishing.Progression.UI
             var cargo = NetworkCargoStation.Instance;
             int reserved = ProgressionModel.ReservedValue(cargo?.ProtectedHold);
             string result = authority.State.LastOffering == OfferingResult.Success ? "Последнее подношение принято. Следующая квота выросла." : "";
-            if (authority.State.Phase == ExpeditionPhase.Failure) result = "ЗАБЕГ ОКОНЧЕН\nE у экспедиционного терминала — новый забег";
+            if (authority.State.Phase == ExpeditionPhase.Failure) result = "ЗАБЕГ ОКОНЧЕН\nTab — начать новый забег";
             if (authority.State.Phase == ExpeditionPhase.Offering) result = $"ПОДНОШЕНИЕ: выберите рыбу у терминала\nДо проверки: {authority.State.OfferingSeconds:0} с";
             hud.text = $"Подношение {reserved}/{authority.State.Quota} · Сонар Q: {authority.Charges(actor.OwnerId)}\n" + StockText(authority) + "\n" + result;
             if (!IsOpen) return;

@@ -45,7 +45,11 @@ namespace UnderwaterFishing.Progression.Network
         private void PhaseChanged(ExpeditionPhase phase) { if (authority != null) authority.SetPhase(phase); }
         private void DiveStarted() { if (authority != null) authority.BeginExpedition(); }
         private void OfferingDue() { if (authority != null) authority.SetPhase(ExpeditionPhase.Offering); }
-        private void RunReset() { if (authority != null) authority.ResetRun(); }
+        private void RunReset()
+        {
+            if (authority == null) return;
+            authority.ResetRun(); ApplyForNextDive?.Invoke(authority.Effects);
+        }
         private void OnDestroy()
         {
             if (session != null && session.Manager != null) session.Manager.ServerManager.OnServerConnectionState -= ServerState;

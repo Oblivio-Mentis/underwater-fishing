@@ -6,6 +6,7 @@ using UnderwaterFishing.Fishing.Tether;
 using UnderwaterFishing.Player;
 using UnderwaterFishing.Cargo.Network;
 using UnderwaterFishing.Expedition.Network;
+using UnderwaterFishing.Progression.Network;
 using UnityEngine;
 
 namespace UnderwaterFishing.Fishing.Network
@@ -62,7 +63,7 @@ namespace UnderwaterFishing.Fishing.Network
             if (diver.AutomationControlled) return;
             if (input.FirePressed) Fire();
             if (input.ReleasePressed) { if (cargo != null && cargo.HasLoot) cargo.ReleaseLoot(); else Release(); }
-            if (input.InteractPressed && !(GetComponent<DiverExpedition>()?.TryInteract() ?? false) && (cargo == null || !cargo.TryInteract())) PickUp();
+            if (input.InteractPressed && !(GetComponent<DiverProgression>()?.TryInteract() ?? false) && !(GetComponent<DiverExpedition>()?.TryInteract() ?? false) && (cargo == null || !cargo.TryInteract())) PickUp();
             if (Time.unscaledTime >= nextActions)
             {
                 nextActions = Time.unscaledTime + .1f;

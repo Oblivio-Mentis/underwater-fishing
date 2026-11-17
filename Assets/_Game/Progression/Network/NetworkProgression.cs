@@ -108,13 +108,29 @@ namespace UnderwaterFishing.Progression.Network
             return false;
         }
         [Server] public bool Process(DiverProgression actor, ulong id)
-        { return CanUse(actor, ProgressionTerminalKind.Processing) && model.TryProcess(CargoAdapter.Create(), id); }
+        {
+            bool ok = CanUse(actor, ProgressionTerminalKind.Processing) && model.TryProcess(CargoAdapter.Create(), id);
+            if (ok) Debug.Log($"RAID_PROCESS actor={actor.ObjectId} item={id} revision={model.Revision}");
+            return ok;
+        }
         [Server] public bool Reserve(DiverProgression actor, ulong id, bool reserved)
-        { return CanUse(actor, ProgressionTerminalKind.Offering) && model.TryReserve(CargoAdapter.Create(), id, reserved); }
+        {
+            bool ok = CanUse(actor, ProgressionTerminalKind.Offering) && model.TryReserve(CargoAdapter.Create(), id, reserved);
+            if (ok) Debug.Log($"RAID_RESERVE actor={actor.ObjectId} item={id} reserved={reserved}");
+            return ok;
+        }
         [Server] public bool Buy(DiverProgression actor, CrewUpgrade upgrade, int expectedLevel, uint expectedRevision)
-        { return CanUse(actor, ProgressionTerminalKind.Workshop) && model.TryBuy(upgrade, expectedLevel, expectedRevision); }
+        {
+            bool ok = CanUse(actor, ProgressionTerminalKind.Workshop) && model.TryBuy(upgrade, expectedLevel, expectedRevision);
+            if (ok) Debug.Log($"RAID_UPGRADE actor={actor.ObjectId} upgrade={upgrade} level={model.Level(upgrade)}");
+            return ok;
+        }
         [Server] public bool CraftSonar(DiverProgression actor, int expectedCharges, uint expectedRevision)
-        { return CanUse(actor, ProgressionTerminalKind.Workshop) && model.TryCraftSonar(actor.OwnerId, expectedCharges, expectedRevision); }
+        {
+            bool ok = CanUse(actor, ProgressionTerminalKind.Workshop) && model.TryCraftSonar(actor.OwnerId, expectedCharges, expectedRevision);
+            if (ok) Debug.Log($"RAID_SONAR_CRAFT actor={actor.ObjectId} charges={model.Charges(actor.OwnerId)}");
+            return ok;
+        }
         [Server] public bool SubmitOffering(DiverProgression actor, uint expectedRevision)
         {
             var cargo = CargoAdapter.Create();
@@ -136,7 +152,9 @@ namespace UnderwaterFishing.Progression.Network
             foreach (var loot in NetworkLoot.All)
                 if (loot.IsServerStarted && loot.State.HolderId < 0 && (loot.transform.position - origin).sqrMagnitude <= range * range)
                     hits.Add(new SonarContact { Position = loot.transform.position, Name = loot.State.Item.Name });
-            contacts = hits.ToArray(); return true;
+            contacts = hits.ToArray();
+            Debug.Log($"RAID_SONAR actor={actor.ObjectId} contacts={contacts.Length} charges={model.Charges(actor.OwnerId)}");
+            return true;
         }
         [Server] public void ResolveOffering()
         {

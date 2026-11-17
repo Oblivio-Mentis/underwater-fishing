@@ -35,7 +35,7 @@ namespace UnderwaterFishing.Editor
             world.StationPrefab = assets.Station; world.ScrapPrefab = assets.Scrap; world.ElectronicsPrefab = assets.Electronics;
             Shape("Cargo hoist", new Vector3(4, -5.2f, 6), new Vector3(.3f, 3, .3f), Material("Hull", Color.gray));
             Shape("Protected cargo hold", new Vector3(4, -8, 7.8f), new Vector3(3, .3f, 2), Material("CargoHold", new Color(.3f, .4f, .65f)));
-            Sign("ГРУЗОВОЙ ОТСЕК\nЗащищённый улов · переработка на базе", new Vector3(4, -6, 7.8f), Quaternion.Euler(0, 180, 0), Color.cyan);
+            Sign("ГРУЗОВОЙ ОТСЕК\nЗащищённый улов · переработка на базе", new Vector3(4, -6, 7.8f), Quaternion.identity, Color.cyan);
         }
         private static NetworkObject CargoStationPrefab(CargoSettings balance)
         {

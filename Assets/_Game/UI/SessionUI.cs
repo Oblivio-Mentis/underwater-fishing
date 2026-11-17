@@ -6,6 +6,8 @@ using UnderwaterFishing.Fishing.Creatures;
 using UnderwaterFishing.Cooperation;
 using UnderwaterFishing.Diving;
 using UnderwaterFishing.Cargo.Network;
+using UnderwaterFishing.Expedition.Network;
+using UnderwaterFishing.Progression.Network;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
@@ -128,6 +130,8 @@ namespace UnderwaterFishing.UI
             var station = NetworkCargoStation.Instance;
             if (station != null) fishingHud.text += $"\nКонтейнер: {station.State.State} · {station.State.UsedCapacity}/{station.State.Capacity} · Отсек {station.State.HoldCount}";
             if (cargo != null && cargo.InteractionHint.Length > 0) fishingHud.text += "\n" + cargo.InteractionHint;
+            if (DiverExpedition.Local != null && DiverExpedition.Local.InteractionHint.Length > 0) fishingHud.text += "\n" + DiverExpedition.Local.InteractionHint;
+            if (DiverProgression.Local != null && DiverProgression.Local.InteractionHint.Length > 0) fishingHud.text += "\n" + DiverProgression.Local.InteractionHint;
             if (f.HelpTargetId >= 0) fishingHud.text += "\nПомогаете удерживать напарника";
             fishingHud.color = f.NormalizedTension > .8f ? new Color(1, .5f, .2f) : new Color(.7f, 1, .9f);
         }

@@ -21,14 +21,15 @@ namespace UnderwaterFishing.Progression.Network
         {
             if (!IsOwner) return;
             Local = this; input = FindAnyObjectByType<DiverInput>();
+            if (input != null) input.CloseUiRequested += Close;
             panel = new GameObject("Progression UI").AddComponent<ProgressionUI>(); panel.Initialize(this, input);
         }
         public override void OnStopClient()
-        { Close(); if (panel != null) Destroy(panel.gameObject); if (Local == this) Local = null; }
+        { Close(); if (input != null) input.CloseUiRequested -= Close; if (panel != null) Destroy(panel.gameObject); if (Local == this) Local = null; }
         public override void OnStopServer() { NetworkProgression.Instance?.RemoveCrew(OwnerId); }
         private void Update()
         {
-            if (IsOwner && IsClientStarted && input != null && input.SonarPressed && NetworkProgression.Instance != null)
+            if (IsOwner && IsClientStarted && !Diver.AutomationControlled && input != null && input.SonarPressed && NetworkProgression.Instance != null)
                 UseSonar(NetworkProgression.Instance.Charges(OwnerId));
         }
         public bool TryInteract()

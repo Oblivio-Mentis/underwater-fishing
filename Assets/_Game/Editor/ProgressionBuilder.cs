@@ -34,6 +34,7 @@ namespace UnderwaterFishing.Editor
             terminal.AddComponent<ProgressionTerminal>().Kind = kind;
             var box = terminal.AddComponent<BoxCollider>(); box.size = new Vector3(1.1f, .6f, .08f);
             var panel = Shape(title, Vector3.zero, box.size, Material("Progression" + kind, color, true), parent: terminal.transform);
+            panel.transform.localPosition = Vector3.zero;
             Object.DestroyImmediate(panel.GetComponent<Collider>());
             var label = new GameObject("Terminal label", typeof(TextMesh)).GetComponent<TextMesh>(); label.transform.SetParent(terminal.transform, false);
             label.transform.localPosition = new Vector3(0, 0, -.06f); label.fontSize = 32; label.characterSize = .025f;
