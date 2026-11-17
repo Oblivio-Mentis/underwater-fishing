@@ -15,6 +15,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         [Min(0.1f)] public float RoamRadius = 7f;
         [Min(0.01f)] public float Stamina = 12f;
         [Min(0f)] public float ReelExhaustionPerSecond = 3f;
+        [Range(.1f, 1f)] public float ReelWorkExponent = .5f;
         [Min(0f)] public float StruggleRecoveryPerSecond = 0.5f;
         [Min(0.1f)] public float RopeMass = 1f;
         [Min(0f)] public float RopeDrag = .8f;
@@ -23,6 +24,9 @@ namespace UnderwaterFishing.Fishing.Creatures
         [Min(0)] public int BioYield = 2;
         [Min(0)] public int RareYield;
         public Vector3 BodyScale = new Vector3(0.5f, 0.4f, 1.2f);
+        [Min(.5f)] public float CarryForwardDistance = 2.2f;
+        public float CarryDownOffset = .5f;
+        public float CarrySideOffset = .55f;
 
         [Header("Behaviour timing and feel")]
         [Min(0f)] public float IdleSeconds = 0.7f;

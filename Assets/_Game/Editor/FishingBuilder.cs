@@ -26,12 +26,15 @@ namespace UnderwaterFishing.Editor
             balance.Tether = tether; EditorUtility.SetDirty(balance);
             var small = Asset<FishSpecies>("SmallFish");
             small.DisplayName = "Рифовая рыба"; small.IsLarge = false;
-            small.Stamina = 10; small.StruggleSpeed = 1.8f; small.RopeMass = 1;
+            small.Stamina = 6; small.StruggleSpeed = 1.8f; small.RopeMass = 1;
+            small.MinimumWorkTension = .005f; small.ReelExhaustionPerSecond = 4; small.StruggleRecoveryPerSecond = .15f;
             small.BodyScale = new Vector3(.6f, .55f, 1.5f); small.RoamRadius = 4;
             var large = Asset<FishSpecies>("LargeFish");
             large.DisplayName = "Глубинный таран"; large.IsLarge = true;
             large.Stamina = 35; large.StruggleSpeed = 4.2f; large.RopeMass = 6;
+            large.MinimumWorkTension = .02f;
             large.BodyScale = new Vector3(1.4f, 1.1f, 3.5f); large.RoamRadius = 8;
+            large.CarryForwardDistance = 3.2f;
             large.BurstSpeedMultiplier = 1.8f; large.RestSpeedMultiplier = .3f;
             large.CargoSize = 4; large.OfferingValue = 12; large.BioYield = 8; large.RareYield = 2;
             EditorUtility.SetDirty(small); EditorUtility.SetDirty(large);
@@ -77,7 +80,7 @@ namespace UnderwaterFishing.Editor
             var sound = go.AddComponent<AudioSource>(); sound.spatialBlend = 1; sound.maxDistance = 30; sound.dopplerLevel = 0;
             var driver = go.AddComponent<FsmPresentationDriver>(); driver.profile = profile; driver.audioSource = sound;
             go.AddComponent<FishFeedback>();
-            var prefab = PrefabUtility.SaveAsPrefabAsset(go, Root + "/Prefabs/" + name + ".prefab");
+            var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/" + name + ".prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
         private static Material UnlitRope()
@@ -91,6 +94,7 @@ namespace UnderwaterFishing.Editor
         private static void ConfigureHarpoon(GameObject diver, Camera camera, FishBuildAssets data)
         {
             diver.AddComponent<DiverFishing>();
+            diver.AddComponent<UnderwaterFishing.Fishing.Debugging.FishingTestBot>();
             var weapon = new GameObject("Harpoon").transform; weapon.SetParent(camera.transform, false); weapon.localPosition = new Vector3(.28f, -.23f, .65f);
             var barrel = GameObject.CreatePrimitive(PrimitiveType.Cylinder); barrel.name = "Barrel"; barrel.transform.SetParent(weapon, false);
             barrel.transform.localRotation = Quaternion.Euler(90, 0, 0); barrel.transform.localScale = new Vector3(.08f, .38f, .08f);

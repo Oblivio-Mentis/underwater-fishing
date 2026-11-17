@@ -21,6 +21,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         protected abstract void Simulate(FishContext context, float dt);
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishIdle : FishBehaviour
     {
         public override int StateId => (int)FishState.Idle;
@@ -32,6 +33,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishRoam : FishBehaviour
     {
         public override int StateId => (int)FishState.Roam;
@@ -47,6 +49,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishAlerted : FishBehaviour
     {
         public override int StateId => (int)FishState.Alerted;
@@ -57,6 +60,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishFlee : FishBehaviour
     {
         public override int StateId => (int)FishState.Flee;
@@ -70,6 +74,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishHooked : FishBehaviour
     {
         public override int StateId => (int)FishState.Hooked;
@@ -79,6 +84,7 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishStruggling : FishBehaviour
     {
         public override int StateId => (int)FishState.Struggling;
@@ -86,7 +92,8 @@ namespace UnderwaterFishing.Fishing.Creatures
         protected override void Simulate(FishContext context, float dt)
         {
             if (context.Reeling && context.Tension >= context.Species.MinimumWorkTension)
-                context.Stamina = Mathf.Max(0f, context.Stamina - Mathf.Max(0f, context.Species.ReelExhaustionPerSecond) * context.Tension * dt);
+                context.Stamina = Mathf.Max(0f, context.Stamina - Mathf.Max(0f, context.Species.ReelExhaustionPerSecond) *
+                    Mathf.Pow(context.Tension, Mathf.Clamp(context.Species.ReelWorkExponent, .1f, 1f)) * dt);
             else context.Recover(dt);
             if (context.Stamina <= 0f) { context.Transition(FishState.Exhausted); return; }
 
@@ -109,18 +116,21 @@ namespace UnderwaterFishing.Fishing.Creatures
         }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishExhausted : FishBehaviour
     {
         public override int StateId => (int)FishState.Exhausted;
         protected override void Simulate(FishContext context, float dt) { }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishCaptured : FishBehaviour
     {
         public override int StateId => (int)FishState.Captured;
         protected override void Simulate(FishContext context, float dt) { }
     }
 
+    [UniversalFsmStateMetadata("Fishing")]
     internal sealed class FishEscaped : FishBehaviour
     {
         public override int StateId => (int)FishState.Escaped;

@@ -31,6 +31,7 @@ namespace UnderwaterFishing.Fishing.Network
         private FishingSnapshot current;
         private bool reeling, helping;
         private float lastActions, nextActions, nextShot;
+        private int previousHelpers;
         public NetworkDiver Diver => diver;
         public FishingSnapshot State => snapshot.Value;
         public NetworkFish CurrentFish => NetworkFish.Find(State.FishId);
@@ -88,7 +89,7 @@ namespace UnderwaterFishing.Fishing.Network
         [ServerRpc] public void Release() { ReleaseFish(HarpoonStatus.Released); }
         [ServerRpc] public void PickUp()
         {
-            if (!diver.IsActive) return;
+            if (!diver.IsActive || current.Status == HarpoonStatus.Carried) return;
             if (fish == null)
             {
                 if (!Physics.Raycast(diver.AimOrigin, diver.AimDirection, out var hit, diver.Balance.FishPickupDistance, ~0, QueryTriggerInteraction.Collide)) return;
@@ -124,6 +125,8 @@ namespace UnderwaterFishing.Fishing.Network
                 var forces = TetherSimulation.Step(ref tether, diver.Balance.Tether, diver.AimOrigin, fish.transform.position,
                     diver.ServerVelocity, fish.ServerVelocity, reeling, helpers, 1f, Time.fixedDeltaTime);
                 current.Helpers = Mathf.Min(helpers, diver.Balance.Tether.MaxAssistants);
+                if (current.Helpers > 0 && previousHelpers == 0) Debug.Log($"RAID_ASSIST diver={ObjectId} fish={fish.ObjectId} helpers={current.Helpers}");
+                previousHelpers = current.Helpers;
                 diver.AddExternalVelocity(forces.PlayerAcceleration * Time.fixedDeltaTime);
                 fish.Pull(forces.FishAcceleration, Time.fixedDeltaTime);
                 if (forces.Broke) ReleaseFish(HarpoonStatus.Broken);
@@ -157,8 +160,9 @@ namespace UnderwaterFishing.Fishing.Network
         }
         [Server] public bool TakeCatch(out NetworkFish catchFish)
         {
-            catchFish = fish;
+            catchFish = null;
             if (fish == null || current.Status != HarpoonStatus.Carried) return false;
+            catchFish = fish;
             fish = null; current.FishId = -1; current.Status = HarpoonStatus.Ready;
             diver.CarrySpeedMultiplier = 1; snapshot.Value = current; return true;
         }

@@ -20,15 +20,20 @@ MonoBehaviour:
   DetectionRadius: 5
   EscapeRadius: 9
   RoamRadius: 4
-  Stamina: 10
-  ReelExhaustionPerSecond: 3
-  StruggleRecoveryPerSecond: 0.5
+  Stamina: 6
+  ReelExhaustionPerSecond: 4
+  ReelWorkExponent: 0.5
+  StruggleRecoveryPerSecond: 0.15
   RopeMass: 1
+  RopeDrag: 0.8
   CargoSize: 1
   OfferingValue: 3
   BioYield: 2
   RareYield: 0
   BodyScale: {x: 0.6, y: 0.55, z: 1.5}
+  CarryForwardDistance: 2.2
+  CarryDownOffset: 0.5
+  CarrySideOffset: 0.55
   IdleSeconds: 0.7
   AlertSeconds: 0.35
   RoamRetargetSeconds: 2.6
@@ -40,6 +45,6 @@ MonoBehaviour:
   BurstSpeedMultiplier: 1.4
   RestSpeedMultiplier: 0.55
   TiredSpeedFraction: 0.35
-  MinimumWorkTension: 0.12
+  MinimumWorkTension: 0.005
   HookReactionSeconds: 0.15
   EscapeCooldownSeconds: 3

@@ -113,6 +113,7 @@ namespace UnderwaterFishing.Player
         private void LateUpdate()
         {
             if (IsOwner && IsClientStarted) eyes.transform.rotation = Quaternion.Euler(pitch, yaw, 0);
+            else if (IsClientStarted) eyes.transform.rotation = Quaternion.Euler(State.Pitch, State.Yaw, 0);
         }
 
         private void FixedUpdate()

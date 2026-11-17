@@ -317,6 +317,7 @@ GameObject:
   - component: {fileID: 1607564505402278593}
   - component: {fileID: 6841842438982003659}
   - component: {fileID: 3716866095754129754}
+  - component: {fileID: 3510296818662800488}
   - component: {fileID: 4650326338220974139}
   m_Layer: 0
   m_Name: Diver
@@ -399,7 +400,7 @@ MonoBehaviour:
   _teleportThreshold: 1
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 0
+  <AssetPathHash>k__BackingField: 3857648657720975939
   SceneId: 0
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
@@ -457,6 +458,19 @@ MonoBehaviour:
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1607564505402278593}
   _networkObjectCache: {fileID: 0}
+--- !u!114 &3510296818662800488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0a267e820dc5163b2c8176575897f92, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Fishing.Debugging.FishingTestBot
+  DeadlineSeconds: 90
 --- !u!114 &4650326338220974139
 MonoBehaviour:
   m_ObjectHideFlags: 0

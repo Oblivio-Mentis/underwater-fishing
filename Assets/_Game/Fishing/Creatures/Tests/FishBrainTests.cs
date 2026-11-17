@@ -20,7 +20,7 @@ namespace UnderwaterFishing.Fishing.Creatures.Tests
         [TearDown]
         public void TearDown()
         {
-            brain.Dispose();
+            brain?.Dispose();
             Object.DestroyImmediate(species);
         }
         private Vector3 Step(float dt = 0.05f, bool reeling = false, float tension = 0f, bool nearby = true)
@@ -77,6 +77,20 @@ namespace UnderwaterFishing.Fishing.Creatures.Tests
             Assert.That(brain.CurrentState, Is.EqualTo(FishState.Captured));
             Assert.That(brain.Capture(), Is.False);
             Assert.That(Step(), Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void LowButTautWorkingLoadCanExhaustTheConfiguredSmallFish()
+        {
+            species.MinimumWorkTension = .005f;
+            species.Stamina = 6f;
+            species.ReelExhaustionPerSecond = 4f;
+            species.StruggleRecoveryPerSecond = .15f;
+            brain.Dispose();
+            brain = new FishBrain(species, home, 27);
+            brain.TryHook();
+            for (int i = 0; i < 1200 && !brain.IsExhausted; i++) Step(.05f, true, .01f);
+            Assert.That(brain.IsExhausted, Is.True);
         }
 
         [Test]

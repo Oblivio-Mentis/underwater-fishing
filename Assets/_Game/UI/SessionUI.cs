@@ -114,6 +114,7 @@ namespace UnderwaterFishing.UI
         }
         private void RefreshLobbies()
         {
+            if (lobbyList == null || steam == null) return;
             foreach (Transform child in lobbyList) Destroy(child.gameObject);
             int count = 0;
             foreach (var lobby in steam.Lobbies)
@@ -160,5 +161,7 @@ namespace UnderwaterFishing.UI
         }
         private static void Fixed(GameObject go, float height) => go.AddComponent<LayoutElement>().preferredHeight = height;
         private void OnDestroy() { if (steam != null) steam.Changed -= RefreshLobbies; }
+        private void OnEnable() { if (steam != null) steam.Changed += RefreshLobbies; }
+        private void OnDisable() { if (steam != null) steam.Changed -= RefreshLobbies; }
     }
 }

@@ -22,13 +22,18 @@ MonoBehaviour:
   RoamRadius: 8
   Stamina: 35
   ReelExhaustionPerSecond: 3
+  ReelWorkExponent: 0.5
   StruggleRecoveryPerSecond: 0.5
   RopeMass: 6
+  RopeDrag: 0.8
   CargoSize: 4
   OfferingValue: 12
   BioYield: 8
   RareYield: 2
   BodyScale: {x: 1.4, y: 1.1, z: 3.5}
+  CarryForwardDistance: 3.2
+  CarryDownOffset: 0.5
+  CarrySideOffset: 0.55
   IdleSeconds: 0.7
   AlertSeconds: 0.35
   RoamRetargetSeconds: 2.6
@@ -40,6 +45,6 @@ MonoBehaviour:
   BurstSpeedMultiplier: 1.8
   RestSpeedMultiplier: 0.3
   TiredSpeedFraction: 0.35
-  MinimumWorkTension: 0.12
+  MinimumWorkTension: 0.02
   HookReactionSeconds: 0.15
   EscapeCooldownSeconds: 3

@@ -25,13 +25,14 @@ namespace UnderwaterFishing.Fishing.Network
         private FishBrain brain;
         private DiverFishing holder;
         private Vector3 ropeVelocity;
-        private Collider hitbox;
+        private CapsuleCollider hitbox;
+        private readonly RaycastHit[] obstacles = new RaycastHit[12];
         public FishSnapshot State => snapshot.Value;
         public FishSpecies Species => species;
         public Vector3 ServerVelocity { get; private set; }
         public bool IsExhausted => brain != null && brain.IsExhausted;
         public void Configure(FishSpecies definition) => species = definition;
-        private void Awake() { hitbox = GetComponent<Collider>(); }
+        private void Awake() { hitbox = GetComponent<CapsuleCollider>(); }
         public override void OnStartNetwork() { All.Add(this); }
         public override void OnStopNetwork() { All.Remove(this); }
         public override void OnStartServer()
@@ -57,7 +58,11 @@ namespace UnderwaterFishing.Fishing.Network
             {
                 hitbox.isTrigger = true;
                 if (holder != null)
-                    transform.position = holder.Diver.AimOrigin + holder.Diver.AimDirection * 1.8f + holder.Diver.transform.right * .55f;
+                {
+                    transform.position = holder.Diver.AimOrigin + holder.Diver.AimDirection * species.CarryForwardDistance +
+                        holder.Diver.transform.right * species.CarrySideOffset - Vector3.up * species.CarryDownOffset;
+                    transform.rotation = Quaternion.LookRotation(holder.Diver.transform.right, Vector3.up);
+                }
                 ServerVelocity = (transform.position - before) / dt;
                 Publish();
                 return;
@@ -76,9 +81,18 @@ namespace UnderwaterFishing.Fishing.Network
             }
             Vector3 desired = brain.Step(dt, before, nearest, nearby, holder != null && holder.Reeling, holder == null ? 0 : holder.NormalizedTension);
             Vector3 displacement = (desired + ropeVelocity) * dt;
-            float radius = Mathf.Max(.15f, species.BodyScale.x * .3f);
-            if (displacement.sqrMagnitude > .000001f && Physics.SphereCast(before, radius, displacement.normalized, out var obstacle, displacement.magnitude, ~0, QueryTriggerInteraction.Ignore))
-                displacement = displacement.normalized * Mathf.Max(0, obstacle.distance - .03f);
+            if (displacement.sqrMagnitude > .000001f)
+            {
+                Vector3 axis = displacement.normalized;
+                float half = Mathf.Max(0, hitbox.height * .5f - hitbox.radius);
+                Vector3 center = transform.TransformPoint(hitbox.center);
+                int count = Physics.CapsuleCastNonAlloc(center - axis * half, center + axis * half, hitbox.radius, axis, obstacles,
+                    displacement.magnitude, ~0, QueryTriggerInteraction.Ignore);
+                float travel = displacement.magnitude;
+                for (int i = 0; i < count; i++)
+                    if (obstacles[i].collider != hitbox) travel = Mathf.Min(travel, Mathf.Max(0, obstacles[i].distance - .03f));
+                displacement = axis * travel;
+            }
             Vector3 next = before + displacement;
             next.y = Mathf.Clamp(next.y, waterFloor, waterCeiling);
             next.x = Mathf.Clamp(next.x, -waterRadius, waterRadius);

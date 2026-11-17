@@ -19,11 +19,15 @@ namespace UnderwaterFishing.Fishing.Debugging
         private float aimYaw, aimPitch;
         private int waypoint;
         private bool helper, configured, finished, reel;
+        private string captureFolder;
+        private bool capturedFight, capturedCatch;
 
         private void Awake()
         {
             if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild) { enabled = false; return; }
             string[] args = System.Environment.GetCommandLineArgs();
+            int capture = System.Array.IndexOf(args, "--raid-capture-directory");
+            if (capture >= 0 && capture + 1 < args.Length) captureFolder = args[capture + 1];
             for (int i = 0; i + 1 < args.Length; i++)
             {
                 if (args[i] != "--raid-fishing-bot") continue;
@@ -50,6 +54,11 @@ namespace UnderwaterFishing.Fishing.Debugging
             }
             if (!diver.IsActive) { Finish(false, "diver incapacitated or dead"); return; }
             if (now - started >= DeadlineSeconds) { Finish(false, "deadline"); return; }
+            if (captureFolder != null)
+            {
+                if (!capturedFight && fishing.State.Connected) { capturedFight = true; Capture("fight"); }
+                if (!capturedCatch && fishing.State.Status == HarpoonStatus.Carried) { capturedCatch = true; Capture("caught"); }
+            }
 
             Vector3 worldMovement = Vector3.zero;
             Vector3 lookTarget = diver.State.Position + Quaternion.Euler(0f, aimYaw, 0f) * Vector3.forward * 5f;
@@ -86,6 +95,11 @@ namespace UnderwaterFishing.Fishing.Debugging
         }
 
         private string Role => helper ? "helper" : "hunter";
+        private void Capture(string phase)
+        {
+            System.IO.Directory.CreateDirectory(captureFolder);
+            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(captureFolder, "fishing-" + phase + ".png"));
+        }
         private Vector3 EyePosition => diver.State.Position + Vector3.up * 0.6f;
         private Vector3 MoveToward(Vector3 point)
         {

@@ -15,6 +15,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
+using GameKit.Dependencies.Utilities;
 
 namespace UnderwaterFishing.Editor
 {
@@ -23,6 +24,31 @@ namespace UnderwaterFishing.Editor
         private const string Root = "Assets/_Game";
         [MenuItem("Underwater Fishing/Create Foundation Scenes")]
         public static void Create()
+        {
+            var existing = new System.Collections.Generic.List<GameObject>();
+            foreach (string guid in AssetDatabase.FindAssets("t:Prefab", new[] { Root + "/Prefabs" }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab.GetComponent<NetworkObject>() == null) continue;
+                SetPrefabHash(prefab, path); existing.Add(prefab);
+            }
+            foreach (var prefab in existing) PrefabUtility.SavePrefabAsset(prefab);
+            CreateContent();
+            AssetDatabase.SaveAssets();
+        }
+        private static void SetPrefabHash(GameObject go, string path)
+        {
+            var normalized = new System.Text.StringBuilder();
+            foreach (char c in (path + go.name).ToLowerInvariant())
+                if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) normalized.Append(c);
+            var networkObject = go.GetComponent<NetworkObject>();
+            networkObject.SetAssetPathHash(normalized.ToString().GetStableHashU64());
+            EditorUtility.SetDirty(networkObject);
+        }
+        private static GameObject SaveNetworkPrefab(GameObject go, string path)
+        { SetPrefabHash(go, path); return PrefabUtility.SaveAsPrefabAsset(go, path); }
+        private static void CreateContent()
         {
             if (EditorApplication.isPlaying) throw new System.InvalidOperationException("Stop play before rebuilding scenes.");
             Directory.CreateDirectory(Root + "/Scenes");
@@ -121,6 +147,7 @@ namespace UnderwaterFishing.Editor
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = RenderSettings.fogColor;
             session.LobbyCamera = camera;
             PlayerSettings.companyName = "Oblivio Mentis"; PlayerSettings.productName = "Underwater Fishing";
+            PlayerSettings.bundleVersion = "0.0.1-raid003";
             PlayerSettings.runInBackground = true;
             PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -166,7 +193,7 @@ namespace UnderwaterFishing.Editor
             go.AddComponent<NetworkObject>();
             go.AddComponent<NetworkDiver>().Configure(balance, camera, mesh);
             ConfigureHarpoon(go, camera, fishing);
-            var prefab = PrefabUtility.SaveAsPrefabAsset(go, Root + "/Prefabs/Diver.prefab");
+            var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
         private static Material Material(string name, Color color, bool emission = false)
@@ -183,6 +210,12 @@ namespace UnderwaterFishing.Editor
             var go = GameObject.CreatePrimitive(type); go.name = name;
             if (parent != null) go.transform.SetParent(parent);
             go.transform.position = p; go.transform.localScale = size; go.GetComponent<Renderer>().sharedMaterial = material;
+            if (type == PrimitiveType.Sphere && parent == null)
+            {
+                // SphereCollider uses the largest scale axis; static cave rocks need the visible mesh shape.
+                Object.DestroyImmediate(go.GetComponent<SphereCollider>());
+                go.AddComponent<MeshCollider>().sharedMesh = go.GetComponent<MeshFilter>().sharedMesh;
+            }
             return go;
         }
         private static void Sign(string text, Vector3 p, Quaternion rotation, Color color)
@@ -201,6 +234,11 @@ namespace UnderwaterFishing.Editor
                 options = BuildOptions.Development });
             if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded) throw new System.Exception("Windows build failed: " + report.summary.result);
             Debug.Log("RAID_BUILD_SUCCEEDED " + report.summary.totalSize);
+        }
+        public static void BuildFromSource()
+        {
+            Create();
+            BuildWindows();
         }
     }
 }

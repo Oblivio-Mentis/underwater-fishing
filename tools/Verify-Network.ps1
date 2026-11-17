@@ -7,6 +7,9 @@ $raidRoot = Split-Path -Parent $PSScriptRoot
 $raidBinary = (Resolve-Path -LiteralPath (Join-Path $raidRoot $BuildPath)).Path
 $raidResults = Join-Path $raidRoot ".studioigor/test-results/network-$Players"
 New-Item -ItemType Directory -Force -Path $raidResults | Out-Null
+foreach ($raidOld in Get-ChildItem -LiteralPath $raidResults -File) {
+    if ($raidOld.Name -match '^player-[0-4]\.log$|^result\.json$') { Remove-Item -LiteralPath $raidOld.FullName }
+}
 $raidProcesses = @()
 try {
     for ($raidIndex = 0; $raidIndex -lt $Players; $raidIndex++) {

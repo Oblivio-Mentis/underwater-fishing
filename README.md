@@ -17,6 +17,7 @@
 - Разработка: RAID-001…RAID-009, отдельные коммиты и PR. Ветка main требует ревью.
 - Исходная презентация идеи: [архив](docs/CONCEPT-ORIGINAL.md).
 - Фактическое состояние: [.studioigor/STATE.md](.studioigor/STATE.md).
+- Полигон охоты и сетевые проверки: [RAID-003](docs/RAID-003-REPORT.md). Сборка: `powershell -NoProfile -ExecutionPolicy Bypass -File tools/Build-Windows.ps1` при закрытом Editor.
 - Unity: открыть Assets/_Game/Scenes/UnderwaterFishing.unity после генерации через меню
   Underwater Fishing → Create Foundation Scenes. Сборка: Build Windows Development в том же меню.
 - Steam App ID задаётся через --steam-app-id или SteamAppId. Тестовый 480 доступен только
