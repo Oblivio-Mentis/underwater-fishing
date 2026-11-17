@@ -1,5 +1,7 @@
 # RAID-004 — спасение и Steam
 
+Git: код `13a4812`; [draft PR #3](https://github.com/Oblivio-Mentis/underwater-fishing/pull/3), база `raid/003-fishing`. main не объединялся.
+
 ## Реализовано
 
 - Серверный завал: движение блокируется, взгляд и расход кислорода сохраняются; F подаёт сигнал помощи.
