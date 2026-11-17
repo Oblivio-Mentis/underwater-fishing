@@ -1,5 +1,7 @@
 # RAID-005 — груз и лебёдка
 
+Git: код `edd3a6c`; [draft PR #4](https://github.com/Oblivio-Mentis/underwater-fishing/pull/4), база `raid/004-cooperation`. main не объединялся.
+
 ## Реализовано
 
 - Конечная вместимость контейнера, серверная загрузка рыбы и найденных предметов.
