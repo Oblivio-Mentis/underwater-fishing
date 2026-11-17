@@ -1,0 +1,7 @@
+{
+  "name": "UnderwaterFishing.Progression",
+  "rootNamespace": "UnderwaterFishing.Progression",
+  "references": ["UnderwaterFishing.Cargo", "UnderwaterFishing.Expedition"],
+  "autoReferenced": true,
+  "noEngineReferences": true
+}

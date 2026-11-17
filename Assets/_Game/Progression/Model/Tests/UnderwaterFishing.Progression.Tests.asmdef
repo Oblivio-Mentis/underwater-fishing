@@ -1,0 +1,8 @@
+{
+  "name": "UnderwaterFishing.Progression.Tests",
+  "rootNamespace": "UnderwaterFishing.Progression.Tests",
+  "references": ["UnderwaterFishing.Progression", "UnderwaterFishing.Cargo", "UnderwaterFishing.Expedition", "OblivioMentis.UniversalFSM.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "autoReferenced": false
+}
