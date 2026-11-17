@@ -25,6 +25,26 @@ namespace UnderwaterFishing.Fishing.Debugging
         private string captureFolder;
         private bool capturedFight, capturedCatch;
 
+        public void BeginAutomation(bool isHelper, bool isLarge, bool followCargo = true)
+        {
+            if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild) return;
+            diver = GetComponent<NetworkDiver>(); fishing = GetComponent<DiverFishing>();
+            if (!diver.IsOwner || !diver.IsClientStarted) return;
+            helper = isHelper; large = isLarge; this.followCargo = followCargo;
+            DeadlineSeconds = large ? 180 : 90;
+            configured = true; finished = reel = sprint = false;
+            target = null; hunter = null; started = -1;
+            nextActions = nextLog = nextShot = targetAcquired = previousFishAt = previousHunterAt = 0;
+            estimatedFishVelocity = estimatedHunterVelocity = Vector3.zero;
+            waypoint = diver.State.Sheltered ? 0 : 2;
+            Status = "Starting"; enabled = true;
+        }
+        public void StopAutomation()
+        {
+            configured = false; enabled = false;
+            if (fishing != null && fishing.IsOwner && fishing.IsClientStarted) fishing.Actions(false, false);
+        }
+
         private void Awake()
         {
             if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild) { enabled = false; return; }

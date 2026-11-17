@@ -13,11 +13,11 @@ foreach ($raidName in @('host.log','client.log','result.json')) {
 }
 $raidProcesses = @()
 try {
-    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host --raid-cooperation-bot helper --raid-fast-diving --raid-exit-after 105" -WindowStyle Hidden -PassThru
+    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host --raid-gym --raid-cooperation-bot helper --raid-fast-diving --raid-exit-after 105" -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 3
     $raidDisplay = '-batchmode -nographics'
     if ($Capture) { $raidDisplay = "-screen-fullscreen 0 -screen-width 1280 -screen-height 720 --raid-cooperation-capture `"$raidCaptures`"" }
-    $raidArgs = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 --raid-cooperation-bot victim --raid-exit-after 105"
+    $raidArgs = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 --raid-gym --raid-cooperation-bot victim --raid-exit-after 105"
     if ($Capture) { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidArgs -PassThru }
     else { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidArgs -WindowStyle Hidden -PassThru }
     $raidDeadline = [DateTime]::UtcNow.AddSeconds(100)

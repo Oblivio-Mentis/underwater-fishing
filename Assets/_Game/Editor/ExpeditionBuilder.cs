@@ -26,7 +26,7 @@ namespace UnderwaterFishing.Editor
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/ExpeditionTerminal.prefab");
             Object.DestroyImmediate(go); return new ExpeditionBuildAssets { Controller = prefab.GetComponent<NetworkObject>() };
         }
-        private static void ConfigureExpeditionDiver(GameObject diver) { diver.AddComponent<DiverExpedition>(); }
+        private static void ConfigureExpeditionDiver(GameObject diver) { diver.AddComponent<DiverExpedition>(); diver.AddComponent<ExpeditionTestBot>(); }
         private static void AddExpeditionWorld(GameObject sessionRoot, ExpeditionBuildAssets assets, SinglePrefabObjects prefabs)
         {
             prefabs.AddObject(assets.Controller, true);

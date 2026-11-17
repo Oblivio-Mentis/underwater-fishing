@@ -35,8 +35,8 @@ namespace UnderwaterFishing.Expedition.Network
         private bool fastMode;
         public ExpeditionSnapshot State => snapshot.Value;
         public ExpeditionSettings Settings => settings;
-        public bool IsAtBase => State.Phase == ExpeditionPhase.Base;
-        public bool GameplayEnabled => State.Phase == ExpeditionPhase.Expedition;
+        public bool IsAtBase => (IsServerStarted && model != null ? model.Phase : State.Phase) == ExpeditionPhase.Base;
+        public bool GameplayEnabled => (IsServerStarted && model != null ? model.Phase : State.Phase) == ExpeditionPhase.Expedition;
         public event Action ExpeditionStarted;
         public event Action<bool> ExpeditionEnded;
         public event Action OfferingDue;
@@ -51,8 +51,16 @@ namespace UnderwaterFishing.Expedition.Network
         {
             fastMode = (Application.isEditor || Debug.isDebugBuild)
                 && Array.IndexOf(Environment.GetCommandLineArgs(), "--raid-fast-expeditions") >= 0;
-            model = new ExpeditionModel(settings, balance.DevelopmentMode,
-                fastMode ? settings.FastExpeditionSeconds : balance.ExpeditionSeconds);
+            float duration = fastMode ? settings.FastExpeditionSeconds : balance.ExpeditionSeconds;
+            string[] args = Environment.GetCommandLineArgs();
+            int configuredSeconds = Array.IndexOf(args, "--raid-expedition-seconds");
+            bool debug = Application.isEditor || Debug.isDebugBuild;
+            if (debug && configuredSeconds >= 0 && configuredSeconds + 1 < args.Length
+                && float.TryParse(args[configuredSeconds + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float seconds)
+                && !float.IsNaN(seconds) && !float.IsInfinity(seconds))
+            { duration = Mathf.Clamp(seconds, 5, 3600); fastMode = true; }
+            bool development = balance.DevelopmentMode || (debug && Array.IndexOf(args, "--raid-development-mode") >= 0);
+            model = new ExpeditionModel(settings, development, duration);
             model.PhaseChanged += PhaseChanged;
             RefreshCrew(); SetCargoAccess(); Publish();
         }
@@ -84,10 +92,12 @@ namespace UnderwaterFishing.Expedition.Network
         {
             Debug.Log($"RAID_EXPEDITION phase={next} day={model.Day} completed={model.CompletedDays} emergency={model.Emergency}");
             SetCargoAccess();
+            Publish();
+            ServerPhaseChanged?.Invoke(next);
             if (next == ExpeditionPhase.Expedition)
             {
-                RelocateCrew();
                 ExpeditionStarted?.Invoke();
+                RelocateCrew();
             }
             if (next == ExpeditionPhase.Debrief)
             {
@@ -97,7 +107,6 @@ namespace UnderwaterFishing.Expedition.Network
                 RelocateCrew();
             }
             if (next == ExpeditionPhase.Offering) OfferingDue?.Invoke();
-            ServerPhaseChanged?.Invoke(next);
         }
         private void RelocateCrew()
         {
@@ -173,8 +182,8 @@ namespace UnderwaterFishing.Expedition.Network
         { bool accepted = model != null && model.CompleteOffering(success); Publish(); return accepted; }
         [Server] public bool TryResetRun(DiverExpedition actor)
         {
-            if (model == null || model.Phase != ExpeditionPhase.Failure || actor == null || !CanUseTerminal(actor.Diver)) return false;
-            model.ResetRun(); NetworkCargoStation.Instance?.ResetRun(); RelocateCrew(); RunReset?.Invoke(); Publish(); return true;
+            if (model == null || model.Phase != ExpeditionPhase.Failure || actor == null || !actor.IsSpawned || actor.OwnerId < 0) return false;
+            model.ResetRun(); NetworkCargoStation.Instance?.ResetRun(); RunReset?.Invoke(); RelocateCrew(); Publish(); return true;
         }
         private void Update()
         {

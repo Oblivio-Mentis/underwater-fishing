@@ -19,6 +19,7 @@ namespace UnderwaterFishing.Expedition.Network
         private bool spawned;
         private void Start()
         {
+            if (UnderwaterFishing.World.DevelopmentGym.Active) return;
             session = GetComponent<NetworkSession>();
             session.Manager.ServerManager.OnServerConnectionState += StateChanged;
             if (session.Manager.IsServerStarted) SpawnAuthority();

@@ -9,6 +9,8 @@ namespace UnderwaterFishing.Player
         private InputActionAsset runtimeActions;
         private InputAction move, vertical, look, sprint, interact, help, fire, reel, release, sonar, menu, info;
         private bool uiCaptured;
+        public bool UiCaptured => uiCaptured;
+        public event System.Action CloseUiRequested;
         public bool MenuOpen { get; private set; } = true;
         private bool Captured => MenuOpen || uiCaptured;
         public bool InteractPressed => !Captured && interact.WasPressedThisFrame();
@@ -46,10 +48,15 @@ namespace UnderwaterFishing.Player
         private void Update()
         {
             if (NetworkDiver.Local == null) { if (!MenuOpen) SetMenu(true); return; }
-            if (menu.WasPressedThisFrame()) SetMenu(!MenuOpen);
+            if (menu.WasPressedThisFrame())
+            {
+                if (uiCaptured) { SetUiCapture(false); CloseUiRequested?.Invoke(); }
+                else SetMenu(!MenuOpen);
+            }
         }
         public void SetMenu(bool open)
         {
+            if (open && uiCaptured) { uiCaptured = false; CloseUiRequested?.Invoke(); }
             MenuOpen = open;
             UpdateCursor();
         }

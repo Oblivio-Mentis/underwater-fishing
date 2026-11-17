@@ -64,6 +64,7 @@ namespace UnderwaterFishing.Editor
             var fishing = PrepareFishing(balance);
             var collapseTrap = PrepareCooperation();
             var cargo = PrepareCargo();
+            var expedition = PrepareExpedition(balance);
             var controls = Controls();
             var diver = DiverPrefab(balance, fishing);
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -81,13 +82,19 @@ namespace UnderwaterFishing.Editor
             var teal = Material("Guide", new Color(.12f, .85f, .75f), true);
             var yellow = Material("Terminal", new Color(.95f, .65f, .16f), true);
             Shape("Seabed", Vector3.down * 39, new Vector3(100, 2, 110), rock);
+            Boundary("Water surface", new Vector3(0, .25f, 0), new Vector3(100, .5f, 110));
+            Boundary("West water limit", new Vector3(-49.5f, -20, 0), new Vector3(1, 90, 110));
+            Boundary("East water limit", new Vector3(49.5f, -20, 0), new Vector3(1, 90, 110));
+            Boundary("North water limit", new Vector3(0, -20, 54.5f), new Vector3(100, 90, 1));
+            Boundary("South water limit", new Vector3(0, -20, -54.5f), new Vector3(100, 90, 1));
+            var baseCave = new GameObject("Base cave geology");
             for (int i = 0; i < 18; i++)
             {
                 float angle = i * Mathf.PI * 2 / 18;
-                Shape("Cave wall " + i, new Vector3(Mathf.Cos(angle) * 43, -18, Mathf.Sin(angle) * 48), new Vector3(18, 42, 17), rock, PrimitiveType.Sphere);
+                Shape("Cave wall " + i, new Vector3(Mathf.Cos(angle) * 43, -18, Mathf.Sin(angle) * 48), new Vector3(18, 42, 17), rock, PrimitiveType.Sphere, baseCave.transform);
             }
-            Shape("Cave roof left", new Vector3(-24, 1, 0), new Vector3(35, 6, 90), rock);
-            Shape("Cave roof right", new Vector3(24, 1, 0), new Vector3(35, 6, 90), rock);
+            Shape("Cave roof left", new Vector3(-24, 1, 0), new Vector3(35, 6, 90), rock, parent: baseCave.transform);
+            Shape("Cave roof right", new Vector3(24, 1, 0), new Vector3(35, 6, 90), rock, parent: baseCave.transform);
             var sub = new GameObject("Submarine");
             sub.transform.position = new Vector3(0, -7, 0);
             sub.AddComponent<SubmarineInterior>();
@@ -115,9 +122,10 @@ namespace UnderwaterFishing.Editor
                 lamp.type = LightType.Point; lamp.range = 13; lamp.intensity = 4;
                 lamp.color = new Color(.4f, 1f, .9f); lamp.transform.position = new Vector3(0, -5, -9 + i * 6);
             }
-            Shape("Wreck hull", new Vector3(20, -29, 19), new Vector3(11, 4, 18), hull);
-            Shape("Wreck mast", new Vector3(20, -21, 19), new Vector3(.5f, 15, .5f), hull);
-            for (int i = 0; i < 8; i++) Shape("Rock", new Vector3(-25 + i * 7, -34, 25 + i % 3 * 4), new Vector3(7, 9, 6), rock, PrimitiveType.Sphere);
+            var diveZone = new GameObject("Expedition wreck geology");
+            Shape("Wreck hull", new Vector3(20, -29, 19), new Vector3(11, 4, 18), hull, parent: diveZone.transform);
+            Shape("Wreck mast", new Vector3(20, -21, 19), new Vector3(.5f, 15, .5f), hull, parent: diveZone.transform);
+            for (int i = 0; i < 8; i++) Shape("Rock", new Vector3(-25 + i * 7, -34, 25 + i % 3 * 4), new Vector3(7, 9, 6), rock, PrimitiveType.Sphere, diveZone.transform);
 
             var root = new GameObject("Session");
             var manager = root.AddComponent<NetworkManager>();
@@ -141,6 +149,14 @@ namespace UnderwaterFishing.Editor
             fishWorld.SmallFish = fishing.Small; fishWorld.LargeFish = fishing.Large;
             root.AddComponent<UnderwaterFishing.Cooperation.CooperationWorld>().TrapPrefab = collapseTrap;
             AddCargoWorld(root, cargo, prefabs);
+            AddExpeditionWorld(root, expedition, prefabs);
+            root.AddComponent<ExpeditionWorldLifecycle>();
+            root.AddComponent<UnderwaterFishing.Expedition.Presentation.ExpeditionInfoUI>();
+            var environment = root.GetComponent<UnderwaterFishing.Expedition.Presentation.ExpeditionEnvironment>();
+            environment.BaseObjects = new[] { environment.BaseObjects[0], baseCave };
+            environment.ExpeditionObjects = new[] { environment.ExpeditionObjects[0], diveZone };
+            environment.AirlockSeal = Shape("Airlock sealed at base", new Vector3(8, -6.5f, 0), new Vector3(.5f, 5, 4.1f), hull, parent: sub.transform);
+            diveZone.SetActive(false);
             var steamTransport = root.AddComponent<FishySteamworks.FishySteamworks>();
             var steamSettings = new SerializedObject(steamTransport);
             steamSettings.FindProperty("_peerToPeer").boolValue = true;
@@ -153,7 +169,7 @@ namespace UnderwaterFishing.Editor
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = RenderSettings.fogColor;
             session.LobbyCamera = camera;
             PlayerSettings.companyName = "Oblivio Mentis"; PlayerSettings.productName = "Underwater Fishing";
-            PlayerSettings.bundleVersion = "0.0.1-raid005";
+            PlayerSettings.bundleVersion = "0.0.1-raid006";
             PlayerSettings.runInBackground = true;
             PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
@@ -202,6 +218,7 @@ namespace UnderwaterFishing.Editor
             go.AddComponent<UnderwaterFishing.Cooperation.CooperationTestBot>();
             ConfigureHarpoon(go, camera, fishing);
             ConfigureCargoDiver(go);
+            ConfigureExpeditionDiver(go);
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
@@ -214,12 +231,17 @@ namespace UnderwaterFishing.Editor
             if (emission) { material.EnableKeyword("_EMISSION"); material.SetColor("_EmissionColor", color * 1.5f); }
             AssetDatabase.CreateAsset(material, path); return material;
         }
+        private static void Boundary(string name, Vector3 position, Vector3 size)
+        {
+            var boundary = new GameObject(name, typeof(BoxCollider));
+            boundary.transform.position = position; boundary.GetComponent<BoxCollider>().size = size;
+        }
         private static GameObject Shape(string name, Vector3 p, Vector3 size, Material material, PrimitiveType type = PrimitiveType.Cube, Transform parent = null)
         {
             var go = GameObject.CreatePrimitive(type); go.name = name;
             if (parent != null) go.transform.SetParent(parent);
             go.transform.position = p; go.transform.localScale = size; go.GetComponent<Renderer>().sharedMaterial = material;
-            if (type == PrimitiveType.Sphere && parent == null)
+            if (type == PrimitiveType.Sphere)
             {
                 // SphereCollider uses the largest scale axis; static cave rocks need the visible mesh shape.
                 Object.DestroyImmediate(go.GetComponent<SphereCollider>());

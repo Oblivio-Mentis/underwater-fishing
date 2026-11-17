@@ -24,11 +24,11 @@ try {
     $raidHostRole = if ($Fish) { '--raid-fishing-bot helper --raid-follow-cargo' } else { '--raid-cargo-bot hauler' }
     $raidClientRole = if ($Fish) { '--raid-fishing-bot hunter --raid-cargo-bot fish' } else { '--raid-cargo-bot hauler' }
     if ($Large) { $raidHostRole += ' --raid-fish-size large'; $raidClientRole += ' --raid-fish-size large' }
-    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host $raidHostRole --raid-exit-after 190" -WindowStyle Hidden -PassThru
+    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host --raid-gym $raidHostRole --raid-exit-after 190" -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 3
     $raidDisplay = '-batchmode -nographics'
     if ($Capture) { $raidDisplay = "-screen-fullscreen 0 -screen-width 1280 -screen-height 720 --raid-cargo-capture `"$raidCaptures`"" }
-    $raidArgs = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 $raidClientRole --raid-exit-after 190"
+    $raidArgs = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 --raid-gym $raidClientRole --raid-exit-after 190"
     if ($Capture) { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidArgs -PassThru }
     else { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidArgs -WindowStyle Hidden -PassThru }
     $raidDeadline = [DateTime]::UtcNow.AddSeconds(175)

@@ -18,6 +18,18 @@ namespace UnderwaterFishing.Cargo.Network
         private float began = -1, nextRequest, nextLog;
         private bool fishOnly, finished, depositedFish, capturedLift, capturedLoad;
         private string captures;
+        private int cyclesRequiredOverride;
+        public void BeginAutomation(bool fishOnly, int requiredCycles = 1)
+        {
+            if (!Application.isEditor && !Debug.isDebugBuild) return;
+            diver = GetComponent<NetworkDiver>(); cargo = GetComponent<DiverCargo>(); fishing = GetComponent<DiverFishing>();
+            if (!diver.IsOwner || !diver.IsClientStarted) return;
+            this.fishOnly = fishOnly; cyclesRequiredOverride = Mathf.Max(1, requiredCycles);
+            target = null; began = -1; nextRequest = nextLog = 0;
+            waypoint = diver.State.Sheltered ? 0 : 2; cycles = 0; previousState = 0;
+            finished = depositedFish = capturedLift = capturedLoad = false; enabled = true;
+        }
+        public void StopAutomation() { enabled = false; }
         private void Awake()
         {
             string[] args = Environment.GetCommandLineArgs();
@@ -43,8 +55,8 @@ namespace UnderwaterFishing.Cargo.Network
             { Debug.LogError("RAID_CARGO_BOT_TIMEOUT inactive=" + !diver.IsActive); finished = true; return; }
             if (previousState == WinchState.Descending && station.State.State == WinchState.Deployed) cycles++;
             previousState = station.State.State;
-            int requiredCycles = fishOnly ? 1 : 2;
-            int requiredHold = fishOnly ? 1 : 2;
+            int requiredCycles = cyclesRequiredOverride > 0 ? cyclesRequiredOverride : fishOnly ? 1 : 2;
+            int requiredHold = requiredCycles;
             if (cycles >= requiredCycles && station.State.HoldCount >= requiredHold && (!fishOnly || depositedFish))
             {
                 var ids = new System.Collections.Generic.HashSet<ulong>();

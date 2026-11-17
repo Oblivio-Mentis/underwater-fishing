@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f73bcd9dd824bbcb667399a2a132893, type: 3}
+  m_Name: ExpeditionBalance
+  m_EditorClassIdentifier: UnderwaterFishing.Expedition::UnderwaterFishing.Expedition.ExpeditionSettings
+  SuccessSeconds: 3
+  PreparingSeconds: 3
+  ReturnSeconds: 3
+  DebriefSeconds: 4
+  CargoWaitTimeoutSeconds: 45
+  TerminalDistance: 3.5
+  FastExpeditionSeconds: 45
+  DaysPerOffering: 3

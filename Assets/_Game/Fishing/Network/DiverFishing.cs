@@ -5,6 +5,7 @@ using UnderwaterFishing.Fishing.Creatures;
 using UnderwaterFishing.Fishing.Tether;
 using UnderwaterFishing.Player;
 using UnderwaterFishing.Cargo.Network;
+using UnderwaterFishing.Expedition.Network;
 using UnityEngine;
 
 namespace UnderwaterFishing.Fishing.Network
@@ -39,7 +40,7 @@ namespace UnderwaterFishing.Fishing.Network
         public FishingSnapshot State => snapshot.Value;
         public NetworkFish CurrentFish => NetworkFish.Find(State.FishId);
         public bool Reeling => reeling && tether.Connected;
-        public float NormalizedTension => tether.Tension / Mathf.Max(.01f, diver.Balance.Tether.BreakTension);
+        public float NormalizedTension => tether.Tension / Mathf.Max(.01f, diver.Tether.BreakTension);
         public bool HasCatch => State.Status == HarpoonStatus.Carried && CurrentFish != null;
         private void Awake() { diver = GetComponent<NetworkDiver>(); cargo = GetComponent<DiverCargo>(); }
         public override void OnStartNetwork() { All.Add(this); }
@@ -61,7 +62,7 @@ namespace UnderwaterFishing.Fishing.Network
             if (diver.AutomationControlled) return;
             if (input.FirePressed) Fire();
             if (input.ReleasePressed) { if (cargo != null && cargo.HasLoot) cargo.ReleaseLoot(); else Release(); }
-            if (input.InteractPressed && (cargo == null || !cargo.TryInteract())) PickUp();
+            if (input.InteractPressed && !(GetComponent<DiverExpedition>()?.TryInteract() ?? false) && (cargo == null || !cargo.TryInteract())) PickUp();
             if (Time.unscaledTime >= nextActions)
             {
                 nextActions = Time.unscaledTime + .1f;
@@ -72,17 +73,18 @@ namespace UnderwaterFishing.Fishing.Network
         { reeling = reel && diver.IsActive; helping = help && diver.IsActive; lastActions = Time.unscaledTime; }
         [ServerRpc] public void Fire()
         {
+            if (NetworkExpedition.Instance != null && !NetworkExpedition.Instance.GameplayEnabled) return;
             if (!diver.IsActive || fish != null || (cargo != null && cargo.HasLoot) || Time.unscaledTime < nextShot) return;
             nextShot = Time.unscaledTime + diver.Balance.HarpoonCooldown;
             current.ShotSequence++;
             current.Status = HarpoonStatus.Miss;
-            if (Physics.Raycast(diver.AimOrigin, diver.AimDirection, out var hit, diver.Balance.Tether.MaxLength, ~0, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(diver.AimOrigin, diver.AimDirection, out var hit, diver.Tether.MaxLength, ~0, QueryTriggerInteraction.Ignore))
             {
                 var target = hit.collider.GetComponentInParent<NetworkFish>();
-                if (target != null && Vector3.Distance(diver.AimOrigin, target.transform.position) <= diver.Balance.Tether.MaxLength && target.TryHook(this))
+                if (target != null && Vector3.Distance(diver.AimOrigin, target.transform.position) <= diver.Tether.MaxLength && target.TryHook(this))
                 {
                     fish = target;
-                    tether = TetherSimulation.Attach(Vector3.Distance(diver.AimOrigin, fish.transform.position), diver.Balance.Tether);
+                    tether = TetherSimulation.Attach(Vector3.Distance(diver.AimOrigin, fish.transform.position), diver.Tether);
                     current.FishId = fish.ObjectId; current.Status = HarpoonStatus.Hooked;
                     Debug.Log($"RAID_HOOK diver={ObjectId} fish={fish.ObjectId} species={fish.Species.DisplayName}");
                 }
@@ -92,6 +94,7 @@ namespace UnderwaterFishing.Fishing.Network
         [ServerRpc] public void Release() { ReleaseFish(HarpoonStatus.Released); }
         [ServerRpc] public void PickUp()
         {
+            if (NetworkExpedition.Instance != null && !NetworkExpedition.Instance.GameplayEnabled) return;
             if (!diver.IsActive || current.Status == HarpoonStatus.Carried || (cargo != null && cargo.HasLoot)) return;
             if (fish == null)
             {
@@ -121,7 +124,7 @@ namespace UnderwaterFishing.Fishing.Network
             current.HelpTargetId = FindHelpTarget();
             int helpers = 0;
             foreach (var other in All) if (other != this && other.current.HelpTargetId == ObjectId && other.helping && other.diver.IsActive) helpers++;
-            current.Helpers = fish == null ? 0 : Mathf.Min(helpers, diver.Balance.Tether.MaxAssistants);
+            current.Helpers = fish == null ? 0 : Mathf.Min(helpers, diver.Tether.MaxAssistants);
             diver.CarrySpeedMultiplier = current.Status == HarpoonStatus.Carried && fish != null
                 ? (fish.Species.IsLarge ? diver.Balance.CarrySpeedLarge : diver.Balance.CarrySpeedSmall) : 1;
             bool carryingTogether = current.Status == HarpoonStatus.Carried && fish != null && fish.Species.IsLarge && current.Helpers > 0;
@@ -132,7 +135,7 @@ namespace UnderwaterFishing.Fishing.Network
             if (cargo != null) diver.CarrySpeedMultiplier = Mathf.Min(diver.CarrySpeedMultiplier, cargo.CarrySpeedMultiplier);
             if (fish != null && tether.Connected)
             {
-                var forces = TetherSimulation.Step(ref tether, diver.Balance.Tether, diver.AimOrigin, fish.transform.position,
+                var forces = TetherSimulation.Step(ref tether, diver.Tether, diver.AimOrigin, fish.transform.position,
                     diver.ServerVelocity, fish.ServerVelocity, reeling, helpers, 1f, Time.fixedDeltaTime);
                 if (current.Helpers > 0 && previousHelpers == 0) Debug.Log($"RAID_ASSIST diver={ObjectId} fish={fish.ObjectId} helpers={current.Helpers}");
                 previousHelpers = current.Helpers;
@@ -169,6 +172,7 @@ namespace UnderwaterFishing.Fishing.Network
             current.Status = status; current.FishId = -1; current.Connected = false; current.Helpers = 0;
             snapshot.Value = current;
         }
+        [Server] public void ResetForDive() { ReleaseFish(HarpoonStatus.Ready); }
         [Server] public bool TakeCatch(out NetworkFish catchFish)
         {
             catchFish = null;

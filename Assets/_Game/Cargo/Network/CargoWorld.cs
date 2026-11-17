@@ -30,7 +30,7 @@ namespace UnderwaterFishing.Cargo.Network
             if (spawned || StationPrefab == null) return;
             spawned = true;
             session.Manager.ServerManager.Spawn(Instantiate(StationPrefab));
-            SpawnExpeditionLoot();
+            if (GetComponent<UnderwaterFishing.Expedition.Network.ExpeditionWorld>() == null || UnderwaterFishing.World.DevelopmentGym.Active) SpawnExpeditionLoot();
         }
         /// <summary>Root expedition controller calls after changing phase; server owns all world item creation.</summary>
         public void SpawnExpeditionLoot()

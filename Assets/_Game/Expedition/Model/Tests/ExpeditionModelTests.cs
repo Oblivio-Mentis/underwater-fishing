@@ -110,7 +110,10 @@ namespace UnderwaterFishing.Expedition.Tests
             Assert.That(model.TryStart(1), Is.False); model.Step(100, true);
             Assert.That(model.Phase, Is.EqualTo(ExpeditionPhase.Offering));
             Assert.That(model.CompleteOffering(true), Is.True);
-            Assert.That(model.CompletedDays, Is.Zero); Assert.That(model.TryStart(1), Is.True);
+            Assert.That(model.CompletedDays, Is.Zero); Assert.That(model.Phase, Is.EqualTo(ExpeditionPhase.Success));
+            Assert.That(model.TryStart(1), Is.False);
+            model.Step(settings.SuccessSeconds, true);
+            Assert.That(model.TryStart(1), Is.True);
         }
         [Test] public void FailedOfferingEndsRunUntilExplicitReset()
         {

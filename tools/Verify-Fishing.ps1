@@ -33,9 +33,9 @@ if ($Capture) {
 }
 try {
     $raidStarted = [DateTime]::UtcNow
-    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host --raid-fishing-bot helper --raid-fish-size $raidSize --raid-exit-after $raidLifetime" -WindowStyle Hidden -PassThru
+    $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList "-batchmode -nographics -logFile `"$raidHostLog`" --raid-host --raid-gym --raid-fishing-bot helper --raid-fish-size $raidSize --raid-exit-after $raidLifetime" -WindowStyle Hidden -PassThru
     Start-Sleep -Seconds 3
-    $raidClientArguments = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 --raid-fishing-bot hunter --raid-fish-size $raidSize --raid-exit-after $raidLifetime"
+    $raidClientArguments = "$raidDisplay -logFile `"$raidClientLog`" --raid-join 127.0.0.1 --raid-gym --raid-fishing-bot hunter --raid-fish-size $raidSize --raid-exit-after $raidLifetime"
     if ($Capture) { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidClientArguments -PassThru }
     else { $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidClientArguments -WindowStyle Hidden -PassThru }
     $raidDeadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)

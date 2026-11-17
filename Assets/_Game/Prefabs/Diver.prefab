@@ -323,6 +323,8 @@ GameObject:
   - component: {fileID: 4650326338220974139}
   - component: {fileID: 2980727953529232898}
   - component: {fileID: 3997304292715931179}
+  - component: {fileID: 1273357153763263107}
+  - component: {fileID: 2017820832818501536}
   m_Layer: 0
   m_Name: Diver
   m_TagString: Untagged
@@ -544,6 +546,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 81ff98362537cf64f882108e2be57810, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Cargo.Network.CargoTestBot
+--- !u!114 &1273357153763263107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 733da3d910f5406b83dad13b784d2f15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Expedition.Network.DiverExpedition
+  _componentIndexCache: 255
+  _addedNetworkObject: {fileID: 1607564505402278593}
+  _networkObjectCache: {fileID: 0}
+--- !u!114 &2017820832818501536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e855aaa5b495be54fb2a36750b0ee08f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Expedition.Network.ExpeditionTestBot
 --- !u!1 &6707998555848854544
 GameObject:
   m_ObjectHideFlags: 0

@@ -9,7 +9,7 @@ VERIFIED: yes
 | Input System / URP / UI | 1.20.0 / 17.5.0 / 2.5.0 | package lock |
 | FishNet | 4.7.4 / pinned SHA | actual Windows 2/5 processes |
 | Steamworks.NET / FishySteamworks | pinned SHA / embedded 4.1.1-raid.1 | actual Steam local lobby + host |
-| Unity Test Framework | 1.7.0 | 73 EditMode tests passed |
+| Unity Test Framework | 1.7.0 | 88 EditMode tests passed |
 
 ## Agent integrations
 Local Unity MCP http://127.0.0.1:8080/mcp; tools/unity_mcp.py stdlib client.

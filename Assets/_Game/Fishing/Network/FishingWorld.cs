@@ -25,6 +25,12 @@ namespace UnderwaterFishing.Fishing.Network
         }
         private void SpawnFish()
         {
+            if (GetComponent<UnderwaterFishing.Expedition.Network.ExpeditionWorld>() != null && !World.DevelopmentGym.Active) return;
+            SpawnExpeditionFish();
+        }
+        public void SpawnExpeditionFish()
+        {
+            if (session == null || !session.Manager.IsServerStarted) return;
             if (spawned || SmallFish == null || LargeFish == null) return;
             spawned = true;
             foreach (var position in SmallSpawns) Spawn(SmallFish, position);
@@ -32,6 +38,14 @@ namespace UnderwaterFishing.Fishing.Network
         }
         private void Spawn(NetworkObject prefab, Vector3 position)
         { session.Manager.ServerManager.Spawn(Instantiate(prefab, position, Quaternion.identity)); }
+        public void ClearExpeditionFish()
+        {
+            if (session == null || !session.Manager.IsServerStarted) return;
+            foreach (var actor in new System.Collections.Generic.List<DiverFishing>(DiverFishing.All)) actor.ResetForDive();
+            foreach (var fish in new System.Collections.Generic.List<NetworkFish>(NetworkFish.All))
+                if (fish != null && fish.IsSpawned) session.Manager.ServerManager.Despawn(fish.NetworkObject);
+            spawned = false;
+        }
         private void OnDestroy()
         { if (session != null && session.Manager != null) session.Manager.ServerManager.OnServerConnectionState -= StateChanged; }
     }

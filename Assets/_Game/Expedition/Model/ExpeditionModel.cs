@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace UnderwaterFishing.Expedition
 {
-    public enum ExpeditionPhase : byte { Base, Preparing, Expedition, Return, Debrief, Offering, Failure }
+    public enum ExpeditionPhase : byte { Base, Preparing, Expedition, Return, Debrief, Offering, Failure, Success }
 
     public struct ExpeditionCrewStatus
     {
@@ -149,6 +149,12 @@ namespace UnderwaterFishing.Expedition
                         ? ExpeditionPhase.Offering : ExpeditionPhase.Base);
                     continue;
                 }
+                if (Phase == ExpeditionPhase.Success)
+                {
+                    if (!Consume(ref dt, ref phaseRemaining)) break;
+                    ChangePhase(ExpeditionPhase.Base);
+                    continue;
+                }
                 break;
             }
         }
@@ -162,8 +168,8 @@ namespace UnderwaterFishing.Expedition
         {
             if (Phase != ExpeditionPhase.Offering) return false;
             ClearReturn();
-            if (success) { CompletedDays = 0; Emergency = false; }
-            ChangePhase(success ? ExpeditionPhase.Base : ExpeditionPhase.Failure);
+            if (success) { CompletedDays = 0; Emergency = false; phaseRemaining = Positive(settings.SuccessSeconds, 3); }
+            ChangePhase(success ? ExpeditionPhase.Success : ExpeditionPhase.Failure);
             return true;
         }
         public void ResetRun()

@@ -3,6 +3,7 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnderwaterFishing.Data;
 using UnderwaterFishing.Diving;
+using UnderwaterFishing.Fishing.Tether;
 using UnityEngine;
 
 namespace UnderwaterFishing.Player
@@ -32,6 +33,7 @@ namespace UnderwaterFishing.Player
         private bool sprint;
         private DivingState diving;
         private DivingSettings divingSettings;
+        private TetherSettings upgradedTether;
         private int pinnedBy = -1;
         private bool automationControlled, automationSprint;
         private Vector3 automationMovement;
@@ -42,6 +44,7 @@ namespace UnderwaterFishing.Player
         public bool IsActive => State.Diving.Life == DiverLife.Active && State.PinnedBy < 0;
         public bool IsPinned => State.PinnedBy >= 0;
         public DivingSettings DivingSettings => divingSettings ?? balance.Diving;
+        public TetherSettings Tether => upgradedTether != null ? upgradedTether : balance.Tether;
         public GameBalance Balance => balance;
         public Camera Eyes => eyes;
         public Vector3 ServerVelocity { get; private set; }
@@ -66,9 +69,7 @@ namespace UnderwaterFishing.Player
         public override void OnStopNetwork() { All.Remove(this); if (Local == this) Local = null; }
         public override void OnStartServer()
         {
-            divingSettings = JsonUtility.FromJson<DivingSettings>(JsonUtility.ToJson(balance.Diving));
-            if ((Application.isEditor || Debug.isDebugBuild) && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--raid-fast-diving") >= 0)
-            { divingSettings.OxygenCapacity = 60; divingSettings.OxygenDrain = 2; }
+            divingSettings = CreateDivingSettings();
             diving = DivingSimulation.Create(divingSettings);
             commandYaw = transform.eulerAngles.y;
             Publish();
@@ -117,6 +118,25 @@ namespace UnderwaterFishing.Player
             lastCommand = Time.unscaledTime;
         }
         private static bool Finite(float n) => !float.IsNaN(n) && !float.IsInfinity(n);
+        private DivingSettings CreateDivingSettings()
+        {
+            var settings = JsonUtility.FromJson<DivingSettings>(JsonUtility.ToJson(balance.Diving));
+            if ((Application.isEditor || Debug.isDebugBuild) && System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--raid-fast-diving") >= 0)
+            { settings.OxygenCapacity = 60; settings.OxygenDrain = 2; }
+            return settings;
+        }
+        [Server] public void ApplyGear(float oxygenMultiplier, float reelMultiplier, float safeDepthBonus)
+        {
+            divingSettings = CreateDivingSettings();
+            divingSettings.OxygenCapacity *= Mathf.Clamp(oxygenMultiplier, 1, 100);
+            divingSettings.SafeDepth += Mathf.Clamp(safeDepthBonus, 0, 500);
+            if (upgradedTether != null) Destroy(upgradedTether);
+            upgradedTether = Instantiate(balance.Tether); upgradedTether.hideFlags = HideFlags.DontSave;
+            float reel = Mathf.Clamp(reelMultiplier, 1, 100);
+            upgradedTether.ReelSpeed *= reel; upgradedTether.BreakTension *= Mathf.Sqrt(reel);
+            Debug.Log($"RAID_GEAR_APPLIED diver={ObjectId} oxygen={divingSettings.OxygenCapacity:0.0} reel={upgradedTether.ReelSpeed:0.00} safeDepth={divingSettings.SafeDepth:0.0}");
+        }
+        public override void OnStopServer() { if (upgradedTether != null) Destroy(upgradedTether); }
 
         private void LateUpdate()
         {
