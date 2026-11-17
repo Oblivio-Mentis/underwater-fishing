@@ -11,11 +11,6 @@ namespace FishySteamworks
 {
     public class FishySteamworks : Transport
     {
-        ~FishySteamworks()
-        {
-            Shutdown();
-        }
-
         #region Public.
         /// <summary>
         /// The SteamId for the local user after connecting to or starting the server. This is populated automatically.
@@ -493,15 +488,13 @@ namespace FishySteamworks
                 }
 
                 //SetUserSteamID();
-                _client.StartConnection(address, _port, _peerToPeer);
+                return _client.StartConnection(address, _port, _peerToPeer);
             }
             //Acting as host.
             else
             {
-                _clientHost.StartConnection(_server);
+                return _clientHost.StartConnection(_server);
             }
-
-            return true;
         }
 
         /// <summary>

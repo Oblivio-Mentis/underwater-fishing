@@ -1,0 +1,8 @@
+{
+    "name": "UnderwaterFishing.Steam.Transport.Tests",
+    "rootNamespace": "UnderwaterFishing.Network.Steam.Tests",
+    "references": ["FishySteamworks.Runtime", "FishNet.Runtime", "com.rlabrecque.steamworks.net"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "autoReferenced": false
+}

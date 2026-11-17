@@ -123,40 +123,39 @@ namespace FishySteamworks
         /// <returns></returns>
         protected EResult Send(HSteamNetConnection steamConnection, ArraySegment<byte> segment, byte channelId)
         {
-            /* Have to resize array to include channel index
-             * if array isn't large enough to fit it. This is because
-             * we don't know what channel data comes in on so
-             * the channel has to be packed into the data sent.
-             * Odds of the array having to resize are extremely low
-             * so while this is not ideal, it's still very low risk. */
-            if ((segment.Array.Length - 1) <= (segment.Offset + segment.Count))
-            {
-                byte[] arr = segment.Array;
-                Array.Resize(ref arr, arr.Length + 1);
-                arr[arr.Length - 1] = channelId;
-            }
-            //If large enough just increase the segment and set the channel byte.
-            else
-            {
-                segment.Array[segment.Offset + segment.Count] = channelId;
-            }
-            //Make a new segment so count is right.
-            segment = new ArraySegment<byte>(segment.Array, segment.Offset, segment.Count + 1);
-
+            segment = AppendChannel(segment, channelId);
             GCHandle pinnedArray = GCHandle.Alloc(segment.Array, GCHandleType.Pinned);
-            IntPtr pData = pinnedArray.AddrOfPinnedObject() + segment.Offset;
-
-            int sendFlag = (channelId == (byte)Channel.Unreliable) ? Constants.k_nSteamNetworkingSend_Unreliable : Constants.k_nSteamNetworkingSend_Reliable;
+            try
+            {
+                IntPtr pData = pinnedArray.AddrOfPinnedObject() + segment.Offset;
+                int sendFlag = (channelId == (byte)Channel.Unreliable) ? Constants.k_nSteamNetworkingSend_Unreliable : Constants.k_nSteamNetworkingSend_Reliable;
 #if UNITY_SERVER
-            EResult result = SteamGameServerNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
+                EResult result = SteamGameServerNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
 #else
-            EResult result = SteamNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
+                EResult result = SteamNetworkingSockets.SendMessageToConnection(steamConnection, pData, (uint)segment.Count, sendFlag, out long _);
 #endif
-            if (result != EResult.k_EResultOK)
-                Transport.NetworkManager.LogWarning($"Send issue: {result}");
+                if (result != EResult.k_EResultOK)
+                    Transport.NetworkManager.LogWarning($"Send issue: {result}");
+                return result;
+            }
+            finally { pinnedArray.Free(); }
+        }
 
-            pinnedArray.Free();
-            return result;
+        /// <summary>Appends the wire channel without assuming spare capacity in a pooled buffer.</summary>
+        protected static ArraySegment<byte> AppendChannel(ArraySegment<byte> segment, byte channelId)
+        {
+            if (segment.Array == null) throw new ArgumentException("A packet requires a backing array.", nameof(segment));
+            int length = checked(segment.Count + 1);
+            byte[] data = segment.Array;
+            int offset = segment.Offset;
+            if (data.Length - offset < length)
+            {
+                data = new byte[length];
+                Buffer.BlockCopy(segment.Array, offset, data, 0, segment.Count);
+                offset = 0;
+            }
+            data[offset + segment.Count] = channelId;
+            return new ArraySegment<byte>(data, offset, length);
         }
 
         /// <summary>
@@ -187,19 +186,33 @@ namespace FishySteamworks
         /// <param name="ptr"></param>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        protected void GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
+        protected bool GetMessage(IntPtr ptr, byte[] buffer, out ArraySegment<byte> segment, out byte channel)
         {
-            SteamNetworkingMessage_t data = Marshal.PtrToStructure<SteamNetworkingMessage_t>(ptr);
+            segment = default;
+            channel = 0;
+            if (ptr == IntPtr.Zero) return false;
+            try
+            {
+                SteamNetworkingMessage_t data = Marshal.PtrToStructure<SteamNetworkingMessage_t>(ptr);
+                if (!IsPacketLengthValid(data.m_cbSize, buffer) || data.m_pData == IntPtr.Zero) return false;
+                Marshal.Copy(data.m_pData, buffer, 0, data.m_cbSize);
+                return TryDecodePacket(buffer, data.m_cbSize, out segment, out channel);
+            }
+            finally { SteamNetworkingMessage_t.Release(ptr); }
+        }
 
-            int packetLength = data.m_cbSize;
-            Marshal.Copy(data.m_pData, buffer, 0, packetLength);
+        private static bool IsPacketLengthValid(int length, byte[] buffer) => buffer != null && length > 0 && length <= buffer.Length;
 
-            //data.Release();
-            SteamNetworkingMessage_t.Release(ptr);
-            //Channel will be at the end of the packet.
-            channel = buffer[packetLength - 1];
-            //Set segment to length - 1 to exclude channel.
-            segment = new ArraySegment<byte>(buffer, 0, packetLength - 1);
+        protected static bool TryDecodePacket(byte[] buffer, int length, out ArraySegment<byte> segment, out byte channel)
+        {
+            segment = default;
+            channel = 0;
+            if (!IsPacketLengthValid(length, buffer)) return false;
+            byte receivedChannel = buffer[length - 1];
+            if (receivedChannel != (byte)Channel.Reliable && receivedChannel != (byte)Channel.Unreliable) return false;
+            channel = receivedChannel;
+            segment = new ArraySegment<byte>(buffer, 0, length - 1);
+            return true;
         }
     }
 
