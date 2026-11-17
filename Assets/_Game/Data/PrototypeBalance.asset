@@ -41,5 +41,7 @@ MonoBehaviour:
   FishPickupDistance: 2.5
   CarrySpeedSmall: 0.9
   CarrySpeedLarge: 0.65
+  CarryAssistSpeedPerHelper: 0.1
+  CarryAssistMaximum: 0.9
   OxygenRescueSeconds: 2
   DebrisRescueSeconds: 3

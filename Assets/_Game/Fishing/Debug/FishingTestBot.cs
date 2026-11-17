@@ -19,6 +19,7 @@ namespace UnderwaterFishing.Fishing.Debugging
         private float aimYaw, aimPitch;
         private int waypoint;
         private bool helper, configured, finished, reel, large, sprint;
+        private bool followCargo;
         private Vector3 previousHunterPosition, estimatedHunterVelocity;
         private float previousHunterAt;
         private string captureFolder;
@@ -28,6 +29,7 @@ namespace UnderwaterFishing.Fishing.Debugging
         {
             if (!Application.isEditor && !UnityEngine.Debug.isDebugBuild) { enabled = false; return; }
             string[] args = System.Environment.GetCommandLineArgs();
+            followCargo = System.Array.IndexOf(args, "--raid-follow-cargo") >= 0;
             int capture = System.Array.IndexOf(args, "--raid-capture-directory");
             if (capture >= 0 && capture + 1 < args.Length) captureFolder = args[capture + 1];
             int size = System.Array.IndexOf(args, "--raid-fish-size");
@@ -255,7 +257,7 @@ namespace UnderwaterFishing.Fishing.Debugging
                 lookTarget = new Vector3(8f, -6.4f, 0f);
                 return;
             }
-            if (hunter.State.Status == HarpoonStatus.Carried && hunter.CurrentFish != null)
+            if (!followCargo && hunter.State.Status == HarpoonStatus.Carried && hunter.CurrentFish != null)
             {
                 UnityEngine.Debug.Log($"RAID_BOT_HELPER_DONE diver={hunter.ObjectId}");
                 Finish(true, "hunter carried fish");
