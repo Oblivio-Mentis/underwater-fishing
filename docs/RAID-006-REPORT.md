@@ -1,5 +1,7 @@
 # RAID-006 — экспедиции и игровые дни
 
+Git: код `1def145`; [draft PR #5](https://github.com/Oblivio-Mentis/underwater-fishing/pull/5), база `raid/005-cargo`. main не объединялся.
+
 ## Реализовано
 
 - Серверные Base → Preparing → Expedition → Return → Debrief → Base, три дня до Offering; предусмотрены Success и Failure.
