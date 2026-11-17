@@ -18,7 +18,9 @@ namespace UnderwaterFishing.Fishing.Debugging
         private float started = -1f, nextActions, nextLog, nextShot, targetAcquired, previousFishAt;
         private float aimYaw, aimPitch;
         private int waypoint;
-        private bool helper, configured, finished, reel;
+        private bool helper, configured, finished, reel, large, sprint;
+        private Vector3 previousHunterPosition, estimatedHunterVelocity;
+        private float previousHunterAt;
         private string captureFolder;
         private bool capturedFight, capturedCatch;
 
@@ -28,6 +30,17 @@ namespace UnderwaterFishing.Fishing.Debugging
             string[] args = System.Environment.GetCommandLineArgs();
             int capture = System.Array.IndexOf(args, "--raid-capture-directory");
             if (capture >= 0 && capture + 1 < args.Length) captureFolder = args[capture + 1];
+            int size = System.Array.IndexOf(args, "--raid-fish-size");
+            if (size >= 0 && size + 1 < args.Length)
+            {
+                large = string.Equals(args[size + 1], "large", System.StringComparison.OrdinalIgnoreCase);
+                if (!large && !string.Equals(args[size + 1], "small", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    UnityEngine.Debug.LogError("RAID_BOT_CONFIGURATION_ERROR --raid-fish-size must be large or small");
+                    enabled = false; return;
+                }
+            }
+            if (large) DeadlineSeconds = Mathf.Max(DeadlineSeconds, 180f);
             for (int i = 0; i + 1 < args.Length; i++)
             {
                 if (args[i] != "--raid-fishing-bot") continue;
@@ -50,7 +63,7 @@ namespace UnderwaterFishing.Fishing.Debugging
                 started = now;
                 firstWaypoint = new Vector3(diver.State.Position.x, -7f, 0f);
                 aimYaw = diver.State.Yaw;
-                UnityEngine.Debug.Log($"RAID_BOT_STARTED role={Role} diver={diver.ObjectId}");
+                UnityEngine.Debug.Log($"RAID_BOT_STARTED role={Role} diver={diver.ObjectId} fishSize={FishSize} deadline={DeadlineSeconds:0}");
             }
             if (!diver.IsActive) { Finish(false, "diver incapacitated or dead"); return; }
             if (now - started >= DeadlineSeconds) { Finish(false, "deadline"); return; }
@@ -63,6 +76,7 @@ namespace UnderwaterFishing.Fishing.Debugging
             Vector3 worldMovement = Vector3.zero;
             Vector3 lookTarget = diver.State.Position + Quaternion.Euler(0f, aimYaw, 0f) * Vector3.forward * 5f;
             bool help = false, fire = false, pickup = false;
+            sprint = false;
             if (waypoint < 2)
             {
                 Vector3 point = waypoint == 0 ? firstWaypoint : new Vector3(11f, -7f, 0f);
@@ -79,7 +93,7 @@ namespace UnderwaterFishing.Fishing.Debugging
             if (finished) return;
             AimAt(lookTarget);
             Vector3 local = Quaternion.Inverse(Quaternion.Euler(0f, aimYaw, 0f)) * Vector3.ClampMagnitude(worldMovement, 1f);
-            diver.SetAutomationInput(local, aimYaw, aimPitch, false);
+            diver.SetAutomationInput(local, aimYaw, aimPitch, sprint);
             if (now >= nextActions)
             {
                 nextActions = now + 0.1f;
@@ -95,10 +109,12 @@ namespace UnderwaterFishing.Fishing.Debugging
         }
 
         private string Role => helper ? "helper" : "hunter";
+        private string FishSize => large ? "large" : "small";
         private void Capture(string phase)
         {
             System.IO.Directory.CreateDirectory(captureFolder);
-            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(captureFolder, "fishing-" + phase + ".png"));
+            string prefix = large ? "fishing-large-" : "fishing-";
+            ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(captureFolder, prefix + phase + ".png"));
         }
         private Vector3 EyePosition => diver.State.Position + Vector3.up * 0.6f;
         private Vector3 MoveToward(Vector3 point)
@@ -117,9 +133,17 @@ namespace UnderwaterFishing.Fishing.Debugging
         private void Hunt(float now, ref Vector3 movement, ref Vector3 lookTarget, ref bool fire, ref bool pickup)
         {
             NetworkFish attached = fishing.CurrentFish;
+            if (attached != null && attached.Species.IsLarge != large)
+            {
+                Status = "Release unexpected fish species";
+                reel = false;
+                fishing.Release();
+                SetTarget(null, now);
+                return;
+            }
             if (fishing.State.Status == HarpoonStatus.Carried && attached != null && attached.State.State == FishState.Captured)
             {
-                UnityEngine.Debug.Log($"RAID_BOT_CAUGHT fish={attached.ObjectId}");
+                UnityEngine.Debug.Log($"RAID_BOT_CAUGHT fish={attached.ObjectId} isLarge={attached.Species.IsLarge} species={attached.Species.DisplayName}");
                 Finish(true, "carried");
                 return;
             }
@@ -139,43 +163,47 @@ namespace UnderwaterFishing.Fishing.Debugging
                 }
                 Status = "Manage moving fish and line";
                 float tension = fishing.State.NormalizedTension;
-                if (tension >= 0.7f) reel = false;
-                else if (tension <= 0.45f) reel = true;
+                if (tension >= (large ? 0.6f : 0.7f)) reel = false;
+                else if (tension <= (large ? 0.35f : 0.45f)) reel = true;
                 var rope = diver.Balance.Tether;
-                float extension = 0.3f * rope.BreakTension / Mathf.Max(0.1f, rope.Stiffness);
-                float standOff = Mathf.Clamp(fishing.State.Length + extension, 2f, Mathf.Max(2f, rope.MaxLength - 1f));
+                float extension = (large ? 0.25f : 0.3f) * rope.BreakTension / Mathf.Max(0.1f, rope.Stiffness);
+                float minimumStandOff = large ? Mathf.Max(2.5f, target.Species.BodyScale.z * 0.5f + 0.7f) : 2f;
+                float standOff = Mathf.Clamp(fishing.State.Length + extension, minimumStandOff, Mathf.Max(minimumStandOff, rope.MaxLength - 1f));
                 Vector3 away = EyePosition - target.State.Position;
                 if (away.sqrMagnitude < 0.01f) away = -Vector3.forward;
                 Vector3 desiredPosition = target.State.Position + away.normalized * standOff - Vector3.up * 0.6f;
                 movement = MoveToward(desiredPosition) + estimatedFishVelocity / Mathf.Max(0.1f, diver.Balance.SwimSpeed);
+                sprint = large && distance > standOff + 1.5f && estimatedFishVelocity.magnitude > diver.Balance.SwimSpeed;
                 return;
             }
 
             reel = false;
-            if (target == null || target.State.State == FishState.Captured || target.Species.IsLarge || target.State.HolderId >= 0)
-                SetTarget(FindSmallFish(), now);
-            if (target == null) { Status = "Wait for available small fish"; return; }
+            if (target == null || target.State.State == FishState.Captured || target.Species.IsLarge != large || target.State.HolderId >= 0)
+                SetTarget(FindFish(), now);
+            if (target == null) { Status = "Wait for available " + FishSize + " fish"; return; }
             EstimateFishVelocity(now);
-            Status = "Aim and approach small fish";
+            Status = "Aim and approach " + FishSize + " fish";
             lookTarget = target.State.Position + estimatedFishVelocity * 0.08f;
             Vector3 approach = target.State.Position - EyePosition;
             float range = approach.magnitude;
             Vector3 stand = range > 0.01f ? approach / range : Vector3.forward;
             movement = MoveToward(target.State.Position - stand * 3.5f - Vector3.up * 0.6f);
-            if (range < diver.Balance.Tether.MaxLength - 1f && now - targetAcquired >= 0.25f && now >= nextShot)
+            sprint = large && range > 16f;
+            float firingRange = large ? Mathf.Min(12f, diver.Balance.Tether.MaxLength - 1f) : diver.Balance.Tether.MaxLength - 1f;
+            if (range < firingRange && now - targetAcquired >= 0.25f && now >= nextShot)
             {
                 nextShot = now + Mathf.Max(0.8f, diver.Balance.HarpoonCooldown + 0.15f);
                 fire = true;
             }
         }
 
-        private NetworkFish FindSmallFish()
+        private NetworkFish FindFish()
         {
             NetworkFish closest = null;
             float range = float.MaxValue;
             foreach (var candidate in NetworkFish.All)
             {
-                if (candidate == null || candidate.Species.IsLarge || candidate.State.State == FishState.Captured || candidate.State.HolderId >= 0) continue;
+                if (candidate == null || candidate.Species.IsLarge != large || candidate.State.State == FishState.Captured || candidate.State.HolderId >= 0) continue;
                 float squared = (candidate.State.Position - diver.State.Position).sqrMagnitude;
                 if (squared >= range) continue;
                 range = squared; closest = candidate;
@@ -211,9 +239,16 @@ namespace UnderwaterFishing.Fishing.Debugging
             {
                 hunter = null;
                 foreach (var candidate in DiverFishing.All)
-                    if (candidate != fishing && candidate.Diver.IsActive && !candidate.IsOwner) { hunter = candidate; break; }
+                    if (candidate != fishing && candidate.Diver.IsActive && !candidate.IsOwner)
+                    {
+                        hunter = candidate;
+                        previousHunterPosition = hunter.Diver.State.Position;
+                        previousHunterAt = Time.unscaledTime;
+                        estimatedHunterVelocity = Vector3.zero;
+                        break;
+                    }
             }
-            if (hunter == null || hunter.Diver.State.Sheltered || hunter.Diver.State.Position.x < 9.5f)
+            if (hunter == null || hunter.Diver.State.Sheltered || (!large && hunter.Diver.State.Position.x < 9.5f))
             {
                 Status = "Wait clear of hatch";
                 movement = MoveToward(new Vector3(12f, -7f, 2.2f));
@@ -230,6 +265,20 @@ namespace UnderwaterFishing.Fishing.Debugging
             Quaternion heading = Quaternion.Euler(0f, hunter.Diver.State.Yaw, 0f);
             Vector3 offset = heading * new Vector3(1.55f, 0f, -0.7f);
             movement = MoveToward(hunter.Diver.State.Position + offset);
+            if (large)
+            {
+                float now = Time.unscaledTime;
+                Vector3 position = hunter.Diver.State.Position;
+                if ((position - previousHunterPosition).sqrMagnitude > 0.000001f && now - previousHunterAt >= 0.01f)
+                {
+                    Vector3 measured = (position - previousHunterPosition) / (now - previousHunterAt);
+                    estimatedHunterVelocity = Vector3.Lerp(estimatedHunterVelocity, Vector3.ClampMagnitude(measured, 10f), 0.5f);
+                    previousHunterPosition = position; previousHunterAt = now;
+                }
+                else if (now - previousHunterAt > 0.5f) estimatedHunterVelocity = Vector3.zero;
+                movement += estimatedHunterVelocity / Mathf.Max(0.1f, diver.Balance.SwimSpeed);
+                sprint = Vector3.Distance(diver.State.Position, position) > 3.5f;
+            }
             lookTarget = hunter.Diver.State.Position + Vector3.up * 0.6f;
             help = true;
         }
@@ -246,8 +295,8 @@ namespace UnderwaterFishing.Fishing.Debugging
         private void LogDiagnostics()
         {
             NetworkFish fish = fishing.CurrentFish != null ? fishing.CurrentFish : target;
-            string detail = fish == null ? "fish=none" : $"fish={fish.ObjectId} fishState={fish.State.State} stamina={fish.State.Stamina:0.0}";
-            UnityEngine.Debug.Log($"RAID_BOT_DIAG role={Role} phase={Status} pos={diver.State.Position} {detail} line={fishing.State.Length:0.0} tension={fishing.State.NormalizedTension:0.00} helpers={fishing.State.Helpers}");
+            string detail = fish == null ? "fish=none" : $"fish={fish.ObjectId} isLarge={fish.Species.IsLarge} fishState={fish.State.State} stamina={fish.State.Stamina:0.0}";
+            UnityEngine.Debug.Log($"RAID_BOT_DIAG role={Role} phase={Status} pos={diver.State.Position} {detail} line={fishing.State.Length:0.0} tension={fishing.State.NormalizedTension:0.00} helpers={fishing.State.Helpers} depth={diver.State.Diving.Depth:0.0} stress={diver.State.Diving.Stress:0.0} oxygen={diver.State.Diving.Oxygen:0.0}");
         }
     }
 }
