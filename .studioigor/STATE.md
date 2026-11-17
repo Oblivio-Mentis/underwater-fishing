@@ -16,7 +16,7 @@
 - Windows Development build176793380 bytes; финальная перепроверка2/5 после последней правки прошла.
 
 ## Next
-1. Зафиксировать foundation commit/PR и актуальные результаты последней Windows QA.
+1. Продолжать реализацию от foundation в новой ветке, используя stacked PR к raid/001-foundation.
 2. В новой ветке от foundation последовательно RAID-003: два вида рыб/UniversalFSM, гарпун/трос/сопротивление;
    интегрировать спасение/наблюдение из RAID-002/004. Затем Cargo, Expedition, Progression, Offering, full QA.
 3. НЕ уменьшать цель до foundation. main не объединять без ревью.
@@ -34,3 +34,8 @@ Steam между разными аккаунтами/устройствами и
 - При повторной генерации сцены исходный InputActionAsset теперь не уничтожается: runtimeActions хранится отдельно.
 - GitHub Schannel TLS ошибку устранила URL-specific глобальная настройка sslBackend=openssl.
 - Исследовательские исходники FishNet/Steam/FSM находятся в AppData/Local/Temp/raid-*. Рабочие worktree RAID-diving и RAID-steam уже влиты в foundation.
+
+## Git
+Код foundation: 3c2185c. Draft PR: https://github.com/Oblivio-Mentis/underwater-fishing/pull/1
+Ветка отправлена; main не объединялся. Коннектор GitHub create PR вернул403, PR создан через авторизацию локального Git.
+Финальные Windows QA2/5 после последней правки: passed, client cleanup=true, host loss=true (5-process run).
