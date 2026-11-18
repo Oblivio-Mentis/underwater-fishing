@@ -1,0 +1,3 @@
+﻿[RAID NETWORK] five peers ids=0,1,3,2,4
+[RAID NETWORK] rescue target owner=1 oxygen=29,05998 trapped=False peers=5
+[RAID NETWORK] sixth attempt peers=5 divers=5

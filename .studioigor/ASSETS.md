@@ -1,23 +1,9 @@
-# Assets — RAID — Underwater Fishing
-
-<!-- Phase 5 (references/assets.md). -->
-
+# Assets
 ## Inventory
-<!-- one line per asset card (references/assets.md): name · category · style · budget · source · status -->
-| asset | category | style | budget | source | status |
-|---|---|---|---|---|---|
-
+Greybox submarine, reservoir, cargo platform, primitive fish with tail, rocks/wreckage, crates and capsule divers authored in project.
 ## Strategy by category
-| category | source (pack / Blender / procedural / generation / user) | why | status |
-|---|---|---|---|
-| <category> | <source> | <why> | plan |
-
-## Conventions
-<units, up axis, pivot, naming, formats, textures, poly count, collisions, import>
-
-## Requests to the user
-- none
-
+User explicitly prioritizes simple greybox; no asset packs, expensive models, cutscenes or realistic water.
 ## License registry
-| asset / pack | source (URL) | license | author | path | attribution |
-|---|---|---|---|---|---|
+Docs/THIRD_PARTY.md and Docs/Licenses contain dependency sources/licenses.
+## Requests to the user
+None; final visual quality and player feel are not locked.

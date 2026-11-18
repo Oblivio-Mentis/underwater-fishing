@@ -1,0 +1,13 @@
+{
+  "source_commit": "cf12346",
+  "job_id": "build-32aee4b74e",
+  "result": "succeeded",
+  "platform": "StandaloneWindows64",
+  "output_path": "Builds/FirstPlayable/UnderwaterFishing.exe",
+  "started_at": "2026-11-18T20:24:46.5292674Z",
+  "duration_seconds": 13.3975849,
+  "completed_at": "2026-11-18T20:24:59.9268523Z",
+  "total_size_mb": 164.92,
+  "errors": 0,
+  "warnings": 0
+}

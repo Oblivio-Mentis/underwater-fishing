@@ -1,13 +1,14 @@
-# studioigor ? Underwater Fishing
+# studioigor - Underwater Fishing
 PROJECT: Underwater Fishing
-PHASE: 4 ? Environment / foundation
-UPDATED: 2026-11-18
+PHASE: 6 — Mechanics
+UPDATED: 2026-11-18 23:26
 ## Now
-Existing Unity project audited. Dependencies installed; first local listen host ran with one owned diver and no Console errors. Windows Foundation build in progress. Fishing and progression under development in isolated worktrees.
+User plays build and reviews feel; two-account Steam test when second device is ready; equal-interval balance and long co-op acceptance pending
+
 ## Open questions
-- Second Steam device/account available later (user); prepare build + instructions now.
-- No final visual or gameplay approval yet. Do not mark user playtests passed.
+Second Steam account/computer available later per user's answer. Cross-account Steam and human co-op/feel acceptance NOT RUN.
 ## Session log
 | date | phase | done | next |
 |---|---|---|---|
-| 2026-11-18 | 4 | audit, packages, server swimming gym | host+client Windows test, then fishing/cargo/progression |
+| 2026-11-18 | 4-6 | audit,dependencies,FoundationWindows host+Editor client,integrated loop,stock-loss fixture | finalWindows build,5connections,rescue/loot checks,user playtest |
+| 2026-11-18 23:26 | 6 — Mechanics | Built integrated Windows prototype;23tests;5peers;RPC loop;wave stock-loss and persistence;archive prepared | User plays build and reviews feel; two-account Steam test when second device is ready; equal-interval balance and long co-op acceptance pending |

@@ -1,0 +1,674 @@
+﻿[
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\dstorage.dll",
+        "Hash":  "CAE65787F61514BEC6F012F44546E68B19E39D8854A9AB52AF813370D44B272A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\dstoragecore.dll",
+        "Hash":  "CF85B19A92A8276F8BACA0DB9BBCD60735BAD50768DEB303D310E84D5F4FDD11"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnityPlayer.dll",
+        "Hash":  "E51F219C89FAE415D16E938BCA12A380A99133DA960BA68CE2AFFD57FA22653B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\WinPixEventRuntime.dll",
+        "Hash":  "81ADCFD8253C3489BE720DA7E30F16004DC9A1F02A8B418C6C3AEF4993032E6D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\D3D12\\D3D12Core.dll",
+        "Hash":  "625BD40005B1C3708695D5256ECF230D278E6B8EDBA5A88AF70F3D91324F3052"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\D3D12\\d3d12SDKLayers.dll",
+        "Hash":  "C0730CC70D3250D3DE19C04C17845BA9E70EECAF502D684D1409195EBC5B5959"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\MonoBleedingEdge\\EmbedRuntime\\mono-2.0-bdwgc.dll",
+        "Hash":  "8F3537A38666DB89A1A9A75977218A4C8A52771844195A8AEB53E55FA17F6235"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\MonoBleedingEdge\\EmbedRuntime\\MonoPosixHelper.dll",
+        "Hash":  "1DB0D6CE6CF55011D2D5E86EAA04269A6142EDE3CDBBFCD4458B91CFAD123192"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\data.unity3d",
+        "Hash":  "9B2CD010764C4B93CC40D20CA2329D7E7B2C094905B03CEE08A1B045ABEFF035"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Assembly-CSharp.dll",
+        "Hash":  "D8DA54E0C438E095D61C18C33A15FDD895F4B120FF777D65C228AA94ADC53CD3"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\com.rlabrecque.steamworks.net.dll",
+        "Hash":  "A9C7CEE0FB02DFF9B0B7837AF688BF890F296A795FEE4AACEC1D88606BCABA41"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\FishNet.CodeAnalysis.dll",
+        "Hash":  "E56A24A6FE023C324D65DFC4C79B19492F052D011E8BBD45051846BE6E05092F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\FishNet.Demos.dll",
+        "Hash":  "42357375CA5F6BDAF844C51941B78B5A08D9867DB22E800CE800F119840D8DAE"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\FishNet.Runtime.dll",
+        "Hash":  "9A0DCF0C6077170E3163B69C33013EE586A49DC7A93FC37ABEF24543ED664A8E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\GameKit.Dependencies.dll",
+        "Hash":  "2833572B531705551F2BF25828B8BA2F2A9138CFA3C560551CD079315905728C"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\MCPForUnity.Runtime.dll",
+        "Hash":  "486D1C5B645FAB15499132DB52EE41E65AC7E16DB4B65BB01FE65296262FDC48"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Mono.Security.dll",
+        "Hash":  "1849437C1D2FE7698C0FDE2A9A6AAD9A864372A373B7C1D887DA902A36965B36"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\mscorlib.dll",
+        "Hash":  "F7698BD46AF58D3EE9DAC59A286CFEDFD28E51F71C0FE3940671A3CCC7AF5711"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\netstandard.dll",
+        "Hash":  "6AE62E082DC494A2433984177F60CA4DB5FAE69B1F360A8B33754172B310B8C5"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Newtonsoft.Json.dll",
+        "Hash":  "A56146202232958F46BD6A28B5A7DA166AEA123EE0D646735A46E5C341DFBF1F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\OblivioMentis.Presentation.Runtime.dll",
+        "Hash":  "AB508EDD27C67E124A11A1F9F449FFE13FA16748E16E05FAADEBE2EA48C21FAB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\OblivioMentis.UniversalFSM.Runtime.dll",
+        "Hash":  "D1BEFBF15A20040758BEB0A27CBA25660EE1D139E1F014BC98C78A8B82B57A6A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Raid.Progression.dll",
+        "Hash":  "BF6D1BFD922EF8E09ADBB7620568F21F7243125FCAE0665D2E4EC2B5142DDC85"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\SynapseSocket.dll",
+        "Hash":  "7B71C561BE88216583250611ADE006F06C6EF7AB8C55EB43B39E1EF58DD03DDD"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Buffers.dll",
+        "Hash":  "762F8FDBE975E05B76BE5FE996C53CE7C75E4A2830F2F50B02A5948EF6BA0AEB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Collections.Immutable.dll",
+        "Hash":  "5B1B1C83BA3D135C2FDFE425842FBE9C7432878B7E468623ACB554C69B4C130F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.ComponentModel.Composition.dll",
+        "Hash":  "335D76D10AE5B80D1FAAE4833937B9166551CCC9E79EE8262D2DA4D58843F79D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Configuration.dll",
+        "Hash":  "D7139DD6B622233D316AAC733B392B9C1A545375804F62685F57F9D36F1C7AC2"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Core.dll",
+        "Hash":  "A4637C44A11EA827D686313CFCA3F5191225D2A96F7EAF0F10AA32DE446380D2"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Data.DataSetExtensions.dll",
+        "Hash":  "80432A96154F8D2935B2F1C9E61B2EE6109FD6234E281327B3B297451C8931BA"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Data.dll",
+        "Hash":  "AB47D362CFF6F6E665CADBC8C6C81F9FA3612F23483A44D08B339347AC99F116"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.dll",
+        "Hash":  "D26CADA0FC3DCAE061F0FA421DF15A082CB35CCF81CCAEEBC8B0E2D2E6877099"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Drawing.dll",
+        "Hash":  "3C3586BA170C1788A8D3A4E419EB1F50F092070F4D81E90238B2FE6C5405CF2C"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.EnterpriseServices.dll",
+        "Hash":  "00595C8EEA345FE0E47DA702100E460AAAF8F14D27A24950B71D926CBF1201C4"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.IO.Compression.dll",
+        "Hash":  "A2803C059BD49C7FE520673F7E2B06657BB0419B253A5267E3F1DA14B357DD5A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.IO.Compression.FileSystem.dll",
+        "Hash":  "F45CA89827639A880DCBEAB1917AF99A5BD18AEC4433FBCB2D7774CCF9FE7121"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Memory.dll",
+        "Hash":  "C4F030A2CBA7DA7CDCF493257C24560E203D355904AEE490D645A935842F834A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Net.Http.dll",
+        "Hash":  "128B31FEC424C70356952314ABFF2F6B1408F64B7613D2AE4BDE5E84C2F8AC03"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Numerics.dll",
+        "Hash":  "B968DC8852985029FD5DD08A1A9C3A6B8750EA4470CD677A5051C33FC5A08639"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Reflection.Metadata.dll",
+        "Hash":  "AFCFD6C166FE0D59F45CC6363082806F6A7EA8CEED9DC6C75EEC9FD79CCB5717"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Runtime.CompilerServices.Unsafe.dll",
+        "Hash":  "FD67ABC4C4AF10AFFBCD42FD68A2A7BC361B26714AFE6965D4D0D139459D8297"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Runtime.dll",
+        "Hash":  "E0A7334B7BA419AAAB6BD3BB6992D693E689341A9178172C9BF99C2AA6A085BD"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Runtime.Serialization.dll",
+        "Hash":  "685123ACDBB6AC313E503E89F4831FED096BE838CCB000B85B33EE903562807F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Security.dll",
+        "Hash":  "02D51B98DC8C877124FEA386C9FBF7264790AAE381AB15577EB0E2D082D1BCC4"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.ServiceModel.Internals.dll",
+        "Hash":  "077333ADC8BF20EB40E94D1909DB2D07A16925A9192B69064F34EAF128804C8B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Transactions.dll",
+        "Hash":  "6557E5029469211193CCEC80DD4D3AD090F5EB87D80F5D5341D77A6D3506B64B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Xml.dll",
+        "Hash":  "32129A7D847A5EFEACEE6BD4B0D6BBFFC8923551C5446A8C216D8EF1191B1DE1"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\System.Xml.Linq.dll",
+        "Hash":  "FD300E794B9CCD85D95BBAB54E282DA1333FAA20A9209457944E831C27452B00"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.AI.Navigation.dll",
+        "Hash":  "4FE0B1BCB1D4AC41A36B82739034AD612EB10A03545880DB7AC5DA389DC62686"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Burst.dll",
+        "Hash":  "E55E93405213EF4192B8D6E3EA940504A9E414260E559C82C48ACFBAAD7DC98F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Burst.Unsafe.dll",
+        "Hash":  "9D9C1FF52411DECBEE5D9F0D1CD61EBEAA222077AA77A52101EA3DEBAFAE98E2"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Collections.dll",
+        "Hash":  "C325A0D461CC2AF30E9589BAFD7C9CB735452FE15A81920585E9A7B4EBDDBE82"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Collections.LowLevel.ILSupport.dll",
+        "Hash":  "FF50383F807F9692E4913B97E47D86FEFCB8FAA33D6D48CD3E3FD6FC7FFB448D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.InputSystem.dll",
+        "Hash":  "B7890D097FCC36CB8E1C6BD8BE82FC1921E9C666E06D37F2793A9BC16B94F140"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.InputSystem.ForUI.dll",
+        "Hash":  "BC3FBB7A3B545E07E270280746DFFA8B401542A248D4F866E90619120C3CF0BE"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.InternalAPIEngineBridge.004.dll",
+        "Hash":  "3B37E715653E44F7B0A101B90FB3FF230B0F4257B95632D297ECC78598906799"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.InternalAPIEngineBridge.RenderPipelines.Core.Runtime.Shared.dll",
+        "Hash":  "EE257CF5600010287A66DBC2620BDBAAEF6A5472832B06D88A916F228777F860"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Mathematics.dll",
+        "Hash":  "1E68875FBEB4F94794116A25F9029B04E09EC3062D918CB3FE801FA4940592F9"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Multiplayer.Center.Common.dll",
+        "Hash":  "9301E4DA6844F861A6D145F87C1B53CFD5A821BF42833AB453E383313948ACB5"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.PathTracing.Runtime.dll",
+        "Hash":  "288589B44EE0900C306BF9097A9ED21B1C3C7B22A0F41E529F2C8DEF6AB24AD4"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipeline.Universal.ShaderLibrary.dll",
+        "Hash":  "7C7B301A5BFC08F03745503F542366ED013AAA4BE9909BEF261A07B7A5346520"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Core.Runtime.dll",
+        "Hash":  "B321C9A47409E55C25902470C43735186E6BBC15E658AFCEA8A34F73EB49E685"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Core.Runtime.Shared.dll",
+        "Hash":  "1F5AC21AF5C5E4E59BA085E502A3FC71EE01953D6DFFD14CC80B2792BD2FC08B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Core.ShaderLibrary.dll",
+        "Hash":  "073CCB2211B8B5343B0A1095FD581B746543095F239164B39B0FEF9164EA5410"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.GPUDriven.Runtime.dll",
+        "Hash":  "85288E95ACEE7002B0CB4BF5105B6733F932A6B6E5432273051C9D57A1E64831"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll",
+        "Hash":  "E31D5B209F821B238544F233462DF5AC48FAC7C26E9573C56878DBDCB9F8AA1B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Universal.2D.Runtime.dll",
+        "Hash":  "1C512662CA533BDC27B62F7DA288CA393FFC82F5B0F16004A70B4E0F099AB144"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Universal.Config.Runtime.dll",
+        "Hash":  "000CB9B10C36690FA33E447BB29FA3F793760B73CB8CD9E9E552EF0527C1409F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Universal.Runtime.dll",
+        "Hash":  "4DD88BB4C8A31EF71E2B5B3E89533B4077A949622D54C8E8BD582DF2F04F4479"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.RenderPipelines.Universal.Shaders.dll",
+        "Hash":  "CF14375EFAB76030CC428A2F7BC94A61D3ADA807EB311A21802A61A62A0C1824"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Scripting.dll",
+        "Hash":  "FC8E1DE4455196F741A9FCBAEF941CEB854002F45E807A9E6D7BFF43B7BFBC04"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.SurfaceCache.Runtime.dll",
+        "Hash":  "8122E97024A7C9F2E0BE126D3DC000A2DF6A17166A397246814AEF51B9A943B8"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.TextMeshPro.dll",
+        "Hash":  "4EE1BA40A5FFEB7F907DC88B65B3C3484238D6A983576297DD15AC7D3DD575C0"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.Timeline.dll",
+        "Hash":  "F4BC8322AD71FE68AB3CA26643C75FD5F2C3F926FA3708A97195F43F741EB0B3"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.UnifiedRayTracing.Runtime.dll",
+        "Hash":  "EA097992C8C3EC0158578A62345A417577457272CD161412C1331C4D498AD9AA"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.VisualScripting.Antlr3.Runtime.dll",
+        "Hash":  "ED7CE205F66EAFE39BBB5D084D42E7FE11CB4B386FF208E5D5110891BE0B7B37"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.VisualScripting.Core.dll",
+        "Hash":  "1FC323D71E8524EE6134568884AC42A8566EAED22CE70902C3A6D7CF24831DCB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.VisualScripting.DocCodeExamples.dll",
+        "Hash":  "4CF85343FEC8C2EAC0545A67725E18A72EA66EA116CC77CC376012412D7CB5CD"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.VisualScripting.Flow.dll",
+        "Hash":  "F2ABF74D69F0A22E85306FB2A20A06CD2229BAF446DB0BCA087C3AEEB35A8A92"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\Unity.VisualScripting.State.dll",
+        "Hash":  "2C15EFB7A9785DA39E3C9CF55B4A296A3C289EBD34515CCC73E063156ABC261E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AccessibilityModule.dll",
+        "Hash":  "E2A892979ABCCCE477986CB9D6B10EB12184F824F2FEDC724AB642619794ED83"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AdaptivePerformanceModule.dll",
+        "Hash":  "6128E7DC7E17D2493ECF71A18071771A910D12B54659F8D0F5479AAA798078E4"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AIModule.dll",
+        "Hash":  "FFC5351EC3A85222AEE193961DA22D47816D0ABEC4357156EF2813E56089043B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AMDModule.dll",
+        "Hash":  "9EB10DA0A2F58EFB4EF21DD8AAC26B5F8CDB886BA184BC586D8E032FD488162D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AndroidJNIModule.dll",
+        "Hash":  "CDE44D43190ACA6022865508834C1B89147BC875C7A1FD4AF9C012BFA9A99518"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AnimationModule.dll",
+        "Hash":  "2E25EC91D4ACC49D104217993A1C0DBE4D504920A953EC6EA9C21BC69E777A63"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ARModule.dll",
+        "Hash":  "CA079F68635E009AF3B17E9208076A941293FAF51330709A146F8C907D56D78B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AssetBundleModule.dll",
+        "Hash":  "CDE6034914B45EFE9C43DEF0132578779A37CD48B5B1908022F7FB179B9887F0"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.AudioModule.dll",
+        "Hash":  "F45835BDE65E91A913E24DFE46812DCA872A202FE28B7670490E6AD7302FC205"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ClothModule.dll",
+        "Hash":  "2C44CD4B95C9EB51913B1478AE2F1DAB0C778ACDB2281BC5C9D1B2D458EDCF08"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ClusterInputModule.dll",
+        "Hash":  "CEB6269C63FAFE2BEEC4372C68A1B8C7AD017CACE7075C059C27C0E09155E81C"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ClusterRendererModule.dll",
+        "Hash":  "2B5E17866CC1FAA270252FCA7FFFB37D99F1CC333AFDA065B27C21AF529C8C24"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ContentLoadModule.dll",
+        "Hash":  "ED2325758E8F539219DEAF5A9FD9FAAD949E68409EDF8E5CDF9AFF953789282A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.CoreModule.dll",
+        "Hash":  "724976DABDEEF28D7DEDB43F59318D17528855881F0A8AD87831C6EDF2C53495"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.CrashReportingModule.dll",
+        "Hash":  "CE41F9D982687916D58F42D4C1FDCA93DE2BF10BCF2666868D894BCDE348876B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.DirectorModule.dll",
+        "Hash":  "93B765F95D8B83FD0A396206888E7D52F5ABE3C2D2961F40B69D755AEB5596CE"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.dll",
+        "Hash":  "65D65CA4F0347A5BF0A92F63F8FC3CA7C319C3DECCB28025AC096C84EC46BC2E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.DSPGraphModule.dll",
+        "Hash":  "9D24418B547A5C5C2B433B6CAF8873466DBC3A1B87D7589CE4097F5CB07A6F1F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.GameCenterModule.dll",
+        "Hash":  "71AB2568D9614CAABCDE7D23DBB88D8E6ED07930E85741E2F60B35CE9D733222"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.GIModule.dll",
+        "Hash":  "771E145DA86901467BCB4AE7645A46369A834E661AFD5C59F5386B925B95D6D0"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.GraphicsStateCollectionSerializerModule.dll",
+        "Hash":  "F3FC057AF03055FC494CE5020CB30626527E8C84A09480A50C1A3ED9FA9A34A7"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.GridModule.dll",
+        "Hash":  "17ADDAB6BA8F461C6E24BC092052E4845C560564F1B471F8D0DF9861A0DA614D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.HierarchyCoreModule.dll",
+        "Hash":  "B26D6A68369FF854FB3CEFA71C1EFEE311A5407C44029413B8AB52B3252C40D3"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.HierarchyModule.dll",
+        "Hash":  "81DF62BAF59C939ED60ED9A081AF59AD6F93A4F44ECF83F32B0A238963E6CA8A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.HotReloadModule.dll",
+        "Hash":  "021B0BC7952D70F63223402FFD184230B3CD5C9A1E94C60177BB343B1ABCA401"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.IdentifiersModule.dll",
+        "Hash":  "7552D2B3730B1D8759DC8230312171857A23B08122DC44D2A92A06C17DC025DB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ImageConversionModule.dll",
+        "Hash":  "9798D89DBCF283A69DDA7411964A880BB44B42E8F63472DB7A0FA9835573B8C4"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.IMGUIModule.dll",
+        "Hash":  "288A53A4D85C3785D1121B95D98BB49818FA51BD06E8B94A93CBF1D3329F13CB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.InputForUIModule.dll",
+        "Hash":  "0D4C47ACCFEF410D4517F37298517A1FF9F41F76FED2BBE4975B216BEE74C88E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.InputLegacyModule.dll",
+        "Hash":  "06B228BA269FB1837EDEF581FAFB8D85F04C4CE204BF38F5A2987DEE16F3F437"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.InputModule.dll",
+        "Hash":  "7B1125034B16252C1D2E6E45F5CECE331DB59142341BEE20EB42D969904DCD4D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.InsightsModule.dll",
+        "Hash":  "C8E2A9D1E152D76E0EDEB33C7176624B534CB864BEE01ADF85BF91EE9D8BCF1E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.JSONSerializeModule.dll",
+        "Hash":  "8D92D79316B23AA072CD898C5F34F9A8A318E1F117DE88441EBE798A4082A8F7"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.LocalizationModule.dll",
+        "Hash":  "28D04C0BB43FFBE5A5DF9E23C0AD1311ABF3DAA647D832E39E04D9CC5696C3C6"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.MarshallingModule.dll",
+        "Hash":  "4AA47243D565B6852FF681C74D556B2FBBE80D4F31C943482FC0A7221B973040"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.MathematicsModule.dll",
+        "Hash":  "696FB395A0FCFE3928849A664A19FEFF340FA9FB0D285FC44A1F498868153FCC"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.MultiplayerModule.dll",
+        "Hash":  "795D291CFAD9268C52983F39D6DEE698E55C74B7D4EA5B92519017ECD72602B9"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.NVIDIAModule.dll",
+        "Hash":  "4E79A35CA1997D5BE5172A68B27254F546C1404E3AD12DEBB3B555D2D15FA1BA"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ParticleSystemModule.dll",
+        "Hash":  "F83703C4200FBEF42EE7449ABAD3722FADF7B329223582F15B7423965D820E25"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.PerformanceReportingModule.dll",
+        "Hash":  "FFCF6F9CD94AC481D1095B3E36BDDD5A8F63503DDBE74BB9D89A4E5FCEDD4AF7"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.Physics2DModule.dll",
+        "Hash":  "49963F3460AB40A4DD9ECBB04615ABBED236486E4682D0E7351D32C9FD771C16"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.PhysicsBackendPhysXModule.dll",
+        "Hash":  "1AC5423C910605B86BE3DFAFE5C6D04BB07AD239408CA1477EC39740EEEE87F5"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.PhysicsCore2DModule.dll",
+        "Hash":  "4DFA9095823256F5FB01EACEC611955C05D7E194ADDCC690223985DE7066A39F"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.PhysicsModule.dll",
+        "Hash":  "A668BCD58AA8159465074599775CE4075287F199E5A43AF12552B6779C69FC9B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.PropertiesModule.dll",
+        "Hash":  "5B15CF26E7D34BE9020DD907EB1E389FE82EB6192AB56B2B3BA6948865049E4B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.RenderAs2DModule.dll",
+        "Hash":  "5421720B2EAEB8B30337D16C3158C4622117C5CAA47DC5B77A24A136499CE9AD"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+        "Hash":  "7A92819AF0E495A8D9BC104FE68C15B5161E0F65F76F78F24EC43DB423831677"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ScreenCaptureModule.dll",
+        "Hash":  "5957C0350B903F5210E3F0C4D85367BAE4DD2FDCBC18C28AA5707C0875951386"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ScriptingModule.dll",
+        "Hash":  "E2BE5323B3F9ACB3B2A026D98342BB7F90C97CFA40F49C434B3EC4049792E862"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.ShaderVariantAnalyticsModule.dll",
+        "Hash":  "353EDEA64DD1071078C174E01FBF3F1D8BDAC990DE568FA7349CD7872292356D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.SharedInternalsModule.dll",
+        "Hash":  "EA0C52615CC025A2D7BCBD7EE26BFBEB2DA1D6A4F1723AC31A3DF05EEF851232"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.SpriteMaskModule.dll",
+        "Hash":  "B7C7CE7ECA8321A30DBE5973DF2498BC426893DC48E5B6A90CEB67E5D4253E05"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.SpriteShapeModule.dll",
+        "Hash":  "537A354C0B264024016DFF70CED495E3DBC9D6E847F60CB68ECD98D0AB98C229"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.StreamingModule.dll",
+        "Hash":  "90DA09D00E15E3BA7F5B50D988682F8A249FF4B39EDD2005FCAD884D29605CF7"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.SubstanceModule.dll",
+        "Hash":  "2AA890D0CEA068A84C354335943EE2C677182026328D3757AB38B76D43FDBC2D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.SubsystemsModule.dll",
+        "Hash":  "E2243FA2D9E0807BFE9CBEB8C319C8C5C8FA15CF886B3736DAF16988E10882D2"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TerrainModule.dll",
+        "Hash":  "EDCA705CF6F6C113CA10375E2A22A2BF68B12BDC6628E4CDE37CB7762E661388"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TerrainPhysicsModule.dll",
+        "Hash":  "77959F83B83958F7732C62FD5A91DDBBEBBA38E42430F93FB99A574878C6D2E3"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TextCoreFontEngineModule.dll",
+        "Hash":  "A1F860CBD2124F0BC9D015640FE2F7D92DEB2D450D80533991323FEA66FD44F6"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TextCoreTextEngineModule.dll",
+        "Hash":  "BE152E19E64F480765F4678CEFD1982F98AB72BDF34292D71130A8EBD0336F3B"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TextRenderingModule.dll",
+        "Hash":  "087006067A7F30B2905A0D91D9B0C00993CF3789D9861DEF1E40D89B0306565E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TilemapModule.dll",
+        "Hash":  "31FC2AFFD868A8F92E531DE7D2C07F8357711C899F4D07C1F2F8934D20EE24BF"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.TLSModule.dll",
+        "Hash":  "B88E8392C9CB1EC4F7FD4F20DDCE38C60D1DC1BF2585B8438A35A90BA1C645CF"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.U2DRuntimeModule.dll",
+        "Hash":  "72FF1A3E533F40E9EC17611510E6B7447444A15FD34C2DAD4632EDBC2D9CE44D"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UI.dll",
+        "Hash":  "4CFA2A3B4D6BE2782EC4A0B49D99E9E9A82E22B08A397A6ABB7DD364D8508EF9"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UIElementsModule.dll",
+        "Hash":  "043792AA44D72DA28CFCC6DFBC4132B05FF68B20015E73E420E0051CB1250692"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UIModule.dll",
+        "Hash":  "3880ED62025A6A2BF16CD94A9013D3D231C6E57C402E1205C76D799E32B07C6E"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UmbraModule.dll",
+        "Hash":  "9F83A3170E1CBE3B8F4C9E7228FF56E67C68149EE6E5607BE39C056677AF42E6"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityAnalyticsCommonModule.dll",
+        "Hash":  "A486308EB5433AB7CBA5AD6B9D68557F1465DB596EB1570BAC1EEF7D7F00C93C"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityAnalyticsModule.dll",
+        "Hash":  "5423C1DEE89F3C85E0688442612C5A6D096C3FD5483BCFAD938939E57545EB12"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityConnectModule.dll",
+        "Hash":  "73F4FBC543294F138F09D45D08AEF00372EE914061F4AD55DD938C0810BD131A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityConsentModule.dll",
+        "Hash":  "854999696C414BFA35DA11A11CDD3815AEB5EB0154F28160973C30747DF76BD0"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityCurlModule.dll",
+        "Hash":  "B518DC2E3386475E565D2EC04678CF089DCD85A243397FEAA8D71EFCE37BBE83"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityWebRequestAssetBundleModule.dll",
+        "Hash":  "9D5928DB13CCE69A707CA37CC6F25B4084DC60E1F9FBF0538B90E509E31D73AB"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityWebRequestAudioModule.dll",
+        "Hash":  "EFCFC996858DC92820E08CDAB9B2AD514B4943B15B639B715DD62144B0953055"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityWebRequestModule.dll",
+        "Hash":  "75E4846E363CAED336DC756029F194300BA239E3DA6717F3E2EBD3173D4653EC"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityWebRequestTextureModule.dll",
+        "Hash":  "2BEA200E47F3E62BBC07C973DFCAEAABAB4BC65E529BF8EBCA0240788969B7BC"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.UnityWebRequestWWWModule.dll",
+        "Hash":  "368D4F388CE0C730FA2581F2FF541D907CE06330FC336C71C8C970498FA9F724"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.VectorGraphicsModule.dll",
+        "Hash":  "D62F3E03673A08AAD7D9B9BB158CAF5FD664E991548D0C5E3EBCBB6E9E8D7624"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.VehiclesModule.dll",
+        "Hash":  "78D4F0785F820A521499A728D1B181D42C0EEC1921225E685D82D78B639234FD"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.VFXModule.dll",
+        "Hash":  "D49B75748B870F27104B6A7275F6EBB635052C2FFDACA008A4580E492C347258"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.VideoModule.dll",
+        "Hash":  "CC3A39D5B3AD37F71CBFCFA265A0DBBE8241C99ACC40F980C095415594BD30CE"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.VirtualTexturingModule.dll",
+        "Hash":  "567E16B87CD931BCD68A0ABE242C6E3627228E467F3E5CB5E401BC5FD01E376A"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.WindModule.dll",
+        "Hash":  "A921C89FE17D94B0524635DCAB72A0225EF21FC38462617634D6CD624281E4C5"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Managed\\UnityEngine.XRModule.dll",
+        "Hash":  "CFD2B6CF1CD4CCA90E103EA61F0EBBDE945475AE2200EDBD438CB47FC230AF27"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Plugins\\x86_64\\libonigwrap.dll",
+        "Hash":  "2CDFAFA8F45FA697AF469069467556ED751D3ABCC2E46855643D8C7C1200AD46"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Plugins\\x86_64\\lib_burst_generated.dll",
+        "Hash":  "7CD25B16695FB40B0C9096852F09548DB7471BEA2E6F0561DA4B23EB57C86A75"
+    },
+    {
+        "Path":  "E:\\Development\\Projects\\RAID\\Builds\\FirstPlayable\\UnderwaterFishing_Data\\Plugins\\x86_64\\steam_api64.dll",
+        "Hash":  "E6D9BAFB9A41E42FBA7B21553DB49F8719027AF3F0DEB23FF86CFC44D60E776D"
+    }
+]

@@ -1,40 +1,19 @@
-# Design — RAID — Underwater Fishing
-
-A living document. Changes after playtests — with a line in "Changelog".
-
+# Design - Underwater Fishing
 ## Mechanics
-<!-- Statuses: idea → spec → gym → playtest → locked, or cut. tier: mvp — needed
-for the vertical slice; full — later. Before a mechanic — research research/mech-<id>.md. -->
 | id | mechanic | tier | pillar | status | scene | notes |
 |---|---|---|---|---|---|---|
-
+| M01 | server swimming / vitals | mvp | authority | playtest | FirstPlayable | local host/client; user feel pending |
+| M02 | harpoon / tension / help | mvp | active fishing | playtest | FirstPlayable | RPC/FSM capture exercised; human co-op pending |
+| M03 | cargo / repeatable hoist | mvp | delivery | playtest | FirstPlayable | default17.13s observed,12deliveries in isolated probe |
+| M04 | process/feed | mvp | choice | playtest | FirstPlayable | single consumption rules and live commands |
+| M05 | upgrades / Depth2 | mvp | incremental | playtest | FirstPlayable | Reel/Fins/Hull purchased with actual catches in probe |
+| M06 | hunger / reservoir waves | mvp | local risk | playtest | FirstPlayable | fixture stock10 to7; upgrades/lifetime preserved |
+| M07 | predator / rescue | mvp | cooperation | gym | FirstPlayable | manual multiplayer feel pending |
+| M08 | host persistence | mvp | permanent tech | playtest | FirstPlayable | checksum/atomic save tests, diskHull1 observed |
+| M09 | Steam lobby / transport | mvp | cooperation | gym | FirstPlayable | two-account test deferred by user |
 ## Game designer ideas
-<!-- references/gamedesigner.md. Statuses: proposed → approved → M## | rejected (why) | deferred.
-Do not propose rejected ideas again. Do not implement unapproved ones. -->
-| id | idea | why it's fun | cost S/M/L | point (phase) | status |
-|---|---|---|---|---|---|
-
-## Content
-<!-- phase 8 (references/production.md): one line per unit. Statuses: sketch → blockout → art → final. -->
-| id | new | signature moment | difficulty 1–10 | axes of difference from the neighbor | story beat | status |
-|---|---|---|---|---|---|---|
-
-## Progression and meta
-- 
-
-## Economy
-<!-- resource: sources → sinks, rate (a guess is fine) -->
-- 
-
-## Difficulty
-- philosophy: 
-- axes: 
-
+No new hooks authorized; implement explicit brief first.
 ## Mechanic specs
-<!-- ### M01 — Name
-what · why (pillar) · controls · rules · parameters (in data files) ·
-acceptance criteria · "feel" (targets) · research: research/mech-M01.md -->
-
+See Docs/BRIEF.md sections3-12. Tuning in Assets/_Game/Data assets; no shop currency or reset.
 ## Changelog
-| date | what | why |
-|---|---|---|
+2026-11-18: adopted supplied brief, Steam prioritized by explicit user request.

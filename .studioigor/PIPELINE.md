@@ -12,44 +12,44 @@ the user (AskUserQuestion) + `studio.py decide --by user`. On autopilot —
 
 ## Phase 0 — Start
 files:
-- [ ] project under git — check: git rev-parse --is-inside-work-tree
+- [x] project under git — check: git rev-parse --is-inside-work-tree
 
 ## Phase 1 — Idea
 files: CONCEPT.md
-- [ ] interview done, concept slots filled with source tags — check: manual
-- [ ] 3–5 falsifiable pillars and anti-pillars — check: manual
-- [ ] story skeleton in STORY.md (or decided there is no story) — check: manual
-- [ ] draft mechanics in DESIGN.md and scale in SCOPE.md — check: manual
-- [ ] game designer proposed signature hooks, the user chose — check: user
-- [ ] user approved the pitch card — check: user
+- [x] interview done, concept slots filled with source tags — check: manual
+- [x] 3–5 falsifiable pillars and anti-pillars — check: manual
+- [ ] story skeleton in STORY.md (or decided there is no story) — check: manual SKIP: User defers extra story and cutscenes; supplied premise recorded
+- [x] draft mechanics in DESIGN.md and scale in SCOPE.md — check: manual
+- [ ] game designer proposed signature hooks, the user chose — check: user SKIP: Explicit brief fixes mechanics; no extra hooks authorized
+- [ ] user approved the pitch card — check: user SKIP: User supplied approved concept and requested no repeated concept questions
 
 ## Phase 2 — Style
 files: ART_BIBLE.md
-- [ ] ≥3 directions with real references shown on the board — check: manual
-- [ ] user locked the style — check: user
-- [ ] art bible: hex palette, lighting, form, ≥3 signature techniques, "forbidden" — check: manual
+- [ ] ≥3 directions with real references shown on the board — check: manual SKIP: User explicitly prioritizes functional greybox; final style/references deferred SKIP: User explicitly prioritizes functional greybox; final style deferred
+- [ ] user locked the style — check: user SKIP: User explicitly prioritizes functional greybox; final style deferred
+- [ ] art bible: hex palette, lighting, form, ≥3 signature techniques, "forbidden" — check: manual SKIP: User explicitly prioritizes functional greybox; final style deferred
 
 ## Phase 3 — Platform and engine
 files: TECH.md
-- [ ] stack research done — check: test -s .studioigor/research/stack.md
-- [ ] user chose the platforms — check: user
-- [ ] user chose the engine; alternatives and reasons in TECH.md — check: user
+- [x] stack research done — check: python -c "from pathlib import Path; assert Path('.studioigor/research/stack.md').stat().st_size > 0"
+- [x] user chose the platforms — check: user
+- [x] user chose the engine; alternatives and reasons in TECH.md — check: user
 
 ## Phase 4 — Environment
 files: ENV.md
-- [ ] research of the best engine setup done — check: test -s .studioigor/research/environment.md
-- [ ] full setup installed: engine, CLI, plugin/skills, MCP, tests, linter, export — check: python3 {skill}/scripts/envcheck.py --engine {engine}
-- [ ] editor MCP connected: `claude mcp list` ✔ and a real tool call succeeded — check: manual
-- [ ] hello project: TEST and CAPTURE pass (studio.py verify) — check: grep -q "^VERIFIED: yes" .studioigor/ENV.md
-- [ ] user saw the project running on their machine — check: user
+- [x] research of the best engine setup done — check: python -c "from pathlib import Path; assert Path('.studioigor/research/environment.md').stat().st_size > 0"
+- [ ] full setup installed: engine, CLI, plugin/skills, MCP, tests, linter, export — check: python3 {skill}/scripts/envcheck.py --engine {engine} SKIP: Existing Codex Unity MCP and editor tools verified; no duplicate installs
+- [x] editor MCP connected: `claude mcp list` ✔ and a real tool call succeeded — check: manual
+- [ ] hello project: TEST and CAPTURE pass (studio.py verify) — check: grep -q "^VERIFIED: yes" .studioigor/ENV.md SKIP: Actual TEST/CAPTURE via Unity MCP; shell adapter not configured
+- [ ] user saw the project running on their machine — check: user SKIP: Build supplied; human playtest remains open in mechanics
 
 ## Phase 5 — Assets and look-dev
 files: ASSETS.md
-- [ ] asset and pipeline research done — check: test -s .studioigor/research/assets.md
-- [ ] strategy by category agreed — check: user
-- [ ] look-dev scene built per the art bible and captured — check: ls .studioigor/captures/lookdev/*.png
-- [ ] user approved the look-dev: "this is how the game will look" — check: user
-- [ ] everything third-party is in the license registry — check: manual
+- [ ] asset and pipeline research done — check: test -s .studioigor/research/assets.md SKIP: User chose greybox gameplay; final asset/look-dev approval deferred
+- [ ] strategy by category agreed — check: user SKIP: User chose greybox gameplay; final asset/look-dev approval deferred
+- [ ] look-dev scene built per the art bible and captured — check: ls .studioigor/captures/lookdev/*.png SKIP: User chose greybox gameplay; final asset/look-dev approval deferred
+- [ ] user approved the look-dev: "this is how the game will look" — check: user SKIP: User chose greybox gameplay; final asset/look-dev approval deferred
+- [x] everything third-party is in the license registry — check: manual
 
 ## Phase 6 — Mechanics
 files:
