@@ -12,6 +12,7 @@ namespace Raid.UI
         void Awake(){button=GetComponent<Button>();caption=GetComponentInChildren<TMP_Text>();border=GetComponent<Outline>();}
         void LateUpdate()
         {
+            if(button==null){button=GetComponent<Button>();caption=GetComponentInChildren<TMP_Text>();border=GetComponent<Outline>();known=false;}
             bool available=button.IsInteractable();
             if(!known || available!=lastInteractable)
             {known=true;lastInteractable=available;caption.color=!available?UiTheme.Text:primary?UiTheme.Steel:UiTheme.Text;RefreshBorder();}

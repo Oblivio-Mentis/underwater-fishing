@@ -29,11 +29,12 @@ namespace Raid.UI
         CanvasGroup[] modalGroups;
         GameObject cancelConfirmationButton;
         UiPage settingsBack=UiPage.Main;
+        UiPage crewBack=UiPage.Pause;
         Action confirmAction;
         RaidWorld subscribedWorld;
         bool connectedBefore,overlayBefore,replyReceived;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
-        float initialVolume;
+        [SerializeField,HideInInspector] float initialVolume=1;
         WorldAction pendingAction;
         long pendingId;
         int requestSequence,pendingRequestId;
@@ -86,6 +87,7 @@ namespace Raid.UI
         public void ShowPage(UiPage value)
         {
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
+            if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
             Page=value;
             if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-254:-4),new Vector2(1080,value==UiPage.None?50:38));
@@ -100,7 +102,7 @@ namespace Raid.UI
         public void ClosePanel()
         {
             if(confirmation.gameObject.activeSelf){CancelConfirmation();return;}
-            ShowPage(Page==UiPage.Settings?settingsBack:Context.Connected?UiPage.None:UiPage.Main);
+            ShowPage(Page==UiPage.Settings?settingsBack:Page==UiPage.Crew?crewBack:Context.Connected?UiPage.None:UiPage.Main);
         }
         void SetCursor()
         {
@@ -111,6 +113,7 @@ namespace Raid.UI
         }
         void Update()
         {
+            if(menu==null)return;
             if(Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();

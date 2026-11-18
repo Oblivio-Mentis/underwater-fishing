@@ -33,7 +33,8 @@ namespace Raid.UI
         {
             var r=Node(parent,name);var label=r.gameObject.AddComponent<TextMeshProUGUI>();label.font=Font;label.text=value;label.fontSize=size;
             label.color=color??UiTheme.Text;label.raycastTarget=false;label.textWrappingMode=TextWrappingModes.Normal;
-            label.overflowMode=TextOverflowModes.Overflow;label.margin=new Vector4(0,2,0,2);return label;
+            label.overflowMode=TextOverflowModes.Overflow;label.margin=Vector4.zero;
+            label.enableAutoSizing=true;label.fontSizeMin=Mathf.Min(16,size);label.fontSizeMax=size;return label;
         }
         public static LayoutElement Size(Component component,float height=-1,float width=-1,float flexibleWidth=0)
         {
