@@ -422,7 +422,9 @@ namespace UnderwaterFishing.Network.Steam
             else if (state.ConnectionState == LocalConnectionState.Started)
             {
                 if (!Available || Transport == null || Manager.TransportManager.Transport is not RoutingTransport router
-                    || router.ActiveTransport != Transport || Transport.GetConnectionState(false) != LocalConnectionState.Started)
+                    // Fishy uses ClientHostSocket for the host; its GetConnectionState(false) only reads the remote-client socket.
+                    // The router records the state event from the selected transport for both client paths.
+                    || router.ActiveTransport != Transport || router.GetConnectionState(false) != LocalConnectionState.Started)
                 { CloseSession("Steam connection rejected: the selected transport is not the active FishySteamworks client."); return; }
                 ulong localId = SteamUser.GetSteamID().m_SteamID;
                 if (!SteamUser.BLoggedOn() || localId == 0 || !ulong.TryParse(SteamMatchmaking.GetLobbyData(new CSteamID(CurrentLobby), "host"), out ulong host)
