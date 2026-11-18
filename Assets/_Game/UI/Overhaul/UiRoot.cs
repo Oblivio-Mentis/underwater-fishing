@@ -68,9 +68,9 @@ namespace Raid.UI
         void MakeConfirmation()
         {
             var dark=UiKit.Panel(transform,"Confirm veil",new Color(0,0,0,.68f),true);UiKit.Fill(dark.rectTransform);confirmation=dark.rectTransform;
-            var surface=UiKit.Frame(confirmation,"Confirmation",780,360);var column=UiKit.Column(surface,"Content",18,28);UiKit.Fill(column);
+            var surface=UiKit.Frame(confirmation,"Confirmation",780,620);var column=UiKit.Column(surface,"Content",18,28);UiKit.Fill(column);
             UiKit.Size(UiKit.Label(column,"Tag",UiText.ModalTag,18,UiTheme.Cyan),28);
-            UiKit.Size(UiKit.Label(column,"Title","",30),48);UiKit.Size(UiKit.Label(column,"Description","",23),110);
+            UiKit.Size(UiKit.Label(column,"Title","",30),48);UiKit.Size(UiKit.Label(column,"Description","",23),260);
             var row=UiKit.Row(column,"Actions");UiKit.Size(row,56);
             cancelConfirmationButton=UiKit.Button(row,"Confirm cancel",UiText.Cancel,CancelConfirmation).gameObject;
             UiKit.Button(row,"Confirm accept",UiText.Confirm,()=>{var action=confirmAction;CancelConfirmation();action?.Invoke();},true);
@@ -116,6 +116,8 @@ namespace Raid.UI
         void Update()
         {
             if(menu==null)return;
+            bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
+            if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
             if(Application.isFocused && !overlayBefore && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
@@ -135,8 +137,6 @@ namespace Raid.UI
                     if(confirmation.gameObject.activeSelf)CancelConfirmation();ShowPage(connected?UiPage.None:UiPage.Main);
                     if(!connected)Toast(UiText.LostHost,true);
                 }
-                bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
-                if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {
