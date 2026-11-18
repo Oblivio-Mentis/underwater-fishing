@@ -24,6 +24,7 @@ namespace Raid
         private float _assistedUntil;
 
         public DiverMotor Motor { get; private set; }
+        public FishActor HookedFish => _fish;
         public FishActor CarriedFish => _fish != null && _fish.Mode == FishMode.Captured ? _fish : null;
         public bool Reeling => IsServerInitialized && _reelHeld && Time.unscaledTime - _lastControls < tuning.inputTimeout;
         public bool IsAssisted => IsServerInitialized && _assistant != null && _assistant._assistHeld
@@ -75,12 +76,12 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
+            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
             if (controlling && _fire.WasPressedThisFrame() && _fish == null) FireServer();
             if (controlling && _release.WasPressedThisFrame()) ReleaseServer();
             if (Time.unscaledTime < _nextHeartbeat) return;
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
-            SetControlsServer(controlling && _fire.IsPressed(), controlling && _assist.IsPressed());
+            SetControlsServer(controlling && _fire.IsPressed(), controlling && _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist));
         }
 
         [ServerRpc]
@@ -165,6 +166,7 @@ namespace Raid
 
         private void OnGUI()
         {
+            if(UI.UiInputGate.Active) return;
             if (!IsClientInitialized || !IsOwner) return;
             GUI.Box(new Rect(Screen.width - 376f, Screen.height - 112f, 360f, 96f), "HARPOON");
             string status = _fish == null ? "Aim at a fish — LMB to fire" : _fish.Mode == FishMode.Captured

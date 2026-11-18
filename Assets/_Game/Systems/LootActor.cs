@@ -10,27 +10,30 @@ namespace Raid
         private readonly SyncVar<Vector3> position=new();
         private readonly SyncVar<bool> visible=new();
         private DiverMotor carrier;
+        private readonly SyncVar<int> carrierOwner=new(-1);
+        public int CarrierOwnerId => carrierOwner.Value;
+        public bool IsVisible => visible.Value;
         private Renderer body;
         private Collider shape;
         private Vector3 spawn;
         private bool enabledAtDepth;
         private void Awake() { body=GetComponent<Renderer>(); shape=GetComponent<Collider>(); spawn=transform.position; }
         private static long NewId()=>System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(),0)&long.MaxValue;
-        public override void OnStartServer() { enabledAtDepth=false; visible.Value=false; carrier=null; itemId=NewId(); position.Value=spawn; }
+        public override void OnStartServer() { enabledAtDepth=false; visible.Value=false; carrier=null; carrierOwner.Value=-1; itemId=NewId(); position.Value=spawn; }
         public void SetDepth(int depth)
         {
             if(!IsServerInitialized) return;
-            enabledAtDepth=depth==tier; carrier=null; transform.position=spawn; position.Value=spawn; visible.Value=enabledAtDepth;
+            enabledAtDepth=depth==tier; carrier=null; carrierOwner.Value=-1; transform.position=spawn; position.Value=spawn; visible.Value=enabledAtDepth;
             itemId=NewId();
         }
         public bool Pickup(DiverMotor diver)
         {
             if(!IsServerInitialized || !enabledAtDepth || !visible.Value || carrier!=null || diver.IsHelpless || Vector3.Distance(diver.transform.position,transform.position)>3f) return false;
             foreach(var loot in FindObjectsByType<LootActor>()) if(loot.carrier==diver) return false;
-            carrier=diver; return true;
+            carrier=diver; carrierOwner.Value=diver.OwnerId; return true;
         }
         public bool IsCarriedBy(DiverMotor diver)=>carrier==diver;
-        public void Consume() { if(!IsServerInitialized) return; visible.Value=false; enabledAtDepth=false; carrier=null; }
+        public void Consume() { if(!IsServerInitialized) return; visible.Value=false; enabledAtDepth=false; carrier=null; carrierOwner.Value=-1; }
         private void FixedUpdate()
         {
             if(!IsServerInitialized) return;
@@ -40,6 +43,7 @@ namespace Raid
                 else transform.position=carrier.transform.position+carrier.transform.right*.8f;
             }
             position.Value=transform.position;
+            carrierOwner.Value=carrier==null?-1:carrier.OwnerId;
         }
         private void LateUpdate()
         {

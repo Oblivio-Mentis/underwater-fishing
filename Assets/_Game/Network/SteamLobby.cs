@@ -14,6 +14,9 @@ namespace Raid
         private CSteamID currentLobby;
         private CSteamID originalHost;
         private bool initialized;
+        public bool IsInitialized => initialized;
+        public bool OverlayActive {get;private set;}
+        private Callback<GameOverlayActivated_t> overlayChanged;
         private int generation;
         private readonly List<IDisposable> requests = new List<IDisposable>();
         private Callback<GameLobbyJoinRequested_t> inviteRequested;
@@ -47,6 +50,7 @@ namespace Raid
                     return false;
                 }
                 initialized = true;
+                overlayChanged=Callback<GameOverlayActivated_t>.Create(value=>OverlayActive=value.m_bActive!=0);
                 inviteRequested = Callback<GameLobbyJoinRequested_t>.Create(OnInvite);
                 membersChanged = Callback<LobbyChatUpdate_t>.Create(OnMembersChanged);
                 dataChanged = Callback<LobbyDataUpdate_t>.Create(OnDataChanged);
@@ -232,6 +236,7 @@ namespace Raid
             inviteRequested?.Dispose();
             membersChanged?.Dispose();
             dataChanged?.Dispose();
+            overlayChanged?.Dispose();
             if (initialized) SteamAPI.Shutdown();
             initialized = false;
         }

@@ -36,6 +36,7 @@ namespace Raid
         private Vector3 _previousPosition;
 
         public float Oxygen => _state.Value.Oxygen;
+        public float LocalLookMultiplier {get;set;} = 1f;
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
@@ -134,12 +135,12 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null) return;
-            if (_release.WasPressedThisFrame()) SetCursor(false);
-            if (_capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
+            if (!UI.UiInputGate.Active && _release.WasPressedThisFrame()) SetCursor(false);
+            if (!UI.UiInputGate.Active && _capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
+            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
             if (controlling)
             {
-                Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity;
+                Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);
                 _pitch = Mathf.Clamp(_pitch - look.y, -85f, 85f);
             }
@@ -242,6 +243,7 @@ namespace Raid
 
         private void OnGUI()
         {
+            if(UI.UiInputGate.Active) return;
             if (!IsClientInitialized || !IsOwner) return;
             GUI.Box(new Rect(16f, Screen.height - 112f, 420f, 96f), "");
             GUI.Label(new Rect(28f, Screen.height - 104f, 400f, 24f),
