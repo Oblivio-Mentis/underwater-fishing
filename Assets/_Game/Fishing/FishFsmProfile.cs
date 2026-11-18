@@ -17,19 +17,19 @@ namespace Raid
         public override void FixedTick(FishContext context, float dt) => context.Actor.SimulateState((FishMode)StateId, dt);
     }
 
-    [UniversalFsmStateMetadata("RAID Fishing", "Roam", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Roam", "Fish")]
     public sealed class FishRoamState : FishFsmState { public override int StateId => (int)FishMode.Roam; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Hooked", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Hooked", "Fish")]
     public sealed class FishHookedState : FishFsmState { public override int StateId => (int)FishMode.Hooked; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Struggling", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Struggling", "Fish")]
     public sealed class FishStrugglingState : FishFsmState { public override int StateId => (int)FishMode.Struggling; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Tired", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Tired", "Fish")]
     public sealed class FishTiredState : FishFsmState { public override int StateId => (int)FishMode.Tired; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Captured", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Captured", "Fish")]
     public sealed class FishCapturedState : FishFsmState { public override int StateId => (int)FishMode.Captured; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Transported", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Transported", "Fish")]
     public sealed class FishTransportedState : FishFsmState { public override int StateId => (int)FishMode.Transported; }
-    [UniversalFsmStateMetadata("RAID Fishing", "Escaped", "Fish")]
+    [UniversalFsmStateMetadata("RaidFishing", "Escaped", "Fish")]
     public sealed class FishEscapedState : FishFsmState { public override int StateId => (int)FishMode.Escaped; }
 
     [CreateAssetMenu(menuName = "RAID/Fish FSM profile")]
