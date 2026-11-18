@@ -47,7 +47,12 @@ namespace UnderwaterFishing.Editor
             EditorUtility.SetDirty(networkObject);
         }
         private static GameObject SaveNetworkPrefab(GameObject go, string path)
-        { SetPrefabHash(go, path); return PrefabUtility.SaveAsPrefabAsset(go, path); }
+        {
+            // Unity saves a prefab root under the asset filename. Hash that final name, as FishNet does on import.
+            go.name = Path.GetFileNameWithoutExtension(path);
+            SetPrefabHash(go, path);
+            return PrefabUtility.SaveAsPrefabAsset(go, path);
+        }
         private static void CreateContent()
         {
             if (EditorApplication.isPlaying) throw new System.InvalidOperationException("Stop play before rebuilding scenes.");
