@@ -1,0 +1,11 @@
+{
+  "mode": "EditMode",
+  "assembly": "Raid.Progression.Tests",
+  "before_job": "93e83184eb4c436d9b9dd4d5df2e306c",
+  "after_job": "3eb9970c0cac4050857b01de95241453",
+  "total": 23,
+  "passed": 23,
+  "failed": 0,
+  "skipped": 0,
+  "after_duration_seconds": 0.7872418
+}

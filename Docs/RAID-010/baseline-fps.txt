@@ -1,0 +1,1 @@
+baseline FirstPlayable static first-person pose, no network; fps=553,72 elapsed=10,0013920000001 frames=5538 resolution=1920x1080 GPU=NVIDIA GeForce RTX 4070 CPU=AMD Ryzen 7 7700X 8-Core Processor  RAM=31894

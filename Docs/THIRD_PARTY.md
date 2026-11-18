@@ -12,3 +12,7 @@
 | Greybox meshes/materials | Created in this project through Unity primitives | Project-authored |
 
 FishySteamworks Git UPM import contained no source code; removed it and imported the official release as documented. No fork or alternate networking framework used. Native Steam DLLs come from the Steamworks.NET package, without duplicate SDK installation.
+
+## RAID-010 visual slice
+
+Hull/interior modules, rocks, kelp, wreck, parasite, fish fins, harpoon, materials and `RAID010/World Text` shader were authored in this project. No external art pack, paid/trial asset, downloaded model or new package was used. The existing Unity font atlas is used by world labels under the installed Unity terms. New materials use the already installed URP 17.5 shaders. No additional third-party art attribution or license grant is required.
