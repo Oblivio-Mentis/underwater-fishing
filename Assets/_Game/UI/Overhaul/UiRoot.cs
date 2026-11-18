@@ -21,6 +21,8 @@ namespace Raid.UI
         CanvasScaler scaler;
         Canvas canvas;
         bool computerSurface;
+        Camera viewCamera;
+        float desiredFov=80;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;
@@ -253,7 +255,16 @@ namespace Raid.UI
         void ApplyCameraSettings()
         {
             if(Context.Player==null)return;Context.Player.LocalLookMultiplier=Settings.sensitivity;
-            var camera=Context.Player.GetComponentInChildren<Camera>();if(camera!=null && camera.fieldOfView!=Settings.fov)camera.fieldOfView=Settings.fov;
+            viewCamera=Context.Player.GetComponentInChildren<Camera>();desiredFov=Settings.fov;
+            if(computerSurface && viewCamera!=null && Context.SelectedConsole!=null)
+            {
+                float distance=Vector3.Distance(viewCamera.transform.position,Context.SelectedConsole.screenAnchor.position);
+                desiredFov=Mathf.Clamp(2*Mathf.Atan(.0018f*810*.65f/Mathf.Max(.5f,distance))*Mathf.Rad2Deg,34,80);
+            }
+        }
+        void LateUpdate()
+        {
+            if(viewCamera!=null)viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
         }
         void OnApplicationFocus(bool focused)
         {

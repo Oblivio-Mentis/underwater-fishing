@@ -224,8 +224,15 @@ namespace Raid
         {
             if(!IsServerInitialized || waveLossBudget<=0) return;
             int count=Mathf.Min(waveLossBudget,Mathf.Max(1,Mathf.CeilToInt(severity)));
-            count=Mathf.Min(count,team.tank.Count);
-            if(count>0) { team.tank.RemoveRange(team.tank.Count-count,count); waveLossBudget-=count; stockLossDisplay.Value+=count; Publish(); Save(); }
+            // Committed pipe batches are behind closed valves; only stock still
+            // available in the reservoir can be stolen. Original non-batch loss is unchanged.
+            var available=team.tank.FindAll(x=>!IsRouting(x.id));
+            count=Mathf.Min(count,available.Count);
+            if(count>0)
+            {
+                for(int i=0;i<count;i++)team.tank.Remove(available[available.Count-1-i]);
+                waveLossBudget-=count;stockLossDisplay.Value+=count;Publish();Save();
+            }
         }
         private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team); }
         private void Save()

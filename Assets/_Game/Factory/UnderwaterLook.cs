@@ -38,6 +38,7 @@ namespace Raid
         void Update()
         {
             if(Time.unscaledTime<nextCamera)return;nextCamera=Time.unscaledTime+.2f;
+            ambient.mute=oneShot.mute=!Application.isFocused;
             var root=UI.UiRoot.Instance;var player=root==null?null:root.Context.Player;
             var owned=player==null?null:player.GetComponentInChildren<Camera>();
             if(owned!=camera)
@@ -69,10 +70,13 @@ namespace Raid
                 bubbleMaterial.SetColor("_BaseColor",new Color(.35f,.85f,.9f,.22f));bubbleMaterial.SetFloat("_Surface",1);bubbleMaterial.SetFloat("_Blend",0);
                 bubbleMaterial.SetFloat("_SrcBlend",5);bubbleMaterial.SetFloat("_DstBlend",10);bubbleMaterial.SetFloat("_ZWrite",0);bubbleMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");bubbleMaterial.renderQueue=3000;
             }
-            go.GetComponent<ParticleSystemRenderer>().sharedMaterial=bubbleMaterial;bubbles.Play();
+            var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=bubbleMaterial;
+            var factory=Object.FindAnyObjectByType<Factory.FactoryVisuals>();
+            if(factory!=null&&factory.bubbleMesh!=null){renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=factory.bubbleMesh;}
+            bubbles.Play();
         }
-        public void Click() { if(oneShot!=null)oneShot.PlayOneShot(click,.6f); }
-        public void Valve() { if(oneShot!=null)oneShot.PlayOneShot(route,.7f); }
+        public void Click() { if(oneShot!=null&&Application.isFocused)oneShot.PlayOneShot(click,.6f); }
+        public void Valve() { if(oneShot!=null&&Application.isFocused)oneShot.PlayOneShot(route,.7f); }
         AudioClip MakeHum()
         {
             const int rate=22050;int count=rate*8;var samples=new float[count];var random=new System.Random(11011);float noise=0;

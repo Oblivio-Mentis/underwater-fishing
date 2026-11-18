@@ -97,6 +97,9 @@ namespace Raid.UI
             snapshot.controls=UnityEngine.Object.FindObjectsByType<Button>().Where(b=>b.IsActive()).Select(b=>
             {
                 var rect=(RectTransform)b.transform;var corners=new Vector3[4];rect.GetWorldCorners(corners);var label=b.GetComponentInChildren<TMP_Text>();
+                var canvas=b.GetComponentInParent<Canvas>();
+                if(canvas!=null && canvas.renderMode==RenderMode.WorldSpace && canvas.worldCamera!=null)
+                    for(int i=0;i<corners.Length;i++)corners[i]=canvas.worldCamera.WorldToScreenPoint(corners[i]);
                 return new Control{name=b.name,text=label==null?"":label.text,interactable=b.IsInteractable(),x=corners[0].x,y=corners[0].y,w=corners[2].x-corners[0].x,h=corners[2].y-corners[0].y};
             }).ToArray();
             File.WriteAllText(Path.Combine(directory,"state.json.tmp"),JsonUtility.ToJson(snapshot,true));

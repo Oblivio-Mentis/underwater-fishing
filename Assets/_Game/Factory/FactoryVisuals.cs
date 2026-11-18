@@ -24,9 +24,7 @@ namespace Raid.Factory
         readonly Transform[] stock=new Transform[PoolSize];
         readonly Transform[] bubbles=new Transform[20];
         readonly Renderer[] bubbleRenderers=new Renderer[20];
-        readonly MaterialPropertyBlock block=new MaterialPropertyBlock();
-        readonly MaterialPropertyBlock treadBlock=new MaterialPropertyBlock();
-        readonly MaterialPropertyBlock glassBlock=new MaterialPropertyBlock();
+        MaterialPropertyBlock block,treadBlock,glassBlock;
         bool batchFeeding,batchActive;
         int batchCount,batchSeed;
         float batchStarted,nextStockRead;
@@ -39,10 +37,11 @@ namespace Raid.Factory
 
         public bool IsPlaying => batchActive;
         public float Elapsed => batchActive?Mathf.Max(0,Time.time-batchStarted):0;
-        public float Duration => FishSeconds+batchCount*FishInterval;
+        public float Duration => FishSeconds+Mathf.Max(0,batchCount-1)*FishInterval;
 
         void Awake()
         {
+            block=new MaterialPropertyBlock();treadBlock=new MaterialPropertyBlock();glassBlock=new MaterialPropertyBlock();
             if(fishTemplate==null){enabled=false;return;}
             for(int i=0;i<PoolSize;i++)
             {
@@ -129,7 +128,7 @@ namespace Raid.Factory
             {
                 nextStockRead=Time.time+.2f;stockCount=0;
                 var world=RaidWorld.Instance;
-                if(world!=null && world.IsClientInitialized && world.View!=null)
+                if(world!=null && world.NetworkObject!=null && world.IsClientInitialized && world.View!=null)
                     foreach(var item in world.View.tank)if(item.offering>0||item.biomass>0||item.chitin>0)stockCount++;
             }
             int inFlight=0;

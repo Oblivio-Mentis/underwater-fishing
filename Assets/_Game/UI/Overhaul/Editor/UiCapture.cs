@@ -48,6 +48,9 @@ namespace Raid.UI.Editor
                 if(text.isTextOverflowing && text.GetComponentInParent<UnityEngine.UI.ScrollRect>()==null)overflow++;
                 if(text.GetComponentInParent<UnityEngine.UI.RectMask2D>()!=null)continue;
                 var corners=new Vector3[4];text.rectTransform.GetWorldCorners(corners);
+                var canvas=text.canvas;
+                if(canvas!=null && canvas.renderMode==RenderMode.WorldSpace && canvas.worldCamera!=null)
+                    for(int i=0;i<corners.Length;i++)corners[i]=canvas.worldCamera.WorldToScreenPoint(corners[i]);
                 if(corners[0].x<-.5f || corners[0].y<-.5f || corners[2].x>Screen.width+.5f || corners[2].y>Screen.height+.5f)escaped++;
             }
             string result="resolution="+Screen.width+"x"+Screen.height+" page="+root.Page+" scale="+root.Settings.scale+" visibleTexts="+visible+" textOutsideScreen="+escaped+" nonScrollTextOverflow="+overflow;
