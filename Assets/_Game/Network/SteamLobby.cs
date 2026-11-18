@@ -10,7 +10,7 @@ namespace Raid
     {
         public RaidSession session;
         private const string Game = "raid-underwater-fishing-2026";
-        private const string Protocol = "foundation-1";
+        private const string Protocol = "playable-1";
         private CSteamID currentLobby;
         private CSteamID originalHost;
         private bool initialized;
@@ -57,6 +57,10 @@ namespace Raid
                 session.SetStatus("Не удалось загрузить Steam API: " + error.Message);
                 return false;
             }
+        }
+        public void Enable()
+        {
+            if(EnsureSteam()) session.SetStatus("Steam подключён. Можно принять приглашение или ввести Lobby ID.");
         }
 
         private void Update()

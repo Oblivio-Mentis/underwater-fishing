@@ -61,6 +61,7 @@ namespace Raid
             if (tuning == null || fsmDefinition == null || fsmProfile == null)
                 throw new InvalidOperationException("Assign fishing tuning, native FSM definition and profile to FishActor.");
             _origin = transform.position;
+            _depthActive=false;
             _clock = _origin.x + _origin.z;
             _speciesName = fishId;
             fishId = Guid.NewGuid().ToString("N");

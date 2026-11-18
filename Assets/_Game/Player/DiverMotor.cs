@@ -95,6 +95,8 @@ namespace Raid
             _camera.nearClipPlane = 0.05f;
             _camera.farClipPlane = 160f;
             _camera.fieldOfView = 80f;
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = RenderSettings.fogColor;
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
             Cursor.lockState = CursorLockMode.Locked;

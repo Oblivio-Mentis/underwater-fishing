@@ -26,6 +26,8 @@ namespace Raid
         private void Start()
         {
             Application.runInBackground = true;
+            localTransport.SetTimeout(10f,false);
+            localTransport.SetTimeout(10f,true);
             manager.ClientManager.OnClientConnectionState += OnClientState;
             manager.ServerManager.OnServerConnectionState += OnServerState;
             string[] args = Environment.GetCommandLineArgs();
@@ -153,6 +155,7 @@ namespace Raid
             else
             {
                 GUI.enabled = !Busy;
+                if (GUILayout.Button("Подключить Steam / принимать приглашения")) lobby.Enable();
                 if (GUILayout.Button("Создать закрытое Steam-лобби")) lobby.Create();
                 GUILayout.Label("Steam Lobby ID (от хоста):");
                 lobbyId = GUILayout.TextField(lobbyId);

@@ -35,11 +35,19 @@ namespace Raid
         public int CurrentDepth=>depth.Value;
         public TeamProgress View=>view;
         public string Message=>message.Value;
+        public bool CanUseTerminal=>localDiver!=null && Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange;
+        public void ToggleTerminal()
+        {
+            if(!CanUseTerminal) return;
+            showTerminal=!showTerminal;
+            Cursor.lockState=showTerminal?CursorLockMode.None:CursorLockMode.Locked; Cursor.visible=showTerminal;
+        }
         private void Awake() { Instance=this; }
 
         public override void OnStartServer()
         {
             saveFailed=false;
+            atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
             savePath=Path.Combine(Application.persistentDataPath,"team-progress.json");
             string[] args=Environment.GetCommandLineArgs();
             int saveArg=Array.IndexOf(args,"-raid-save");
@@ -82,7 +90,7 @@ namespace Raid
             if(localDiver!=null && interact!=null && interact.WasPressedThisFrame())
             {
                 if(Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange)
-                { showTerminal=!showTerminal; Cursor.lockState=showTerminal?CursorLockMode.None:CursorLockMode.Locked; Cursor.visible=showTerminal; }
+                { ToggleTerminal(); }
                 else if(Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange)
                     Command(WorldAction.LoadCargo,0);
                 else Command(WorldAction.Collect,0);

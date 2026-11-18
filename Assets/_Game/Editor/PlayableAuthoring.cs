@@ -22,6 +22,7 @@ namespace Raid.Editor
             PrefabUtility.UnloadPrefabContents(prefab);
             var go=new GameObject("Game rules"); go.AddComponent<NetworkObject>();
             var world=go.AddComponent<RaidWorld>(); var threats=go.AddComponent<ThreatDirector>();
+            go.AddComponent<RaidStatusHud>();
             world.tuning=Asset<WorldTuning>("WorldTuning"); world.progression=Asset<ProgressionTuning>("ProgressionTuning");
             threats.tuning=Asset<ThreatTuning>("ThreatTuning"); world.threats=threats;
             world.container=GameObject.Find("Cargo container").transform;
@@ -43,6 +44,9 @@ namespace Raid.Editor
                 actor.depthTier=tier; actor.fishId=large?"Bristlefish":"Lanternfish";
                 actor.biomass=large?6*tier:3*tier; actor.chitin=tier==2?(large?3:1):0;
                 actor.offering=large?6:3; actor.cargoSize=large?3:1;
+                var tail=GameObject.CreatePrimitive(PrimitiveType.Cube);tail.name="Tail";tail.transform.SetParent(fish.transform,false);
+                tail.transform.localPosition=new Vector3(0,0,-.65f);tail.transform.localScale=new Vector3(.1f,.65f,.4f);
+                Object.DestroyImmediate(tail.GetComponent<Collider>());tail.GetComponent<Renderer>().sharedMaterial=fish.GetComponent<Renderer>().sharedMaterial;
             }
             for(int tier=1;tier<=2;tier++) for(int i=0;i<3;i++)
             {
@@ -55,6 +59,11 @@ namespace Raid.Editor
             var rubble=new GameObject("Rubble rescue gym"); rubble.transform.position=new Vector3(-8,-4,20);
             var trigger=rubble.AddComponent<BoxCollider>(); trigger.isTrigger=true; trigger.size=new Vector3(4,3,4);
             rubble.AddComponent<Rigidbody>().isKinematic=true; rubble.AddComponent<RubbleTrap>();
+            for(int i=0;i<3;i++)
+            {
+                var stone=GameObject.CreatePrimitive(PrimitiveType.Cube); stone.name="Loose wreckage";stone.transform.position=new Vector3(-9+i,-4.5f,20+(i%2));
+                stone.transform.localScale=new Vector3(1.4f,.6f,1);stone.GetComponent<Renderer>().sharedMaterial=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Materials/Safety.mat");
+            }
             foreach(var label in Object.FindObjectsByType<TextMesh>()) label.characterSize*=.15f;
             SerializeNetworkObjects();
             EditorSceneManager.SaveScene(scene);

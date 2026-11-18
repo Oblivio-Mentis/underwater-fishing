@@ -10,5 +10,9 @@ namespace Raid
             if(diver==null || !diver.IsServerInitialized || !touched.Add(diver.OwnerId)) return;
             diver.Trap();
         }
+        private void OnTriggerExit(Collider other)
+        {
+            var diver=other.GetComponentInParent<DiverMotor>(); if(diver!=null) touched.Remove(diver.OwnerId);
+        }
     }
 }

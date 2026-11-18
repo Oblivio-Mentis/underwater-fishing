@@ -122,7 +122,7 @@ MonoBehaviour:
   _initializeOrder: 0
   _preventDespawnOnDisconnect: 0
   _defaultDespawnType: 0
-  _initializedTimestamp: -8584065750120428453
+  _initializedTimestamp: -8584065749471341853
 --- !u!114 &3467996615617572052
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -16,7 +16,7 @@ namespace Raid
         private bool enabledAtDepth;
         private void Awake() { body=GetComponent<Renderer>(); shape=GetComponent<Collider>(); spawn=transform.position; }
         private static long NewId()=>System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(),0)&long.MaxValue;
-        public override void OnStartServer() { itemId=NewId(); position.Value=spawn; }
+        public override void OnStartServer() { enabledAtDepth=false; visible.Value=false; carrier=null; itemId=NewId(); position.Value=spawn; }
         public void SetDepth(int depth)
         {
             if(!IsServerInitialized) return;
