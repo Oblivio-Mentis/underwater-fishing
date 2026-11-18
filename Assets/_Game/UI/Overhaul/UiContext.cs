@@ -19,7 +19,9 @@ namespace Raid.UI
         public ThreatDirector Threats => World==null?null:World.threats;
         public bool Connected => Session!=null && Session.Connected && Player!=null;
         public bool AtBase => World!=null && World.AtBase;
-        public bool NearTerminal => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange;
+        public ShipConsole SelectedConsole {get;set;}
+        public ShipConsole AimedConsole {get;private set;}
+        public bool NearTerminal => SelectedConsole!=null?SelectedConsole.InRange(Player):ShipConsole.Stations.Count==0&&Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange;
         public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.cargoPosition)<World.tuning.interactionRange;
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
@@ -41,12 +43,18 @@ namespace Raid.UI
                 Loot.Clear();Loot.AddRange(Object.FindObjectsByType<LootActor>());
             }
             Player=Players.FirstOrDefault(p=>p.IsOwner);Harpoon=Player==null?null:Player.GetComponent<HarpoonTool>();Rescue=Player==null?null:Player.GetComponent<RescueTool>();
-            RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;Interaction=UiInteraction.None;
+            RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;AimedConsole=null;Interaction=UiInteraction.None;
             if(!Connected)return;
             float range=2.5f;
             foreach(var other in Players)if(other!=Player && (other.IsHelpless||other.IsTrapped))
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
+            var playerCamera=Player.GetComponentInChildren<Camera>();RaycastHit consoleHit;
+            if(playerCamera!=null && Physics.Raycast(playerCamera.transform.position,playerCamera.transform.forward,out consoleHit,4f,~0,QueryTriggerInteraction.Ignore))
+            {
+                var station=consoleHit.collider.GetComponentInParent<ShipConsole>();
+                if(station!=null && station.InRange(Player)){AimedConsole=station;Interaction=UiInteraction.Terminal;return;}
+            }
             if(NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
             var camera=Camera.main;RaycastHit hit;
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))

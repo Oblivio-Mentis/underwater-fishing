@@ -19,6 +19,8 @@ namespace Raid.UI
         public string LastCommandReason {get;private set;}="";
         public bool LastCommandSucceeded {get;private set;}
         CanvasScaler scaler;
+        Canvas canvas;
+        bool computerSurface;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;
@@ -45,7 +47,7 @@ namespace Raid.UI
         {
             if(Instance!=null){Destroy(gameObject);return;}Instance=this;UiInputGate.Reset();UiInputGate.Active=true;
             Settings=UiSettings.Load();UiKit.Font=font;initialVolume=AudioListener.volume;
-            var canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=100;
+            canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=100;
             scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;gameObject.AddComponent<GraphicRaycaster>();canvasRect=(RectTransform)transform;
             var systems=UnityEngine.Object.FindObjectsByType<EventSystem>();
@@ -84,21 +86,41 @@ namespace Raid.UI
             var labels=confirmation.GetComponentsInChildren<TMP_Text>();foreach(var label in labels){if(label.name=="Title")label.text=title;if(label.name=="Description")label.text=description;}
             SetCursor();EventSystem.current?.SetSelectedGameObject(cancelConfirmationButton);
         }
-        void CancelConfirmation() { confirmAction=null;confirmation.gameObject.SetActive(false);foreach(var group in modalGroups)group.interactable=true;UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor(); }
+        void CancelConfirmation() { confirmAction=null;confirmation.gameObject.SetActive(false);foreach(var group in modalGroups)group.interactable=true;if(Page==UiPage.None)Context.SelectedConsole=null;UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor(); }
         public void ShowPage(UiPage value)
         {
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
             if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
             Page=value;
+            if(value!=UiPage.Terminal)Context.SelectedConsole=null;
+            ConfigureSurface(value);
             if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-254:-4),new Vector2(1080,value==UiPage.None?50:38));
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
-            shade.gameObject.SetActive(value!=UiPage.None);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
+            shade.gameObject.SetActive(value!=UiPage.None&&!computerSurface);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
             UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor();EventSystem.current?.SetSelectedGameObject(null);
             if(Context.Connected && value==UiPage.Terminal)terminal.Refresh();if(Context.Connected&&value==UiPage.Cargo)cargo.Refresh();
             Canvas.ForceUpdateCanvases();
+        }
+        void ConfigureSurface(UiPage page)
+        {
+            var station=Context.SelectedConsole;
+            computerSurface=page==UiPage.Terminal && station!=null && station.screenAnchor!=null;
+            if(computerSurface)
+            {
+                canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=Context.Player.GetComponentInChildren<Camera>();
+                canvasRect.sizeDelta=new Vector2(1920,1080);
+                canvasRect.position=station.screenAnchor.position;canvasRect.rotation=station.screenAnchor.rotation;
+                canvasRect.localScale=Vector3.one*.0018f;
+                Context.Player.LookAtConsole(station.screenAnchor.position);
+            }
+            else
+            {
+                canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.worldCamera=null;
+                canvasRect.localScale=Vector3.one;canvasRect.localRotation=Quaternion.identity;
+            }
         }
         public void ClosePanel()
         {
@@ -157,13 +179,38 @@ namespace Raid.UI
             if(Context.Player.IsHelpless)return;
             switch(Context.Interaction)
             {
-                case UiInteraction.Terminal: ShowPage(UiPage.Terminal); break;
+                case UiInteraction.Terminal:
+                    Context.SelectedConsole=Context.AimedConsole;
+                    if(Context.SelectedConsole!=null && (Context.SelectedConsole.kind==ShipConsoleKind.Process || Context.SelectedConsole.kind==ShipConsoleKind.Feed))
+                        ConfirmFishRoute(Context.SelectedConsole.kind==ShipConsoleKind.Feed);
+                    else
+                    {
+                        ShowPage(UiPage.Terminal);
+                        terminal.SelectTab(Context.SelectedConsole!=null&&Context.SelectedConsole.kind==ShipConsoleKind.Depths?"depths":"upgrades");
+                    }
+                    break;
                 case UiInteraction.Cargo:
                     if(Context.View.hoistPhase!=HoistPhase.Loading)Toast(UiText.CargoLocked);
                     else if(Context.HasCargo && Context.View.CargoUsed+Context.CarriedSize<=Context.View.Capacity(Context.Tuning))Send(WorldAction.LoadCargo);
                     ShowPage(UiPage.Cargo);break;
                 case UiInteraction.Loot: Send(WorldAction.Collect); break;
             }
+        }
+        void ConfirmFishRoute(bool feeding)
+        {
+            var view=Context.View;if(view==null)return;
+            if(Context.World.FishRoute.active){Toast(UiText.RouteBusy);return;}
+            if(!feeding&&!Context.AtBase){Toast(UiText.ProcessAtBase);return;}
+            var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
+            int count=fish.Count,food=0,biomass=0,chitin=0;
+            var station=Context.SelectedConsole;
+            foreach(var item in fish){food+=item.offering;biomass+=item.biomass;chitin+=item.chitin;}
+            string detail=feeding?"Пища: "+food+" / нужно "+Context.FoodRequired:"Выход: биомасса "+biomass+", хитин "+chitin;
+            Confirm(feeding?"Отдать всю рыбу чудовищу?":"Переработать всю рыбу?", "Рыбы: "+count+"\n"+detail+"\n\n"+(feeding?"Рыба уйдёт по правой трубе в пасть. Материалов из неё не будет.":"Рыба уйдёт по левой трубе на конвейер. Материалы поступят после обработки."),()=>
+            {
+                if(station==null || !station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
+                Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,count);
+            });
         }
         public void Send(WorldAction action,long id=0)
         {
@@ -179,6 +226,7 @@ namespace Raid.UI
             if(pendingAction==WorldAction.Process||pendingAction==WorldAction.Feed)return v.tank.Exists(x=>x.id==pendingId).ToString();
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();
             if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
+            if(pendingAction==WorldAction.ProcessAll||pendingAction==WorldAction.FeedAll)return Context.World.FishRoute.sequence.ToString();
             return Context.World.CurrentDepth+"/"+Context.AtBase+"/"+(Context.World.TravelRemaining>0);
         }
         void OnCommandReply(int requestId,bool success,string reason)

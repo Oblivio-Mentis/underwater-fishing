@@ -12,5 +12,6 @@ namespace Raid.UI
         public const string FocusPause="Управление приостановлено локально. Другие участники продолжают играть";
         public const string CaptureContext="Подойдите к точке взаимодействия";
         public const string RootVersion="RAID-011 • ИНТЕРФЕЙС NEREID";
+        public const string RouteBusy="Трубы заняты: дождитесь завершения подачи";
     }
 }

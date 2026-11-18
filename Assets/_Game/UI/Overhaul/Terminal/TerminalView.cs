@@ -105,6 +105,14 @@ namespace Raid.UI
         }
         void AddItem(CatchItem item,int index,bool feedOnly)
         {
+            if(ShipConsole.Stations.Count>0 && item.offering>0)
+            {
+                var card=TerminalParts.Card(content,"Catch_"+item.id,116);
+                TerminalParts.Text(card,"Title",UiText.ItemTitle(index,item),30,25);
+                TerminalParts.Text(card,"Yield",UiText.YieldLabel(item)+"  •  "+UiText.FoodValue(item.offering),26,20,UiTheme.Muted);
+                TerminalParts.Text(card,"RouteHint",app.Context.World.FishRoute.active?UiText.RouteBusy:"Подача рыбы: пульты по сторонам резервуара",24,18,UiTheme.Cyan);
+                return;
+            }
             long id=item.id;var body=TerminalParts.Card(content,"Catch_"+id,192);
             var titleRow=UiKit.Row(body,"TitleRow",16);UiKit.Size(titleRow,34);
             var title=UiKit.Label(titleRow,"Title",UiText.ItemTitle(index,item),26);UiKit.Size(title,34,flexibleWidth:1);

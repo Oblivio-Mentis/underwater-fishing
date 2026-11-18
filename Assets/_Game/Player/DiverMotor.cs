@@ -37,6 +37,14 @@ namespace Raid
 
         public float Oxygen => _state.Value.Oxygen;
         public float LocalLookMultiplier {get;set;} = 1f;
+        public void LookAtConsole(Vector3 point)
+        {
+            if(!IsOwner || _camera==null)return;
+            Vector3 direction=point-_camera.transform.position;
+            if(direction.sqrMagnitude<.01f)return;
+            var angles=Quaternion.LookRotation(direction).eulerAngles;
+            _yaw=angles.y;_pitch=Mathf.Clamp(Mathf.DeltaAngle(0,angles.x),-85,85);
+        }
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);

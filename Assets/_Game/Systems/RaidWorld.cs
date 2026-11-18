@@ -8,9 +8,9 @@ using UnityEngine.InputSystem;
 
 namespace Raid
 {
-    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect }
+    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll }
 
-    public sealed class RaidWorld : NetworkBehaviour
+    public sealed partial class RaidWorld : NetworkBehaviour
     {
         public static RaidWorld Instance {get; private set;}
         public WorldTuning tuning;
@@ -52,6 +52,7 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            ResetFishRoute();
             saveFailed=false;
             travelDisplay.Value=0; stockLossDisplay.Value=0;
             atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
@@ -106,6 +107,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if(!IsServerInitialized || team==null) return;
+            TickRouteClock();
             team.TickHoist(Time.fixedDeltaTime,progression);
             if(team.TickHunger(Time.fixedDeltaTime,progression))
             {
@@ -163,7 +165,12 @@ namespace Raid
             }
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
-            if(Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
+            if(stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
+            {Respond(sender,requestId,false,"route_busy");return;}
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id>0 && team.tank.FindAll(x=>x.offering>0).Count!=id)
+            {Respond(sender,requestId,false,"changed");return;}
             if(action>=WorldAction.Reel && action<=WorldAction.Winch && expectedLevel>=0 && team.Level((Upgrade)((int)action-(int)WorldAction.Reel))!=expectedLevel)
             { Respond(sender,requestId,false,"changed"); return; }
             bool success=false;
@@ -178,6 +185,8 @@ namespace Raid
                     pendingDepth=0; transitionRemaining=tuning.transitionSeconds; message.Value="Returning to base…"; success=true; break;
                 case WorldAction.Process: if(AtBase) success=team.Process(id); break;
                 case WorldAction.Feed: success=team.Feed(id); break;
+                case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
+                case WorldAction.FeedAll: success=BeginFishRoute(true); break;
                 case WorldAction.LoadCargo:
                     var tool=diver.GetComponent<HarpoonTool>(); var fish=tool!=null?tool.CarriedFish:null;
                     if(AtBase || team.hoistPhase!=HoistPhase.Loading) break;
