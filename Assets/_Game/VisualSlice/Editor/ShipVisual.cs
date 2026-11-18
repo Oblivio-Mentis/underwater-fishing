@@ -105,6 +105,7 @@ namespace Raid.VisualSlice.Editor
         static void Basket()
         {
             var cargo=GameObject.Find("Cargo container").transform;
+            var previous=cargo.Find("RAID010 cargo basket");if(previous!=null)Object.DestroyImmediate(previous.gameObject);
             var root=VisualKit.Group("RAID010 cargo basket",cargo);root.localScale=new Vector3(1/cargo.localScale.x,1/cargo.localScale.y,1/cargo.localScale.z);
             Box("Basket base",root,new Vector3(0,-.55f,0),new Vector3(2,.16f,2),"Navy");
             foreach(int side in new[]{-1,1})for(int i=0;i<7;i++)
