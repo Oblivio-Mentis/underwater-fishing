@@ -17,6 +17,8 @@ namespace UnderwaterFishing.Diving
         [Min(0f)] public float StressGainSpeed = 5f;
         [Min(0f)] public float StressRecovery = 4f;
         [Min(0f)] public float CriticalStress = 100f;
+        [Min(0f)] public float WarningStress = 40f;
+        [Min(0f)] public float CriticalWarningStress = 75f;
         [Min(0f)] public float RescueOxygen = 30f;
         [Min(0f)] public float IncapacitatedSeconds = 35f;
     }

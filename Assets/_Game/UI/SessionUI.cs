@@ -105,8 +105,11 @@ namespace UnderwaterFishing.UI
             if (diver == null) { hud.text = "ПЕЩЕРА · БАЗА ЭКИПАЖА"; fishingHud.text = ""; return; }
             var state = diver.State;
             var d = state.Diving;
-            hud.text = $"O₂  {d.Oxygen:0}   |   Глубина {d.Depth:0.0} м\nДавление {d.AmbientPressure:0.0} атм   |   Нагрузка {d.Stress:0}%\n{(state.Sheltered ? "ПОДЛОДКА · кислород восстанавливается" : "В ОТКРЫТОЙ ВОДЕ")}\nСостояние: {d.Life}  ·  Экипаж {session.PlayerCount}/5";
-            hud.color = d.Stress > 60 || d.Oxygen < 25 ? new Color(1f, .65f, .3f) : new Color(.7f, 1f, .95f);
+            var pressure = DivingSimulation.GetPressureCondition(d, diver.DivingSettings);
+            string pressureText = pressure == PressureCondition.Normal ? "норма" : pressure == PressureCondition.Warning ? "предупреждение" : pressure == PressureCondition.Critical ? "критическая" : "без сознания";
+            hud.text = $"O₂  {d.Oxygen:0}   |   Глубина {d.Depth:0.0} м\nДавление {d.AmbientPressure:0.0} атм   |   Нагрузка {d.Stress:0}% · {pressureText}\n{(state.Sheltered ? "ПОДЛОДКА · кислород восстанавливается" : "В ОТКРЫТОЙ ВОДЕ")}\nСостояние: {d.Life}  ·  Экипаж {session.PlayerCount}/5";
+            hud.color = pressure >= PressureCondition.Critical ? new Color(1, .35f, .2f)
+                : pressure == PressureCondition.Warning || d.Oxygen < 25 ? new Color(1f, .65f, .3f) : new Color(.7f, 1f, .95f);
             var rescue = diver.GetComponent<DiverRescue>();
             if (state.PinnedBy >= 0) hud.text += "\nПРИДАВЛЕН · F — подать сигнал. Напарник: удерживать E.";
             if (d.Life == DiverLife.Incapacitated) hud.text += $"\nБЕЗ СОЗНАНИЯ · до гибели {d.IncapacitatedRemaining:0} с. Напарник: удерживать F.";

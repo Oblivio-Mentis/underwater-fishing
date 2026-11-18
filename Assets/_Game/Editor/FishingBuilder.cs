@@ -24,19 +24,27 @@ namespace UnderwaterFishing.Editor
         {
             var tether = Asset<TetherSettings>("TetherBalance");
             balance.Tether = tether; EditorUtility.SetDirty(balance);
+            bool newSmall = !File.Exists(Root + "/Data/SmallFish.asset");
+            bool newLarge = !File.Exists(Root + "/Data/LargeFish.asset");
             var small = Asset<FishSpecies>("SmallFish");
-            small.DisplayName = "Рифовая рыба"; small.IsLarge = false;
-            small.Stamina = 6; small.StruggleSpeed = 1.8f; small.RopeMass = 1;
-            small.MinimumWorkTension = .005f; small.ReelExhaustionPerSecond = 4; small.StruggleRecoveryPerSecond = .15f;
-            small.BodyScale = new Vector3(.6f, .55f, 1.5f); small.RoamRadius = 4;
+            if (newSmall)
+            {
+                small.DisplayName = "Рифовая рыба"; small.IsLarge = false;
+                small.Stamina = 6; small.StruggleSpeed = 1.8f; small.RopeMass = 1;
+                small.MinimumWorkTension = .005f; small.ReelExhaustionPerSecond = 4; small.StruggleRecoveryPerSecond = .15f;
+                small.BodyScale = new Vector3(.6f, .55f, 1.5f); small.RoamRadius = 4;
+            }
             var large = Asset<FishSpecies>("LargeFish");
-            large.DisplayName = "Глубинный таран"; large.IsLarge = true;
-            large.Stamina = 35; large.StruggleSpeed = 4.2f; large.RopeMass = 6;
-            large.MinimumWorkTension = .02f;
-            large.BodyScale = new Vector3(1.4f, 1.1f, 3.5f); large.RoamRadius = 8;
-            large.CarryForwardDistance = 3.2f;
-            large.BurstSpeedMultiplier = 1.8f; large.RestSpeedMultiplier = .3f;
-            large.CargoSize = 4; large.OfferingValue = 12; large.BioYield = 8; large.RareYield = 2;
+            if (newLarge)
+            {
+                large.DisplayName = "Глубинный таран"; large.IsLarge = true;
+                large.Stamina = 35; large.StruggleSpeed = 4.2f; large.RopeMass = 6;
+                large.MinimumWorkTension = .02f;
+                large.BodyScale = new Vector3(1.4f, 1.1f, 3.5f); large.RoamRadius = 8;
+                large.CarryForwardDistance = 3.2f;
+                large.BurstSpeedMultiplier = 1.8f; large.RestSpeedMultiplier = .3f;
+                large.CargoSize = 4; large.OfferingValue = 12; large.BioYield = 8; large.RareYield = 2;
+            }
             EditorUtility.SetDirty(small); EditorUtility.SetDirty(large);
             var hookClip = Tone("Hook", 580, .12f);
             var catchClip = Tone("Catch", 920, .2f);

@@ -2,6 +2,7 @@ using System;
 
 namespace UnderwaterFishing.Diving
 {
+    public enum PressureCondition { Normal, Warning, Critical, Incapacitated }
     public enum DiverLife
     {
         Active,

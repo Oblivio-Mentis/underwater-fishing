@@ -327,6 +327,7 @@ GameObject:
   - component: {fileID: 2017820832818501536}
   - component: {fileID: 5447703830163626077}
   - component: {fileID: 3715682129285955566}
+  - component: {fileID: 7493740256757883230}
   m_Layer: 0
   m_Name: Diver
   m_TagString: Untagged
@@ -602,6 +603,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15a5dda299e844735c8dd06aabe2b5fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Debugging.CoreLoopTestBot
+--- !u!114 &7493740256757883230
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5608751642055112439}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c3ab2e1f0fa5f14ab93c2917894fe1a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UnderwaterFishing.Debugging.SpectatorTestBot
 --- !u!1 &6707998555848854544
 GameObject:
   m_ObjectHideFlags: 0

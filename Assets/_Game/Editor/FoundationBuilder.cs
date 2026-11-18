@@ -167,6 +167,7 @@ namespace UnderwaterFishing.Editor
             var steam = root.AddComponent<SteamLobbyService>(); steam.Manager = manager; steam.Transport = steamTransport;
             root.AddComponent<SteamSmokeTest>();
             root.AddComponent<SessionUI>();
+            root.AddComponent<WorldLabelVisibility>();
             var camera = new GameObject("Lobby Camera", typeof(Camera)).GetComponent<Camera>();
             camera.transform.position = new Vector3(0, -6.5f, -9); camera.transform.rotation = Quaternion.Euler(0, 0, 0);
             camera.clearFlags = CameraClearFlags.SolidColor; camera.backgroundColor = RenderSettings.fogColor;
@@ -224,6 +225,7 @@ namespace UnderwaterFishing.Editor
             ConfigureExpeditionDiver(go);
             ConfigureProgressionDiver(go);
             go.AddComponent<UnderwaterFishing.Debugging.CoreLoopTestBot>();
+            go.AddComponent<UnderwaterFishing.Debugging.SpectatorTestBot>();
             var prefab = SaveNetworkPrefab(go, Root + "/Prefabs/Diver.prefab");
             Object.DestroyImmediate(go); return prefab.GetComponent<NetworkObject>();
         }
@@ -254,11 +256,12 @@ namespace UnderwaterFishing.Editor
             }
             return go;
         }
-        private static void Sign(string text, Vector3 p, Quaternion rotation, Color color)
+        private static TextMesh Sign(string text, Vector3 p, Quaternion rotation, Color color)
         {
             var go = new GameObject(text, typeof(TextMesh)); go.transform.position = p; go.transform.rotation = rotation;
             var mesh = go.GetComponent<TextMesh>(); mesh.text = text; mesh.fontSize = 40; mesh.characterSize = .055f;
             mesh.anchor = TextAnchor.MiddleCenter; mesh.color = color;
+            return mesh;
         }
         [MenuItem("Underwater Fishing/Build Windows Development")]
         public static void BuildWindows()

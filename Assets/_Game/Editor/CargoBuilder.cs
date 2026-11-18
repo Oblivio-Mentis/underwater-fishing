@@ -14,12 +14,20 @@ namespace UnderwaterFishing.Editor
         private static CargoBuildAssets PrepareCargo()
         {
             var balance = Asset<CargoSettings>("CargoBalance");
+            bool newScrap = !System.IO.File.Exists(Root + "/Data/ScrapLoot.asset");
+            bool newElectronics = !System.IO.File.Exists(Root + "/Data/ElectronicsLoot.asset");
             var scrap = Asset<LootDefinition>("ScrapLoot");
-            scrap.DisplayName = "Ящик металлолома"; scrap.CargoSize = 2;
-            scrap.Yield = new CargoYield { Scrap = 4 }; scrap.Shape = new Vector3(.9f, .7f, .8f);
+            if (newScrap)
+            {
+                scrap.DisplayName = "Ящик металлолома"; scrap.CargoSize = 2;
+                scrap.Yield = new CargoYield { Scrap = 4 }; scrap.Shape = new Vector3(.9f, .7f, .8f);
+            }
             var electronics = Asset<LootDefinition>("ElectronicsLoot");
-            electronics.DisplayName = "Повреждённый электронный модуль"; electronics.CargoSize = 1;
-            electronics.Yield = new CargoYield { Scrap = 1, Electronics = 3 }; electronics.Shape = new Vector3(.5f, .45f, .6f);
+            if (newElectronics)
+            {
+                electronics.DisplayName = "Повреждённый электронный модуль"; electronics.CargoSize = 1;
+                electronics.Yield = new CargoYield { Scrap = 1, Electronics = 3 }; electronics.Shape = new Vector3(.5f, .45f, .6f);
+            }
             EditorUtility.SetDirty(scrap); EditorUtility.SetDirty(electronics);
             return new CargoBuildAssets {
                 Station = CargoStationPrefab(balance),
@@ -35,7 +43,8 @@ namespace UnderwaterFishing.Editor
             world.StationPrefab = assets.Station; world.ScrapPrefab = assets.Scrap; world.ElectronicsPrefab = assets.Electronics;
             Shape("Cargo hoist", new Vector3(4, -5.2f, 6), new Vector3(.3f, 3, .3f), Material("Hull", Color.gray));
             Shape("Protected cargo hold", new Vector3(4, -8, 7.8f), new Vector3(3, .3f, 2), Material("CargoHold", new Color(.3f, .4f, .65f)));
-            Sign("ГРУЗОВОЙ ОТСЕК\nЗащищённый улов · переработка на базе", new Vector3(4, -6, 7.8f), Quaternion.identity, Color.cyan);
+            var holdSign = Sign("ГРУЗОВОЙ ОТСЕК\nЗащищённый улов · переработка на базе", new Vector3(4, -6, 7.8f), Quaternion.identity, Color.cyan);
+            holdSign.characterSize = .018f;
         }
         private static NetworkObject CargoStationPrefab(CargoSettings balance)
         {

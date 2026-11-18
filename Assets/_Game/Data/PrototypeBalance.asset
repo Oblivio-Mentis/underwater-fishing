@@ -24,6 +24,8 @@ MonoBehaviour:
     StressGainSpeed: 5
     StressRecovery: 4
     CriticalStress: 100
+    WarningStress: 40
+    CriticalWarningStress: 75
     RescueOxygen: 30
     IncapacitatedSeconds: 35
   SwimSpeed: 4

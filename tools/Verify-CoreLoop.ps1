@@ -14,6 +14,16 @@ $raidResults = Join-Path $raidRoot ".studioigor/test-results/$raidScenario/$raid
 $raidCaptures = Join-Path $raidRoot ".studioigor/captures/$raidScenario/$raidRun"
 New-Item -ItemType Directory -Force -Path $raidResults | Out-Null
 if ($Capture) { New-Item -ItemType Directory -Force -Path $raidCaptures | Out-Null }
+if ($Capture) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public static class RaidCorePreviewWindow {
+    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr window, int x, int y, int width, int height, bool repaint);
+    [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
+}
+'@
+}
 $raidHostLog = Join-Path $raidResults 'host.log'
 $raidClientLog = Join-Path $raidResults 'client.log'
 $raidProcesses = @()
@@ -50,7 +60,20 @@ try {
         }
         $raidFailureFlag = if ($Failure) { '--raid-core-failure' } else { '' }
         $raidArguments = "$raidDisplay -logFile `"$raidLog`" $raidConnection --raid-core-bot $raidRole $raidFailureFlag --raid-expedition-seconds $ExpeditionSeconds --raid-exit-after $raidLifetime"
-        $raidProcesses += Start-Process -FilePath $raidBinary -ArgumentList $raidArguments -WindowStyle Hidden -PassThru
+        $raidWindowStyle = if ($Capture) { 'Normal' } else { 'Hidden' }
+        $raidPlayer = Start-Process -FilePath $raidBinary -ArgumentList $raidArguments -WindowStyle $raidWindowStyle -PassThru
+        $raidProcesses += $raidPlayer
+        if ($Capture) {
+            $raidWindowDeadline = [DateTime]::UtcNow.AddSeconds(10)
+            do { $raidPlayer.Refresh(); if ($raidPlayer.MainWindowHandle -ne [IntPtr]::Zero) { break }; Start-Sleep -Milliseconds 100 } while (!$raidPlayer.HasExited -and [DateTime]::UtcNow -lt $raidWindowDeadline)
+            if ($raidPlayer.MainWindowHandle -ne [IntPtr]::Zero) {
+                $raidWidth = [Math]::Min(1280, [RaidCorePreviewWindow]::GetSystemMetrics(0) - 60)
+                $raidHeight = [Math]::Min(720, [RaidCorePreviewWindow]::GetSystemMetrics(1) - 60)
+                $raidX = if ($raidIndex -eq 0) { 0 } else { [Math]::Max(60, [RaidCorePreviewWindow]::GetSystemMetrics(0) - $raidWidth) }
+                $raidY = if ($raidIndex -eq 0) { 0 } else { [Math]::Max(60, [RaidCorePreviewWindow]::GetSystemMetrics(1) - $raidHeight) }
+                [void][RaidCorePreviewWindow]::MoveWindow($raidPlayer.MainWindowHandle, $raidX, $raidY, $raidWidth, $raidHeight, $true)
+            }
+        }
         if ($raidIndex -eq 0) { Start-Sleep -Seconds 3 }
     }
     $raidDeadline = $raidStarted.AddSeconds($TimeoutSeconds)

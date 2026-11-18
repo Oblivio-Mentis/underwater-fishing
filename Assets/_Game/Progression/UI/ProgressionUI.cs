@@ -22,7 +22,6 @@ namespace UnderwaterFishing.Progression.UI
         private Text hud, title, stock, information, feedback;
         private Font font;
         private uint shownRevision = uint.MaxValue, shownCargoRevision = uint.MaxValue;
-        private float nextRefresh;
         private readonly List<Marker> markers = new List<Marker>();
         private sealed class Marker { public SonarContact Contact; public Text Label; public float Until; }
         public void Initialize(DiverProgression owner, DiverInput controls)
@@ -56,7 +55,7 @@ namespace UnderwaterFishing.Progression.UI
         public void Open(ProgressionTerminal target)
         {
             terminal = target; window.SetActive(true); input?.SetUiCapture(true);
-            shownRevision = shownCargoRevision = uint.MaxValue; nextRefresh = 0;
+            shownRevision = shownCargoRevision = uint.MaxValue;
         }
         public void Close()
         {
@@ -72,8 +71,6 @@ namespace UnderwaterFishing.Progression.UI
             if (authority == null) { Close(); if (hud != null) hud.text = ""; ClearSonar(); return; }
             if (IsOpen && (input != null && input.MenuOpen || terminal == null || !authority.CanUse(actor, terminal.Kind, true))) Close();
             if (authority.State.Phase != ExpeditionPhase.Expedition || !actor.Diver.IsActive) ClearSonar();
-            if (Time.unscaledTime < nextRefresh) return;
-            nextRefresh = Time.unscaledTime + .15f;
             var cargo = NetworkCargoStation.Instance;
             int reserved = ProgressionModel.ReservedValue(cargo?.ProtectedHold);
             string result = authority.State.LastOffering == OfferingResult.Success ? "Последнее подношение принято. Следующая квота выросла." : "";

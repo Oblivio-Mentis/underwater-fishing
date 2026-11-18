@@ -5,6 +5,16 @@ namespace UnderwaterFishing.Diving
     /// <summary>Deterministic gameplay rules. The caller owns time, shelter checks, and rescue eligibility.</summary>
     public static class DivingSimulation
     {
+        public static PressureCondition GetPressureCondition(DivingState state, DivingSettings settings)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            if (state.Life != DiverLife.Active) return PressureCondition.Incapacitated;
+            float maximum = NonNegative(settings.CriticalStress);
+            float warning = Math.Min(maximum, NonNegative(settings.WarningStress));
+            float critical = Math.Max(warning, Math.Min(maximum, NonNegative(settings.CriticalWarningStress)));
+            return state.Stress >= critical ? PressureCondition.Critical
+                : state.Stress >= warning ? PressureCondition.Warning : PressureCondition.Normal;
+        }
         public static DivingState Create(DivingSettings settings)
         {
             if (settings == null) throw new ArgumentNullException(nameof(settings));
