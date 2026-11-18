@@ -30,6 +30,11 @@ namespace Raid.VisualSlice.Editor
                 default:color=Color.white;break;
             }
             mat=new Material(Shader.Find("Universal Render Pipeline/Lit")){name=key};mat.color=color;
+            if(key=="Glass")
+            {
+                color.a=.3f;mat.color=color;mat.SetFloat("_Surface",1);mat.SetFloat("_SrcBlend",5);mat.SetFloat("_DstBlend",10);mat.SetFloat("_ZWrite",0);
+                mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");mat.renderQueue=3000;
+            }
             mat.SetFloat("_Smoothness",key=="Glass"?.75f:.27f); mat.SetFloat("_Metallic",key=="Hull"||key=="Trim"?.35f:0);
             if(key=="Light"||key=="Glow") {mat.EnableKeyword("_EMISSION");mat.SetColor("_EmissionColor",color*(key=="Light"?2f:1.4f));}
             AssetDatabase.CreateAsset(mat,path);return mat;
@@ -61,7 +66,7 @@ namespace Raid.VisualSlice.Editor
                 for(int i=0;i<sides;i++) {float angle=i*2*Mathf.PI/sides;vertices.Add(points[ring]+(a*Mathf.Cos(angle)+b*Mathf.Sin(angle))*radii[ring]);}
             }
             for(int r=0;r<points.Length-1;r++)for(int s=0;s<sides;s++)
-            {int a=r*sides+s,b=r*sides+(s+1)%sides,c=a+sides,d=b+sides;indices.AddRange(new[]{a,c,b,b,c,d});}
+            {int a=r*sides+s,b=r*sides+(s+1)%sides,c=a+sides,d=b+sides;indices.AddRange(new[]{a,b,c,b,d,c});}
             var mesh=new Mesh{name=name};mesh.SetVertices(vertices);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();mesh.RecalculateBounds();
             return MeshObject(name,parent,mesh,material);
         }
