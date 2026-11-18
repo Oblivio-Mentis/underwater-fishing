@@ -14,6 +14,9 @@ namespace Raid.UI
         public const string HudTension="НАТЯЖЕНИЕ";
         public const string HudStamina="СИЛЫ РЫБЫ";
         public const string HudHarpoonTip="ЛКМ — тянуть · отпускать при рывке\nR — освободить трос";
+        public const string HudTetherControls="ЛКМ — подтянуть · R — отпустить";
+        public const string HudTetherRefuse="R — отцепиться";
+        public const string HudTetherReleasing="Трос отсоединяется";
         public const string HudCaptured="УЛОВ ЗАХВАЧЕН";
         public const string HudCarryTip="Доставьте рыбу в грузовой контейнер";
         public const string HudCargo="КОНТЕЙНЕР / ЛЕБЁДКА";
@@ -22,6 +25,7 @@ namespace Raid.UI
         public const string HudTerminalPrompt="E — терминал резервуара";
         public const string HudTerminalBaseHint="Улов, улучшения и выбор глубины";
         public const string HudTerminalDiveHint="Улов, кормление и возвращение на базу";
+        public const string HudProcessAtBase="Переработка доступна на базе";
         public const string HudCargoPrompt="E — управление контейнером";
         public const string HudLoadPrompt="E — загрузить улов";
         public const string HudCargoBaseHint="Загрузка улова доступна во время экспедиции";
@@ -56,6 +60,10 @@ namespace Raid.UI
         public static string HudDepthState(bool inside) => inside?"НА БОРТУ":"ПОД ВОДОЙ";
         public static string HudFood(int amount,int required) => "Пища  "+amount+" / "+required;
         public static string HudHungerTime(float seconds) => Time(seconds);
+        public static string HudConsolePrompt(ShipConsole console) => "E — "+console.Caption;
+        public static string HudConsoleAction(ShipConsoleKind kind) => kind==ShipConsoleKind.Process?"Переработать всю рыбу":kind==ShipConsoleKind.Feed?"Отдать всю рыбу":kind==ShipConsoleKind.Upgrades?"Улучшения снаряжения":"Глубина и возвращение";
+        public static string HudTetherActor(DiverMotor other,bool pulled) => (pulled?"ТРОС ОТ ":"ТРОС К ")+(other==null?(pulled?"НАПАРНИКА":"НАПАРНИКУ"):"ВОДОЛАЗ"+(pulled?"А ":"У ")+(other.OwnerId+1).ToString("00"));
+        public static string HudTetherDistance(float distance,float maximum) => "Дистанция "+distance.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" / "+maximum.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" м";
         public static string HudHarpoonState(FishMode mode) => mode==FishMode.Hooked?"РЫБА ЗАЦЕПЛЕНА":mode==FishMode.Tired?"РЫБА ИСТОЩЕНА":"РЫБА СОПРОТИВЛЯЕТСЯ";
         public static string HudTensionValue(float value) => (value*100).ToString("0")+"%"+(value>=.85f?" · РИСК ОБРЫВА":value>=.6f?" · ОСЛАБЬТЕ":"");
         public static string HudStaminaValue(float current,float maximum) => current.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" / "+maximum.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"));

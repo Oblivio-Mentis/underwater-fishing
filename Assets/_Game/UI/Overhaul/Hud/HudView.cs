@@ -10,7 +10,7 @@ namespace Raid.UI
         public RectTransform Root {get;private set;}
         readonly TMP_Text crewHeading,depthLabel,depthState,depthZone,oxygenLabel,vitalsState,stressLabel;
         readonly TMP_Text stockValue,stockDetail,hungerTime,foodLabel;
-        readonly TMP_Text harpoonState,tensionValue,staminaValue,harpoonTip;
+        readonly TMP_Text harpoonState,tetherDistance,tensionValue,staminaValue,harpoonTip;
         readonly TMP_Text cargoCount,cargoPhase;
         readonly TMP_Text promptLabel,promptDetail,rescueLabel;
         readonly TMP_Text noticeTitle,noticeDetail,reticle;
@@ -84,6 +84,7 @@ namespace Raid.UI
 
             harpoonPanel=Instrument(Root,"HUD Harpoon",new Vector2(1,0),new Vector2(1,0),new Vector2(-24,24),new Vector2(352,194),out content);
             harpoonState=Line(content,"Hook State","",18,UiTheme.Cyan,24);
+            tetherDistance=Line(content,"Friend Tether Distance","",18,UiTheme.Muted,24);tetherDistance.gameObject.SetActive(false);
             tensionRow=UiKit.Row(content,"Tension Values",8);UiKit.Size(tensionRow,20);
             var tensionCaption=UiKit.Label(tensionRow,"Tension Caption",UiText.HudTension,16,UiTheme.Muted);UiKit.Size(tensionCaption,20,flexibleWidth:1);
             tensionValue=UiKit.Label(tensionRow,"Tension Value","",17);UiKit.Size(tensionValue,20,180);tensionValue.alignment=TextAlignmentOptions.MidlineRight;
@@ -184,12 +185,28 @@ namespace Raid.UI
 
         void RefreshHarpoon(UiContext context)
         {
-            var fish=context.Harpoon==null?null:context.Harpoon.HookedFish;
+            var tool=context.Harpoon;var fish=tool==null?null:tool.HookedFish;
+            // Incoming R refuses the friend tether and preserves a captured fish.
+            // Its controls take priority over the carried-fish hint for that reason.
+            bool tether=tool!=null && tool.TetherActive && (fish==null || tool.IsPulled);
             bool hooked=fish!=null && fish.Mode>=FishMode.Hooked && fish.Mode<=FishMode.Tired;
             bool captured=fish!=null && fish.Mode==FishMode.Captured;
-            harpoonPanel.gameObject.SetActive(hooked||captured);
-            tensionRow.gameObject.SetActive(hooked);tensionBar.transform.parent.gameObject.SetActive(hooked);
-            staminaRow.gameObject.SetActive(hooked);staminaBar.transform.parent.gameObject.SetActive(hooked);
+            harpoonPanel.gameObject.SetActive(hooked||captured||tether);
+            tetherDistance.gameObject.SetActive(tether);
+            tensionRow.gameObject.SetActive(hooked&&!tether);tensionBar.transform.parent.gameObject.SetActive(hooked&&!tether);
+            staminaRow.gameObject.SetActive(hooked&&!tether);staminaBar.transform.parent.gameObject.SetActive(hooked&&!tether);
+            if(tether)
+            {
+                bool pulled=tool.IsPulled;
+                var owner=tool.TetherOwner;var target=tool.TetherTarget;
+                UiKit.Set(harpoonState,UiText.HudTetherActor(pulled?owner:target,pulled));
+                UiKit.Set(tetherDistance,owner!=null&&target!=null?UiText.HudTetherDistance(Vector3.Distance(owner.transform.position,target.transform.position),tool.TetherMaxRange):UiText.HudTetherReleasing);
+                UiKit.Set(harpoonTip,pulled?UiText.HudTetherRefuse:UiText.HudTetherControls);
+                harpoonState.color=pulled?UiTheme.Amber:UiTheme.Cyan;harpoonTip.color=pulled?UiTheme.Amber:UiTheme.Text;
+                harpoonTip.fontSizeMax=pulled?20:16;UiKit.Size(harpoonTip,pulled?28:40);harpoonPanel.sizeDelta=new Vector2(352,pulled?116:128);
+                return;
+            }
+            harpoonState.color=UiTheme.Cyan;harpoonTip.color=UiTheme.Muted;harpoonTip.fontSizeMax=16;
             UiKit.Size(harpoonTip,captured?24:40);harpoonPanel.sizeDelta=new Vector2(352,captured?84:194);
             if(!hooked && !captured)return;
             UiKit.Set(harpoonState,captured?UiText.HudCaptured:UiText.HudHarpoonState(fish.Mode));
@@ -228,7 +245,15 @@ namespace Raid.UI
                 case UiInteraction.Rescue:
                     if(context.RescueTarget!=null){prompt=UiText.HudRescuePrompt(context.RescueTarget);detail=UiText.HudRescueDuration(player.tuning.rescueSeconds);}break;
                 case UiInteraction.Terminal:
-                    prompt=UiText.HudTerminalPrompt;detail=context.AtBase?UiText.HudTerminalBaseHint:UiText.HudTerminalDiveHint;break;
+                    var console=context.AimedConsole;
+                    if(console!=null)
+                    {
+                        prompt=UiText.HudConsolePrompt(console);detail=UiText.HudConsoleAction(console.kind);
+                        color=console.kind==ShipConsoleKind.Feed?UiTheme.Amber:UiTheme.Cyan;
+                        if(console.kind==ShipConsoleKind.Process&&!context.AtBase){detail=UiText.HudProcessAtBase;color=UiTheme.Amber;}
+                    }
+                    else {prompt=UiText.HudTerminalPrompt;detail=context.AtBase?UiText.HudTerminalBaseHint:UiText.HudTerminalDiveHint;}
+                    break;
                 case UiInteraction.Cargo:
                     prompt=UiText.HudCargoPrompt;
                     if(view==null || context.Tuning==null)break;
@@ -266,7 +291,7 @@ namespace Raid.UI
             rescueBar.transform.parent.gameObject.SetActive(rescuing);rescueLabel.gameObject.SetActive(rescuing);
             if(rescuing){UiKit.Fraction(rescueBar,rescue);UiKit.Set(rescueLabel,UiText.HudRescueProgress(target,rescue));}
             promptPanel.sizeDelta=new Vector2(580,rescuing?130:detail.Length>0?82:56);
-            reticle.color=context.AimedFish!=null && context.AimedFish.Mode==FishMode.Roam?UiTheme.Cyan:UiTheme.Text;
+            reticle.color=context.AimedConsole!=null?color:context.AimedFish!=null && context.AimedFish.Mode==FishMode.Roam?UiTheme.Cyan:UiTheme.Text;
         }
 
         void RefreshNotice(UiContext context,float oxygenFraction)
