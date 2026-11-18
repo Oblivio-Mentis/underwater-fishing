@@ -121,7 +121,7 @@ namespace Raid.Editor
         private static void Label(string text,Vector3 position,float size)
         {
             var label=new GameObject(text).AddComponent<TextMesh>(); label.text=text;
-            label.transform.position=position; label.characterSize=size; label.fontSize=48; label.color=Color.white;
+            label.transform.position=position; label.characterSize=size*.15f; label.fontSize=48; label.color=Color.white;
         }
     }
 }

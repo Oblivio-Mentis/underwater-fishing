@@ -1,0 +1,156 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7042270596659113264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Struggling Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 1, g: 0.35, b: 0.1, a: 1}
+--- !u!114 &-4663048319108306375
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Tired Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 0.6, g: 1, b: 0.4, a: 1}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c5718947c954f1398d90ec2d9375c7a, type: 3}
+  m_Name: FishPresentation
+  m_EditorClassIdentifier: OblivioMentis.Presentation.Runtime::OblivioMentis.Presentation.FsmPresentationProfile
+  definition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
+  bindings:
+  - trigger: 0
+    layerId: 0
+    stateId: 1
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: 2878456079551949808}
+  - trigger: 0
+    layerId: 0
+    stateId: 2
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: 4216271546525199219}
+  - trigger: 0
+    layerId: 0
+    stateId: 3
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: -7042270596659113264}
+  - trigger: 0
+    layerId: 0
+    stateId: 4
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: -4663048319108306375}
+  - trigger: 0
+    layerId: 0
+    stateId: 5
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: 7974542651974885467}
+  - trigger: 0
+    layerId: 0
+    stateId: 6
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: 5386971539418924386}
+  - trigger: 0
+    layerId: 0
+    stateId: 7
+    toStateId: 0
+    eventKey: 
+    actions:
+    - {fileID: 5423458215469071356}
+--- !u!114 &2878456079551949808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Roam Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 0, g: 1, b: 1, a: 1}
+--- !u!114 &4216271546525199219
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Hooked Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+--- !u!114 &5386971539418924386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Transported Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+--- !u!114 &5423458215469071356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Escaped Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 0.3, g: 0.5, b: 0.65, a: 1}
+--- !u!114 &7974542651974885467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dad41216c0c18e34fb4e249aa292a45b, type: 3}
+  m_Name: Captured Tint
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishTintCue
+  color: {r: 0, g: 1, b: 0, a: 1}

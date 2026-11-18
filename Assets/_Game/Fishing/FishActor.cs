@@ -45,6 +45,7 @@ namespace Raid
         public FishMode DesiredState { get; private set; } = FishMode.Roam;
         public HarpoonTool Hooker => _hooker;
         public string SpeciesId => _speciesName ?? fishId;
+        public long CargoId => BitConverter.ToInt64(Guid.Parse(fishId).ToByteArray(),0)&long.MaxValue;
 
         private void Awake()
         {

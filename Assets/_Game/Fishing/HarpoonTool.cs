@@ -89,13 +89,14 @@ namespace Raid
             if (tuning == null || _fish != null || Motor.Oxygen <= 0f || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
-            if (!Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore)) return;
-            var fish = hit.collider.GetComponentInParent<FishActor>();
+            bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
+            var fish = didHit?hit.collider.GetComponentInParent<FishActor>():null;
             if (fish != null && fish.TryHook(this))
             {
                 _fish = fish;
                 _fishObject.Value = fish.NetworkObject;
             }
+            else ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
         }
 
         [ServerRpc]

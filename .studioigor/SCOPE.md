@@ -1,6 +1,6 @@
-# Scope ? Underwater Fishing
+# Scope
 ## Contract
-- [ ] A Foundation: dependencies, compilation, actual host+client, submarine, swimming.
-- [ ] B First Playable (20 ?????? 2026): fish/harpoon/tether, oxygen, cargo delivery, processing, upgrade, Windows build.
-- [ ] C Incremental + Monster (22 ?????? 2026): repeatable hoist, 4 resources, 5 upgrade types, Depth2, predator, rescue, hunger/waves, persistent progression, five clients.
-- Steam lobby cross-account check deferred until second computer/account available by user's reply.
+- [ ] A Foundation: dependencies, compilation, host+client, submarine, swimming.
+- [ ] B First Playable (2026-11-20): fishing/tether/oxygen/cargo/process/upgrade/Windows build.
+- [ ] C Incremental+Monster (2026-11-22): repeated hoist,4resources,upgrades,Depth2,predator,rescue,hunger,waves,persistent progress,5players.
+Steam two-device test deferred until user's second participant is available.

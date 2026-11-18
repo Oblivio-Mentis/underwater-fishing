@@ -7,11 +7,11 @@ namespace Raid
     public sealed class CatchItem
     {
         public long id;
-        public int biomass, chitin, offering, cargoSize, depthTier;
-        public CatchItem(long id, int biomass, int chitin, int offering, int cargoSize, int depthTier)
-        { this.id = id; this.biomass = biomass; this.chitin = chitin; this.offering = offering; this.cargoSize = cargoSize; this.depthTier = depthTier; }
-        public bool IsValid => id > 0 && biomass >= 0 && chitin >= 0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
-        public CatchItem Copy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier);
+        public int biomass, chitin, offering, cargoSize, depthTier, scrap, electronics;
+        public CatchItem(long id, int biomass, int chitin, int offering, int cargoSize, int depthTier, int scrap=0, int electronics=0)
+        { this.id = id; this.biomass = biomass; this.chitin = chitin; this.offering = offering; this.cargoSize = cargoSize; this.depthTier = depthTier; this.scrap=scrap; this.electronics=electronics; }
+        public bool IsValid => id > 0 && biomass >= 0 && chitin >= 0 && scrap>=0 && electronics>=0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
+        public CatchItem Copy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier,scrap,electronics);
     }
 
     [Serializable]
@@ -142,7 +142,7 @@ namespace Raid
 
         private void Deliver(CatchItem item)
         {
-            long total = checked(lifetimeCatch + item.biomass + item.chitin);
+            long total = checked(lifetimeCatch + item.biomass + item.chitin + item.scrap + item.electronics);
             deliveredIds.Add(item.id);
             tank.Add(item.Copy());
             lifetimeCatch = total;
@@ -154,15 +154,17 @@ namespace Raid
             if (index < 0) return false;
             CatchItem fish = tank[index];
             int nextBiomass = checked(biomass + fish.biomass), nextChitin = checked(chitin + fish.chitin);
+            int nextScrap=checked(scrap+fish.scrap), nextElectronics=checked(electronics+fish.electronics);
             tank.RemoveAt(index);
             biomass = nextBiomass; chitin = nextChitin;
+            scrap=nextScrap; electronics=nextElectronics;
             return true;
         }
 
         public bool Feed(long id)
         {
             int index = tank.FindIndex(item => item.id == id);
-            if (index < 0) return false;
+            if (index < 0 || tank[index].offering<=0) return false;
             int next = checked(offering + tank[index].offering);
             tank.RemoveAt(index);
             offering = next;

@@ -8,7 +8,10 @@ namespace Raid
     [RequireComponent(typeof(CharacterController))]
     public sealed class DiverMotor : NetworkBehaviour
     {
+        public static readonly System.Collections.Generic.List<DiverMotor> ServerDivers = new();
         public DiverTuning tuning;
+        public float SpeedMultiplier = 1f, OxygenMultiplier = 1f, SafeDepthBonus, DepthOffset;
+        private float _helplessTime, _trappedTime;
 
         public struct DiverState
         {
@@ -17,6 +20,7 @@ namespace Raid
             public float Oxygen;
             public float Stress;
             public bool Inside;
+            public bool Trapped;
         }
 
         private readonly SyncVar<DiverState> _state = new();
@@ -34,7 +38,9 @@ namespace Raid
         public float Oxygen => _state.Value.Oxygen;
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
-        public float Depth => Mathf.Max(0f, -_state.Value.Position.y);
+        public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
+        public bool IsHelpless => Oxygen <= 0f;
+        public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f : _state.Value.Trapped;
         public Vector3 AimDirection => Quaternion.Euler(_serverPitch, _serverYaw, 0f) * Vector3.forward;
 
         private void Awake()
@@ -52,6 +58,7 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            ServerDivers.Add(this);
             _controller.enabled = true;
             _previousPosition = transform.position;
             _serverYaw = transform.eulerAngles.y;
@@ -67,6 +74,7 @@ namespace Raid
 
         public override void OnStopServer()
         {
+            ServerDivers.Remove(this);
             _controller.enabled = false;
             _serverInput = Vector3.zero;
         }
@@ -156,10 +164,11 @@ namespace Raid
             if (!IsServerInitialized) return;
             DiverState state = _state.Value;
             bool active = Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
-            Vector3 axes = active && state.Oxygen > 0f ? _serverInput : Vector3.zero;
+            Vector3 axes = active && state.Oxygen > 0f && !IsTrapped ? _serverInput : Vector3.zero;
             Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
             direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-            float speed = Mathf.Max(0f, tuning.swimSpeed) * (_serverSprint ? Mathf.Max(1f, tuning.sprintMultiplier) : 1f);
+            float speed = Mathf.Max(0f, tuning.swimSpeed) * SpeedMultiplier * (_serverSprint ? Mathf.Max(1f, tuning.sprintMultiplier) : 1f);
+            if(state.Stress>=tuning.stressDanger) speed*=.5f;
             Vector3 velocity = direction * speed;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
             velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
@@ -169,14 +178,52 @@ namespace Raid
             state.Position = transform.position;
             state.Yaw = _serverYaw;
             state.Inside = IsSealedInterior(state.Position);
+            state.Trapped = _trappedTime > 0;
             state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery : -1f) * Time.fixedDeltaTime,
-                0f, Mathf.Max(1f, tuning.oxygenCapacity));
-            float depthExcess = Mathf.Max(0f, -state.Position.y - tuning.safeDepth);
+                0f, Mathf.Max(1f, tuning.oxygenCapacity * OxygenMultiplier));
+            float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
             float verticalExcess = Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
             float stressChange = state.Inside ? -1f : depthExcess + verticalExcess;
             state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
+            if(!state.Inside && state.Stress>=tuning.stressDanger)
+                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*Time.fixedDeltaTime);
             _previousPosition = state.Position;
             _state.Value = state;
+            _trappedTime = Mathf.Max(0f, _trappedTime-Time.fixedDeltaTime);
+            _helplessTime = state.Oxygen <= 0f ? _helplessTime+Time.fixedDeltaTime : 0f;
+            if (_helplessTime >= tuning.helplessWindow)
+            {
+                Teleport(new Vector3(0,1.2f,1));
+                Rescue();
+            }
+        }
+
+        public void ApplyExternalMotion(Vector3 displacement)
+        {
+            if (!IsServerInitialized || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
+            _controller.Move(Vector3.ClampMagnitude(displacement, 2f));
+        }
+
+        public void Teleport(Vector3 position)
+        {
+            if (!IsServerInitialized) return;
+            _controller.enabled=false; transform.position=position; _controller.enabled=true;
+            _previousPosition=position;
+            var state=_state.Value; state.Position=position; state.Inside=IsSealedInterior(position); _state.Value=state;
+        }
+
+        public void DamageOxygen(float amount)
+        {
+            if (!IsServerInitialized) return;
+            var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)); _state.Value=state;
+        }
+
+        public void Trap() { if(IsServerInitialized) _trappedTime=tuning.trappedDuration; }
+        public void Rescue()
+        {
+            if (!IsServerInitialized) return;
+            _trappedTime=0; _helplessTime=0;
+            var state=_state.Value; state.Oxygen=Mathf.Max(state.Oxygen,tuning.rescueOxygen); _state.Value=state;
         }
 
         private void LateUpdate()
@@ -198,7 +245,7 @@ namespace Raid
             GUI.Label(new Rect(28f, Screen.height - 104f, 400f, 24f),
                 $"Oxygen {Oxygen:F0}/{tuning.oxygenCapacity:F0}   Depth {Depth:F1}m   Stress {PressureStress:F0}%");
             GUI.Label(new Rect(28f, Screen.height - 78f, 400f, 24f),
-                Oxygen <= 0f ? "OUT OF OXYGEN — waiting for rescue" : IsInside ? "SEALED SUBMARINE — oxygen recovering" : "UNDERWATER");
+                Oxygen <= 0f ? "OUT OF OXYGEN — waiting for rescue" : IsTrapped ? "TRAPPED — teammate: hold F nearby" : PressureStress>=tuning.stressDanger ? "PRESSURE DANGER: slowed / oxygen loss — ascend slowly" : PressureStress>=tuning.stressWarning ? "PRESSURE WARNING: return to safe depth" : IsInside ? "SEALED SUBMARINE — oxygen recovering" : "UNDERWATER");
             GUI.Label(new Rect(28f, Screen.height - 52f, 400f, 24f), "WASD / Space / Ctrl / Shift   Esc: cursor   RMB: look");
             GUI.Label(new Rect(Screen.width * 0.5f - 5f, Screen.height * 0.5f - 10f, 20f, 20f), "+");
         }

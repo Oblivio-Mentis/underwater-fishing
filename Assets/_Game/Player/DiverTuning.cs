@@ -14,5 +14,12 @@ namespace Raid
         public float safeDepth = 35f;
         public float inputTimeout = 0.3f;
         public float sendInterval = 0.05f;
+        public float helplessWindow = 45f;
+        public float rescueOxygen = 30f;
+        public float rescueSeconds = 3f;
+        public float trappedDuration = 12f;
+        public float stressWarning = 50f;
+        public float stressDanger = 85f;
+        public float stressOxygenDrain = 6f;
     }
 }

@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd37fd5bfb16f3d4098d7bb9aee47a7f, type: 3}
+  m_Name: ProgressionTuning
+  m_EditorClassIdentifier: Raid.Progression::Raid.ProgressionTuning
+  cargoCapacity: 8
+  cargoCapacityPerWinch: 4
+  raisingSeconds: 8
+  unloadingSeconds: 3
+  returningSeconds: 6
+  winchSpeedPerLevel: 0.35
+  depthTwoLifetimeCatch: 24
+  foodRequired: 12
+  foodPerDepth: 6
+  maximumFoodCarry: 3
+  hungerInterval: 180
+  maximumStockLossFraction: 0.35
+  maximumStockLossCount: 4
+  reelPowerPerLevel: 0.3
+  finsSpeedPerLevel: 0.2
+  oxygenPerTankLevel: 0.4
+  upgrades:
+  - upgrade: 0
+    initialCost:
+      biomass: 6
+      chitin: 0
+      scrap: 0
+      electronics: 0
+    costMultiplier: 1.7
+    maximumLevel: 3
+  - upgrade: 1
+    initialCost:
+      biomass: 8
+      chitin: 0
+      scrap: 0
+      electronics: 0
+    costMultiplier: 1.7
+    maximumLevel: 3
+  - upgrade: 2
+    initialCost:
+      biomass: 10
+      chitin: 0
+      scrap: 0
+      electronics: 0
+    costMultiplier: 1.7
+    maximumLevel: 3
+  - upgrade: 3
+    initialCost:
+      biomass: 18
+      chitin: 0
+      scrap: 0
+      electronics: 0
+    costMultiplier: 1.7
+    maximumLevel: 1
+  - upgrade: 4
+    initialCost:
+      biomass: 12
+      chitin: 0
+      scrap: 0
+      electronics: 0
+    costMultiplier: 1.7
+    maximumLevel: 3

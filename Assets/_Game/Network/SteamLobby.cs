@@ -20,6 +20,13 @@ namespace Raid
         private Callback<LobbyChatUpdate_t> membersChanged;
         private Callback<LobbyDataUpdate_t> dataChanged;
         public string LobbyId => currentLobby.IsValid() ? currentLobby.m_SteamID.ToString() : "";
+        public bool ContainsMember(string address)
+        {
+            if(!initialized || !currentLobby.IsValid() || !ulong.TryParse(address,out ulong id)) return false;
+            int count=SteamMatchmaking.GetNumLobbyMembers(currentLobby);
+            for(int i=0;i<count;i++) if(SteamMatchmaking.GetLobbyMemberByIndex(currentLobby,i).m_SteamID==id) return true;
+            return false;
+        }
 
         private void Start()
         {
