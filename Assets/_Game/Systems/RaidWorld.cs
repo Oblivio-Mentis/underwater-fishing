@@ -22,6 +22,8 @@ namespace Raid
         private readonly SyncVar<bool> atBase=new(true);
         private readonly SyncVar<string> message=new("Choose depth at the reservoir terminal");
         private readonly SyncVar<float> travelDisplay=new();
+        private readonly SyncVar<int> stockLossDisplay=new();
+        public int StockLossCount => stockLossDisplay.Value;
         public float TravelRemaining => travelDisplay.Value;
         public event Action<bool,string> CommandResponded;
         private TeamProgress team,view;
@@ -51,6 +53,7 @@ namespace Raid
         public override void OnStartServer()
         {
             saveFailed=false;
+            travelDisplay.Value=0; stockLossDisplay.Value=0;
             atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
             savePath=Path.Combine(Application.persistentDataPath,"team-progress.json");
             string[] args=Environment.GetCommandLineArgs();
@@ -210,7 +213,7 @@ namespace Raid
             if(!IsServerInitialized || waveLossBudget<=0) return;
             int count=Mathf.Min(waveLossBudget,Mathf.Max(1,Mathf.CeilToInt(severity)));
             count=Mathf.Min(count,team.tank.Count);
-            if(count>0) { team.tank.RemoveRange(team.tank.Count-count,count); waveLossBudget-=count; Publish(); Save(); }
+            if(count>0) { team.tank.RemoveRange(team.tank.Count-count,count); waveLossBudget-=count; stockLossDisplay.Value+=count; Publish(); Save(); }
         }
         private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team); }
         private void Save()
