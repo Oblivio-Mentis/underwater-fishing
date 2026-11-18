@@ -17,6 +17,45 @@
       },
       "hash": "81542a7e86292b5c4c21b1782c5af23b567f45ce"
     },
+    "com.firstgeargames.fishnet": {
+      "version": "https://github.com/FirstGearGames/FishNet.git?path=Assets/FishNet#a2e2c3e12f5f4e18c96e402113e14030ae7849f0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1",
+        "com.unity.ugui": "1.0.0",
+        "com.unity.modules.animation": "1.0.0",
+        "com.unity.modules.imgui": "1.0.0",
+        "com.unity.modules.particlesystem": "1.0.0",
+        "com.unity.modules.physics": "1.0.0",
+        "com.unity.modules.physics2d": "1.0.0",
+        "com.unity.modules.ui": "1.0.0"
+      },
+      "hash": "a2e2c3e12f5f4e18c96e402113e14030ae7849f0"
+    },
+    "com.obliviomentis.presentation": {
+      "version": "https://github.com/Oblivio-Mentis/Unity-UniversalFSMPresentation-Public.git#v0.3.2",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "com.obliviomentis.universalfsm": "0.2.0"
+      },
+      "hash": "1339bcf25922c48ce89b370889f6a01f6aa16697"
+    },
+    "com.obliviomentis.universalfsm": {
+      "version": "https://github.com/Oblivio-Mentis/Unity-UniversalFSM-Public.git#v0.2.0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "7b23d48753648df9ffbf6a6b0f7ac72773c6ce4c"
+    },
+    "com.rlabrecque.steamworks.net": {
+      "version": "https://github.com/rlabrecque/Steamworks.NET.git?path=/com.rlabrecque.steamworks.net#2025.165.0",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "ea51b029a5dbcb47a99d3c1fac930b811672ed32"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.14",
       "depth": 0,
