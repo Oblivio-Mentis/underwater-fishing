@@ -21,6 +21,7 @@ namespace Raid
     {
         public Upgrade upgrade;
         public MaterialCost initialCost;
+        public MaterialCost additionalPerLevel;
         [Min(1f)] public float costMultiplier = 1.7f;
         [Min(1)] public int maximumLevel = 3;
         public UpgradeRecipe(Upgrade upgrade, MaterialCost cost, int maximumLevel = 3)

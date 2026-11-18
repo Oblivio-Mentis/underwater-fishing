@@ -60,11 +60,14 @@ namespace Raid
         public MaterialCost Cost(Upgrade upgrade, ProgressionTuning tuning)
         {
             UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (recipe == null || !recipe.initialCost.IsValid || recipe.costMultiplier < 1f)
+            if (recipe == null || !recipe.initialCost.IsValid || !recipe.additionalPerLevel.IsValid || recipe.costMultiplier < 1f)
                 throw new ArgumentException("Invalid upgrade recipe: " + upgrade);
             double scale = Math.Pow(recipe.costMultiplier, Level(upgrade));
-            return new MaterialCost(Price(recipe.initialCost.biomass, scale), Price(recipe.initialCost.chitin, scale),
-                Price(recipe.initialCost.scrap, scale), Price(recipe.initialCost.electronics, scale));
+            int level=Level(upgrade);
+            return new MaterialCost(checked(Price(recipe.initialCost.biomass, scale)+level*recipe.additionalPerLevel.biomass),
+                checked(Price(recipe.initialCost.chitin, scale)+level*recipe.additionalPerLevel.chitin),
+                checked(Price(recipe.initialCost.scrap, scale)+level*recipe.additionalPerLevel.scrap),
+                checked(Price(recipe.initialCost.electronics, scale)+level*recipe.additionalPerLevel.electronics));
         }
 
         private static int Price(int value, double scale) => checked((int)Math.Ceiling(Math.Round(value * scale, 6)));

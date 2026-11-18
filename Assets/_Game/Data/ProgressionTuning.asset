@@ -35,6 +35,11 @@ MonoBehaviour:
       chitin: 0
       scrap: 0
       electronics: 0
+    additionalPerLevel:
+      biomass: 0
+      chitin: 2
+      scrap: 0
+      electronics: 0
     costMultiplier: 1.7
     maximumLevel: 3
   - upgrade: 1
@@ -43,12 +48,22 @@ MonoBehaviour:
       chitin: 0
       scrap: 0
       electronics: 0
+    additionalPerLevel:
+      biomass: 0
+      chitin: 0
+      scrap: 2
+      electronics: 0
     costMultiplier: 1.7
     maximumLevel: 3
   - upgrade: 2
     initialCost:
       biomass: 10
       chitin: 0
+      scrap: 0
+      electronics: 0
+    additionalPerLevel:
+      biomass: 0
+      chitin: 1
       scrap: 0
       electronics: 0
     costMultiplier: 1.7
@@ -59,13 +74,23 @@ MonoBehaviour:
       chitin: 0
       scrap: 0
       electronics: 0
+    additionalPerLevel:
+      biomass: 0
+      chitin: 0
+      scrap: 0
+      electronics: 0
     costMultiplier: 1.7
     maximumLevel: 1
   - upgrade: 4
     initialCost:
       biomass: 12
       chitin: 0
-      scrap: 0
+      scrap: 2
       electronics: 0
+    additionalPerLevel:
+      biomass: 0
+      chitin: 0
+      scrap: 0
+      electronics: 1
     costMultiplier: 1.7
     maximumLevel: 3

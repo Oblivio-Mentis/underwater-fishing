@@ -88,8 +88,17 @@ namespace Raid.Editor
         private static T Asset<T>(string name) where T:ScriptableObject
         {
             string path="Assets/_Game/Data/"+name+".asset"; var asset=AssetDatabase.LoadAssetAtPath<T>(path);
-            if(asset==null) { asset=ScriptableObject.CreateInstance<T>(); AssetDatabase.CreateAsset(asset,path); }
+            if(asset==null) { asset=ScriptableObject.CreateInstance<T>(); if(asset is ProgressionTuning progression) ConfigureProgressionDefaults(progression); AssetDatabase.CreateAsset(asset,path); }
             return asset;
+        }
+        public static void ConfigureProgressionDefaults(ProgressionTuning tuning)
+        {
+            tuning.Recipe(Upgrade.Reel).additionalPerLevel=new MaterialCost(0,2);
+            tuning.Recipe(Upgrade.Fins).additionalPerLevel=new MaterialCost(0,0,2);
+            tuning.Recipe(Upgrade.Tank).additionalPerLevel=new MaterialCost(0,1);
+            tuning.Recipe(Upgrade.Winch).initialCost=new MaterialCost(12,0,2);
+            tuning.Recipe(Upgrade.Winch).additionalPerLevel=new MaterialCost(0,0,0,1);
+            EditorUtility.SetDirty(tuning);
         }
     }
 }

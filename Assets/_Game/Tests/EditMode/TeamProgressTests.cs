@@ -29,6 +29,20 @@ namespace Raid.Tests
 
         private static CatchItem Fish(long id, int size = 1) => new CatchItem(id, 4, 1, 3, size, 1);
 
+        [Test]
+        public void LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging()
+        {
+            tuning.Recipe(Upgrade.Reel).additionalPerLevel=new MaterialCost(0,2,1,1);
+            team.biomass=100;
+            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.True);
+            int balance=team.biomass;
+            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.False);
+            Assert.That(team.biomass,Is.EqualTo(balance));
+            team.chitin=2;team.scrap=1;team.electronics=1;
+            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.True);
+            Assert.That(team.chitin+team.scrap+team.electronics,Is.Zero);
+        }
+
         [TestCase(true)]
         [TestCase(false)]
         public void FishCanBeConsumedOnlyOnce(bool processFirst)
