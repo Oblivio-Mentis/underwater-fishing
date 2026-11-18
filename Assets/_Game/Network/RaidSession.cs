@@ -2,6 +2,7 @@ using System;
 using FishNet.Managing;
 using FishNet.Transporting;
 using FishNet.Transporting.Tugboat;
+using FishNet.Transporting.Multipass;
 using UnityEngine;
 
 namespace Raid
@@ -11,6 +12,7 @@ namespace Raid
         public NetworkManager manager;
         public Tugboat localTransport;
         public FishySteamworks.FishySteamworks steamTransport;
+        public Multipass multipass;
         public Camera menuCamera;
         public SteamLobby lobby;
         public string Status { get; private set; } = "Выберите подключение";
@@ -51,8 +53,8 @@ namespace Raid
         {
             if (Busy || !manager.IsOffline) return false;
             SteamMode = steam;
-            manager.TransportManager.Transport = steam ? (Transport)steamTransport : localTransport;
-            manager.TransportManager.Transport.SetMaximumClients(5);
+            multipass.SetClientTransport(steam ? (Transport)steamTransport : localTransport);
+            multipass.SetMaximumClients(5);
             Busy = true;
             startedAt = Time.realtimeSinceStartup;
             return true;
@@ -62,7 +64,7 @@ namespace Raid
         {
             if (!SelectTransport(false)) return;
             SetStatus("Запускается локальный хост…");
-            if (!manager.ServerManager.StartConnection()) Disconnect();
+            if (!multipass.StartConnection(true, 0)) Disconnect();
         }
 
         public void JoinLocal()
@@ -76,7 +78,7 @@ namespace Raid
         public void StartSteamHost()
         {
             SetStatus("Запускается Steam-хост…");
-            if (!manager.ServerManager.StartConnection()) Disconnect();
+            if (!multipass.StartConnection(true, 1)) Disconnect();
         }
 
         public void StartSteamClient(string owner)
