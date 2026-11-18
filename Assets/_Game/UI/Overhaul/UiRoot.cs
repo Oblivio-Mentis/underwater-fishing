@@ -19,6 +19,7 @@ namespace Raid.UI
         public string LastCommandReason {get;private set;}="";
         public bool LastCommandSucceeded {get;private set;}
         CanvasScaler scaler;
+        InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;
         Image toastPanel;
@@ -51,7 +52,7 @@ namespace Raid.UI
             EventSystem events=systems.Length>0?systems[0]:new GameObject("RAID011 EventSystem",typeof(EventSystem),typeof(InputSystemUIInputModule)).GetComponent<EventSystem>();
             foreach(var system in systems)if(system!=events)system.enabled=false;
             foreach(var module in events.GetComponents<BaseInputModule>())if(!(module is InputSystemUIInputModule))module.enabled=false;
-            if(events.GetComponent<InputSystemUIInputModule>()==null)events.gameObject.AddComponent<InputSystemUIInputModule>();
+            inputModule=events.GetComponent<InputSystemUIInputModule>();if(inputModule==null)inputModule=events.gameObject.AddComponent<InputSystemUIInputModule>();
             events.sendNavigationEvents=true;
             hud=new HudView(transform,this);
             var dim=UiKit.Panel(transform,"Menu shade",new Color(.015f,.035f,.045f,.82f),true);shade=dim.rectTransform;UiKit.Fill(shade);
@@ -107,6 +108,7 @@ namespace Raid.UI
         void SetCursor()
         {
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
+            if(inputModule!=null)inputModule.enabled=Application.isFocused&&!overlay;
             UiInputGate.Modal=Page!=UiPage.None||confirmation.gameObject.activeSelf||overlay;
             bool locked=Context.Connected && !UiInputGate.Modal && Application.isFocused;
             Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;
@@ -114,7 +116,7 @@ namespace Raid.UI
         void Update()
         {
             if(menu==null)return;
-            if(Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if(Application.isFocused && !overlayBefore && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
                 else if(Page==UiPage.None)ShowPage(UiPage.Pause);

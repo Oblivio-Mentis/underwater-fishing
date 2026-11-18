@@ -86,7 +86,7 @@ namespace Raid.UI
         }
         void Rebuild()
         {
-            UiKit.Clear(content);refreshRows.Clear();feedingSummary=feedingTime=feedingState=feedingThreat=feedingLoss=null;feedingBar=null;scroll.verticalNormalizedPosition=1;
+            UiKit.Clear(content);refreshRows.Clear();feedingSummary=feedingTime=feedingState=feedingThreat=feedingLoss=null;feedingBar=null;scroll.StopMovement();scroll.verticalNormalizedPosition=1;
             if(app.Context.View==null){TerminalParts.Text(content,"Waiting",UiText.NoConfirmedState,70);return;}
             if(tab=="catch")BuildCatch(false);else if(tab=="upgrades")BuildUpgrades();else if(tab=="depths")BuildDepths();else BuildFeeding();
         }
