@@ -1,0 +1,1 @@
+RAID010 final interior, Editor host + Windows client running, owner FP; fps=146.65 elapsed=10.0034 frames=1467 resolution=1920x1080 GPU=NVIDIA GeForce RTX 4070 CPU=AMD Ryzen 7 7700X 8-Core Processor  RAM=31894 vSync=0 target=500

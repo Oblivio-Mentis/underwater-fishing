@@ -52,7 +52,7 @@ namespace Raid.VisualSlice.Editor
             System.IO.Directory.CreateDirectory(AssetsPath+"/Meshes");
             string path=AssetsPath+"/Meshes/"+name.Replace(" ","_").Replace("/","_")+".asset";
             var old=AssetDatabase.LoadAssetAtPath<Mesh>(path);
-            if(old==null) {AssetDatabase.CreateAsset(mesh,path);old=mesh;} else Object.DestroyImmediate(mesh);
+            if(old==null) {AssetDatabase.CreateAsset(mesh,path);old=mesh;} else {EditorUtility.CopySerialized(mesh,old);EditorUtility.SetDirty(old);Object.DestroyImmediate(mesh);}
             var go=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));go.transform.SetParent(parent,false);
             go.GetComponent<MeshFilter>().sharedMesh=old;go.GetComponent<MeshRenderer>().sharedMaterial=material;return go;
         }
@@ -84,6 +84,15 @@ namespace Raid.VisualSlice.Editor
         {
             var text=Group(words,parent,position).gameObject.AddComponent<TextMesh>();text.text=words;text.fontSize=64;text.characterSize=size;
             text.anchor=TextAnchor.MiddleCenter;text.alignment=TextAlignment.Center;text.color=color;text.transform.localRotation=rotation==default?Quaternion.identity:rotation;
+            string path=AssetsPath+"/Materials/WorldText.mat";
+            var material=AssetDatabase.LoadAssetAtPath<Material>(path);
+            if(material==null)
+            {
+                material=new Material(Shader.Find("RAID010/World Text"));
+                material.mainTexture=text.GetComponent<Renderer>().sharedMaterial.mainTexture;
+                AssetDatabase.CreateAsset(material,path);
+            }
+            text.GetComponent<Renderer>().sharedMaterial=material;
         }
         public static Light Lamp(string name,Transform parent,Vector3 position,Color color,float intensity,float range)
         {

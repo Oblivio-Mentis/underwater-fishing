@@ -40,12 +40,22 @@ namespace Raid.VisualSlice.Editor
                 Box("Ballast pod",hull,new Vector3(side*7,-1,-7),new Vector3(2.6f,2.6f,22),"Navy");
                 Box("Ballast safety rail",hull,new Vector3(side*8.33f,-.7f,-7),new Vector3(.12f,.3f,19),"Amber");
                 Box("Stabiliser",hull,new Vector3(side*7.5f,1,-21),new Vector3(8,.3f,4),"Hull");
-                VisualKit.Label("NEREID  /  07",hull,new Vector3(side*7.13f,2.7f,-14),.16f,new Color(.7f,.84f,.8f),Quaternion.Euler(0,side>0?-90:90,0));
+                Box("Hull nameplate backing",hull,new Vector3(side*7.1f,2.7f,-14),new Vector3(.08f,1.2f,7),"Navy");
+                VisualKit.Label("NEREID  /  07",hull,new Vector3(side*7.16f,2.7f,-14),.11f,new Color(.7f,.84f,.8f),Quaternion.Euler(0,side>0?-90:90,0));
             }
             // Bow shoulder panels leave the existing central hatch open.
             Box("Bow port shoulder",hull,new Vector3(-4.5f,1.5f,9.3f),new Vector3(4.7f,5.2f,2.5f),"Hull");
             Box("Bow starboard shoulder",hull,new Vector3(4.5f,1.5f,9.3f),new Vector3(4.7f,5.2f,2.5f),"Hull");
             Box("Bow crown",hull,new Vector3(0,4.5f,9.3f),new Vector3(5,1.5f,2.5f),"Hull");
+            for(int side=-1;side<=1;side+=2)
+            {
+                var spot=VisualKit.Group("Bow survey spotlight",hull,new Vector3(side*3.2f,3.8f,10.3f));
+                spot.localRotation=Quaternion.LookRotation(new Vector3(side*.12f,-.6f,1));
+                Box("Survey lamp housing",spot,Vector3.zero,new Vector3(.65f,.45f,.5f),"Navy");
+                Box("Survey lamp lens",spot,new Vector3(0,0,.26f),new Vector3(.48f,.28f,.02f),"Light");
+                var light=spot.gameObject.AddComponent<Light>();light.type=LightType.Spot;light.color=new Color(.72f,.89f,1);light.intensity=45;light.range=30;light.spotAngle=65;light.shadows=LightShadows.None;
+            }
+            VisualKit.Lamp("Bow attachment inspection fill",hull,new Vector3(-11,5,15),new Color(.58f,.77f,1),80,19);
             Interior(parent);Basket();
         }
         static void Interior(Transform parent)
@@ -92,14 +102,17 @@ namespace Raid.VisualSlice.Editor
                 Box("Tank top rail",tank,new Vector3(side*1.52f,1.45f,0),new Vector3(.12f,.12f,3.2f),"Amber");
                 Box("Tank cyan strip",tank,new Vector3(0,.25f,side*1.65f),new Vector3(2.4f,.045f,.03f),"Glow");
             }
-            VisualKit.Label("CATCH RESERVOIR",tank,new Vector3(0,.5f,1.58f),.05f,Color.white,Quaternion.Euler(0,180,0));
+            foreach(int side in new[]{-1,1})Box("Tank nameplate backing",tank,new Vector3(0,.5f,side*1.58f),new Vector3(2.6f,.38f,.035f),"Navy");
+            VisualKit.Label("CATCH RESERVOIR",tank,new Vector3(0,.5f,1.61f),.05f,Color.white,Quaternion.Euler(0,180,0));
+            VisualKit.Label("CATCH RESERVOIR",tank,new Vector3(0,.5f,-1.61f),.05f,Color.white);
             var console=VisualKit.Group("Crew terminal",room,new Vector3(3.15f,0,-3));
             Box("Console pedestal",console,new Vector3(0,.45f,0),new Vector3(.9f,.9f,.7f),"Navy");
             Box("Terminal chassis",console,new Vector3(0,1.2f,0),new Vector3(1.45f,.85f,.4f),"Trim");
             Box("Terminal screen",console,new Vector3(0,1.25f,.215f),new Vector3(1.2f,.6f,.03f),"Navy");
             VisualKit.Label("CREW SYSTEMS\nDEPTH / CATCH / UPGRADES\n[ E ]",console,new Vector3(0,1.25f,.24f),.023f,new Color(.28f,1,.81f),Quaternion.Euler(0,180,0));
+            console.localRotation=Quaternion.Euler(0,180,0);
             VisualKit.Label("NEREID  //  MARINE RESEARCH",room,new Vector3(-3.7f,2.75f,7.75f),.04f,new Color(.65f,.85f,.83f));
-            for(int i=0;i<3;i++)VisualKit.Lamp("Warm overhead",room,new Vector3(0,3.7f,(i-1)*5),new Color(1,.65f,.32f),7,11);
+            for(int i=0;i<3;i++)VisualKit.Lamp("Warm overhead",room,new Vector3(0,3.7f,(i-1)*5),new Color(1,.72f,.42f),50,11);
             VisualKit.Lamp("Reservoir bounce",room,new Vector3(0,2.1f,-3),new Color(.22f,.8f,.9f),2,5);
         }
         static void Basket()

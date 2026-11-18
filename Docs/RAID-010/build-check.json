@@ -1,0 +1,12 @@
+{
+  "job_id": "build-20806d36d7",
+  "result": "succeeded",
+  "platform": "StandaloneWindows64",
+  "output_path": "Builds/RAID010-VisualSlice/UnderwaterFishing-VisualSlice.exe",
+  "started_at": "2026-11-18T21:24:26.044547Z",
+  "duration_seconds": 5.3416115,
+  "completed_at": "2026-11-18T21:24:31.3861585Z",
+  "total_size_mb": 165.26,
+  "errors": 0,
+  "warnings": 0
+}

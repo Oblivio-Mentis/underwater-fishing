@@ -8,7 +8,9 @@ namespace Raid.VisualSlice
         public Transform cargo;
         public Material steel,amber,glow;
         public LineRenderer hoistCable;
+        public Transform[] tankFish;
         private Camera diverCamera;
+        private LineRenderer harpoonRope;
         private Transform gun;
         private float searchAt;
         private void LateUpdate()
@@ -27,9 +29,25 @@ namespace Raid.VisualSlice
                 }
             }
             if(gun!=null)gun.localPosition=new Vector3(.29f,-.29f,.52f)+Vector3.up*Mathf.Sin(Time.time*1.5f)*.002f;
+            if(harpoonRope!=null && harpoonRope.enabled && harpoonRope.positionCount>0)
+                harpoonRope.SetPosition(0,diverCamera.transform.TransformPoint(new Vector3(.29f,-.22f,.85f)));
+            if(tankFish!=null && RaidWorld.Instance!=null && RaidWorld.Instance.View!=null)
+            {
+                int count=0;
+                foreach(var entry in RaidWorld.Instance.View.tank) if(entry.offering>0) count++;
+                for(int i=0;i<tankFish.Length;i++)
+                {
+                    var fish=tankFish[i];fish.gameObject.SetActive(i<count);
+                    float angle=Time.time*.4f+i*1.27f;
+                    fish.localPosition=new Vector3(Mathf.Cos(angle)*.85f,.72f+Mathf.Sin(angle*1.7f)*.16f,Mathf.Sin(angle)*.85f);
+                    fish.localRotation=Quaternion.Euler(0,-angle*Mathf.Rad2Deg,0);
+                }
+            }
         }
         void MakeGun()
         {
+            var tool=diverCamera.GetComponentInParent<DiverMotor>().GetComponentInChildren<HarpoonTool>();
+            if(tool!=null)harpoonRope=tool.GetComponentInChildren<LineRenderer>();
             gun=new GameObject("Harpoon / presentation only").transform;gun.SetParent(diverCamera.transform,false);
             Add("Receiver",PrimitiveType.Cube,new Vector3(0,0,0),new Vector3(.12f,.13f,.32f),steel,Quaternion.identity);
             Add("Spear barrel",PrimitiveType.Cylinder,new Vector3(0,.045f,.26f),new Vector3(.038f,.26f,.038f),steel,Quaternion.Euler(90,0,0));

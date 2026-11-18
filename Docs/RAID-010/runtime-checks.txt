@@ -1,0 +1,7 @@
+[RAID010 ROUTE] forward input through existing hatch: (0.00, 1.20, 1.00) -> (0.00, 1.20, 21.16) depth=1 O2=116,4206
+[RAID010 FISH] actual RPC/FSM capture 13,37s; cargoId=5439755452968688705
+[RAID010 ROUTE] return through hatch complete; stock=1 atBase=True position=(-3.00, 1.20, 1.00)
+[RAID010 SHOT] two peers=2
+[RAID010 COOP FINAL] peers=2 divers=2 owners=0,1
+[RAID010 FISH FINAL] mode=Struggling tension=0,2584 stamina=6,889997 distance=7,040531
+[RAID010 SHOT] two peers=2
