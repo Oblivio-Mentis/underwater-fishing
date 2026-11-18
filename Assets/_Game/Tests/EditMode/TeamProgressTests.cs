@@ -238,6 +238,64 @@ namespace Raid.Tests
         }
 
         [Test]
+        public void DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce()
+        {
+            Assert.That(team.Deposit(new CatchItem(7001, 0, 0, 0, 2, 2, 5, 3)), Is.True);
+            TeamSave.Save(savePath, team);
+            TeamProgress restored = TeamSave.Load(savePath);
+            Assert.That(restored.tank.Count, Is.EqualTo(1));
+            Assert.That(restored.tank[0].scrap, Is.EqualTo(5));
+            Assert.That(restored.tank[0].electronics, Is.EqualTo(3));
+            Assert.That(restored.tank[0].depthTier, Is.EqualTo(2));
+            Assert.That(restored.Process(7001), Is.True);
+            Assert.That(restored.Process(7001), Is.False);
+            TeamSave.Save(savePath, restored);
+            TeamProgress processed = TeamSave.Load(savePath);
+            Assert.That(processed.scrap, Is.EqualTo(5));
+            Assert.That(processed.electronics, Is.EqualTo(3));
+            Assert.That(processed.biomass + processed.chitin, Is.Zero);
+            Assert.That(processed.lifetimeCatch, Is.EqualTo(8));
+            Assert.That(processed.tank, Is.Empty);
+            Assert.That(processed.Deposit(new CatchItem(7001, 0, 0, 0, 2, 2, 5, 3)), Is.False);
+        }
+
+        [Test]
+        public void ZeroOfferingLootCannotBeFedOrDiscardedByFeeding()
+        {
+            team.offering = 3;
+            Assert.That(team.Deposit(new CatchItem(7002, 0, 0, 0, 1, 1, 2, 1)), Is.True);
+            Assert.That(team.Feed(7002), Is.False);
+            Assert.That(team.offering, Is.EqualTo(3));
+            Assert.That(team.tank.Count, Is.EqualTo(1), "A rejected feed must preserve the resource item.");
+            Assert.That(team.Process(7002), Is.True);
+            Assert.That(team.scrap, Is.EqualTo(2));
+            Assert.That(team.electronics, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce()
+        {
+            tuning.raisingSeconds = 2; tuning.unloadingSeconds = 3; tuning.returningSeconds = 4;
+            Assert.That(team.LoadCargo(new CatchItem(7003, 4, 1, 3, 1, 1, 2, 3), tuning), Is.True);
+            Assert.That(team.LoadCargo(new CatchItem(7004, 0, 0, 0, 2, 2, 5, 2), tuning), Is.True);
+            Assert.That(team.BeginHoist(tuning), Is.True);
+            team.TickHoist(2, tuning);
+            Assert.That(team.lifetimeCatch, Is.Zero, "Raising alone must not count undelivered resources.");
+            team.TickHoist(3, tuning);
+            Assert.That(team.tank.Count, Is.EqualTo(2));
+            Assert.That(team.lifetimeCatch, Is.EqualTo(17));
+            team.TickHoist(100, tuning);
+            Assert.That(team.lifetimeCatch, Is.EqualTo(17), "Returning/idle ticks cannot deliver twice.");
+            Assert.That(team.Process(7003), Is.True);
+            Assert.That(team.Process(7004), Is.True);
+            Assert.That(team.biomass, Is.EqualTo(4));
+            Assert.That(team.chitin, Is.EqualTo(1));
+            Assert.That(team.scrap, Is.EqualTo(7));
+            Assert.That(team.electronics, Is.EqualTo(5));
+            Assert.That(team.lifetimeCatch, Is.EqualTo(17));
+        }
+
+        [Test]
         public void CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved()
         {
             TeamSave.Save(savePath, team);
