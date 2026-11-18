@@ -214,6 +214,15 @@ namespace Raid
             if (!IsServerInitialized || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
             _controller.Move(Vector3.ClampMagnitude(displacement, 2f));
         }
+        public void ApplyTetherMotion(Vector3 displacement)
+        {
+            if(!IsServerInitialized)return;
+            float before=transform.position.y;
+            ApplyExternalMotion(displacement);
+            // Friendly transport must not create a second rapid-ascent penalty on top
+            // of the participant's own swim input. Actual depth pressure still applies.
+            _previousPosition.y+=transform.position.y-before;
+        }
 
         public void Teleport(Vector3 position)
         {

@@ -274,7 +274,7 @@ namespace Raid
             Vector3 motion = offset / distance * step;
             float vertical = Safe(target.Motor.tuning.verticalSpeed, 2, 0, 4) * Time.fixedDeltaTime;
             motion.y = Mathf.Clamp(motion.y, -vertical, vertical);
-            target.Motor.ApplyExternalMotion(motion);
+            target.Motor.ApplyTetherMotion(motion);
         }
 
         bool FriendLineVisible(HarpoonTool target)
