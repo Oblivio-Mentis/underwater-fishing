@@ -47,6 +47,16 @@ namespace Raid
                 [1] = new FishRoamState(), [2] = new FishHookedState(), [3] = new FishStrugglingState(),
                 [4] = new FishTiredState(), [5] = new FishCapturedState(), [6] = new FishTransportedState(), [7] = new FishEscapedState()
             };
+            // The compiler retains raw mirror IDs in its layer registry and inherits
+            // origin routes. Bind each alias to its canonical, stateless handler so
+            // gameplay receives the canonical mode while the native FSM keeps its ID.
+            foreach (var state in definition.states)
+            {
+                if (state.mirror_of_id < 0) continue;
+                if (!states.TryGetValue(state.mirror_of_id, out var origin))
+                    throw new System.InvalidOperationException($"Fish mirror {state.id} has no registered origin {state.mirror_of_id}.");
+                states.Add(state.id, origin);
+            }
             return UniversalFsmRuntimeComposition<FishContext>.CreateWithPrivateRegistry(
                 new FishContext { Actor = actor }, states, blackboard: board,
                 beforeTick: (context, dt) => board.SetInt(UniversalFsmBlackboard.StableHash("DesiredState"), (int)actor.DesiredState));
