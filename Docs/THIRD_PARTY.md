@@ -16,3 +16,11 @@ FishySteamworks Git UPM import contained no source code; removed it and imported
 ## RAID-010 visual slice
 
 Hull/interior modules, rocks, kelp, wreck, parasite, fish fins, harpoon, materials and `RAID010/World Text` shader were authored in this project. No external art pack, paid/trial asset, downloaded model or new package was used. The existing Unity font atlas is used by world labels under the installed Unity terms. New materials use the already installed URP 17.5 shaders. No additional third-party art attribution or license grant is required.
+
+## RAID-011 interface
+
+| Component | Source / version | License |
+|---|---|---|
+| PT Sans Regular, unmodified static TTF; generated TMP SDF atlas | [Google Fonts / ParaType](https://github.com/google/fonts/tree/main/ofl/ptsans), TTF SHA256 `9cc831490532009bae2b3ce0d39c62adfc889060beb421593bfd9d2396d0f10a` | SIL OFL 1.1, copyright and full license retained in `Assets/_Game/UI/Overhaul/Fonts/OFL.txt`; permits commercial bundling |
+| TMP Essential Resources | Imported from already installed `com.unity.ugui` 2.5.0 package | Unity package terms and included notices; Liberation Sans default font license retained in imported Fonts folder |
+| UI panels, status marks and layout | Authored in this project, uGUI Images / TextMeshPro | Project-authored; no external icon pack |

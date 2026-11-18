@@ -28,6 +28,7 @@ namespace Raid.UI
             }
             return raw;
         }
-        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":"Действие отклонено: условия изменились на сервере";
+        public const string QuoteChanged="Уровень или цена изменились. Проверьте улучшение и подтвердите заново";
+        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
     }
 }

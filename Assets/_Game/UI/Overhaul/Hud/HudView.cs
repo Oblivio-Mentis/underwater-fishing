@@ -267,7 +267,7 @@ namespace Raid.UI
             if(message!=previousWorldMessage && message.StartsWith("Feeding: "))app.Toast(UiText.WorldMessage(message),message.Contains("Underfed")||message.Contains("None"));
             if(wave && !previousWave)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
             if(!wave && previousWave)app.Toast(UiText.HudWaveEnded);
-            if(loss>previousLoss && (wave||previousWave))app.Toast(UiText.HudStockLost(loss-previousLoss),true);
+            if(loss>previousLoss)app.Toast(UiText.HudStockLost(loss-previousLoss),true);
             previousWave=wave;previousLoss=loss;previousWorldMessage=message;
         }
 

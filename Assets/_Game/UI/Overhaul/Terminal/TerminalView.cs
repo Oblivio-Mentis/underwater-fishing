@@ -182,12 +182,18 @@ namespace Raid.UI
         {
             string reason=UpgradeReason(upgrade);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
             var ctx=app.Context;var view=ctx.View;
+            int quotedLevel=view.Level(upgrade);var quotedCost=view.Cost(upgrade,ctx.Tuning);
             app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(view.Level(upgrade)+1)+"\n"+UiText.UpgradeCost(view.Cost(upgrade,ctx.Tuning))+"\n\n"+UiText.UpgradeConfirmHint,
-                ()=>TerminalParts.Execute(app,()=>UpgradeReason(upgrade),(WorldAction)((int)WorldAction.Reel+(int)upgrade)));
+                ()=>
+                {
+                    if(ctx.View==null||ctx.View.Level(upgrade)!=quotedLevel||!ctx.View.Cost(upgrade,ctx.Tuning).Equals(quotedCost)){app.Toast(UiText.QuoteChanged,true);return;}
+                    TerminalParts.Execute(app,()=>UpgradeReason(upgrade),(WorldAction)((int)WorldAction.Reel+(int)upgrade));
+                });
         }
         void BuildDepths()
         {
-            AddDepth(1);AddDepth(2);
+            var zones=UiKit.Row(content,"DepthZones",16);UiKit.Size(zones,356);
+            AddDepth(zones,1);AddDepth(zones,2);
             var returnBody=TerminalParts.Card(content,"ReturnToBase",178);
             TerminalParts.Text(returnBody,"Title",UiText.ReturnTitle,32,26);
             TerminalParts.Text(returnBody,"Description",UiText.ReturnDescription,48,21,UiTheme.Muted);
@@ -199,22 +205,21 @@ namespace Raid.UI
             TerminalParts.Text(cargo,"Title",UiText.CargoFromTerminal,30,24);
             TerminalParts.Text(cargo,"Description",UiText.CargoFromTerminalHint,36,20,UiTheme.Muted);
         }
-        void AddDepth(int depth)
+        void AddDepth(Transform parent,int depth)
         {
-            var body=TerminalParts.Card(content,"Depth_"+depth,258);
+            var body=TerminalParts.Card(parent,"Depth_"+depth,356);
             TerminalParts.Text(body,"Title",depth==1?UiText.DepthOneTitle:UiText.DepthTwoTitle,36,28);
-            TerminalParts.Text(body,"Loot",depth==1?UiText.DepthOneLoot:UiText.DepthTwoLoot,42,22);
-            TerminalParts.Text(body,"Risk",depth==1?UiText.DepthOneRisk:UiText.DepthTwoRisk,34,20,UiTheme.Muted);
-            var access=TerminalParts.Text(body,"Access","",34,20,UiTheme.Muted);
-            var row=UiKit.Row(body,"Action",20);UiKit.Size(row,52);
-            var reason=UiKit.Label(row,"Reason","",20,UiTheme.Amber);UiKit.Size(reason,52,flexibleWidth:1);
-            var button=UiKit.Button(row,"Dive_"+depth,UiText.StartExpedition,()=>ConfirmDepth(depth),true,52);UiKit.Size(button,52,300);button.GetComponent<LayoutElement>().flexibleWidth=0;
+            TerminalParts.Text(body,"Loot",depth==1?UiText.DepthOneLoot:UiText.DepthTwoLoot,70,22);
+            TerminalParts.Text(body,"Risk",depth==1?UiText.DepthOneRisk:UiText.DepthTwoRisk,54,20,UiTheme.Muted);
+            var access=TerminalParts.Text(body,"Access","",50,20,UiTheme.Muted);
+            var reason=TerminalParts.Text(body,"Reason","",26,19,UiTheme.Amber);
+            var button=UiKit.Button(body,"Dive_"+depth,UiText.StartExpedition,()=>ConfirmDepth(depth),true,52);
             refreshRows.Add(()=>
             {
                 var ctx=app.Context;if(ctx.View==null){button.interactable=false;return;}
                 bool unlocked=ctx.View.CanVisitDepth(depth);
                 UiKit.Set(access,unlocked?UiText.DepthAvailable:UiText.HullUnlock(ctx.View.lifetimeCatch,ctx.Tuning.depthTwoLifetimeCatch));access.color=unlocked?UiTheme.Green:UiTheme.Amber;
-                TerminalParts.ButtonReason(button,reason,TravelReason(depth),UiText.DepthAvailable);
+                TerminalParts.ButtonReason(button,reason,TravelReason(depth),"");
             });
         }
         string TravelReason(int destination)

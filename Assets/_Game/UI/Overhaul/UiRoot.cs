@@ -26,6 +26,8 @@ namespace Raid.UI
         HudView hud;
         TerminalView terminal;
         CargoView cargo;
+        CanvasGroup[] modalGroups;
+        GameObject cancelConfirmationButton;
         UiPage settingsBack=UiPage.Main;
         Action confirmAction;
         RaidWorld subscribedWorld;
@@ -34,6 +36,7 @@ namespace Raid.UI
         float initialVolume;
         WorldAction pendingAction;
         long pendingId;
+        int requestSequence,pendingRequestId;
         string beforeFingerprint;
 
         void Awake()
@@ -52,9 +55,11 @@ namespace Raid.UI
             hud=new HudView(transform,this);
             var dim=UiKit.Panel(transform,"Menu shade",new Color(.015f,.035f,.045f,.82f),true);shade=dim.rectTransform;UiKit.Fill(shade);
             menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);
+            modalGroups=new[]{menu.Root.gameObject.AddComponent<CanvasGroup>(),terminal.Root.gameObject.AddComponent<CanvasGroup>(),cargo.Root.gameObject.AddComponent<CanvasGroup>()};
             MakeConfirmation();
-            toastPanel=UiKit.Panel(transform,"System notification",UiTheme.Panel);UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-112),new Vector2(650,76));
-            toastText=UiKit.Label(toastPanel.transform,"Message","",22);UiKit.Fill(toastText.rectTransform,14);toastText.alignment=TextAlignmentOptions.Center;
+            toastPanel=UiKit.Panel(transform,"System notification",UiTheme.Panel);UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-4),new Vector2(1080,38));
+            toastText=UiKit.Label(toastPanel.transform,"Message","",20);UiKit.Fill(toastText.rectTransform,4);toastText.alignment=TextAlignmentOptions.Center;
+            toastText.enableAutoSizing=true;toastText.fontSizeMin=16;toastText.fontSizeMax=20;toastText.textWrappingMode=TextWrappingModes.NoWrap;toastText.overflowMode=TextOverflowModes.Ellipsis;
             pendingText=UiKit.Label(transform,"Server acknowledgement","",20,UiTheme.Cyan);UiKit.Place(pendingText.rectTransform,new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(0,22),new Vector2(750,34));pendingText.alignment=TextAlignmentOptions.Center;
             ApplySettings();ShowPage(UiPage.Main);
         }
@@ -65,7 +70,7 @@ namespace Raid.UI
             UiKit.Size(UiKit.Label(column,"Tag",UiText.ModalTag,18,UiTheme.Cyan),28);
             UiKit.Size(UiKit.Label(column,"Title","",30),48);UiKit.Size(UiKit.Label(column,"Description","",23),110);
             var row=UiKit.Row(column,"Actions");UiKit.Size(row,56);
-            UiKit.Button(row,"Confirm cancel",UiText.Cancel,CancelConfirmation);
+            cancelConfirmationButton=UiKit.Button(row,"Confirm cancel",UiText.Cancel,CancelConfirmation).gameObject;
             UiKit.Button(row,"Confirm accept",UiText.Confirm,()=>{var action=confirmAction;CancelConfirmation();action?.Invoke();},true);
             confirmation.gameObject.SetActive(false);
         }
@@ -73,21 +78,24 @@ namespace Raid.UI
         {
             if(CommandPending)return;
             confirmAction=confirmed;confirmation.gameObject.SetActive(true);
+            foreach(var group in modalGroups)group.interactable=false;
             var labels=confirmation.GetComponentsInChildren<TMP_Text>();foreach(var label in labels){if(label.name=="Title")label.text=title;if(label.name=="Description")label.text=description;}
-            SetCursor();EventSystem.current?.SetSelectedGameObject(null);
+            SetCursor();EventSystem.current?.SetSelectedGameObject(cancelConfirmationButton);
         }
-        void CancelConfirmation() { confirmAction=null;confirmation.gameObject.SetActive(false);UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor(); }
+        void CancelConfirmation() { confirmAction=null;confirmation.gameObject.SetActive(false);foreach(var group in modalGroups)group.interactable=true;UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor(); }
         public void ShowPage(UiPage value)
         {
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
             Page=value;
+            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-254:-4),new Vector2(1080,value==UiPage.None?50:38));
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
             shade.gameObject.SetActive(value!=UiPage.None);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
             UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor();EventSystem.current?.SetSelectedGameObject(null);
             if(Context.Connected && value==UiPage.Terminal)terminal.Refresh();if(Context.Connected&&value==UiPage.Cargo)cargo.Refresh();
+            Canvas.ForceUpdateCanvases();
         }
         public void ClosePanel()
         {
@@ -123,12 +131,12 @@ namespace Raid.UI
                     if(!connected)Toast(UiText.LostHost,true);
                 }
                 bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
-                if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected)ShowPage(UiPage.Pause);SetCursor();}
+                if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {
                     if((Page==UiPage.Terminal && !Context.NearTerminal)||(Page==UiPage.Cargo && !Context.NearCargo))ShowPage(UiPage.None);
-                    if(Page==UiPage.None)hud.Refresh();else if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
+                    hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
                     if(worldMessage.StartsWith("SAVE ERROR") && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
@@ -156,7 +164,8 @@ namespace Raid.UI
         {
             if(!Context.Connected||Context.World==null){Toast(UiText.NotConnected,true);return;}if(CommandPending)return;
             pendingAction=action;pendingId=id;beforeFingerprint=Fingerprint();pendingSince=Time.unscaledTime;replyReceived=false;CommandPending=true;
-            Context.World.Command(action,id);
+            int expectedLevel=action>=WorldAction.Reel&&action<=WorldAction.Winch?Context.View.Level((Upgrade)((int)action-(int)WorldAction.Reel)):-1;
+            pendingRequestId=++requestSequence;Context.World.RequestCommand(action,id,pendingRequestId,expectedLevel);
         }
         string Fingerprint()
         {
@@ -164,12 +173,12 @@ namespace Raid.UI
             if(pendingAction>=WorldAction.Reel && pendingAction<=WorldAction.Winch)return v.Level((Upgrade)((int)pendingAction-(int)WorldAction.Reel)).ToString();
             if(pendingAction==WorldAction.Process||pendingAction==WorldAction.Feed)return v.tank.Exists(x=>x.id==pendingId).ToString();
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();
-            if(pendingAction==WorldAction.Collect)return Context.HasCargo.ToString();
+            if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
             return Context.World.CurrentDepth+"/"+Context.AtBase+"/"+(Context.World.TravelRemaining>0);
         }
-        void OnCommandReply(bool success,string reason)
+        void OnCommandReply(int requestId,bool success,string reason)
         {
-            if(!CommandPending)return;replyReceived=true;replyAt=Time.unscaledTime;LastCommandReason=reason;LastCommandSucceeded=success;
+            if(!CommandPending||requestId!=pendingRequestId)return;replyReceived=true;replyAt=Time.unscaledTime;LastCommandReason=reason;LastCommandSucceeded=success;
             Toast(UiText.CommandReason(reason),!success);
         }
         void UpdatePending()
@@ -192,7 +201,12 @@ namespace Raid.UI
             if(Context.Player==null)return;Context.Player.LocalLookMultiplier=Settings.sensitivity;
             var camera=Context.Player.GetComponentInChildren<Camera>();if(camera!=null && camera.fieldOfView!=Settings.fov)camera.fieldOfView=Settings.fov;
         }
-        void OnApplicationFocus(bool focused) { if(!focused && Context.Connected && menu!=null){ShowPage(UiPage.Pause);Toast(UiText.FocusPause);}else if(menu!=null)SetCursor(); }
+        void OnApplicationFocus(bool focused)
+        {
+            if(menu==null)return;
+            if(!focused && Context.Connected && Page==UiPage.None){ShowPage(UiPage.Pause);Toast(UiText.FocusPause);}
+            else SetCursor();
+        }
         void OnDestroy()
         {
             if(Instance!=this)return;if(subscribedWorld!=null)subscribedWorld.CommandResponded-=OnCommandReply;

@@ -21,9 +21,9 @@ namespace Raid.UI
         public bool AtBase => World!=null && World.AtBase;
         public bool NearTerminal => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange;
         public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.cargoPosition)<World.tuning.interactionRange;
-        public bool AllInside => Players.Count>0 && Players.All(p=>p.IsInside);
+        public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
-        public bool HasCargo => Harpoon!=null && Harpoon.CarriedFish!=null || Player!=null && Loot.Any(l=>l.CarrierOwnerId==Player.OwnerId);
+        public bool HasCargo => Harpoon!=null && Harpoon.CarriedFish!=null || Player!=null && Loot.Any(l=>l!=null && l.CarrierOwnerId==Player.OwnerId);
         public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.CarriedFish.cargoSize:HasCargo?1:0;
         public DiverMotor RescueTarget {get;private set;}
         public HarpoonTool AssistTarget {get;private set;}
@@ -33,6 +33,7 @@ namespace Raid.UI
         float nextRoster;
         public void Refresh()
         {
+            Players.RemoveAll(p=>p==null||!p.IsClientInitialized);Loot.RemoveAll(l=>l==null);
             if(Session==null)Session=Object.FindAnyObjectByType<RaidSession>();if(World==null)World=RaidWorld.Instance;
             if(Time.unscaledTime>=nextRoster)
             {
@@ -51,13 +52,17 @@ namespace Raid.UI
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
             {
                 AimedLoot=hit.collider.GetComponentInParent<LootActor>();AimedFish=hit.collider.GetComponentInParent<FishActor>();
-                if(AimedLoot!=null && hit.distance<=3 && !AtBase && AimedLoot.CarrierOwnerId<0){Interaction=UiInteraction.Loot;return;}
+                if(AimedLoot!=null && hit.distance<=3 && !AtBase && AimedLoot.CarrierOwnerId<0 && !Loot.Any(l=>l!=null&&l.CarrierOwnerId==Player.OwnerId)){Interaction=UiInteraction.Loot;return;}
             }
             foreach(var other in Players)
             {
                 if(other==Player)continue;var tool=other.GetComponent<HarpoonTool>();
                 if(tool!=null && tool.HookedFish!=null && tool.HookedFish.Mode!=FishMode.Captured && Vector3.Distance(Player.transform.position,other.transform.position)<=Harpoon.tuning.assistRange)
-                {AssistTarget=tool;Interaction=UiInteraction.Assist;return;}
+                {
+                    Vector3 from=Player.transform.position+Vector3.up*.6f,to=other.transform.position+Vector3.up*.6f;
+                    RaycastHit block;if(Physics.Raycast(from,(to-from).normalized,out block,Vector3.Distance(from,to),Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore)&&block.collider.GetComponentInParent<HarpoonTool>()!=tool)continue;
+                    AssistTarget=tool;Interaction=UiInteraction.Assist;return;
+                }
             }
             if(AimedFish!=null)Interaction=UiInteraction.Fish;
         }

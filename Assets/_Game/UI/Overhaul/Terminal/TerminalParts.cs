@@ -34,6 +34,7 @@ namespace Raid.UI
         public static void ButtonReason(Button button,TMP_Text label,string reason,string ready)
         {
             button.interactable=string.IsNullOrEmpty(reason);UiKit.Set(label,string.IsNullOrEmpty(reason)?ready:reason);label.color=string.IsNullOrEmpty(reason)?UiTheme.Green:UiTheme.Amber;
+            button.GetComponentInChildren<TMP_Text>().color=button.interactable?UiTheme.Steel:UiTheme.Text;
         }
         public static string BaseReason(IUiController app,bool cargo=false)
         {

@@ -23,7 +23,7 @@ namespace Raid.UI.Editor
                 var source=AssetDatabase.LoadAssetAtPath<Font>("Assets/_Game/UI/Overhaul/Fonts/PTSans-Regular.ttf");
                 font=TMP_FontAsset.CreateFontAsset(source,64,8,GlyphRenderMode.SDFAA,2048,2048,AtlasPopulationMode.Dynamic,true);font.name="PT Sans UI Cyrillic";
                 var chars=new List<uint>();for(uint i=32;i<127;i++)chars.Add(i);for(uint i=0x400;i<=0x45f;i++)chars.Add(i);
-                chars.AddRange(new uint[]{0x00b7,0x00b0,0x2013,0x2014,0x2022,0x2026,0x2116,0x2190,0x2191,0x2192,0x2193,0x2264,0x2265});
+                chars.AddRange(new uint[]{0x00b7,0x00b0,0x00d7,0x2013,0x2014,0x2022,0x2026,0x2116,0x2190,0x2191,0x2192,0x2193,0x2264,0x2265});
                 uint[] missing;font.TryAddCharacters(chars.ToArray(),out missing);font.atlasPopulationMode=AtlasPopulationMode.Static;
                 AssetDatabase.CreateAsset(font,FontPath);AssetDatabase.AddObjectToAsset(font.material,font);
                 foreach(var atlas in font.atlasTextures)AssetDatabase.AddObjectToAsset(atlas,font);

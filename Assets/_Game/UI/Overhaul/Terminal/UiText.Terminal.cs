@@ -103,7 +103,7 @@ namespace Raid.UI
         public static string BuyUpgradeLevel(int level) => "Улучшить до "+level;
         public static string UpgradeCost(MaterialCost cost) => "Стоимость: "+Materials(cost);
         public static string LifetimeNeed(long current,int required) => "Накопленная добыча: "+current+" / "+required+" ед. материалов";
-        public static string HullUnlock(long current,int required) => "Корпус I требует накопленной добычи "+current+" / "+required+" ед. материалов и стоимости по рецепту.";
+        public static string HullUnlock(long current,int required) => "Нужен Корпус I. Добыча "+current+" / "+required+(current>=required?" — условие выполнено":" — накопите материалы");
         public static string NeedMaterials(MaterialCost cost,TeamProgress view)
         {
             var items=new List<string>();

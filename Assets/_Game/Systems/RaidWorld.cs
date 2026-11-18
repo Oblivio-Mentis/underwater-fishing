@@ -25,7 +25,7 @@ namespace Raid
         private readonly SyncVar<int> stockLossDisplay=new();
         public int StockLossCount => stockLossDisplay.Value;
         public float TravelRemaining => travelDisplay.Value;
-        public event Action<bool,string> CommandResponded;
+        public event Action<int,bool,string> CommandResponded;
         private TeamProgress team,view;
         private DiverMotor localDiver;
         private InputAction interact;
@@ -143,26 +143,29 @@ namespace Raid
             container.position=Vector3.MoveTowards(container.position,destination,Time.deltaTime*4);
         }
         public void Command(WorldAction action,long id) { Act(action,id); }
+        public void RequestCommand(WorldAction action,long id,int requestId,int expectedLevel=-1) { Act(action,id,requestId,expectedLevel); }
         [ServerRpc(RequireOwnership=false)]
-        private void Act(WorldAction action,long id,NetworkConnection sender=null)
+        private void Act(WorldAction action,long id,int requestId=0,int expectedLevel=-1,NetworkConnection sender=null)
         {
             if(sender==null || sender.FirstObject==null || team==null || !Enum.IsDefined(typeof(WorldAction),action)) return;
-            if(transitionRemaining>0) { Respond(sender,false,"travel"); return; }
+            if(transitionRemaining>0) { Respond(sender,requestId,false,"travel"); return; }
             var diver=sender.FirstObject.GetComponent<DiverMotor>();
-            if(diver==null || diver.IsHelpless) { Respond(sender,false,"helpless"); return; }
-            if(commandTimes.TryGetValue(sender.ClientId,out float last) && Time.unscaledTime-last<.15f) { Respond(sender,false,"cooldown"); return; }
+            if(diver==null || diver.IsHelpless) { Respond(sender,requestId,false,"helpless"); return; }
+            if(commandTimes.TryGetValue(sender.ClientId,out float last) && Time.unscaledTime-last<.15f) { Respond(sender,requestId,false,"cooldown"); return; }
             commandTimes[sender.ClientId]=Time.unscaledTime;
             if(action==WorldAction.Collect)
             {
-                if(AtBase) { Respond(sender,false,"unavailable"); return; }
+                if(AtBase) { Respond(sender,requestId,false,"unavailable"); return; }
                 if(Physics.Raycast(diver.transform.position+Vector3.up*.6f,diver.AimDirection,out var hit,3f))
-                { bool picked=hit.collider.GetComponent<LootActor>()?.Pickup(diver)??false; Respond(sender,picked,picked?"ok":"unavailable"); }
-                else Respond(sender,false,"range");
+                { bool picked=hit.collider.GetComponent<LootActor>()?.Pickup(diver)??false; Respond(sender,requestId,picked,picked?"ok":"unavailable"); }
+                else Respond(sender,requestId,false,"range");
                 return;
             }
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
-            if(Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,false,"range"); return; }
+            if(Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            if(action>=WorldAction.Reel && action<=WorldAction.Winch && expectedLevel>=0 && team.Level((Upgrade)((int)action-(int)WorldAction.Reel))!=expectedLevel)
+            { Respond(sender,requestId,false,"changed"); return; }
             bool success=false;
             switch(action)
             {
@@ -195,9 +198,9 @@ namespace Raid
             }
             if(success) { Publish(); Save(); }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
-            Respond(sender,success,success?"ok":"unavailable");
+            Respond(sender,requestId,success,success?"ok":"unavailable");
         }
-        [TargetRpc] private void Respond(NetworkConnection target,bool success,string reason) { CommandResponded?.Invoke(success,reason); }
+        [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {

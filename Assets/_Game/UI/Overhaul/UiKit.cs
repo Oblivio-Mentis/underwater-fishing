@@ -38,7 +38,7 @@ namespace Raid.UI
         public static LayoutElement Size(Component component,float height=-1,float width=-1,float flexibleWidth=0)
         {
             var e=component.GetComponent<LayoutElement>();if(e==null)e=component.gameObject.AddComponent<LayoutElement>();
-            if(height>=0){e.minHeight=height;e.preferredHeight=height;}if(width>=0){e.minWidth=width;e.preferredWidth=width;}e.flexibleWidth=flexibleWidth;return e;
+            if(height>=0){e.minHeight=height;e.preferredHeight=height;e.flexibleHeight=0;}if(width>=0){e.minWidth=width;e.preferredWidth=width;}e.flexibleWidth=flexibleWidth;return e;
         }
         public static RectTransform Column(Transform parent,string name,float spacing=12,int padding=0)
         {
@@ -57,15 +57,20 @@ namespace Raid.UI
             colors.selectedColor=new Color(1.18f,1.2f,1.1f);colors.disabledColor=new Color(.46f,.52f,.55f,.75f);colors.fadeDuration=.08f;button.colors=colors;
             var edge=image.gameObject.AddComponent<Outline>();edge.effectColor=UiTheme.Edge;edge.effectDistance=new Vector2(1,-1);
             var text=Label(image.transform,"Caption",caption,22,primary?UiTheme.Steel:UiTheme.Text);Fill(text.rectTransform,10);text.alignment=TextAlignmentOptions.Center;
+            image.gameObject.AddComponent<UiButtonFeedback>().primary=primary;
             Size(image,height,flexibleWidth:1);if(clicked!=null)button.onClick.AddListener(clicked);return button;
         }
         public static void Caption(Button button,string value) { var label=button.GetComponentInChildren<TMP_Text>();if(label.text!=value)label.text=value; }
         public static ScrollRect Scroll(Transform parent,string name,out RectTransform content)
         {
             var r=Node(parent,name);var scroll=r.gameObject.AddComponent<ScrollRect>();scroll.horizontal=false;scroll.movementType=ScrollRect.MovementType.Clamped;scroll.scrollSensitivity=36;
-            var viewport=Panel(r,"Viewport",new Color(0,0,0,.08f),true);Fill(viewport.rectTransform);viewport.gameObject.AddComponent<RectMask2D>();scroll.viewport=viewport.rectTransform;
+            var viewport=Panel(r,"Viewport",new Color(0,0,0,.08f),true);Fill(viewport.rectTransform);viewport.rectTransform.offsetMax=new Vector2(-16,0);viewport.gameObject.AddComponent<RectMask2D>();scroll.viewport=viewport.rectTransform;
             content=Column(viewport.transform,"Content",12,8);content.anchorMin=new Vector2(0,1);content.anchorMax=Vector2.one;content.pivot=new Vector2(.5f,1);content.anchoredPosition=Vector2.zero;content.sizeDelta=Vector2.zero;
-            var fit=content.gameObject.AddComponent<ContentSizeFitter>();fit.verticalFit=ContentSizeFitter.FitMode.PreferredSize;scroll.content=content;return scroll;
+            var fit=content.gameObject.AddComponent<ContentSizeFitter>();fit.verticalFit=ContentSizeFitter.FitMode.PreferredSize;scroll.content=content;
+            var track=Panel(r,"Vertical scrollbar",UiTheme.Panel,true);track.rectTransform.anchorMin=new Vector2(1,0);track.rectTransform.anchorMax=Vector2.one;track.rectTransform.pivot=new Vector2(1,.5f);track.rectTransform.sizeDelta=new Vector2(8,0);track.rectTransform.anchoredPosition=Vector2.zero;
+            var handle=Panel(track.transform,"Handle",UiTheme.Edge,true);Fill(handle.rectTransform);
+            var bar=track.gameObject.AddComponent<Scrollbar>();bar.direction=Scrollbar.Direction.BottomToTop;bar.handleRect=handle.rectTransform;bar.targetGraphic=handle;
+            scroll.verticalScrollbar=bar;scroll.verticalScrollbarVisibility=ScrollRect.ScrollbarVisibility.AutoHide;return scroll;
         }
         public static Image Bar(Transform parent,string name,Color color,float height=10)
         {
