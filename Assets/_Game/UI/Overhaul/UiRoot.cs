@@ -47,6 +47,7 @@ namespace Raid.UI
         {
             if(Instance!=null){Destroy(gameObject);return;}Instance=this;UiInputGate.Reset();UiInputGate.Active=true;
             Settings=UiSettings.Load();UiKit.Font=font;initialVolume=AudioListener.volume;
+            gameObject.AddComponent<UnderwaterLook>();
             canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=100;
             scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;gameObject.AddComponent<GraphicRaycaster>();canvasRect=(RectTransform)transform;

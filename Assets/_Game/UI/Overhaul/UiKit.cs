@@ -59,7 +59,7 @@ namespace Raid.UI
             var edge=image.gameObject.AddComponent<Outline>();edge.effectColor=UiTheme.Edge;edge.effectDistance=new Vector2(1,-1);
             var text=Label(image.transform,"Caption",caption,22,primary?UiTheme.Steel:UiTheme.Text);Fill(text.rectTransform,10);text.alignment=TextAlignmentOptions.Center;
             image.gameObject.AddComponent<UiButtonFeedback>().primary=primary;
-            Size(image,height,flexibleWidth:1);if(clicked!=null)button.onClick.AddListener(clicked);return button;
+            Size(image,height,flexibleWidth:1);if(clicked!=null)button.onClick.AddListener(()=>{UnderwaterLook.Instance?.Click();clicked();});return button;
         }
         public static void Caption(Button button,string value) { var label=button.GetComponentInChildren<TMP_Text>();if(label.text!=value)label.text=value; }
         public static ScrollRect Scroll(Transform parent,string name,out RectTransform content)
