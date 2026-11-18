@@ -1,0 +1,559 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e45ccf4dc827cbf4a9a04dc0f3c11f4c, type: 3}
+  m_Name: FishGraph
+  m_EditorClassIdentifier: OblivioMentis.UniversalFSM.Runtime::OblivioMentis.UniversalFSM.UniversalFsmDefinitionAsset
+  _definition:
+    version: 5
+    domain_id: RaidFishing
+    context_type_name: Raid.FishContext, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    profile_id: 
+    profile_asset_guid: 
+    start_state_id: 1
+    fallback_state_id: 1
+    max_stack_depth: 8
+    states:
+    - id: 1
+      name: Roam
+      state_type_name: Raid.FishRoamState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 0, y: 0}
+      mirror_of_id: -1
+    - id: 2
+      name: Hooked
+      state_type_name: Raid.FishHookedState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 640, y: 0}
+      mirror_of_id: -1
+    - id: 3
+      name: Struggling
+      state_type_name: Raid.FishStrugglingState, Assembly-CSharp, Version=0.0.0.0,
+        Culture=neutral, PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 1280, y: 0}
+      mirror_of_id: -1
+    - id: 4
+      name: Tired
+      state_type_name: Raid.FishTiredState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 1920, y: 0}
+      mirror_of_id: -1
+    - id: 5
+      name: Captured
+      state_type_name: Raid.FishCapturedState, Assembly-CSharp, Version=0.0.0.0,
+        Culture=neutral, PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 2560, y: 0}
+      mirror_of_id: -1
+    - id: 6
+      name: Transported
+      state_type_name: Raid.FishTransportedState, Assembly-CSharp, Version=0.0.0.0,
+        Culture=neutral, PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 3200, y: 0}
+      mirror_of_id: -1
+    - id: 7
+      name: Escaped
+      state_type_name: Raid.FishEscapedState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 1920, y: 216}
+      mirror_of_id: -1
+    - id: 101
+      name: Escaped (hook lost)
+      state_type_name: Raid.FishEscapedState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 1280, y: 216}
+      mirror_of_id: 7
+    - id: 102
+      name: Escaped (tired)
+      state_type_name: Raid.FishEscapedState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 2560, y: 216}
+      mirror_of_id: 7
+    - id: 103
+      name: Roam (dropped cargo)
+      state_type_name: Raid.FishRoamState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 3200, y: 216}
+      mirror_of_id: 1
+    - id: 104
+      name: Roam (recovered)
+      state_type_name: Raid.FishRoamState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 2560, y: 432}
+      mirror_of_id: 1
+    - id: 105
+      name: Roam (respawned)
+      state_type_name: Raid.FishRoamState, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+        PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 3840, y: 0}
+      mirror_of_id: 1
+    condition_nodes:
+    - node_uid: fish-1-2
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 2
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 320, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-2-3
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 3
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 960, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-3-4
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 4
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 1600, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-4-5
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 5
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 2240, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-5-6
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 6
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 2880, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-6-1
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 1
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 3520, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-2-7
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 7
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 960, y: 216}
+      has_editor_position: 1
+    - node_uid: fish-3-7
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 7
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 1600, y: 216}
+      has_editor_position: 1
+    - node_uid: fish-4-7
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 7
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 2240, y: 216}
+      has_editor_position: 1
+    - node_uid: fish-5-1
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 1
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 2880, y: 216}
+      has_editor_position: 1
+    - node_uid: fish-7-1
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 1
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 2240, y: 432}
+      has_editor_position: 1
+    edges:
+    - edge_uid: fish-1-2-input
+      from_kind: 0
+      from_state_id: 1
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-1-2
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-1-2-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-1-2
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 2
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-2-3-input
+      from_kind: 0
+      from_state_id: 2
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-2-3
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-2-3-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-2-3
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 3
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-4-input
+      from_kind: 0
+      from_state_id: 3
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-3-4
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-4-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-3-4
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 4
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-4-5-input
+      from_kind: 0
+      from_state_id: 4
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-4-5
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-4-5-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-4-5
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 5
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-5-6-input
+      from_kind: 0
+      from_state_id: 5
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-5-6
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-5-6-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-5-6
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 6
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-6-1-input
+      from_kind: 0
+      from_state_id: 6
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-6-1
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-6-1-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-6-1
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 105
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-2-7-input
+      from_kind: 0
+      from_state_id: 2
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-2-7
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-2-7-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-2-7
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 101
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-7-input
+      from_kind: 0
+      from_state_id: 3
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-3-7
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-7-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-3-7
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 7
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-4-7-input
+      from_kind: 0
+      from_state_id: 4
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-4-7
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-4-7-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-4-7
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 102
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-5-1-input
+      from_kind: 0
+      from_state_id: 5
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-5-1
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-5-1-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-5-1
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 103
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-7-1-input
+      from_kind: 0
+      from_state_id: 7
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-7-1
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-7-1-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-7-1
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 104
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    variables:
+    - id: DesiredState
+      name: Server-confirmed intent
+      context_binding_name: 
+      type: 1
+      float_value: 0
+      int_value: 1
+      bool_value: 0
+    layers:
+    - id: Default
+      name: Fish lifecycle
+      start_state_id: 1
+      fallback_state_id: 1
+      update_order: 0
+      enabled: 1
+      color: {r: 0, g: 1, b: 1, a: 1}
+    layer_rules: []
+    tags: []

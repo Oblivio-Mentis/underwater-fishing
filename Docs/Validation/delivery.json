@@ -1,0 +1,11 @@
+{
+  "source_commit": "cf12346",
+  "build": "Builds/FirstPlayable/UnderwaterFishing.exe",
+  "archive": "Builds/UnderwaterFishing-FirstPlayable.zip",
+  "archive_bytes": 72268518,
+  "archive_sha256": "C3E51D0114AD95B8B0C7CFA0DE486F42F1231B588C9CE74F4F07759B4BBCFD7D",
+  "archive_crc": "PASS",
+  "archive_entries": 335,
+  "steam_two_device_test": "NOT RUN - second participant available later",
+  "human_playtest": "NOT RUN"
+}

@@ -1,0 +1,46 @@
+﻿[RAID SMOKE] fishing timeout
+[RAID SMOKE] caught via harpoon RPC in 15,15 seconds; mode=Captured
+[RAID LOOP] catch 1 tier=1 reel=0 seconds=13,46
+[RAID LOOP] delivered lifetime=3 hoist=17,13
+[RAID LOOP] subsequent hoists accelerated on runtime clone only
+[RAID LOOP] consumed id=5383284064766585176 biomass=3 food=0
+[RAID LOOP] catch 2 tier=1 reel=0 seconds=13,35
+[RAID LOOP] delivered lifetime=6 hoist=1,79
+[RAID LOOP] consumed id=4910086565877598779 biomass=6 food=0
+[RAID LOOP] consumed id=4910086565877598779 biomass=0 food=0
+[RAID LOOP] catch 3 tier=1 reel=1 seconds=8,51
+[RAID LOOP] delivered lifetime=9 hoist=1,80
+[RAID LOOP] consumed id=5064094570331599648 biomass=3 food=0
+[RAID LOOP] catch 4 tier=1 reel=1 seconds=8,60
+[RAID LOOP] delivered lifetime=12 hoist=1,79
+[RAID LOOP] consumed id=5678782865438187501 biomass=6 food=0
+[RAID LOOP] catch 5 tier=1 reel=1 seconds=8,58
+[RAID LOOP] delivered lifetime=15 hoist=1,79
+[RAID LOOP] consumed id=4901956218266988687 biomass=9 food=0
+[RAID LOOP] consumed id=4901956218266988687 biomass=1 food=0
+[RAID LOOP] catch 6 tier=1 reel=1 seconds=13,70
+[RAID LOOP] delivered lifetime=18 hoist=1,80
+[RAID LOOP] consumed id=4793427236587792298 biomass=4 food=0
+[RAID LOOP] catch 7 tier=1 reel=1 seconds=8,56
+[RAID LOOP] delivered lifetime=21 hoist=1,79
+[RAID LOOP] consumed id=4981803487134631894 biomass=7 food=0
+[RAID LOOP] catch 8 tier=1 reel=1 seconds=8,56
+[RAID LOOP] delivered lifetime=24 hoist=1,79
+[RAID LOOP] consumed id=5761158502288572503 biomass=10 food=0
+[RAID LOOP] catch 9 tier=1 reel=1 seconds=8,50
+[RAID LOOP] delivered lifetime=27 hoist=1,80
+[RAID LOOP] consumed id=5193497545595136374 biomass=13 food=0
+[RAID LOOP] catch 10 tier=1 reel=1 seconds=9,80
+[RAID LOOP] delivered lifetime=30 hoist=1,80
+[RAID LOOP] consumed id=4963691976634570088 biomass=16 food=0
+[RAID LOOP] catch 11 tier=1 reel=1 seconds=8,57
+[RAID LOOP] delivered lifetime=33 hoist=1,80
+[RAID LOOP] consumed id=5374442389860468999 biomass=19 food=0
+[RAID LOOP] consumed id=5374442389860468999 biomass=1 food=0
+[RAID LOOP] catch 12 tier=2 reel=1 seconds=24,39
+[RAID LOOP] delivered lifetime=40 hoist=1,79
+[RAID LOOP] consumed id=5490760987119572184 biomass=1 food=3
+[RAID LOOP] PASS catches=12 lifetime=40 reel=1 fins=1 hull=1 food=3
+[RAID WAVE] fixture stock=10 life=60 reel=1 fins=1 hull=1
+[RAID WAVE] complete stock=10 life=60 reel=1 fins=1 hull=1
+[RAID WAVE] fresh wave complete stock=7 life=60 reel=1 fins=1 hull=1
