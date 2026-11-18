@@ -1,22 +1,17 @@
-# Technology — RAID — Underwater Fishing
-
-<!-- Phase 3 (references/stack.md). ENGINE — one of: godot, godot-mono, unity,
-unreal, web, defold, bevy (read by studio.py and envcheck.py). DIMENSION — 2D or 3D
-(2.5D with 3D models is 3D); envcheck.py recommends Blender for 3D. -->
-ENGINE: <engine>
-ENGINE VERSION: <version>
-DIMENSION: <2D or 3D>
-LANGUAGE: <language>
-PLATFORMS: <platforms>
-
+# Technology ? Underwater Fishing
+ENGINE: unity
+ENGINE VERSION: 6000.5.6f1
+DIMENSION: 3D
+LANGUAGE: C#
+PLATFORMS: Windows x64 / Steam
 ## Decision
-- context: <game, 2D/3D, platforms, what matters>
-- options: <engine — pros / cons; engine — pros / cons; …>
-- choice and why: <…>
-- consequences: <for assets, export, performance>
-
+- Existing Unity project and mandatory stack explicitly selected in Docs/BRIEF.md; no engine migration.
+- URP 17.5.0, Input System 1.20.0, uGUI 2.5.0, Test Framework 1.7.0.
+- FishNet 4.7.4 pinned official commit; Multipass selects Tugboat or FishySteamworks 4.1.1.
+- UniversalFSM 0.2.0 / UniversalFSMPresentation 0.3.2.
+- Steamworks.NET 2025.165.0; AppID 480 development only, no store publishing.
 ## Budgets
-<fps at the worst moment, draw calls, memory, build size, loading>
-
+- [default] Target 60fps, small greybox; measured budgets pending first playable.
 ## Project structure
-<folders and what lives where>
+- Assets/_Game: Player, Network, Fishing, Progression, Editor, Data, Scenes, Prefabs.
+- Docs/BRIEF.md is the approved specification; .studioigor records decisions and playtests.
