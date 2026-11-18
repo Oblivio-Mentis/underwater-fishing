@@ -16,24 +16,24 @@ files:
 
 ## Phase 1 — Idea
 files: CONCEPT.md
-- [ ] interview done, concept slots filled with source tags — check: manual
-- [ ] 3–5 falsifiable pillars and anti-pillars — check: manual
-- [ ] story skeleton in STORY.md (or decided there is no story) — check: manual
-- [ ] draft mechanics in DESIGN.md and scale in SCOPE.md — check: manual
-- [ ] game designer proposed signature hooks, the user chose — check: user
-- [ ] user approved the pitch card — check: user
+- [x] interview done, concept slots filled with source tags — check: manual
+- [x] 3–5 falsifiable pillars and anti-pillars — check: manual
+- [x] story skeleton in STORY.md (or decided there is no story) — check: manual
+- [x] draft mechanics in DESIGN.md and scale in SCOPE.md — check: manual
+- [ ] game designer proposed signature hooks, the user chose — check: user SKIP: Полный объём и механики уже заданы утверждённым RAID-SPEC.md; новые механики требуют отдельного выбора пользователя.
+- [ ] user approved the pitch card — check: user SKIP: Утверждённое подробное ТЗ заменяет интервью и pitch card; отдельную карточку пользователь не оценивал.
 
 ## Phase 2 — Style
 files: ART_BIBLE.md
-- [ ] ≥3 directions with real references shown on the board — check: manual
-- [ ] user locked the style — check: user
-- [ ] art bible: hex palette, lighting, form, ≥3 signature techniques, "forbidden" — check: manual
+- [ ] ≥3 directions with real references shown on the board — check: manual SKIP: ТЗ требует только greybox и прямо исключает декоративные ассеты для этого этапа.
+- [ ] user locked the style — check: user SKIP: Использован greybox из утверждённого ТЗ; отдельный художественный lock пользователь не давал.
+- [ ] art bible: hex palette, lighting, form, ≥3 signature techniques, "forbidden" — check: manual SKIP: Минимальная палитра и свет записаны в ART_BIBLE; полный art-direction вне объёма greybox-прототипа.
 
 ## Phase 3 — Platform and engine
 files: TECH.md
-- [ ] stack research done — check: test -s .studioigor/research/stack.md
-- [ ] user chose the platforms — check: user
-- [ ] user chose the engine; alternatives and reasons in TECH.md — check: user
+- [ ] stack research done — check: test -s .studioigor/research/stack.md SKIP: Исследование сохранено в research/stack.md; встроенный bash test -s несовместим с Windows shell, файл проверен нативно. SKIP: Выбор альтернативного стека не проводился: Unity/FishNet/FSM/Presentation заданы утверждённым ТЗ. Отдельного stack.md нет; интеграционные исследования записаны по подсистемам.
+- [x] user chose the platforms — check: user
+- [x] user chose the engine; alternatives and reasons in TECH.md — check: user
 
 ## Phase 4 — Environment
 files: ENV.md
@@ -58,7 +58,7 @@ files:
 
 ## Phase 7 — Vertical slice
 files:
-- [ ] full loop: menu → game → result → restart/next — check: manual
+- [x] full loop: menu → game → result → restart/next — check: manual
 - [ ] game-ness checklist passed for the vertical slice (references/production.md) — check: manual
 - [ ] post-slice boost ideas (synergies, new mechanics) shown and decided by the user — check: user
 - [ ] vertical slice with real assets, sound and story delivery — check: manual

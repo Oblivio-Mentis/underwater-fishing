@@ -21,6 +21,8 @@
 - Спасение и исправления Steam: [RAID-004](docs/RAID-004-REPORT.md). Проверены три локальных Steam-хоста подряд; отдельные аккаунты и приглашения ещё требуют проверки.
 - Груз, повторная лебёдка и крупная охота: [RAID-005](docs/RAID-005-REPORT.md).
 - Экспедиции, согласие и игровые дни: [RAID-006](docs/RAID-006-REPORT.md).
+- Материалы, улучшения, сонар и подношения: [RAID-007/008](docs/RAID-007-008-REPORT.md).
+- Windows-сборка: [запуск и игровой маршрут](docs/WINDOWS-PLAYTEST.md), [Steam на двух устройствах](docs/STEAM-TEST.md), [фактическая приёмка](docs/RAID-009-ACCEPTANCE.md).
 - Unity: открыть Assets/_Game/Scenes/UnderwaterFishing.unity после генерации через меню
   Underwater Fishing → Create Foundation Scenes. Сборка: Build Windows Development в том же меню.
 - Steam App ID задаётся через --steam-app-id или SteamAppId. Тестовый 480 доступен только

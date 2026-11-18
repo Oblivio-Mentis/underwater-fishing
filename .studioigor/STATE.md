@@ -1,22 +1,18 @@
 # State — Underwater Fishing
 
 ## Now
-СЕЙЧАС идёт core-failure:execsession45979, папка20261117-221220-638. ДождатьсяполногоPASS/FAIL, затемSpectatorреальный(новыйкомпонентужеестьвпоследнемbinary), SteamSmoke3цикласфинальнымиобъектами,5clients. CurrentbinaryпослеBuild50002включаетpressureWarning40/75 иpreservebalance, ноsourceпослеегоизменён: UIбез150msзадержки, WorldLabelVisibilityскрывает3Dтекстподмодалами/меню, holdSignмасштаб. SteamAcceptanceагентвRAID-steam-acceptanceдописываетautoSteamhost/inviteswitch/remoteverify+protocol; небратьдоегоcommit. Goalactive,ещёнедоказанSteamразныхаккаунтов. 007PRнеоткрыт/неpushed, mainнеmerge.
+Подготовить portable ZIP и draft stacked PR007/008/009 к raid/006-expeditions. Дождаться ответа, есть ли второй Windows-компьютер/напарник с другим Steam-аккаунтом; требуется внешняя проверка Steam соединения, поиска и приглашений. main не объединять. Полная цель остаётся активной, ручной плейтест и пределы доказательств перечислены в docs/RAID-009-ACCEPTANCE.md.
 
 ## Verified
-- 41/41 Unity EditMode tests; повторный studio.py verify прошёл TEST и CAPTURE, ENV VERIFIED=yes.
-- Windows2/5 отдельных процессов видят всех игроков; client crash и host loss обработаны, исключений в QA-логах нет.
-- Steam480: настоящее лобби создано, локальный Steam-хост1 участник подключён; удалённый аккаунт НЕ тестировался.
-- Input Actions -> RPC -> перемещение до столкновения со стенкой.
-- Исправлены свободные spawn slots, Esc offline, сохранность исходного InputActionAsset, объём герметичной зоны.
-- Два последовательных Play после исправления InputActions:0 ошибок. bowSheltered=True, O2=180.
-- Windows Development 0.0.1-raid003; повторный LAN клиент реально поймал рыбу с помощью хоста, оба процесса вышли0 без исключений; кадры осмотрены. Перепроверка5 процессов прошла.
+- Финальный Windows Development 0.0.2-raid009, DLL SHA256 87E16E06147BB222BB50765999DFFC3907837EDF3DA8C5E6DF789191D1548D6B.
+- 111/111 Unity EditMode; на финальном бинарнике Steam480 три Create/Connect/Leave через FishySteamworks, пять отдельных LAN-процессов, disconnect и hostloss. Исключений нет. Удалённые Steam-аккаунты и приглашения НЕ проверены.
+- Предыдущий бинарник DE8E...268A: два владельца прошли реальные три дня с добычей, лебёдкой, переработкой, Oxygen180→225, сонаром и Success/квота17; отдельно Failure/reset и естественная смерть/наблюдение. Логи и ограничения в docs/RAID-009-ACCEPTANCE.md.
+- Звук исключён по просьбе пользователя; настройки громкости не менять.
 
 ## Next
-1. Отправить raid/003-fishing как stacked PR к raid/001-foundation.
-2. Исправить найденные проверкой Steam проблемы повторного хоста; Steam обязателен для лобби и транспорта.
-3. RAID-004: спасение/наблюдение, завал; RAID-005 Cargo, далее Expedition, Progression, Offering, full QA.
-3. НЕ уменьшать цель до foundation. main не объединять без ревью.
+1. Упаковать проверенный бинарник и оформить stacked PR к raid/006-expeditions. PR1…5 уже созданы; main не объединять.
+2. Внешний Steam-плейтест на разных аккаунтах/устройствах, включая поиск и приглашения; async-вопрос об их наличии задан.
+3. Пользовательский плейтест механик; остальные пределы доказательств перечислены в docs/RAID-009-ACCEPTANCE.md. Полную цель не закрывать автоматически.
 
 ## Open questions
 Настоящий Steam App ID для релиза ещё не указан;480 только Editor/Development.
@@ -44,3 +40,4 @@ Steam между разными аккаунтами/устройствами и
 | 2026-11-18 00:39 | ? | RAID-006:88/88 EditMode, Windows0.0.1-raid006. Настоящие2 процесса прошли обычную экспедицию с pending-согласием игрока в воде и отдельную аварийную по45с таймеру; оба вернулись Base/день2/completed1 без исключений. Шлюз/границы добавлены, согласие на финальном билде повторно прошло. Пользователь подтвердилSteam480 для разработки. | Отправить PR006 кraid/005-cargo, затем ветка007/008: интегрироватьProgression26713db, выполнить111Unityтестов, builder/UI/E/Esc/ApplyGear. ПотомCoreLoopQA17a7ff1 (новыефайлы), добавитьCoreLoopTestBot вDiver; реальные3дняsuccess/failure/reset. Steamразныхаккаунтов/приглашения остаются непроверенными, полныйобъёмцели сохранять. |
 | 2026-11-18 00:59 | ? | RAID007/008: Progression26713db влит,111/111Unityтестов прошли. Builder/терминалы/ресурсныйUI/E/Esc/gear copies/latejoin/reset подключены; нулевыеgear180/2/35 подтверждены реальной экспедицией2процессов. CoreLoopQA17a7ff1 cherry-picked52c97d5;Spectator5f335f37 cherry-picked85585ed. Первый fullcoreпрогон ошибся в CargoTestBot: prior winchcycles+techhold блокировали продолжение команд доfishdeposit. Исправлено815193b: ждать фактическойрыбыиосвобождениярук, не прекращатьдвижениеприинвалидномmanifest. | СЕЙЧАС идёт fullcore-success повтор: execsession21015, результаты core-success/20261117-215621-533; перваярыба уже реально загружена (item5), hold3, нормальноеReturn началось. Дождатьсятерминальногостатусасессии; не пересобиратьбинарьпокаегоигровыепроцессыживы. Затем failure/reset, Spectator, Steam3cycles/final5clients иfinal111tests. Последнийbinary0.0.2-raid007; послеего сборки sourceдобавленrisklabelPressureCondition(40/75), ещёнепересобран. .studioigorполнуюцельне закрывать; Steam480approved, separateaccounts/invitesunverified. PR1..5вGitHub, ветка007ещёнеpushed. |
 | 2026-11-18 01:13 | ? | FullCoreSuccess теперьPASS целиком:2реальныхвладельца,3serverExp/3Debrief, реальныеlargecatch/assist/carry/cargo, переработаны1/4/5, O2upgrade1даёт225вследующейвылазке, сонар8контактовсрасходом, резерв12/12→Success→Baseквота17, остаткиbio3/rare2/scrap3/electronics2 сохранены. Результат .studioigor/test-results/core-success/20261117-220632-329/result.json passedtrue, nativePNGесть иосмотреныworkshop. Wrapperисправлен: -Capture видимыеокна, hiddenраньшедавалиFailedtoscreenshot. | СЕЙЧАС идёт core-failure:execsession45979, папка20261117-221220-638. ДождатьсяполногоPASS/FAIL, затемSpectatorреальный(новыйкомпонентужеестьвпоследнемbinary), SteamSmoke3цикласфинальнымиобъектами,5clients. CurrentbinaryпослеBuild50002включаетpressureWarning40/75 иpreservebalance, ноsourceпослеегоизменён: UIбез150msзадержки, WorldLabelVisibilityскрывает3Dтекстподмодалами/меню, holdSignмасштаб. SteamAcceptanceагентвRAID-steam-acceptanceдописываетautoSteamhost/inviteswitch/remoteverify+protocol; небратьдоегоcommit. Goalactive,ещёнедоказанSteamразныхаккаунтов. 007PRнеоткрыт/неpushed, mainнеmerge. |
+| 2026-11-18 12:45 | ? | Собран Windows Development0.0.2-raid009, DLL87E16E06147BB222BB50765999DFFC3907837EDF3DA8C5E6DF789191D1548D6B. На нём прошли111EditMode, Steam480 три Create/Connect/Leave и5реальных LAN-процессов с disconnect/hostloss. Исправлена ошибочная проверка FishyClientHostSocket. Старые core-success/core-failure/spectator PASS привязаны к DE8E...268A; это явно записано в RAID-009. Звук исключён. | Подготовить portable ZIP и draft stacked PR007/008/009 к raid/006-expeditions. Дождаться ответа, есть ли второй Windows-компьютер/напарник с другим Steam-аккаунтом; требуется внешняя проверка Steam соединения, поиска и приглашений. main не объединять. Полная цель остаётся активной, ручной плейтест и пределы доказательств перечислены в docs/RAID-009-ACCEPTANCE.md. |
