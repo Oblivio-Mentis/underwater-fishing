@@ -20,6 +20,8 @@ namespace Raid.UI
         [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
         [Serializable] public sealed class Snapshot
         {
+            public bool dead,consumed,canReturn;
+            public int watchedOwner=-1;
             public string request,page,error,cursor,worldMessage,scene;
             public bool connected,pending,inputBlocked,atBase,lastSuccess,wave;
             public int width,height,owner,players,events,canvases,audioListeners,stockLoss;
@@ -174,6 +176,15 @@ namespace Raid.UI
         }
         void Execute(Request r)
         {
+            if(r.action=="view" || r.action=="spectate" || r.action=="return_to_ship")
+            {
+                var diver=UiRoot.Instance.Context.Player;
+                if(diver==null || !diver.IsOwner || UiRoot.Instance.Page!=UiPage.None)throw new InvalidOperationException("Local HUD required");
+                if(r.action=="spectate")diver.CycleSpectator();
+                else if(r.action=="return_to_ship")diver.RequestRespawn();
+                else diver.LookAtConsole(diver.transform.position+Vector3.up*.6f+Quaternion.Euler(r.number2,r.number,0)*Vector3.forward*10f);
+                return;
+            }
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
             if (r.action == "slot" || r.action == "fish_reel" || r.action == "fish_grip")
@@ -262,6 +273,11 @@ namespace Raid.UI
             if(world!=null)
             {
                 snapshot.fishRoute=world.FishRoute;
+                if(player!=null)
+                {
+                    snapshot.dead=player.IsDead;snapshot.consumed=player.IsConsumed;snapshot.canReturn=player.CanRespawn;
+                    snapshot.watchedOwner=player.Spectating==null?-1:player.Spectating.OwnerId;
+                }
                 var shoal = world.container == null ? null : world.container.GetComponentInChildren<WetCargoShoal>();
                 snapshot.cageSwimmers = shoal == null ? 0 : shoal.Count;
             }
