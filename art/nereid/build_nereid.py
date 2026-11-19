@@ -2,7 +2,7 @@
 Run Blender -b --factory-startup --python-exit-code 1 -P this_file.
 Geometry, openings and materials are deterministic; no downloaded art.
 """
-import bpy, math, json, sys
+import bpy, bmesh, math, json, sys
 from pathlib import Path
 from mathutils import Vector
 
@@ -11,6 +11,23 @@ OUT=ROOT/'Assets/_Game/Nereid/Art'
 OUT.mkdir(parents=True,exist_ok=True)
 PREVIEW=ROOT/'art/nereid'
 INTERIOR_ONLY='--interior-only' in sys.argv
+SCALE_COMPAT='industrial-v2'
+ROOT_SCALE=2.0
+
+def compensated_height(y,z):
+    # The scene doubles the vessel in every axis. Keep lower work-height details
+    # human-sized, while the arches and crown grow into the large industrial hall.
+    # Bow structure blends back to the original height to meet the monster mouth.
+    k=max(0.0,min(1.0,(7.5-z)/2.0))
+    adjusted=y*.5 if y<=1.0 else y-.5
+    return y*(1.0-k)+adjusted*k
+
+def to_blender(u):
+    return Vector((u[0],-u[2],compensated_height(u[1],u[2])))
+
+assert compensated_height(.87,0)*ROOT_SCALE==.87
+assert abs(compensated_height(4.6,0)*ROOT_SCALE-8.2)<1e-6
+assert compensated_height(1.85,7.75)==1.85
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 for d in list(bpy.data.materials):bpy.data.materials.remove(d)
 PALETTE={
@@ -294,8 +311,31 @@ for side in (-1,1):
     obj.location=(side*6.72,19.5,2.2);obj.rotation_euler=(math.pi/2,0,side*math.pi/2)
     obj.data.materials.append(MATS['Nereid_Trim']);bpy.context.view_layer.objects.active=obj;obj.select_set(True);bpy.ops.object.convert(target='MESH');obj.select_set(False);objects['Exterior'].append(obj)
 
+# Apply the same deformation to both architectural exports, including the lettering.
+# In world space this is equivalent to mapping every Unity-space source vertex by
+# F(y,z); applying it before modifiers keeps bevels and weighted normals coherent.
+for obs in objects.values():
+    for obj in obs:
+        # Long shared deck/pipe faces need vertices on each deformation boundary.
+        # Otherwise their endpoints interpolate across the entire room while a
+        # separately built intermediate cuff follows F at its actual position.
+        if obj.location.length<1e-5:
+            bm=bmesh.new();bm.from_mesh(obj.data)
+            for co,normal in [((0,-5.5,0),(0,1,0)),((0,-7.5,0),(0,1,0)),((0,0,1),(0,0,1))]:
+                bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),dist=1e-6,plane_co=co,plane_no=normal,use_snap_center=False,clear_outer=False,clear_inner=False)
+            bm.to_mesh(obj.data);bm.free()
+        inverse=obj.matrix_world.inverted()
+        for vertex in obj.data.vertices:
+            p=obj.matrix_world@vertex.co
+            vertex.co=inverse@to_blender((p.x,p.z,-p.y))
+        obj.data.update()
+
 bpy.context.scene.unit_settings.system='METRIC';bpy.context.scene.unit_settings.scale_length=1
-meta={'coordinates':'Unity metres, x right, y up, z bow; geometry built in Blender(x,-z,y), exported FBX -Z forward/Y up','materials':list(PALETTE),'models':{},'openings':{'main_windows':'x=+-5.87 reveals to+-6.89; z=-7.8..6.55; y0.87..3.24','main_to_aft':'z=-8,width3.04,height3.15','aft_starboard_exit':'x5.8..7,z-15.6..-12.4,y0..3.0','bow_mouth':'z7.6,centre(0,1.85),width5.1,height3.58'}}
+meta={'coordinates':'Unity model-local metres before scene rootScale; x right, y up, z bow; Blender(x,-z,y), FBX -Z forward/Y up',
+      'scale_compat':SCALE_COMPAT,'scene_root_scale':ROOT_SCALE,
+      'vertical_compensation':{'k':'clamp((7.5-z)/2,0,1)','F':'(1-k)*y+k*(y*0.5 if y<=1 else y-0.5)','bow':'No deformation at z>=7.5; full compensation at z<=5.5','world_reference_heights':{'main_ledge':.87,'main_crown':8.2,'aft_crown':6.6,'bow_mouth_centre':3.7}},
+      'materials':list(PALETTE),'models':{},
+      'openings':{'main_windows':'local x=+-5.87 reveals to+-6.89; z=-7.8..6.55; full-compensated local y .435..2.74, rising smoothly near bow','main_to_aft':'local z=-8,width3.04,height2.65; world z=-16,width6.08,height5.3','aft_starboard_exit':'local x5.8..7,z-15.6..-12.4; world x11.6..14,z-31.2..-24.8,clearHeight~5','bow_mouth':'local z7.6,centre(0,1.85),width5.1,height3.58; world z15.2,centreY3.7,width10.2,height7.16'}}
 if INTERIOR_ONLY:
     meta['models']=json.loads((OUT/'Nereid_Architecture.json').read_text(encoding='utf-8'))['models']
 for scope,obs in objects.items():
@@ -308,17 +348,19 @@ for scope,obs in objects.items():
     dg=bpy.context.evaluated_depsgraph_get();tris=0;verts=[]
     for o in obs:
         ev=o.evaluated_get(dg);m=ev.to_mesh();m.calc_loop_triangles();tris+=len(m.loop_triangles)
-        verts.extend([(v.co.x,v.co.z,-v.co.y)for v in m.vertices]);ev.to_mesh_clear()
-    meta['models'][scope]={'file':path.name,'objects':len(obs),'triangles':tris,'unity_bounds_min':[min(v[k]for v in verts)for k in range(3)],'unity_bounds_max':[max(v[k]for v in verts)for k in range(3)]}
+        verts.extend([(p.x,p.z,-p.y)for p in (ev.matrix_world@v.co for v in m.vertices)]);ev.to_mesh_clear()
+    lo=[min(v[k]for v in verts)for k in range(3)];hi=[max(v[k]for v in verts)for k in range(3)]
+    meta['models'][scope]={'file':path.name,'objects':len(obs),'triangles':tris,'unity_bounds_min':lo,'unity_bounds_max':hi,'root_scale2_world_bounds_min':[v*ROOT_SCALE for v in lo],'root_scale2_world_bounds_max':[v*ROOT_SCALE for v in hi]}
+assert sum(m['triangles']for m in meta['models'].values())<250000,meta['models']
 (OUT/'Nereid_Architecture.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
 bpy.ops.wm.save_as_mainfile(filepath=str(PREVIEW/'Nereid_Architecture.blend'))
 
 # Headless preview uses only generated camera/lights and is never exported into the game.
 scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=24;scene.render.resolution_x=1280;scene.render.resolution_y=720;scene.render.resolution_percentage=100
 scene.world.color=(.05,.07,.09)
-def aim(o,u):o.rotation_euler=(Vector((u[0],-u[2],u[1]))-o.location).to_track_quat('-Z','Y').to_euler()
+def aim(o,u):o.rotation_euler=(to_blender(u)-o.location).to_track_quat('-Z','Y').to_euler()
 def light(name,pos,power,col,size=5):
-    d=bpy.data.lights.new(name,'AREA');d.energy=power;d.color=col;d.shape='DISK';d.size=size;o=bpy.data.objects.new(name,d);bpy.context.collection.objects.link(o);o.location=(pos[0],-pos[2],pos[1]);return o
+    d=bpy.data.lights.new(name,'AREA');d.energy=power;d.color=col;d.shape='DISK';d.size=size;o=bpy.data.objects.new(name,d);bpy.context.collection.objects.link(o);o.location=to_blender(pos);return o
 camera=bpy.data.objects.new('Preview camera',bpy.data.cameras.new('Preview camera'));bpy.context.collection.objects.link(camera);scene.camera=camera;camera.data.lens=24
 for z in (-6.6,-1,4.6):
     for side in(-1,1):
@@ -326,10 +368,10 @@ for z in (-6.6,-1,4.6):
 for z in (-6,1,6):
     l=light('Preview cool ocean',(7,3,z),260,(.34,.65,1),4);aim(l,(0,1,z))
 for o in objects['Exterior']:o.hide_render=True
-camera.location=(3.8,6.6,1.7);aim(camera,(-1.8,1.85,2.3));scene.render.filepath=str(PREVIEW/'preview_interior.png');bpy.ops.render.render(write_still=True)
+camera.location=to_blender((3.8,1.7,-6.6));aim(camera,(-1.8,1.85,2.3));scene.render.filepath=str(PREVIEW/'preview_interior.png');bpy.ops.render.render(write_still=True)
 if not INTERIOR_ONLY:
     for o in objects['Exterior']:o.hide_render=False
-    camera.location=(30,-33,18);aim(camera,(0,1,-8));camera.data.lens=40
+    camera.location=to_blender((30,18,33));aim(camera,(0,1,-8));camera.data.lens=40
     l=light('Preview exterior key',(12,20,5),7000,(.45,.75,1),20);aim(l,(0,0,-7))
     l=light('Preview exterior rim',(-12,7,-14),5000,(.3,.65,1),15);aim(l,(0,1,-10))
     scene.render.filepath=str(PREVIEW/'preview_exterior.png');bpy.ops.render.render(write_still=True)
