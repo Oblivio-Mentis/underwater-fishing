@@ -17,6 +17,7 @@ namespace Raid.UI
         public const string MenuCrew = "Экипаж и связь";
         public const string MenuDisconnect = "Покинуть сессию";
         public const string MenuPauseTitle = "Пост управления";
+        public const string MenuDiveControls = "L — фонарь под водой     ·     Shift — ускорение     ·     ПКМ — прицел";
         public const string MenuPauseSubtitle = "Локальное меню. Экспедиция и время на сервере продолжаются.";
         public const string MenuPauseDescription = "Во время работы с меню движение, стрельба и взаимодействия вашего водолаза отключены. Возвращайтесь на пост, когда будете готовы.";
         public const string MenuConnectionTitle = "Связь с экипажем";

@@ -5,6 +5,7 @@ using UnityEngine.Rendering.Universal;
 namespace Raid
 {
     // Camera-local visual treatment for the diver and spectator.
+    [DefaultExecutionOrder(275)] // Publish the lamp direction after DiverMotor positions the first-person camera.
     public sealed partial class UnderwaterLook : MonoBehaviour
     {
         public static UnderwaterLook Instance {get;private set;}

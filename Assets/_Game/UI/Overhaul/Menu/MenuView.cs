@@ -274,6 +274,7 @@ namespace Raid.UI
         {
             Page(UiPage.Pause, false, out var content);
 
+            Line(content, "DiveControls", UiText.MenuDiveControls, 40, 21, UiTheme.Muted);
             UiKit.Button(content, "PauseResume", UiText.MenuResume, () => app.ShowPage(UiPage.None), true, 64);
             UiKit.Button(content, "PauseSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
             UiKit.Button(content, "PauseCrew", UiText.MenuCrew, () => app.ShowPage(UiPage.Crew), height: 60);

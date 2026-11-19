@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
 
 namespace Raid
@@ -10,11 +11,13 @@ namespace Raid
         FogMode initialMode;
         float initialDensity,wetBlend;
         Color initialColor;
-        const float BeamCandela=58f;
+        const float BeamCandela=245f;
+        bool lampOn;
         Light diveLamp;
         static readonly int WaterShader=Shader.PropertyToID("_NereidTurbidity");
         static readonly int LampShader=Shader.PropertyToID("_NereidLampForward");
         static readonly int LampOriginShader=Shader.PropertyToID("_NereidLampOriginRange");
+        static readonly int LampConeShader=Shader.PropertyToID("_NereidLampCone");
         static readonly int WaterTintShader=Shader.PropertyToID("_NereidWaterTint");
         public float WaterBlend=>wetBlend;
 
@@ -31,13 +34,35 @@ namespace Raid
             if(diveLamp!=null)Destroy(diveLamp.gameObject);
             var node=new GameObject("Diver helmet inspection light");
             node.transform.SetParent(eye,false);
-            node.transform.localPosition=new Vector3(.15f,.12f,.09f);
+            node.transform.localPosition=new Vector3(-.17f,.20f,.22f);
+            // The helmet-mounted lamp converges on the reticle at normal fishing distance.
+            node.transform.localRotation=Quaternion.LookRotation(Vector3.forward*8f-node.transform.localPosition);
             diveLamp=node.AddComponent<Light>();
-            diveLamp.type=LightType.Spot;diveLamp.spotAngle=68;diveLamp.innerSpotAngle=36;
-            diveLamp.range=11;diveLamp.color=new Color(.79f,.92f,.96f);
+            diveLamp.type=LightType.Spot;diveLamp.spotAngle=56;diveLamp.innerSpotAngle=24;
+            diveLamp.range=24;diveLamp.color=new Color(.91f,.96f,1f);
             diveLamp.renderMode=LightRenderMode.ForcePixel;
             diveLamp.lightUnit=UnityEngine.Rendering.LightUnit.Candela;
             diveLamp.shadows=LightShadows.None;diveLamp.intensity=BeamCandela;diveLamp.enabled=false;
+            float outer=Mathf.Cos(.5f*diveLamp.spotAngle*Mathf.Deg2Rad);
+            float inner=Mathf.Cos(.5f*diveLamp.innerSpotAngle*Mathf.Deg2Rad);
+            Shader.SetGlobalVector(LampConeShader,new Vector4(outer,inner,0,0));
+            lampOn=true;
+        }
+
+        void UpdateDiveLamp(bool submerged)
+        {
+            if(diveLamp==null)return;
+            if(submerged && viewed!=null && viewed.IsOwner && !viewed.IsDead &&
+                !UI.UiInputGate.Blocked && Keyboard.current!=null && Keyboard.current.lKey.wasPressedThisFrame)
+                lampOn=!lampOn;
+
+            diveLamp.enabled=lampOn && viewed!=null && !viewed.IsDead && wetBlend>.04f;
+            diveLamp.intensity=BeamCandela*wetBlend;
+            var lamp=diveLamp.transform;
+            var pos=lamp.position;
+            var dir=lamp.forward;
+            Shader.SetGlobalVector(LampShader,new Vector4(dir.x,dir.y,dir.z,diveLamp.enabled?diveLamp.intensity:0));
+            Shader.SetGlobalVector(LampOriginShader,new Vector4(pos.x,pos.y,pos.z,diveLamp.range));
         }
 
         bool IsEyeUnderwater()
@@ -55,6 +80,7 @@ namespace Raid
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
             if(wetBlend<=0 && !appliedFog)return;
+            UpdateDiveLamp(wet);
             if(wetBlend>0)
             {
                 appliedFog=true;
@@ -65,16 +91,9 @@ namespace Raid
                 RenderSettings.fogColor=Color.Lerp(initialColor,waterTint,wetBlend);
                 Shader.SetGlobalColor(WaterTintShader,waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
-                if(diveLamp!=null)
-                {
-                    var t=diveLamp.transform;var p=t.position;
-                    Shader.SetGlobalVector(LampShader,t.forward);
-                    Shader.SetGlobalVector(LampOriginShader,new Vector4(p.x,p.y,p.z,diveLamp.range));
-                }
             }
             else ResetFog();
             Shader.SetGlobalFloat(WaterShader,wetBlend);
-            if(diveLamp!=null){diveLamp.enabled=wetBlend>.04f;diveLamp.intensity=BeamCandela*wetBlend;}
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
                 color.postExposure.Override(Mathf.Lerp(.12f,-.19f,wetBlend));
@@ -96,6 +115,7 @@ namespace Raid
         void RestoreOceanSettings()
         {
             if(appliedFog)ResetFog();
+            Shader.SetGlobalVector(LampShader,Vector4.zero);
             if(diveLamp!=null)Destroy(diveLamp.gameObject);
         }
     }
