@@ -7,7 +7,7 @@ namespace Raid.UI
     // The whole display reads the same confirmed diver, world and tool snapshots as the terminals.
     sealed class DiveInstruments
     {
-        enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass }
+        enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass, SlotOutline }
         static readonly Color Ink=new Color(.022f,.05f,.061f,.83f);
         static readonly Color Rim=new Color(.60f,.77f,.78f,.49f);
         static readonly Color Ivory=new Color(.95f,.97f,.94f);
@@ -69,7 +69,7 @@ namespace Raid.UI
             for(int i=0;i<5;i++)
             {
                 float x=i*74;
-                slotRim[i]=Icon(hotbar,"Slot "+(i+1),Mark.Tile,x,0,66,66,Rim);
+                slotRim[i]=Icon(hotbar,"Slot "+(i+1),Mark.SlotOutline,x,0,66,66,Rim);
                 var face=Icon(slotRim[i].transform,"Slot well",Mark.Tile,3,-3,60,60,Ink);
                 slotArt[i]=Icon(face.transform,"Item",Mark.Spear,5,-5,50,50,Ivory);
                 keys[i]=Caption(hotbar,"Key "+(i+1),x,-66,66,23,18,TextAlignmentOptions.Center);
@@ -189,11 +189,11 @@ namespace Raid.UI
         static void LoadArt()
         {
             var tex=Resources.Load<Texture2D>("DiveInstruments");
-            art=new Sprite[13];
+            art=new Sprite[14];
             for(int i=0;i<art.Length;i++)
             {
                 var rect=new Rect((i%8)*96,(1-i/8)*96,96,96);
-                art[i]=Sprite.Create(tex,rect,Center,100,0,SpriteMeshType.FullRect,i==(int)Mark.Tile?new Vector4(16,16,16,16):Vector4.zero);
+                art[i]=Sprite.Create(tex,rect,Center,100,0,SpriteMeshType.FullRect,(i==(int)Mark.Tile||i==(int)Mark.SlotOutline)?new Vector4(16,16,16,16):Vector4.zero);
                 art[i].name=((Mark)i).ToString();art[i].hideFlags=HideFlags.HideAndDontSave;
             }
         }
@@ -209,7 +209,7 @@ namespace Raid.UI
         }
         static Image Icon(Transform p,string name,Mark mark,float x,float y,float w,float h,Color color)
         {
-            var img=Box(p,name,x,y,w,h,color);img.sprite=art[(int)mark];img.type=mark==Mark.Tile?Image.Type.Sliced:Image.Type.Simple;
+            var img=Box(p,name,x,y,w,h,color);img.sprite=art[(int)mark];img.type=(mark==Mark.Tile||mark==Mark.SlotOutline)?Image.Type.Sliced:Image.Type.Simple;
             return img;
         }
         static RectTransform Back(Transform p,string name,float x,float y,float w,float h)
