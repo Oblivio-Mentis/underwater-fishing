@@ -218,7 +218,7 @@ namespace Raid.UI
                 title=player.Spectating!=null?"Наблюдение  ·  "+UiText.HudPlayerName(player.Spectating):
                     player.IsConsumed?"Вас проглотил левиафан":"Водолаз погиб";
                 bool teammate=false;
-                foreach(var member in context.Players)if(member!=null&&member!=player&&!member.IsDead){teammate=true;break;}
+                foreach(var member in context.Players)if(member!=null&&member!=player&&!member.IsHelpless){teammate=true;break;}
                 detail=teammate?"ПКМ — наблюдать":"";
                 if(player.CanRespawn)detail+=(detail.Length>0?"    ·    ":"")+"E — вернуться на борт";
                 else if(player.CanBeRescued&&teammate)detail+="    ·    Напарник может спасти вас [F]";

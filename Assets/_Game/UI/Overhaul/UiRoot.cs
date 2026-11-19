@@ -37,7 +37,7 @@ namespace Raid.UI
         UiPage crewBack=UiPage.Pause;
         Action confirmAction;
         RaidWorld subscribedWorld;
-        bool connectedBefore,overlayBefore,replyReceived,wasPulled;
+        bool connectedBefore,overlayBefore,replyReceived,wasPulled,wasDead;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
         [SerializeField,HideInInspector] float initialVolume=1;
         WorldAction pendingAction;
@@ -162,6 +162,13 @@ namespace Raid.UI
                     if(confirmation.gameObject.activeSelf)CancelConfirmation();ShowPage(connected?UiPage.None:UiPage.Main);
                     if(!connected)Toast(UiText.LostHost,true);
                 }
+                bool dead=connected && Context.Player.IsDead;
+                if(dead && !wasDead)
+                {
+                    if(confirmation.gameObject.activeSelf)CancelConfirmation();
+                    if(Page!=UiPage.None)ShowPage(UiPage.None);
+                }
+                wasDead=dead;
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {

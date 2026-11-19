@@ -119,6 +119,9 @@ namespace Raid
         void LateUpdate()
         {
             if(body==null||diver==null||tool==null)return;
+            // FishNet can reuse the diver object between sessions, and the motor restores the prefab renderers on pool return.
+            if(legacyVisor!=null&&legacyVisor.enabled)legacyVisor.enabled=false;
+            if(legacyCapsule!=null&&legacyCapsule.enabled)legacyCapsule.enabled=false;
             var ui=UI.UiRoot.Instance;var local=ui==null?null:ui.Context.Player;
             bool visible=diver.IsClientInitialized&&!diver.IsConsumed&&local!=null&&local.Spectating!=diver&&(!diver.IsOwner||local.Spectating!=null);
             if(body.gameObject.activeSelf!=visible)body.gameObject.SetActive(visible);
