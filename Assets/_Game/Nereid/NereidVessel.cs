@@ -9,6 +9,9 @@ namespace Raid.Nereid
     {
         public static NereidVessel Active { get; private set; }
         public Bounds[] sealedRooms;
+        [Min(.1f)] public float indoorGravity=18f;
+        [Min(0)] public float indoorJumpHeight=.8f;
+        [Min(0)] public float indoorWalkSpeed=4.5f;
         public Vector3[] cargoRail;
         public LineRenderer hoistCable;
         RaidWorld world;
