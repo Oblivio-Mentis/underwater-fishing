@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public sealed class ThreatDirector : NetworkBehaviour
+    public sealed partial class ThreatDirector : NetworkBehaviour
     {
         public ThreatTuning tuning;
         public Vector3[] factoryWaveRoute;
@@ -32,6 +32,7 @@ namespace Raid
             Instance = this;
             if (tuning == null) { tuning = ScriptableObject.CreateInstance<ThreatTuning>(); ownsTuning = true; }
             state.UpdateSettings(new SyncTypeSettings(Mathf.Max(.02f, tuning.snapshotInterval)));
+            reefState.UpdateSettings(new SyncTypeSettings(.15f));
             predatorView = Primitive("Predator", new Vector3(1.4f, .8f, 2.8f), new Color(.8f, .23f, .12f));
             waveView = Primitive("Reservoir raider", new Vector3(1.1f, .7f, 1.8f), new Color(.8f, .1f, .6f));
         }
@@ -54,16 +55,18 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            ResetReef();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
             state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = tuning.predatorHealth };
         }
 
-        public override void OnStopClient() { predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
+        public override void OnStopClient() { if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
 
         public void SetDepth(int tier)
         {
             if (!IsServerInitialized) return;
             depthTier = Mathf.Clamp(tier, 1, 2);
+            ResetReef();
             ThreatSnapshot next = state.Value;
             next.PredatorPosition = tuning.predatorSpawn;
             next.PredatorHealth = tuning.predatorHealth * Strength;
@@ -90,7 +93,12 @@ namespace Raid
             if (!IsServerInitialized) return;
             ThreatSnapshot next = state.Value;
             float dt = Time.fixedDeltaTime;
-            TickPredator(ref next, dt);
+            if(Nereid.NereidVessel.Active!=null)
+            {
+                TickReef(ref next,dt);
+                if(reefState.Value.Active)TickAngler(ref next,dt);
+            }
+            else TickPredator(ref next, dt);
             if (next.WaveActive)
             {
                 waveRemaining -= dt;
@@ -153,7 +161,7 @@ namespace Raid
             direction.Normalize();
             bool waveHit = next.WaveActive && Hits(origin, direction, next.WavePosition);
             bool predatorHit = next.PredatorHealth > 0f && Hits(origin, direction, next.PredatorPosition);
-            if (!waveHit && !predatorHit) return false;
+            if (!waveHit && !predatorHit) return StrikeReef(origin,direction);
             power = Mathf.Clamp(power, 0f, tuning.maximumStrikePower);
             if (waveHit && (!predatorHit || (next.WavePosition - origin).sqrMagnitude <= (next.PredatorPosition - origin).sqrMagnitude))
             {
@@ -180,7 +188,9 @@ namespace Raid
         {
             if (!IsClientInitialized) return;
             ThreatSnapshot snapshot = state.Value;
-            Show(predatorView, snapshot.PredatorPosition, snapshot.PredatorHealth > 0f);
+            bool nereid=Nereid.NereidVessel.Active!=null;
+            if(nereid)ShowReef();
+            Show(predatorView, snapshot.PredatorPosition, snapshot.PredatorHealth > 0f && (!nereid || reefState.Value.Active));
             Show(waveView, snapshot.WavePosition, snapshot.WaveActive);
         }
 
