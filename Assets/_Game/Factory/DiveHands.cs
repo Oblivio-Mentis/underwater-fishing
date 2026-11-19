@@ -65,8 +65,8 @@ namespace Raid
             if(switchTime<.17f){displaySlot=targetSlot;displayedHeavy=targetHeavy;}
             float stow=Mathf.Sin(Mathf.Clamp01(switchTime/.34f)*Mathf.PI);
             float push=Mathf.Pow(Mathf.Max(0,Mathf.Sin(press/.46f*Mathf.PI)),.7f);
-            bool ranged=displaySlot==0&&!displayedHeavy;
             bool grip=equipment.AssistTarget!=null;
+            bool ranged=displaySlot==0 && !displayedHeavy && !grip;
             var caught=displayedHeavy?equipment.CarriedFish:displaySlot>=2?equipment.FishInSlot(displaySlot):null;
             UpdateFish(caught!=null?caught.SpeciesId:null);
             float swim=actor.IsWalking?0:1;

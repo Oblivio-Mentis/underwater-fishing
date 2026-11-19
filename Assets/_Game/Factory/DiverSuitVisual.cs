@@ -148,7 +148,7 @@ namespace Raid
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
             var pocket=tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
-            gun.gameObject.SetActive(!diver.IsDead&&!held&&tool.ActiveSlot==0);
+            gun.gameObject.SetActive(!diver.IsDead && tool.HarpoonInHands);
             UpdateFish(pocket!=null&&!held&&!diver.IsDead?pocket.SpeciesId:null);
             if(diver.IsDead)
             {
