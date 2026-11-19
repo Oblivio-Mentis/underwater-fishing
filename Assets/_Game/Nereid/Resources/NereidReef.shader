@@ -1,6 +1,6 @@
 Shader "RAID/Nereid Reef"
 {
-    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 }
+    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 _BasaltLayers("Basalt layers",Range(0,1))=0 }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry"}
@@ -16,7 +16,7 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide;
+            float _Glow, _Hide, _BasaltLayers;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
@@ -87,6 +87,16 @@ Shader "RAID/Nereid Reef"
                 half sun=saturate(dot(n,normalize(half3(-.49,.84,-.21))));
                 half light=.43+.54*sun+.14*saturate(dot(n,key.direction))*key.shadowAttenuation;
                 half3 base=i.color.rgb*_Tint.rgb;
+                if (_BasaltLayers > .5)
+                {
+                    // World-space bedding follows the formation across its differently scaled facets.
+                    float uplift=ReefNoise(i.pos.xz*.16);
+                    float bed=i.pos.y*.43+dot(i.pos.xz,float2(.105,-.073))+uplift*.72;
+                    float seam=1-smoothstep(.02,.15,abs(frac(bed)-.5));
+                    float mineral=ReefNoise(float2(bed*1.4,dot(i.pos.xz,float2(.12,.08))));
+                    base=lerp(half3(.062,.100,.116),half3(.164,.213,.198),mineral)
+                        *(.80+.20*saturate(n.y+.4))*(1-.23*seam);
+                }
                 half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
                 half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
                 rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool+half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
