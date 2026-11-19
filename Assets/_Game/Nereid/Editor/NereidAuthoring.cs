@@ -41,9 +41,11 @@ namespace Raid.Nereid.Editor
             HideOldArchitecture();
             Import("Nereid_Exterior");Import("Nereid_Interior");
             ImportCreature();
-            PhysicalRooms();Lighting();ServiceExit(vessel);Labels();RerouteFeed();TankBarrier();OceanSilhouettes();TraversableDecks();
+            PhysicalRooms();Lighting();ServiceExit(vessel);Labels();RerouteFeed();ConfigureProcessingHall();TankBarrier();OceanSilhouettes();TraversableDecks();
             NereidEquipmentAuthoring.Upgrade();BindIdleScreens();
             RemoveWorkshopGlazing();PlaceFishingGrounds();
+            foreach(var text in factory.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                if(text.name.StartsWith("Label 01 /",StringComparison.Ordinal)||text.name.StartsWith("Label 02 /",StringComparison.Ordinal)||text.name.StartsWith("Label ПАСТЬ /",StringComparison.Ordinal))text.gameObject.SetActive(false);
             var menu=Object.FindAnyObjectByType<RaidSession>().menuCamera;
             menu.transform.position=new Vector3(-53,15,51);menu.transform.LookAt(new Vector3(0,3,-8));menu.fieldOfView=62;
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene());AssetDatabase.SaveAssets();
@@ -158,29 +160,45 @@ namespace Raid.Nereid.Editor
             var sun=GameObject.Find("Directional Light").GetComponent<Light>();sun.intensity=.65f;sun.color=new Color(.3f,.61f,.76f);sun.shadows=LightShadows.Soft;
             foreach(float z in new[]{-6.6f,-1,4.6f})foreach(int side in new[]{-1,1})
             {
-                var lamp=new GameObject("Caged luminaire downlight");lamp.transform.SetParent(root,false);lamp.transform.localPosition=new Vector3(side*2.7f,4.05f,z);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
+                var lamp=new GameObject("Caged luminaire downlight");lamp.transform.SetParent(root,false);lamp.transform.localPosition=new Vector3(side*2.7f,3.58f,z);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
                 var spot=lamp.AddComponent<Light>();spot.type=LightType.Spot;spot.color=new Color(1,.76f,.49f);spot.intensity=70;spot.range=7.5f;spot.spotAngle=112;spot.innerSpotAngle=78;spot.shadows=LightShadows.Soft;spot.shadowBias=.025f;spot.shadowNormalBias=.15f;
                 Light("Cold pressure window bounce",new Vector3(side*5.1f,2.6f,z),new Color(.16f,.48f,.62f),5,4.8f,false);
             }
             foreach(float z in new[]{-5.5f,1.5f})foreach(int side in new[]{-1,1})Light("Warm reflected working-plane fill",new Vector3(side*2.7f,2.2f,z),new Color(1,.76f,.52f),12,5,false);
-            Light("Aft loading room",new Vector3(0,3.4f,-12),new Color(1,.65f,.34f),16,7,true);
+            Light("Aft loading room",new Vector3(0,3.05f,-12),new Color(1,.65f,.34f),24,7,true);
             Light("Reservoir reflected water",new Vector3(0,2.9f,-3),new Color(.18f,.7f,.8f),7,4.3f,false);
-            Light("Workshop task light",new Vector3(-3.5f,2.8f,-5.5f),new Color(1,.74f,.46f),7,4.5f,true);
+            Light("Workshop task light",new Vector3(-2.5f,2.65f,-11.5f),new Color(1,.74f,.46f),20,5.5f,true);
             Light("Living mouth inspection",new Vector3(-1.7f,2.9f,5.8f),new Color(.4f,.65f,.72f),6,5,false);
+            foreach(int side in new[]{-1,1})
+            {
+                Solid("Mouth inspection lamp casing",new Vector3(side*1.9f,1.55f,6.2f),new Vector3(.28f,.32f,.18f),"Nereid_Dark");
+                Solid("Mouth inspection lamp lens",new Vector3(side*1.9f,1.55f,6.31f),new Vector3(.19f,.23f,.035f),"Nereid_Lamp");
+                Light("Warm graft inspection",new Vector3(side*1.9f,1.55f,6.45f),new Color(1,.75f,.5f),30,4,false);
+            }
             Light("Stern dock light",new Vector3(7.6f,3.3f,-14),new Color(1,.7f,.4f),7,6,true);
             Light("Bow reflected ocean light",new Vector3(-6,5,14),new Color(.28f,.54f,.7f),20,14,false);
-            var go=new GameObject("Interior reflection / refresh once");go.transform.SetParent(root,false);go.transform.localPosition=new Vector3(0,2,-3);
+            foreach(int side in new[]{-1,1})
+            {
+                var position=new Vector3(side*5,4,7);
+                var rotation=Quaternion.LookRotation(new Vector3(side*3,2,13)-position);
+                Solid("Bow inspection floodlight",position,new Vector3(.45f,.28f,.22f),"Nereid_Dark");
+                root.GetChild(root.childCount-1).localRotation=rotation;
+                Solid("Bow floodlight lens",position+rotation*Vector3.forward*.12f,new Vector3(.34f,.18f,.025f),"Nereid_Lamp");
+                root.GetChild(root.childCount-1).localRotation=rotation;
+                var fixture=new GameObject("Exterior graft inspection beam");fixture.transform.SetParent(root,false);fixture.transform.localPosition=position+rotation*Vector3.forward*.15f;fixture.transform.localRotation=rotation;
+                var beam=fixture.AddComponent<Light>();beam.type=LightType.Spot;beam.color=new Color(.48f,.74f,.88f);beam.intensity=1000;beam.range=18;beam.spotAngle=85;beam.innerSpotAngle=50;beam.shadows=LightShadows.Soft;
+            }
+            var go=new GameObject("Interior reflection / refresh once");go.transform.SetParent(root,false);go.transform.localPosition=new Vector3(3,1.5f,-1);
             var reflection=go.AddComponent<ReflectionProbe>();reflection.mode=ReflectionProbeMode.Realtime;reflection.refreshMode=ReflectionProbeRefreshMode.OnAwake;
-            reflection.timeSlicingMode=ReflectionProbeTimeSlicingMode.IndividualFaces;reflection.resolution=128;reflection.size=new Vector3(12,5,24);reflection.center=new Vector3(0,0,-1);
+            reflection.timeSlicingMode=ReflectionProbeTimeSlicingMode.IndividualFaces;reflection.resolution=128;reflection.size=new Vector3(12,5,24);reflection.center=new Vector3(-3,0,-3);
             reflection.boxProjection=true;reflection.intensity=.8f;reflection.blendDistance=1;reflection.clearFlags=ReflectionProbeClearFlags.SolidColor;reflection.backgroundColor=RenderSettings.fogColor;reflection.shadowDistance=25;reflection.nearClipPlane=.2f;reflection.farClipPlane=60;
             foreach(var light in root.GetComponentsInChildren<Light>()){light.range*=VesselScale;light.intensity*=VesselScale*VesselScale;}
         }
 
         static void Labels()
         {
-            Label("ЦЕХ / КОРМОВОЙ ШЛЮЗ",new Vector3(0,3.2f,-7.85f),Quaternion.Euler(0,180,0),.25f);
-            Label("ВЫХОД / ПОДЪЁМНИК",new Vector3(5.72f,3.35f,-14),Quaternion.Euler(0,90,0),.2f);
-            Label("NEREID  /  ГЛАВНЫЙ ОТСЕК",new Vector3(0,3.85f,.5f),Quaternion.Euler(0,180,0),.19f);
+            Label("ЦЕХ",new Vector3(0,3.2f,-7.85f),Quaternion.Euler(0,180,0),.2f);
+            Label("КОРМОВОЙ ШЛЮЗ",new Vector3(5.72f,2.8f,-14),Quaternion.Euler(0,90,0),.14f);
         }
 
         static void TraversableDecks()
@@ -212,6 +230,18 @@ namespace Raid.Nereid.Editor
                 foreach(float z in new[]{Mathf.Lerp(-7.5f,-4.5f,t),Mathf.Lerp(6,3,t)})
                     Solid("Stair safety post",new Vector3(edge,level*t+.27f,z),new Vector3(.035f,.54f,.035f),"Nereid_Trim",true);
             }
+            foreach(int side in new[]{-1,1})
+            {
+                float edge=x+side*.61f;
+                Rail(new Vector3(edge,.54f,-7.5f),new Vector3(edge,level+.54f,-4.5f));
+                Rail(new Vector3(edge,level+.54f,3),new Vector3(edge,.54f,6));
+            }
+        }
+
+        static void Rail(Vector3 start,Vector3 end)
+        {
+            var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.name="Continuous stair handrail";go.transform.SetParent(root,false);
+            go.transform.localPosition=(start+end)*.5f;go.transform.localRotation=Quaternion.LookRotation(end-start);go.transform.localScale=new Vector3(.035f,.035f,Vector3.Distance(start,end));go.GetComponent<Renderer>().sharedMaterial=mats["Nereid_Ochre"];
         }
 
         public static void BindIdleScreens()
@@ -258,16 +288,37 @@ namespace Raid.Nereid.Editor
 
         static void RerouteFeed()
         {
-            // Leave the centre of the living throat visible: feed through its upper-right shoulder.
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
-            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(2.02f,1.3f,-3),new Vector3(2.02f,3.02f,-3),new Vector3(3.15f,3.08f,-2.6f),new Vector3(3.15f,3.08f,4.6f),new Vector3(2.3f,3.05f,6.3f),new Vector3(1.35f,2.7f,7.6f)};
+            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(2.02f,1.3f,-3),new Vector3(2.02f,3.02f,-3),new Vector3(3.15f,3.08f,-2.6f),new Vector3(3.15f,3.08f,4.6f),new Vector3(2.35f,3.0f,6.35f),new Vector3(1.1f,2.4f,7.75f)};
+            factory.feedTube=BuildTube(anchors,factory.feedGlass,"FeedingShoulderPipe");
+            foreach(var r in factory.GetComponentsInChildren<Renderer>(true))
+                if(r.sharedMaterial!=null&&r.sharedMaterial.name=="Enamel_safety_ochre")r.sharedMaterial=mats["Nereid_Ochre"];
+            EditorUtility.SetDirty(factory);
+        }
+
+        static void ConfigureProcessingHall()
+        {
+            var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
+            factory.processorOffset=new Vector3(.95f,0,-6);factory.processorScale=new Vector3(1,.5f,1);
+            var workshop=factory.transform.Find("Aft processing workshop");
+            workshop.localPosition=factory.processorOffset;workshop.localScale=factory.processorScale;
+            var backdrop=workshop.Find("Workshop rear service panel");if(backdrop!=null)backdrop.gameObject.SetActive(false);
+            foreach(Transform bin in workshop)if(bin.name.StartsWith("Material output bin",StringComparison.Ordinal))
+                foreach(var label in bin.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                {var point=label.transform.localPosition;point.z=-.27f;label.transform.localPosition=point;label.transform.localRotation=Quaternion.identity;}
+            var anchors=new[]{new Vector3(-1.6f,1.3f,-3),new Vector3(-2.02f,1.3f,-3),new Vector3(-2.02f,3.03f,-3),new Vector3(-2.5f,3.08f,-4.5f),new Vector3(-2.5f,3.05f,-7),new Vector3(-2.5f,2.9f,-9.5f),new Vector3(-2.5f,2.35f,-10.95f)};
+            factory.processTube=BuildTube(anchors,factory.processGlass,"ProcessingHallPipe");EditorUtility.SetDirty(factory);
+        }
+
+        static Vector3[] BuildTube(Vector3[] anchors,Renderer[] renderers,string name)
+        {
             var path=new List<Vector3>();
             for(int i=0;i<anchors.Length-1;i++)for(int step=0;step<8;step++)
             {
                 float t=step/8f;var a=anchors[Mathf.Max(0,i-1)];var b=anchors[i];var c=anchors[i+1];var d=anchors[Mathf.Min(anchors.Length-1,i+2)];
                 path.Add(.5f*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t));
             }
-            path.Add(anchors[anchors.Length-1]);factory.feedTube=path.ToArray();
+            path.Add(anchors[anchors.Length-1]);
             var vertices=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();const int sides=24;float distance=0;
             for(int ring=0;ring<path.Count;ring++)
             {
@@ -276,13 +327,10 @@ namespace Raid.Nereid.Editor
                 var x=Vector3.Cross(tangent,Mathf.Abs(tangent.y)>.9f?Vector3.forward:Vector3.up).normalized;var y=Vector3.Cross(tangent,x);
                 for(int side=0;side<sides;side++){float a=side*Mathf.PI*2/sides;vertices.Add(path[ring]+(x*Mathf.Cos(a)+y*Mathf.Sin(a))*.34f);uv.Add(new Vector2(side/(float)sides,distance));}
             }
-            for(int ring=0;ring<path.Count-1;ring++)for(int s=0;s<sides;s++)
-            {int a=ring*sides+s,b=ring*sides+(s+1)%sides,c=a+sides,d=b+sides;triangles.AddRange(new[]{a,b,c,b,d,c});}
-            var mesh=new Mesh{name="Feeding shoulder pipe"};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.RecalculateNormals();mesh.RecalculateBounds();
-            var asset=SaveMesh("FeedingShoulderPipe",mesh);foreach(var r in factory.feedGlass)r.GetComponent<MeshFilter>().sharedMesh=asset;
-            foreach(var r in factory.GetComponentsInChildren<Renderer>(true))
-                if(r.sharedMaterial!=null&&r.sharedMaterial.name=="Enamel_safety_ochre")r.sharedMaterial=mats["Nereid_Ochre"];
-            EditorUtility.SetDirty(factory);
+            for(int ring=0;ring<path.Count-1;ring++)for(int side=0;side<sides;side++)
+            {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;triangles.AddRange(new[]{a,b,c,b,d,c});}
+            var mesh=new Mesh{name=name};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.RecalculateNormals();mesh.RecalculateBounds();
+            var asset=SaveMesh(name,mesh);foreach(var renderer in renderers)renderer.GetComponent<MeshFilter>().sharedMesh=asset;return path.ToArray();
         }
 
         static Mesh SaveMesh(string name,Mesh mesh)
@@ -363,6 +411,8 @@ namespace Raid.Nereid.Editor
         }
         static void Label(string text,Vector3 p,Quaternion rotation,float size)
         {
+            Solid("Navigation sign backing",p+rotation*Vector3.forward*.025f,new Vector3(2.6f,.38f,.035f),"Nereid_Dark");
+            root.GetChild(root.childCount-1).localRotation=rotation;
             var go=new GameObject("Sign "+text);go.transform.SetParent(root,false);go.transform.localPosition=p;go.transform.localRotation=rotation;
             var label=go.AddComponent<TMPro.TextMeshPro>();label.font=AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>("Assets/_Game/UI/Overhaul/Fonts/PTSans-SDF.asset");label.text=text;label.fontSize=size*10;label.alignment=TMPro.TextAlignmentOptions.Center;label.color=new Color(.7f,.78f,.73f);label.rectTransform.sizeDelta=new Vector2(4,.45f);
         }
