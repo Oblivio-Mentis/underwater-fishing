@@ -52,23 +52,23 @@ namespace Raid.UI
             crewPanel.sizeDelta=new Vector2(310,52);
 
             // One shared expedition instrument replaces separate depth and hunger windows.
-            missionPanel=Instrument(Root,"HUD Expedition",new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-24),new Vector2(700,108),out content);
+            missionPanel=Instrument(Root,"HUD Expedition",new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-24),new Vector2(700,124),out content);
             missionAccent=UiKit.Panel(missionPanel,"Status Rail",UiTheme.Cyan);missionAccent.rectTransform.anchorMin=new Vector2(0,1);missionAccent.rectTransform.anchorMax=Vector2.one;missionAccent.rectTransform.pivot=new Vector2(.5f,1);missionAccent.rectTransform.sizeDelta=new Vector2(0,3);missionAccent.rectTransform.anchoredPosition=Vector2.zero;
-            var strip=UiKit.Row(content,"Expedition Readouts",16);UiKit.Size(strip,82);
-            var stock=UiKit.Column(strip,"Reservoir",2);UiKit.Size(stock,82,154);
-            var stockHeading=UiKit.Row(stock,"Stock Heading",8);UiKit.Size(stockHeading,20);
-            var stockTitle=UiKit.Label(stockHeading,"Stock Caption",UiText.HudStock,16,UiTheme.Muted);UiKit.Size(stockTitle,20,flexibleWidth:1);
+            var strip=UiKit.Row(content,"Expedition Readouts",16);UiKit.Size(strip,96);
+            var stock=UiKit.Column(strip,"Reservoir",2);UiKit.Size(stock,96,154);
+            var stockHeading=UiKit.Row(stock,"Stock Heading",8);UiKit.Size(stockHeading,22);
+            var stockTitle=UiKit.Label(stockHeading,"Stock Caption",UiText.HudStock,16,UiTheme.Muted);UiKit.Size(stockTitle,22,flexibleWidth:1);
             stockValue=Line(stock,"Stock Count","—",32,UiTheme.Text,34);
             stockDetail=Line(stock,"Stock Detail",UiText.HudReservoir,16,UiTheme.Muted,20);
             Divider(strip);
-            var feeding=UiKit.Column(strip,"Feeding",4);UiKit.Size(feeding,82,300);
+            var feeding=UiKit.Column(strip,"Feeding",4);UiKit.Size(feeding,96,300);
             Line(feeding,"Feeding Heading",UiText.HudHunger,16,UiTheme.Muted,20);
             var feedingValues=UiKit.Row(feeding,"Feeding Values",8);UiKit.Size(feedingValues,34);
             hungerTime=UiKit.Label(feedingValues,"Hunger Timer","—",30);UiKit.Size(hungerTime,34,112);
             foodLabel=UiKit.Label(feedingValues,"Food Amount","",18,UiTheme.Muted);UiKit.Size(foodLabel,34,flexibleWidth:1);foodLabel.alignment=TextAlignmentOptions.MidlineRight;
             foodBar=UiKit.Bar(feeding,"Food Progress",UiTheme.Green,5);
             Divider(strip);
-            var depth=UiKit.Column(strip,"Depth",2);UiKit.Size(depth,82,154);
+            var depth=UiKit.Column(strip,"Depth",2);UiKit.Size(depth,96,154);
             depthZone=Line(depth,"Depth Zone",UiText.HudBase,16,UiTheme.Muted,20);
             depthLabel=Line(depth,"Depth Value","NEREID",30,UiTheme.Text,34);
             depthState=Line(depth,"Depth State","",16,UiTheme.Muted,20);
@@ -84,11 +84,11 @@ namespace Raid.UI
             harpoonPanel=Instrument(Root,"HUD Harpoon",new Vector2(1,0),new Vector2(1,0),new Vector2(-24,24),new Vector2(352,194),out content);
             harpoonState=Line(content,"Hook State","",18,UiTheme.Cyan,24);
             tetherDistance=Line(content,"Friend Tether Distance","",18,UiTheme.Muted,24);tetherDistance.gameObject.SetActive(false);
-            tensionRow=UiKit.Row(content,"Tension Values",8);UiKit.Size(tensionRow,20);
+            tensionRow=UiKit.Row(content,"Tension Values",8);UiKit.Size(tensionRow,22);
             var tensionCaption=UiKit.Label(tensionRow,"Tension Caption",UiText.HudTension,16,UiTheme.Muted);UiKit.Size(tensionCaption,20,flexibleWidth:1);
             tensionValue=UiKit.Label(tensionRow,"Tension Value","",17);UiKit.Size(tensionValue,20,180);tensionValue.alignment=TextAlignmentOptions.MidlineRight;
             tensionBar=UiKit.Bar(content,"Tension Gauge",UiTheme.Cyan,8);
-            staminaRow=UiKit.Row(content,"Stamina Values",8);UiKit.Size(staminaRow,20);
+            staminaRow=UiKit.Row(content,"Stamina Values",8);UiKit.Size(staminaRow,22);
             var staminaCaption=UiKit.Label(staminaRow,"Stamina Caption",UiText.HudStamina,16,UiTheme.Muted);UiKit.Size(staminaCaption,20,flexibleWidth:1);
             staminaValue=UiKit.Label(staminaRow,"Stamina Value","",17);UiKit.Size(staminaValue,20,82);staminaValue.alignment=TextAlignmentOptions.MidlineRight;
             staminaBar=UiKit.Bar(content,"Stamina Gauge",UiTheme.Green,6);
@@ -100,14 +100,14 @@ namespace Raid.UI
             cargoBar=UiKit.Bar(content,"Cargo Progress",UiTheme.Amber,5);
             cargoPhase=Line(content,"Cargo Phase","",16,UiTheme.Muted,22);
 
-            reticle=UiKit.Label(Root,"HUD Reticle","·",25,UiTheme.Text);UiKit.Place(reticle.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(20,20));reticle.alignment=TextAlignmentOptions.Center;
+            reticle=UiKit.Label(Root,"HUD Reticle","·",25,UiTheme.Text);UiKit.Place(reticle.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(24,24));reticle.alignment=TextAlignmentOptions.Center;
             promptPanel=Instrument(Root,"HUD Context",new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(0,32),new Vector2(580,82),out content);
             promptLabel=Line(content,"Context Action","",20,UiTheme.Text,26);promptLabel.alignment=TextAlignmentOptions.Center;
             promptDetail=Line(content,"Context Reason","",16,UiTheme.Muted,22);promptDetail.alignment=TextAlignmentOptions.Center;
             rescueBar=UiKit.Bar(content,"Rescue Progress",UiTheme.Green,6);
             rescueLabel=Line(content,"Rescue Confirmation","",16,UiTheme.Green,22);rescueLabel.alignment=TextAlignmentOptions.Center;
 
-            noticePanel=Instrument(Root,"HUD Alert",new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-146),new Vector2(680,88),out content);
+            noticePanel=Instrument(Root,"HUD Alert",new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-162),new Vector2(680,94),out content);
             noticeEdge=noticePanel.GetComponent<Image>();
             noticeTitle=Line(content,"Alert Title","",21,UiTheme.Amber,26);noticeTitle.alignment=TextAlignmentOptions.Center;
             noticeDetail=Line(content,"Alert Detail","",17,UiTheme.Text,30);noticeDetail.alignment=TextAlignmentOptions.Center;
@@ -204,11 +204,11 @@ namespace Raid.UI
                 UiKit.Set(tetherDistance,owner!=null&&target!=null?UiText.HudTetherDistance(Vector3.Distance(owner.transform.position,target.transform.position),tool.TetherMaxRange):UiText.HudTetherReleasing);
                 UiKit.Set(harpoonTip,pulled?UiText.HudTetherRefuse:UiText.HudTetherControls);
                 harpoonState.color=pulled?UiTheme.Amber:UiTheme.Cyan;harpoonTip.color=pulled?UiTheme.Amber:UiTheme.Text;
-                harpoonTip.fontSizeMax=pulled?20:16;UiKit.Size(harpoonTip,pulled?28:40);harpoonPanel.sizeDelta=new Vector2(352,pulled?116:128);
+                harpoonTip.fontSizeMax=pulled?20:16;UiKit.Size(harpoonTip,pulled?28:44);harpoonPanel.sizeDelta=new Vector2(352,pulled?118:134);
                 return;
             }
             harpoonState.color=UiTheme.Cyan;harpoonTip.color=UiTheme.Muted;harpoonTip.fontSizeMax=16;
-            UiKit.Size(harpoonTip,captured?24:40);harpoonPanel.sizeDelta=new Vector2(352,captured?84:194);
+            UiKit.Size(harpoonTip,captured?24:44);harpoonPanel.sizeDelta=new Vector2(352,captured?84:194);
             if(!hooked && !captured)return;
             UiKit.Set(harpoonState,captured?UiText.HudCaptured:UiText.HudHarpoonState(fish.Mode));
             UiKit.Set(harpoonTip,captured?UiText.HudCarryTip:UiText.HudHarpoonTip);
@@ -318,7 +318,7 @@ namespace Raid.UI
                 previousWave=wave;previousLoss=loss;previousWorldMessage=message;return;
             }
             if(message!=previousWorldMessage && message.StartsWith("Feeding: "))app.Toast(UiText.WorldMessage(message),message.Contains("Underfed")||message.Contains("None"));
-            if(wave && !previousWave)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
+            if(wave && !previousWave && !Root.gameObject.activeInHierarchy)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
             if(!wave && previousWave)app.Toast(UiText.HudWaveEnded);
             if(loss>previousLoss)app.Toast(UiText.HudStockLost(loss-previousLoss),true);
             previousWave=wave;previousLoss=loss;previousWorldMessage=message;
@@ -331,7 +331,7 @@ namespace Raid.UI
             content=UiKit.Column(surface.transform,"Readouts",6,12);UiKit.Fill(content);return edge.rectTransform;
         }
         static TMP_Text Line(Transform parent,string name,string value,float size,Color color,float height)
-        {var text=UiKit.Label(parent,name,value,size,color);UiKit.Size(text,height);return text;}
+        {var text=UiKit.Label(parent,name,value,size,color);UiKit.Size(text,Mathf.Max(height,Mathf.Ceil(size*1.3f)+1));return text;}
         static void Divider(Transform parent)
         {var line=UiKit.Panel(parent,"Readout Divider",UiTheme.Edge);UiKit.Size(line,74,1);}
         static void SetColor(Image image,Color color) {if(image.color!=color)image.color=color;}

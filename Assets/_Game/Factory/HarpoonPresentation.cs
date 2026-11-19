@@ -51,7 +51,9 @@ namespace Raid
                 if(view==null)return;
             }
             // SlicePresentation (order 150) owns the legacy transform and may re-enable it.
-            if(legacyModel==null)legacyModel=view.transform.Find("Harpoon / presentation only");
+            if(legacyModel==null)
+                foreach(Transform child in view.transform)
+                    if(child.name=="Harpoon / presentation only"){legacyModel=child;break;}
             if(legacyModel!=null&&legacyModel.gameObject.activeSelf)legacyModel.gameObject.SetActive(false);
             if(model==null)
             {

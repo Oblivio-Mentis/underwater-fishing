@@ -6,7 +6,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Nereid_service_portal_shell
+  m_Name: Nereid shell with starboard aft service portal
   serializedVersion: 12
   m_SubMeshes:
   - serializedVersion: 2

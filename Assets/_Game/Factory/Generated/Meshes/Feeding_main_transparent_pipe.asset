@@ -6,7 +6,7 @@ Mesh:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Feeding_main_transparent_pipe
+  m_Name: Feeding main transparent pipe
   serializedVersion: 12
   m_SubMeshes:
   - serializedVersion: 2

@@ -21,15 +21,15 @@ namespace Raid
         {
             if(action==WorldAction.ProcessAll)return kind==ShipConsoleKind.Process;
             if(action==WorldAction.FeedAll)return kind==ShipConsoleKind.Feed;
-            if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths;
-            if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return)return kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Upgrades;
+            if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades;
+            if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return)return kind==ShipConsoleKind.Depths;
             return kind==ShipConsoleKind.Reservoir;
         }
         public static bool CanUse(DiverMotor diver,WorldAction action)
         {
             foreach(var station in Stations)
             {
-                if(station==null || !station.isActiveAndEnabled || !station.Supports(action) || !station.InRange(diver))continue;
+                if(station==null || diver==null || station.gameObject.scene!=diver.gameObject.scene || !station.isActiveAndEnabled || !station.Supports(action) || !station.InRange(diver))continue;
                 Vector3 eye=diver.transform.position+Vector3.up*.6f;
                 Vector3 destination=station.transform.position+Vector3.up*1.1f;
                 RaycastHit hit;

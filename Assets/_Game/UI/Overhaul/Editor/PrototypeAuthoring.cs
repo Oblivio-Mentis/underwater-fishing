@@ -19,6 +19,17 @@ namespace Raid.UI.Editor
             AddReservoirMonitor();Bind("ReservoirConsole",ShipConsoleKind.Reservoir);
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
             if(factory!=null && factory.GetComponent<Raid.Factory.FishRoutePresentation>()==null)factory.gameObject.AddComponent<Raid.Factory.FishRoutePresentation>();
+            if(factory!=null)
+            {
+                var weapon=factory.GetComponent<HarpoonPresentation>();if(weapon==null)weapon=factory.gameObject.AddComponent<HarpoonPresentation>();
+                const string mats="Assets/_Game/Factory/Generated/Materials/";
+                weapon.steel=AssetDatabase.LoadAssetAtPath<Material>(mats+"Machined_stainless_trim.mat");
+                weapon.amber=AssetDatabase.LoadAssetAtPath<Material>(mats+"Enamel_safety_ochre.mat");
+                weapon.dark=AssetDatabase.LoadAssetAtPath<Material>(mats+"Machine_dark_steel.mat");
+                weapon.cyan=AssetDatabase.LoadAssetAtPath<Material>(mats+"Inspection_cyan_emission.mat");
+                var threats=Object.FindAnyObjectByType<ThreatDirector>();
+                if(threats!=null)threats.factoryWaveRoute=new[]{new Vector3(9,1.5f,-11.05f),new Vector3(0,1.5f,-11.05f),new Vector3(0,1.5f,-6),new Vector3(0,1.5f,-4.8f)};
+            }
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene());AssetDatabase.SaveAssets();
         }
         static void Bind(string name,ShipConsoleKind kind)

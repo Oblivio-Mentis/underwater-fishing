@@ -37,7 +37,7 @@ namespace Raid.UI
         UiPage crewBack=UiPage.Pause;
         Action confirmAction;
         RaidWorld subscribedWorld;
-        bool connectedBefore,overlayBefore,replyReceived;
+        bool connectedBefore,overlayBefore,replyReceived,wasPulled;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
         [SerializeField,HideInInspector] float initialVolume=1;
         WorldAction pendingAction;
@@ -98,7 +98,7 @@ namespace Raid.UI
             Page=value;
             if(value!=UiPage.Terminal)Context.SelectedConsole=null;
             ConfigureSurface(value);
-            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-254:-4),new Vector2(value==UiPage.None?760:1080,38));
+            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4),new Vector2(value==UiPage.None?760:1080,38));
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
@@ -166,10 +166,14 @@ namespace Raid.UI
                 if(connected)
                 {
                     if((Page==UiPage.Terminal && !Context.NearTerminal)||(Page==UiPage.Cargo && !Context.NearCargo))ShowPage(UiPage.None);
+                    bool pulled=Context.Harpoon!=null&&Context.Harpoon.IsPulled;
+                    if(pulled&&!wasPulled&&Page!=UiPage.None)Toast("Напарник тянет вас к себе. R — отцепиться");
+                    wasPulled=pulled;
                     hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
                     if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
+                    else if(!worldMessage.StartsWith("SAVE ERROR")&&!worldMessage.StartsWith("Подача остановлена"))lastSaveMessage="";
                 }
                 if(menu.Root.gameObject.activeSelf)menu.Refresh();UpdatePending();
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");

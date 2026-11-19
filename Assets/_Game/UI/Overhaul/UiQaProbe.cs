@@ -80,7 +80,8 @@ namespace Raid.UI
             if(r.action=="key")
             {
                 Key key;if(!Enum.TryParse(r.value,true,out key))throw new ArgumentException("Unknown key");
-                InputSystem.QueueStateEvent(Keyboard.current,new KeyboardState(key));releaseKeyboard=true;keyboardReleaseAt=Time.unscaledTime+Mathf.Clamp(r.number,.05f,10);return;
+                var keyboard=Keyboard.current;if(keyboard==null)keyboard=InputSystem.AddDevice<Keyboard>();
+                InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));releaseKeyboard=true;keyboardReleaseAt=Time.unscaledTime+Mathf.Clamp(r.number,.05f,10);return;
             }
             if(r.action=="mouse") {mousePosition=new Vector2(Screen.width*.5f,Screen.height*.5f);InputSystem.QueueStateEvent(Mouse.current,new MouseState{position=mousePosition,buttons=(ushort)(r.value=="release"?0:1)});releaseMouse=r.value!="release";mouseReleaseAt=Time.unscaledTime+Mathf.Clamp(r.number,.05f,10);return;}
             if(r.action=="pointer") {mousePosition=new Vector2(r.number,r.number2);InputSystem.QueueStateEvent(Mouse.current,new MouseState{position=mousePosition,buttons=(ushort)(r.value=="move"?0:1)});releaseMouse=r.value!="move";mouseReleaseAt=Time.unscaledTime+.12f;return;}

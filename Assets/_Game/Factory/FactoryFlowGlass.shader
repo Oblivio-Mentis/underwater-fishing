@@ -36,7 +36,7 @@ Shader "RAID011/Factory Flow Glass"
             half4 frag(Varyings input):SV_Target
             {
                 half3 normal=normalize(input.normalWS);half3 view=normalize(GetWorldSpaceViewDir(input.positionWS));
-                half rim=pow(1-abs(dot(normal,view)),1.45);
+                half rim=pow(saturate(1-abs(dot(normal,view))),1.45);
                 float moving=frac(input.uv.y*.75-_Time.y*(.25+_FlowActive*.6));
                 half band=(1-smoothstep(.035,.075,abs(moving-.5)))*_FlowActive*.075;
                 half3 color=_BaseColor.rgb*(.85+rim*.35)+half3(.24,.31,.33)*rim*.32+_FlowColor.rgb*band;

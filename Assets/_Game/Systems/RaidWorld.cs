@@ -53,6 +53,7 @@ namespace Raid
         public override void OnStartServer()
         {
             ResetFishRoute();
+            message.Value="Choose depth at the reservoir terminal";
             saveFailed=false;
             travelDisplay.Value=0; stockLossDisplay.Value=0;
             atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
