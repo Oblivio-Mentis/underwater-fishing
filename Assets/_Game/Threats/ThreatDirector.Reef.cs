@@ -182,7 +182,7 @@ namespace Raid
             if(!r.Active)return 0;
             float nearest=Vector3.Distance(eye,r.Clicker);
             if(state.Value.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,state.Value.PredatorPosition));
-            if(r.Deep)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel),Vector3.Distance(eye,Rift)*.8f);
+            if(r.Deep)nearest=Mathf.Min(nearest,Mathf.Min(Vector3.Distance(eye,r.Eel),Vector3.Distance(eye,Rift)*.8f));
             return 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2,13,nearest));
         }
 

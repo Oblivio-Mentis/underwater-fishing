@@ -104,12 +104,12 @@ namespace Raid
                 color.contrast.Override(Mathf.Lerp(8,14,wetBlend));
             }
             if(profile!=null && profile.TryGet<Vignette>(out var vignette))
-                vignette.intensity.Override(.16f+wetBlend*.08f+threatBlend*.095f);
+                vignette.intensity.Override(.16f+wetBlend*(.08f+threatBlend*.095f));
             if(regulator!=null)
             {
                 regulator.mute=heartbeat.mute=!Application.isFocused;
                 regulator.volume=wetBlend*(.13f+.18f*threatBlend);regulator.pitch=1+.4f*threatBlend;
-                heartbeat.volume=.41f*threatBlend;heartbeat.pitch=.86f+.65f*threatBlend;
+                heartbeat.volume=.41f*threatBlend*wetBlend;heartbeat.pitch=.86f+.65f*threatBlend;
             }
         }
 
