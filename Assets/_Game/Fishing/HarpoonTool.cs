@@ -160,7 +160,16 @@ namespace Raid
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
             bool gripInput = _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist || AssistTarget != null)
                 || ActiveSlot == 1 && _fire.IsPressed();
-            SetControlsServer(controlling && ActiveSlot == 0 && _fire.IsPressed(), controlling && gripInput);
+            bool reel = controlling && ActiveSlot == 0 && _fire.IsPressed();
+            bool assist = controlling && gripInput;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!UI.UiInputGate.Blocked)
+            {
+                reel |= Time.unscaledTime < _qaReelUntil;
+                assist |= Time.unscaledTime < _qaGripUntil;
+            }
+#endif
+            SetControlsServer(reel, assist);
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -220,6 +229,17 @@ namespace Raid
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private float _qaReelUntil, _qaGripUntil;
+
+        internal bool QaHoldOwned(bool grip, float duration)
+        {
+            if (!IsClientInitialized || !IsOwner || Motor.IsHelpless || UI.UiInputGate.Blocked) return false;
+            float until = Time.unscaledTime + Mathf.Clamp(duration, 0, 15);
+            if (grip) _qaGripUntil = until;
+            else _qaReelUntil = until;
+            return true;
+        }
+
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
         internal bool QaFireOwned()
         {

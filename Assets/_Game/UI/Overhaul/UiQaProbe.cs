@@ -26,6 +26,10 @@ namespace Raid.UI
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,volume,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
+            public string[] pockets;
+            public string heldSpecies;
+            public bool handsFull;
+            public int activeSlot, helperOwner=-1, assistedOwner=-1, cageSwimmers;
             public FishRouteState fishRoute;
             public int observedBurps;
             public long observedSwallows;
@@ -172,6 +176,14 @@ namespace Raid.UI
         {
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
+            if (r.action == "slot" || r.action == "fish_reel" || r.action == "fish_grip")
+            {
+                var tool = UiRoot.Instance.Context.Harpoon;
+                bool accepted = tool != null && (r.action == "slot" ? tool.SelectSlot(Mathf.RoundToInt(r.number))
+                    : tool.QaHoldOwned(r.action == "fish_grip", r.number));
+                if (!accepted) throw new InvalidOperationException("Owned fishing controls are currently unavailable");
+                return;
+            }
             if(r.action=="fire"||r.action=="harpoon_release")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;
@@ -240,8 +252,19 @@ namespace Raid.UI
                 var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;
                 snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
                 snapshot.tetherRefusal=tool.TetherOptOutRemaining;
+                snapshot.activeSlot = tool.ActiveSlot;
+                snapshot.handsFull = tool.HandsFull;
+                snapshot.heldSpecies = tool.CarriedFish == null ? "" : tool.CarriedFish.SpeciesId;
+                snapshot.pockets = Enumerable.Range(2,3).Select(i => tool.FishInSlot(i)?.SpeciesId ?? "").ToArray();
+                snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
+                snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }
-            if(world!=null) snapshot.fishRoute=world.FishRoute;
+            if(world!=null)
+            {
+                snapshot.fishRoute=world.FishRoute;
+                var shoal = world.container == null ? null : world.container.GetComponentInChildren<WetCargoShoal>();
+                snapshot.cageSwimmers = shoal == null ? 0 : shoal.Count;
+            }
             var mouth=UnityEngine.Object.FindAnyObjectByType<Nereid.NereidFeedingReaction>();
             if(mouth!=null){snapshot.observedBurps=mouth.BurpCount;snapshot.observedSwallows=mouth.SwallowedFishObserved;}
             if(observedFx!=null)

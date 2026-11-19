@@ -287,6 +287,22 @@ namespace Raid.Tests
         }
 
         [Test]
+        public void NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch()
+        {
+            Assert.That(team.LoadCargo(new CatchItem(7511, 4, 0, 2, 1, 1, species: "Needlefish"), tuning), Is.True);
+            Assert.That(team.LoadCargo(Fish(7512), tuning), Is.True);
+            TeamSave.Save(savePath, team);
+            var restored = TeamSave.Load(savePath);
+            Assert.That(restored.cargo[0].species, Is.EqualTo("Needlefish"));
+            Assert.That(restored.cargo[1].species, Is.Null.Or.Empty);
+            Assert.That(restored.BeginHoist(tuning), Is.True);
+            restored.TickHoist(1000f, tuning);
+            Assert.That(restored.tank.Count, Is.EqualTo(2));
+            Assert.That(restored.tank.Find(catchItem => catchItem.id == 7511).species, Is.EqualTo("Needlefish"));
+            Assert.That(restored.cargo, Is.Empty);
+        }
+
+        [Test]
         public void MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce()
         {
             tuning.raisingSeconds = 2; tuning.unloadingSeconds = 3; tuning.returningSeconds = 4;
