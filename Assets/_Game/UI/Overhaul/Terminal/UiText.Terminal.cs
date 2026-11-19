@@ -64,13 +64,13 @@ namespace Raid.UI
         public const string CargoFromTerminal="Контейнер и лебёдка";
         public const string CargoFromTerminalHint="Подъём запускается у контейнера. Доставленный улов поступает в этот резервуар.";
         public const string HungerTitle="ПИТАНИЕ И ЗАЩИТА РЕЗЕРВУАРА";
-        public const string FeedingHint="Выберите рыбу из улова и нажмите «Покормить». Технический груз не является пищей.";
+        public const string FeedingHint="Откройте клапан кормления у резервуара. Рыба засчитывается при доставке в пасть.";
         public const string NoFoodStock="В резервуаре нет рыбы для кормления";
         public const string NoFoodHint="Доставьте биологический улов через лебёдку. Металлолом и электронику перерабатывают в материалы.";
         public const string FeedingOutcomes="ИСХОДЫ ЦИКЛА";
-        public const string OutcomeNone="Не кормили — полный дефицит пищи и нападение.";
-        public const string OutcomeUnder="Мало — остаток дефицита вызывает нападение.";
-        public const string OutcomeEnough="Достаточно — голод удовлетворён, нападения из-за этого цикла нет.";
+        public const string OutcomeNone="Если к концу срока пасть не получит пищи, налётчик пойдёт к резервуару.";
+        public const string OutcomeUnder="Даже частичная порция предотвращает налёт в этом цикле.";
+        public const string OutcomeEnough="Полный рацион утоляет голод чудовища.";
         public const string TechnologiesSafe="Нападение угрожает необработанному улову. Технологии и улучшения сохраняются.";
         public const string WaveActiveTitle="НАПАДЕНИЕ: ЗАЩИТИТЕ РЕЗЕРВУАР";
         public const string CargoTitle="КОНТЕЙНЕР И ЛЕБЁДКА";
@@ -92,7 +92,7 @@ namespace Raid.UI
         public const string CargoRaisingHint="Контейнер поднимается. Новая загрузка временно закрыта.";
         public const string CargoUnloadingHint="Улов передаётся в резервуар после завершения разгрузки.";
         public const string CargoReturningHint="Улов уже в резервуаре. Дождитесь возвращения пустой корзины.";
-        public static string TerminalSummary(TeamProgress view,int required) => "Улов: "+view.tank.Count+"   •   Пища: "+view.offering+" / "+required+"   •   До голода: "+Time(view.hungerRemaining);
+        public static string TerminalSummary(TeamProgress view,int required,bool defending) => "Улов: "+view.tank.Count+"   •   Пища: "+view.offering+" / "+required+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
         public static string CargoSummary(TeamProgress view,ProgressionTuning tuning) => "Контейнер "+view.CargoUsed+" / "+view.Capacity(tuning)+"   •   "+Phase(view.hoistPhase)+(view.hoistPhase==HoistPhase.Loading?"":"   "+Time(view.hoistRemaining));
         public static string YieldLabel(CatchItem item) => Materials(item.biomass,item.chitin,item.scrap,item.electronics);
         public static string ItemTitle(int index,CatchItem item) => (index+1).ToString("00")+"  /  "+ItemName(item);
@@ -144,9 +144,9 @@ namespace Raid.UI
             }
         }
         public static string OverfeedingRule(int carry) => "Перекорм — избыток переносится в следующий цикл, максимум "+carry+" пищи; других бонусов нет.";
-        public static string FoodProjection(int offering,int required) => "При текущей пище: "+(offering==0?"не кормили":offering<required?"недокорм":offering==required?"достаточно":"перекорм");
-        public static string FeedingAmount(int paid,int required) => "Подготовлено пищи: "+paid+" / "+required;
-        public static string HungerCountdown(float time) => "Следующий цикл голода через "+Time(time);
+        public static string FoodProjection(int offering,int required) => offering==0?"Чудовище ждёт первую порцию":offering<required?"Часть рациона получена":offering==required?"Полный рацион получен":"Получено сверх рациона";
+        public static string FeedingAmount(int paid,int required) => "Получено пищи: "+paid+" / "+required;
+        public static string HungerCountdown(float time) => "До конца срока кормления "+Time(time);
         public static string CargoCapacity(int used,int total) => used+" / "+total;
         public static string DeliveredStock(int count) => "Доставлено в резервуар: "+count+" ед. улова";
         public static string SessionStockLoss(int count) => "Потеряно улова за эту сессию: "+count;

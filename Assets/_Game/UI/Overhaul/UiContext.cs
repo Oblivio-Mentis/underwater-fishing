@@ -17,6 +17,7 @@ namespace Raid.UI
         public TeamProgress View => Connected && World!=null ? World.View:null;
         public ProgressionTuning Tuning => World==null?null:World.progression;
         public ThreatDirector Threats => World==null?null:World.threats;
+        public bool DefendingReservoir => Connected && Threats!=null && Threats.WaveActive;
         public bool Connected => Session!=null && Session.Connected && Player!=null;
         public bool AtBase => World!=null && World.AtBase;
         public ShipConsole SelectedConsole {get;set;}

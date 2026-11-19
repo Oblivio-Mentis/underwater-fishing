@@ -130,9 +130,9 @@ namespace Raid.UI
                 int n=0;foreach(var item in v.tank)if(item!=null&&(item.offering>0||item.biomass>0||item.chitin>0))n++;
                 UiKit.Set(stock,n.ToString());
                 UiKit.Set(food,v.offering+" / "+c.FoodRequired);
-                UiKit.Set(timer,UiText.HudHungerTime(v.hungerRemaining));
-                timer.color=c.Threats!=null&&c.Threats.WaveActive?UiTheme.Red:v.hungerRemaining<=30?Gold:Ivory;
-                food.color=v.offering>=c.FoodRequired?Green:Ivory;
+                UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
+                timer.color=c.DefendingReservoir?UiTheme.Red:v.offering==0&&v.hungerRemaining<=30?Gold:Ivory;
+                food.color=v.offering>0?Green:Ivory;
                 var flow=c.World.FishRoute;
                 UiKit.Set(route,flow.active?(flow.stopping?"Клапан закрыт":flow.feeding?"Кормление":"Переработка")+"   "+flow.completed+" / "+flow.total:"");
             }

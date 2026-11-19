@@ -75,7 +75,7 @@ namespace Raid.UI
             else
             {
                 UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
-                UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired));
+                UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired,ctx.DefendingReservoir));
                 if(equipment)UiKit.Set(summary,ctx.AtBase?"Общее оборудование экипажа · установка на базе":"Установка оборудования доступна на базе");
                 if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
                 string reason=TerminalParts.BaseReason(app);
@@ -292,10 +292,14 @@ namespace Raid.UI
         {
             if(feedingSummary==null || app.Context.View==null)return;var ctx=app.Context;var view=ctx.View;
             UiKit.Set(feedingSummary,UiText.FeedingAmount(view.offering,ctx.FoodRequired));UiKit.Fraction(feedingBar,(float)view.offering/Mathf.Max(1,ctx.FoodRequired));
-            UiKit.Set(feedingTime,UiText.HungerCountdown(view.hungerRemaining));feedingTime.color=view.hungerRemaining<=30?UiTheme.Amber:UiTheme.Muted;
-            UiKit.Set(feedingState,UiText.FoodProjection(view.offering,ctx.FoodRequired));feedingState.color=view.offering>=ctx.FoodRequired?UiTheme.Green:UiTheme.Amber;
-            bool wave=ctx.Threats!=null&&ctx.Threats.WaveActive;
-            UiKit.Set(feedingThreat,UiText.WorldMessage(ctx.World.Message)+(wave?"\n"+UiText.WaveActiveTitle:""));feedingThreat.color=wave?UiTheme.Red:UiTheme.Muted;
+            bool wave=ctx.DefendingReservoir;
+            UiKit.Set(feedingTime,wave?"Срок кормления истёк":UiText.HungerCountdown(view.hungerRemaining));
+            feedingTime.color=!wave&&view.offering==0&&view.hungerRemaining<=30?UiTheme.Amber:UiTheme.Muted;
+            UiKit.Set(feedingState,wave?"Следующий срок начнётся после обороны":UiText.FoodProjection(view.offering,ctx.FoodRequired));
+            feedingState.color=wave?UiTheme.Muted:view.offering>0?UiTheme.Green:UiTheme.Amber;
+            UiKit.Set(feedingThreat,wave?UiText.WaveActiveTitle:"");
+            feedingThreat.gameObject.SetActive(wave);
+            feedingThreat.color=UiTheme.Red;
             UiKit.Set(feedingLoss,UiText.SessionStockLoss(ctx.World.StockLossCount));feedingLoss.color=ctx.World.StockLossCount>0?UiTheme.Amber:UiTheme.Muted;
         }
     }

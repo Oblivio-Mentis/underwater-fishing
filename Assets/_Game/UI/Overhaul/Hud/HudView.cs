@@ -231,7 +231,7 @@ namespace Raid.UI
             else if(player.IsTrapped){title=UiText.HudTrapped;detail=UiText.HudRescueHint;color=UiTheme.Red;}
             else if(!player.IsInside && oxygenFraction<=.1f){title=UiText.HudOxygenLow;detail=UiText.HudOxygenLowHint;color=UiTheme.Red;}
             else if(!player.IsInside && player.PressureStress>=player.tuning.stressDanger){title=UiText.HudPressureDanger;detail=UiText.HudPressureDangerHint;color=UiTheme.Red;}
-            else if(context.Threats!=null && context.Threats.WaveActive){title=UiText.HudWave;detail=UiText.HudWaveHint;color=UiTheme.Red;}
+            else if(context.DefendingReservoir){title=UiText.HudWave;detail=UiText.HudWaveHint;color=UiTheme.Red;}
             else if(!player.IsInside && oxygenFraction<=.2f){title=UiText.HudOxygenLow;detail=UiText.HudOxygenLowHint;}
             else if(!player.IsInside && player.PressureStress>=player.tuning.stressWarning){title=UiText.HudPressureWarning;detail=UiText.HudPressureWarningHint;}
             noticePanel.gameObject.SetActive(title.Length>0);UiKit.Set(noticeTitle,title);UiKit.Set(noticeDetail,detail);noticeTitle.color=color;SetColor(noticeEdge,color);
@@ -239,14 +239,14 @@ namespace Raid.UI
 
         void RefreshEvents(UiContext context)
         {
-            bool wave=context.Threats!=null && context.Threats.WaveActive;
+            bool wave=context.DefendingReservoir;
             string message=context.World.Message??"";int loss=context.World.StockLossCount;
             if(observedPlayer!=context.Player || observedWorld!=context.World || loss<previousLoss)
             {
                 observedPlayer=context.Player;observedWorld=context.World;
                 previousWave=wave;previousLoss=loss;previousWorldMessage=message;return;
             }
-            if(message!=previousWorldMessage && message.StartsWith("Feeding: "))app.Toast(UiText.WorldMessage(message),message.Contains("Underfed")||message.Contains("None"));
+            if(message!=previousWorldMessage && message.StartsWith("Feeding: ") && !message.Contains("None"))app.Toast(UiText.WorldMessage(message));
             if(wave && !previousWave && !Root.gameObject.activeInHierarchy)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
             if(!wave && previousWave)app.Toast(UiText.HudWaveEnded);
             if(loss>previousLoss)app.Toast(UiText.HudStockLost(loss-previousLoss),true);

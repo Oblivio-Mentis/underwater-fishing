@@ -49,7 +49,7 @@ namespace Raid.UI
         public const string HudPressureWarningHint="Двигайтесь к безопасной глубине";
         public const string HudWave="НАПАДЕНИЕ НА РЕЗЕРВУАР";
         public const string HudWaveHint="Защитите необработанный улов гарпунами";
-        public const string HudWaveEnded="Нападение завершено. Технологии и улучшения сохранены";
+        public const string HudWaveEnded="Оборона завершена. Начался новый срок кормления";
         public static string HudCrewCount(int value) => HudCrew+"  "+value+" / 5";
         public static string HudPlayerName(DiverMotor player) => (player.OwnerId+1).ToString("00")+(player.IsOwner?" · ВЫ":"");
         public static string HudStockDetail(int technicalCount) => technicalCount>0?"Техгруз: "+technicalCount:HudReservoir;
@@ -74,6 +74,6 @@ namespace Raid.UI
         public static string HudRescuePrompt(DiverMotor target) => "Удерживать F — спасти "+PlayerName(target);
         public static string HudRescueProgress(int owner,float fraction) => "Спасение водолаза "+(owner+1).ToString("00")+"  "+(fraction*100).ToString("0")+"%";
         public static string HudRescueDuration(float seconds) => "Непрерывное удержание: "+seconds.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" с";
-        public static string HudStockLost(int count) => "Нападение: потеряно единиц улова — "+count+". Улучшения сохранены";
+        public static string HudStockLost(int count) => "Потеряно единиц улова — "+count;
     }
 }
