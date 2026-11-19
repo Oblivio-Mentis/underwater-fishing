@@ -35,7 +35,7 @@ def send(directory, action="snapshot", name="", value="", number=0, number2=0, s
 
 
 def summary(current):
-    fields = ("page", "connected", "pending", "cursor", "inputBlocked", "width", "height", "players", "owner", "events", "canvases", "audioListeners", "depth", "travel", "hookMode", "tension", "stamina", "rescueProgress", "stockLoss", "wave", "x", "y", "z", "oxygen", "stress", "aimYaw", "aimPitch", "lastSuccess", "tetherActive", "isPulled", "tetherOwner", "tetherTarget", "tetherRefusal")
+    fields = ("page", "connected", "pending", "cursor", "inputBlocked", "width", "height", "players", "owner", "events", "canvases", "audioListeners", "depthTier", "travel", "hookMode", "tension", "stamina", "rescueProgress", "stockLoss", "wave", "x", "y", "z", "oxygen", "stress", "aimYaw", "aimPitch", "lastSuccess", "tetherActive", "isPulled", "tetherOwner", "tetherTarget", "tetherRefusal")
     result = {key: current.get(key) for key in fields}
     result.update({key: value for key, value in current.items() if key.startswith("harpoon")})
     if current.get("team"):
