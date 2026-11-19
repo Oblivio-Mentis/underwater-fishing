@@ -77,17 +77,18 @@ namespace Raid
                 : new[] {"214C60","56C4CA","ACD8CD","39798C","9BFFF2"};
             var colors = new Material[palette.Length];
             var shader = Shader.Find("Universal Render Pipeline/Lit");
+            // Weak reflected water color on the back, stronger along the iridescent flank and pale underside.
+            // Direct URP lighting still supplies facet shading, highlights, and the moving work-light response.
+            float[] shadowFill = { .10f, .34f, .19f, .16f, 1.35f };
             for (int i = 0; i < colors.Length; i++)
             {
                 ColorUtility.TryParseHtmlString("#" + palette[i], out var color);
                 var material = new Material(shader) { name = species + " / " + i, hideFlags = HideFlags.DontSave };
                 material.SetColor("_BaseColor", color);
                 material.SetFloat("_Smoothness", i == 4 ? .8f : .48f);
-                if (i == 4)
-                {
-                    material.EnableKeyword("_EMISSION");
-                    material.SetColor("_EmissionColor", color * 1.35f);
-                }
+                material.EnableKeyword("_EMISSION");
+                Color reflected = i == 4 ? color : Color.Lerp(color, new Color(.17f,.46f,.54f), i == 0 ? .45f : .14f);
+                material.SetColor("_EmissionColor", reflected * shadowFill[i]);
                 colors[i] = material;
             }
 
@@ -116,6 +117,29 @@ namespace Raid
 
             foreach (int sign in new[] {-1,1})
             {
+                if (bristle)
+                {
+                    // Two copper bars wrap around the shoulder instead of sitting flat across its flank.
+                    for (int band = 2; band <= 3; band++)
+                    {
+                        Vector3 shoulder = rings[band];
+                        shoulder.y *= 1.017f;
+                        shoulder.z *= 1.017f;
+                        float previous = .08f;
+                        for (int step = 1; step <= 4; step++)
+                        {
+                            float angle = previous + .20f;
+                            Vector3 p = Point(shoulder, sign > 0 ? previous : Mathf.PI - previous);
+                            Vector3 q = Point(shoulder, sign > 0 ? angle : Mathf.PI - angle);
+                            p.z -= .072f * previous;
+                            q.z -= .072f * angle;
+                            var edge = Vector3.forward * .017f;
+                            body.Fin(p-edge, q-edge, q+edge, 1);
+                            body.Fin(p-edge, q+edge, p+edge, 1);
+                            previous = angle;
+                        }
+                    }
+                }
                 if (ray)
                 {
                     Vector3 front = new(sign*.14f,.005f,.36f), peak = new(sign*.39f,.075f,.02f);

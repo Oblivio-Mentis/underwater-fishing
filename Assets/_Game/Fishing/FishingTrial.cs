@@ -133,7 +133,7 @@ namespace Raid
             yield return Wait(() => host.ActiveSlot == 2, 3, "Occupied pocket was not selectable.");
             Require(!host.QaFireOwned(), "Occupied pocket incorrectly fired the harpoon.");
             yield return Pause(.4f);
-            Shot("catch-pockets.png");
+            yield return Shot("catch-pockets.png");
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Could not return to the harpoon.");
             Check("Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.");
@@ -167,7 +167,7 @@ namespace Raid
                 "Paired capture lost a pocket or failed to occupy both hands.");
             Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
             yield return Pause(.5f);
-            Shot("catch-heavy.png");
+            yield return Shot("catch-heavy.png");
             Check("Heavy capture completed with all three small catches intact; tool switch and fire blocked.");
 
             Phase("Deposit and observe swimming cargo on both peers");
@@ -181,7 +181,7 @@ namespace Raid
             Require(caughtIds.All(id => world.Team.cargo.Count(item => item.id == id) == 1), "Deposit lost or duplicated a catch ID.");
             yield return Wait(() => cage != null && cage.Count == beforeSwimmers + 4 && ReadClient()?.cageSwimmers == cage.Count,
                 10, "Host/client cage swimmers did not reflect four new entries.");
-            Shot("catch-cage.png");
+            yield return Shot("catch-cage.png");
             Check("Four authoritative catch IDs now swim in both cages; hands and pockets are empty.");
 
             Phase("Hoist cargo into reservoir");
@@ -274,7 +274,16 @@ namespace Raid
         private void Phase(string phase) { result.phase=phase; Write(); }
         private void Check(string message) { result.checks.Add(message); Write(); }
         private void Write() => File.WriteAllText(reportPath,JsonUtility.ToJson(result,true));
-        private void Shot(string filename) => ScreenCapture.CaptureScreenshot(Path.Combine(Path.GetDirectoryName(reportPath),filename));
+        private IEnumerator Shot(string filename)
+        {
+            string path = Path.Combine(Path.GetDirectoryName(reportPath), filename);
+            DateTime previous = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
+            yield return null;
+            ScreenCapture.CaptureScreenshot(path);
+            // The screenshot is asynchronous. Keep the camera and held item in place until the frame reaches disk.
+            yield return Wait(() => File.Exists(path) && File.GetLastWriteTimeUtc(path) != previous
+                && new FileInfo(path).Length > 0, 8, "Game View did not finish capture " + filename);
+        }
     }
 }
 #endif
