@@ -1,0 +1,22 @@
+{
+  "source": "03b10794b3eb81edfa202da17c9f8a249ef1e2c2",
+  "unity": "6000.5.6f1",
+  "platform": "StandaloneWindows64",
+  "scene": "Assets/_Game/Scenes/InterfaceVerticalSlice.unity",
+  "release": {
+    "job": "build-17b48329d0",
+    "durationSeconds": 15.213256,
+    "errors": 0,
+    "warnings": 0
+  },
+  "development": {
+    "job": "build-d4123b18dd",
+    "durationSeconds": 17.167036,
+    "errors": 0,
+    "warnings": 0
+  },
+  "zip": "RAID012-Playable.zip",
+  "bytes": 51251491,
+  "sha256": "cab6eb8141580e1b8e6d5106e7d3f80b1128f7b4724851d56fde8e9b31b20e0e",
+  "soloSmoke": "Local host and local client joined the standalone Release session"
+}

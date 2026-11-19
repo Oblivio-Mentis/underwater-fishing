@@ -26,7 +26,7 @@ namespace Raid.UI
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
         public bool HasCargo => Harpoon!=null && Harpoon.CarriedFish!=null || Player!=null && Loot.Any(l=>l!=null && l.CarrierOwnerId==Player.OwnerId);
-        public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.CarriedFish.cargoSize:HasCargo?1:0;
+        public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.SmallestCatchSize:HasCargo?1:0;
         public DiverMotor RescueTarget {get;private set;}
         public HarpoonTool AssistTarget {get;private set;}
         public LootActor AimedLoot {get;private set;}
@@ -46,7 +46,7 @@ namespace Raid.UI
             RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;AimedConsole=null;Interaction=UiInteraction.None;
             if(!Connected)return;
             float range=2.5f;
-            foreach(var other in Players)if(other!=Player && (other.IsHelpless||other.IsTrapped))
+            foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
             var playerCamera=Player.GetComponentInChildren<Camera>();RaycastHit consoleHit;
@@ -65,7 +65,10 @@ namespace Raid.UI
             foreach(var other in Players)
             {
                 if(other==Player)continue;var tool=other.GetComponent<HarpoonTool>();
-                if(tool!=null && tool.HookedFish!=null && tool.HookedFish.Mode!=FishMode.Captured && Vector3.Distance(Player.transform.position,other.transform.position)<=Harpoon.tuning.assistRange)
+                if(Harpoon!=null && Harpoon.ActiveSlot<=1 && !Harpoon.HandsFull && !Player.IsHelpless && !other.IsHelpless &&
+                    tool!=null && tool.HookedFish!=null && tool.HookedFish.Mode!=FishMode.Captured &&
+                    (tool.AssistingDiver==null||tool.AssistingDiver==Player) &&
+                    Vector3.Distance(Player.transform.position,other.transform.position)<=Mathf.Min(2.4f,Harpoon.tuning.assistRange))
                 {
                     Vector3 from=Player.transform.position+Vector3.up*.6f,to=other.transform.position+Vector3.up*.6f;
                     RaycastHit block;if(Physics.Raycast(from,(to-from).normalized,out block,Vector3.Distance(from,to),Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore)&&block.collider.GetComponentInParent<HarpoonTool>()!=tool)continue;

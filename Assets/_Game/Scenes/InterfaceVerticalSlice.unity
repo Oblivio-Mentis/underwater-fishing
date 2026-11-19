@@ -1650,19 +1650,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8230337030297780056, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: f54221784b9cefa4abad525da6f602fc, type: 2}
     - target: {fileID: -6163057519222223901, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 3353e41645467034a9a34a76cee9199f, type: 2}
     - target: {fileID: -5210847093294832647, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 5464aabe2953d164a89d912581068083, type: 2}
     - target: {fileID: 241017148034300755, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: c9c46d67faf4a9d45bb85b0770c1e2bb, type: 2}
     - target: {fileID: 919132149155446097, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: m_Name
@@ -1670,19 +1670,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4793236789418369673, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: 5323977024013330664, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4e97414746b2ea8438ff7574455a9053, type: 2}
     - target: {fileID: 6394901228383597787, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 9fe7de45575425646ac0836afcf28e06, type: 2}
     - target: {fileID: 9000541596987311784, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 87f54169e66ac484cb2994c059c63ec1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2618,7 +2618,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 1954683523}
@@ -2912,7 +2912,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 1
   screenAnchor: {fileID: 924027929}
@@ -3225,7 +3225,7 @@ GameObject:
   - component: {fileID: 77263652}
   - component: {fileID: 77263651}
   m_Layer: 0
-  m_Name: Depth 1 Bristlefish
+  m_Name: Depth 1 Sailray
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3241,7 +3241,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 77263652}
@@ -3250,13 +3250,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Bristlefish
-  biomass: 6
+  fishId: Sailray
+  biomass: 8
   chitin: 0
-  offering: 6
+  offering: 9
   cargoSize: 3
   depthTier: 1
-  power: 1.5
+  power: 1.7
 --- !u!114 &77263652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3267,7 +3267,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -5554,7 +5554,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 131443117}
@@ -5573,7 +5573,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -7856,7 +7856,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -8870,7 +8870,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 2078460021}
   actor: {fileID: 1705836806}
@@ -9070,7 +9070,7 @@ Transform:
   m_GameObject: {fileID: 198403110}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 16, y: 0.8, z: -28}
+  m_LocalPosition: {x: 23, y: -16.4, z: -28}
   m_LocalScale: {x: 2, y: 1.4, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -9859,7 +9859,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -10346,7 +10346,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -10808,7 +10808,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -11038,7 +11038,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -12824,7 +12824,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 266538810}
@@ -12843,7 +12843,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -13361,7 +13361,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -14049,7 +14049,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -14475,7 +14475,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 772106818}
@@ -14974,7 +14974,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 302583069}
@@ -14993,7 +14993,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -15674,7 +15674,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -16536,7 +16536,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 175126591}
   actor: {fileID: 1560204267}
@@ -16587,7 +16587,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 523422059}
@@ -17849,7 +17849,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 4
   screenAnchor: {fileID: 1466850431}
@@ -19281,7 +19281,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -21108,7 +21108,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -22103,7 +22103,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -22831,7 +22831,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -23824,7 +23824,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 454fede126e5b7444a847d39cd386471, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.RaidStatusHud
 --- !u!114 &455991381
 MonoBehaviour:
@@ -23836,7 +23836,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8a4b76487d566ac489eecdf6e75d1175, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ThreatDirector
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 455991383}
@@ -23858,7 +23858,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8b62ee5cfe83fcb408787832d9c0a056, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.RaidWorld
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 455991383}
@@ -23877,7 +23877,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -29384,7 +29384,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -30066,7 +30066,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -31191,7 +31191,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -31352,7 +31352,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a838718cb50ba944a92a32b010564a1b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.SlicePresentation
   cargo: {fileID: 198403114}
   steel: {fileID: 2100000, guid: a924a727299f6b343b7672cc1284c8f7, type: 2}
@@ -31891,7 +31891,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 1375487437}
   actor: {fileID: 1007353663}
@@ -32345,7 +32345,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 465043519}
@@ -32795,7 +32795,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 364294ea0fec5364b99d54d81422f0c9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.ParasiteMotion
   breathingMantle: {fileID: 1316877635}
   luminousOrgans: {fileID: 1511208854}
@@ -33275,7 +33275,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -36655,7 +36655,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 15627443}
@@ -37628,7 +37628,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
   m_IsGlobal: 1
   priority: 0
@@ -39924,7 +39924,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 427925e8437e2014d8768f633decaaea, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidShipScreens
   stations:
   - {fileID: 358293382}
@@ -39944,7 +39944,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a41cbcf19fcd47a7b13122d3e90e5546, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidAim
   enterSeconds: 0.14
   exitSeconds: 0.11
@@ -39960,7 +39960,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 646b010e6b5a4b57bc0d49a507cd8622, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidFeedingReaction
   burpDelay: 0.44
   voiceVolume: 0.48
@@ -39976,7 +39976,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb3e9a31cf3b60b488587b0520f5a904, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidVfx
 --- !u!114 &779397700
 MonoBehaviour:
@@ -39988,7 +39988,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9d206ee5ce668b34db314c83737d3932, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidVessel
   sealedRooms:
   - m_Center: {x: 0, y: 2.05, z: -1}
@@ -40001,8 +40001,8 @@ MonoBehaviour:
   indoorJumpHeight: 0.8
   indoorWalkSpeed: 4.5
   cargoRail:
-  - {x: 8, y: 0.4, z: -14}
-  - {x: 8, y: 6.1, z: -14}
+  - {x: 11.5, y: -8.2, z: -14}
+  - {x: 11.5, y: 6.1, z: -14}
   - {x: 0, y: 6.1, z: -14}
   - {x: 0, y: 6.1, z: -3}
   hoistCable: {fileID: 827449513}
@@ -40998,7 +40998,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 792077554}
@@ -41017,7 +41017,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -43569,7 +43569,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 1588563055}
@@ -44230,7 +44230,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -44656,7 +44656,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -45617,7 +45617,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -48933,7 +48933,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -49189,7 +49189,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 943416834}
@@ -49208,7 +49208,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -49648,7 +49648,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9ad5ef713b9445e1ab2d2d8db82e7f6c, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Factory.FactoryVisuals
   fishTemplate: {fileID: 1318780332}
   tankCenter: {fileID: 562017240}
@@ -50176,7 +50176,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 92a7f685e050e0846bbc322d72efe071, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Factory.FishRoutePresentation
 --- !u!114 &951072091
 MonoBehaviour:
@@ -50188,7 +50188,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4f5481c5581048f49ba22a78c79eb251, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.HarpoonPresentation
   steel: {fileID: 2100000, guid: 7b170e493b0850c4399908940618c3e3, type: 2}
   amber: {fileID: 2100000, guid: 2b5d92db868d68245a7ec9004fa8670b, type: 2}
@@ -50204,7 +50204,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d37695f00e2b45aa923f76a10586163b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ThreatPresentation
   steel: {fileID: 2100000, guid: 7b170e493b0850c4399908940618c3e3, type: 2}
   skin: {fileID: 2100000, guid: f6a8fbb6c2f82e34590edbe104366a2a, type: 2}
@@ -52061,7 +52061,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -52932,7 +52932,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -53097,7 +53097,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1007353664}
@@ -53123,7 +53123,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -55066,7 +55066,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -55536,7 +55536,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -56293,7 +56293,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -58770,7 +58770,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -61247,7 +61247,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -61494,7 +61494,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 523897723}
   actor: {fileID: 1306939086}
@@ -62669,7 +62669,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 957133477}
@@ -64786,8 +64786,8 @@ Transform:
   m_GameObject: {fileID: 1218940889}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 4, y: 6.9, z: -14}
-  m_LocalScale: {x: 8.3, y: 0.35, z: 0.28}
+  m_LocalPosition: {x: 5.75, y: 6.9, z: -14}
+  m_LocalScale: {x: 11.8, y: 0.35, z: 0.28}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 779397701}
@@ -68260,7 +68260,7 @@ GameObject:
   - component: {fileID: 1306939087}
   - component: {fileID: 1306939086}
   m_Layer: 0
-  m_Name: Depth 1 Lanternfish
+  m_Name: Depth 1 Needlefish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -68276,7 +68276,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1306939087}
@@ -68285,13 +68285,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Lanternfish
-  biomass: 3
+  fishId: Needlefish
+  biomass: 4
   chitin: 0
-  offering: 3
+  offering: 2
   cargoSize: 1
   depthTier: 1
-  power: 1
+  power: 0.8
 --- !u!114 &1306939087
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68302,7 +68302,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -70049,7 +70049,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1329656764}
@@ -70075,7 +70075,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -70408,7 +70408,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -70900,7 +70900,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -71082,7 +71082,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 2010048433}
   actor: {fileID: 1329656763}
@@ -71403,7 +71403,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -71748,7 +71748,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1365853675}
@@ -71774,7 +71774,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -73105,31 +73105,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8649287151462440812, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: c9c46d67faf4a9d45bb85b0770c1e2bb, type: 2}
     - target: {fileID: -8062485300801861278, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 9fe7de45575425646ac0836afcf28e06, type: 2}
     - target: {fileID: -6095762964943259873, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: -3441991606956237158, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 3353e41645467034a9a34a76cee9199f, type: 2}
     - target: {fileID: 833618819862785071, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 87f54169e66ac484cb2994c059c63ec1, type: 2}
     - target: {fileID: 846518433903997613, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4e97414746b2ea8438ff7574455a9053, type: 2}
     - target: {fileID: 898901205749528232, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: 919132149155446097, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: m_Name
@@ -73137,11 +73137,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5224650040556737332, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: 6751650110982512258, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 5464aabe2953d164a89d912581068083, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -74235,7 +74235,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -78063,7 +78063,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 3
   screenAnchor: {fileID: 551850604}
@@ -78387,7 +78387,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -79315,7 +79315,7 @@ MeshCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 5
-  m_Convex: 0
+  m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 4300000, guid: d6f8b6f96e5baed45bb52c832e673351, type: 2}
 --- !u!1 &1511208853
@@ -79732,7 +79732,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 941448021}
   actor: {fileID: 1365853674}
@@ -80952,7 +80952,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 385992529}
   actor: {fileID: 77263651}
@@ -81555,7 +81555,7 @@ GameObject:
   - component: {fileID: 1560204268}
   - component: {fileID: 1560204267}
   m_Layer: 0
-  m_Name: Depth 2 Bristlefish
+  m_Name: Depth 2 Sailray
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -81571,7 +81571,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1560204268}
@@ -81580,13 +81580,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Bristlefish
-  biomass: 12
+  fishId: Sailray
+  biomass: 16
   chitin: 3
-  offering: 6
+  offering: 9
   cargoSize: 3
   depthTier: 2
-  power: 3
+  power: 3.4
 --- !u!114 &1560204268
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -81597,7 +81597,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -81955,7 +81955,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4037c8312d534924092c526151b0a5c7, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.SteamLobby
   session: {fileID: 1566123901}
 --- !u!114 &1566123901
@@ -81968,7 +81968,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b494a4973a06f849bd322dc1cdf46f6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.RaidSession
   manager: {fileID: 1566123903}
   localTransport: {fileID: 1566123907}
@@ -81986,7 +81986,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 211a9f6ec51ddc14f908f5acc0cd0423, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Component.Spawning.PlayerSpawner
   _playerPrefab: {fileID: 693802274710931388, guid: 693b4857f0a0e514cb4f5e40ea8fce9e, type: 3}
   _addToDefaultScene: 1
@@ -82006,7 +82006,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d2c95dfde7d73b54dbbdc23155d35d36, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.NetworkManager
   _logging: {fileID: 0}
   _spawnablePrefabs: {fileID: 11400000, guid: 728f7aea4c39c674eb23ab2fe62d3616, type: 2}
@@ -82025,7 +82025,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 34e4a322dca349547989b14021da4e23, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.Transporting.TransportManager
   Transport: {fileID: 1566123905}
   _maximumClientPacketSize: 20480
@@ -82046,7 +82046,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 314b449d3505bd24487ba69b61c2fda5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Transporting.Multipass.Multipass
   GlobalServerActions: 1
   _transports:
@@ -82062,13 +82062,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 28b19962fe839804180bd02ce1a545f0, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FishySteamworks.FishySteamworks
-  _serverBindAddress:
+  _serverBindAddress: 
   _port: 7770
   _maximumClients: 5
   _peerToPeer: 1
-  _clientAddress:
+  _clientAddress: 
 --- !u!114 &1566123907
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -82079,14 +82079,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6f48f002b825cbd45a19bd96d90f9edb, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Transporting.Tugboat.Tugboat
   _stopSocketsOnThread: 0
   _dontRoute: 0
   _reuseAddress: 0
-  _ipv4BindAddress:
+  _ipv4BindAddress: 
   _enableIpv6: 1
-  _ipv6BindAddress:
+  _ipv6BindAddress: 
   _port: 7770
   _maximumClients: 5
   _clientAddress: localhost
@@ -82115,7 +82115,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 68828c85278210948b9d50a8db3aab74, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Managing.Server.ServerManager
   _authenticator: {fileID: 1566123910}
   _remoteClientTimeout: 2
@@ -82141,7 +82141,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: af7fb5f260ccc2a42b9e564213ff55ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LobbyAuthenticator
   session: {fileID: 1566123901}
   lobby: {fileID: 1566123900}
@@ -85030,7 +85030,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1557a740a52a7144681bf6e030350794, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.LootActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1613914423}
@@ -85049,7 +85049,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -89509,7 +89509,7 @@ GameObject:
   - component: {fileID: 1705836807}
   - component: {fileID: 1705836806}
   m_Layer: 0
-  m_Name: Depth 2 Lanternfish
+  m_Name: Depth 2 Needlefish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -89525,7 +89525,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1705836807}
@@ -89534,13 +89534,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Lanternfish
-  biomass: 6
+  fishId: Needlefish
+  biomass: 8
   chitin: 1
-  offering: 3
+  offering: 2
   cargoSize: 1
   depthTier: 2
-  power: 2
+  power: 1.6
 --- !u!114 &1705836807
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -89551,7 +89551,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -89981,7 +89981,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -90152,19 +90152,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -6688664169851649128, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 7381a4bd51e70864db05b5e494517833, type: 2}
     - target: {fileID: -5513865271473413775, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 9cadf05fde2b2c046aa8e169c442c0b8, type: 2}
     - target: {fileID: -1613367684548762933, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: dc2d13e13d36a9f4a9648c6d54bffdb4, type: 2}
     - target: {fileID: -990987583918896920, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 2e4c02603f706464aafff0923af36f1a, type: 2}
     - target: {fileID: 919132149155446097, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: m_Name
@@ -90172,7 +90172,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7202511984614799360, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value:
+      value: 
       objectReference: {fileID: 2100000, guid: 06d224b11e7a7f14aa63bdb4867c04e8, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -90267,7 +90267,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c246d36a0baaf94eb3bd3790cc739c1, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidCreatureMotion
   eyes:
   - {fileID: 1712017107}
@@ -91205,7 +91205,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 0
   screenAnchor: {fileID: 1857034498}
@@ -91701,7 +91701,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -93086,7 +93086,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0a96e9569ec388e49b5b71a298cc82ad, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.FishVisualMotion
   tail: {fileID: 175963662}
   actor: {fileID: 1909217388}
@@ -94081,7 +94081,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -96423,7 +96423,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -98230,7 +98230,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -100577,7 +100577,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -101327,7 +101327,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -101569,7 +101569,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -102822,7 +102822,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1909217389}
@@ -102848,7 +102848,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -103853,7 +103853,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 2
   screenAnchor: {fileID: 1343704120}
@@ -108414,7 +108414,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb54d6570d8da1d4e9497eec1635d5fe, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.UI.UiRoot
   font: {fileID: 11400000, guid: 8108eda61d3c4194a9256a72ce6c67b0, type: 2}
   initialVolume: 1
@@ -108727,7 +108727,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -108973,7 +108973,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -109743,7 +109743,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -110771,7 +110771,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f48704022b87fcc4b9aa206795cc4b0b, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.RubbleTrap
 --- !u!54 &2067865859
 Rigidbody:

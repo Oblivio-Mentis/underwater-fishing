@@ -287,6 +287,53 @@ namespace Raid.Tests
         }
 
         [Test]
+        public void NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch()
+        {
+            Assert.That(team.LoadCargo(new CatchItem(7511, 4, 0, 2, 1, 1, species: "Needlefish"), tuning), Is.True);
+            Assert.That(team.LoadCargo(Fish(7512), tuning), Is.True);
+            TeamSave.Save(savePath, team);
+            var restored = TeamSave.Load(savePath);
+            Assert.That(restored.cargo[0].species, Is.EqualTo("Needlefish"));
+            Assert.That(restored.cargo[1].species, Is.Null.Or.Empty);
+            Assert.That(restored.BeginHoist(tuning), Is.True);
+            restored.TickHoist(1000f, tuning);
+            Assert.That(restored.tank.Count, Is.EqualTo(2));
+            Assert.That(restored.tank.Find(catchItem => catchItem.id == 7511).species, Is.EqualTo("Needlefish"));
+            Assert.That(restored.cargo, Is.Empty);
+        }
+
+        [Test]
+        public void FifteenCatchesOfOneSpeciesRetainEachIdentityAcrossTwoFullCrewDeliveries()
+        {
+            const int crewSize = 5, pocketsPerDiver = 3;
+            tuning.cargoCapacity = 8;
+            var catches = new CatchItem[crewSize * pocketsPerDiver];
+            for (int diver = 0; diver < crewSize; diver++)
+                for (int pocket = 0; pocket < pocketsPerDiver; pocket++)
+                {
+                    int index = diver * pocketsPerDiver + pocket;
+                    catches[index] = new CatchItem(9000 + index, 3, 0, 3, 1, 1, species: "Lanternfish");
+                }
+
+            for (int i = 0; i < 8; i++) Assert.That(team.LoadCargo(catches[i], tuning), Is.True);
+            Assert.That(team.LoadCargo(catches[8], tuning), Is.False);
+            Assert.That(team.BeginHoist(tuning), Is.True);
+            team.TickHoist(1000, tuning);
+            for (int i = 8; i < catches.Length; i++) Assert.That(team.LoadCargo(catches[i], tuning), Is.True);
+            Assert.That(team.BeginHoist(tuning), Is.True);
+            team.TickHoist(1000, tuning);
+            TeamSave.Save(savePath, team);
+            var saved = TeamSave.Load(savePath);
+            Assert.That(saved.tank.Count, Is.EqualTo(15));
+            Assert.That(saved.lifetimeCatch, Is.EqualTo(45));
+            foreach (var item in catches)
+            {
+                Assert.That(saved.tank.FindAll(entry => entry.id == item.id && entry.species == "Lanternfish").Count, Is.EqualTo(1));
+                Assert.That(saved.LoadCargo(item, tuning), Is.False, "A previously delivered ID must stay spent.");
+            }
+        }
+
+        [Test]
         public void MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce()
         {
             tuning.raisingSeconds = 2; tuning.unloadingSeconds = 3; tuning.returningSeconds = 4;

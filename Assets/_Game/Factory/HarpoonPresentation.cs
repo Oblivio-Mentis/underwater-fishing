@@ -19,6 +19,11 @@ namespace Raid
         HarpoonTool tool;
         Transform model,legacyModel,reel,loadedBolt,slide;
         HarpoonShotFx shotFx;
+        DiveHands hands;
+        DiverMotor viewed;
+        HarpoonTool viewedTool;
+        float nextSuitCheck;
+        int observedShot;
         Renderer statusLamp;
         Vector3 previousPosition,sway;
         float searchAt,bobClock,recoil,recoilVelocity;
@@ -31,9 +36,18 @@ namespace Raid
 
         void LateUpdate()
         {
+            if(Time.unscaledTime>=nextSuitCheck)
+            {
+                nextSuitCheck=Time.unscaledTime+.32f;
+                var ui=UI.UiRoot.Instance;
+                if(ui!=null&&steel!=null&&dark!=null&&amber!=null)
+                    foreach(var member in ui.Context.Players)
+                        if(member!=null&&member.IsClientInitialized&&!member.TryGetComponent<DiverSuitVisual>(out _))
+                            member.gameObject.AddComponent<DiverSuitVisual>().Initialize(this);
+            }
             if(!UI.UiInputGate.Active)
             {
-                if(model!=null)model.gameObject.SetActive(false);
+                if(model!=null)model.gameObject.SetActive(false);hands?.SetVisible(false);
                 return;
             }
             if(view==null||owner==null||!owner.IsClientInitialized||!owner.IsOwner)
@@ -61,23 +75,36 @@ namespace Raid
                 if(steel==null||amber==null||dark==null)return;
                 BuildModel();
             }
-            bool visible=!UI.UiInputGate.Modal;
-            model.gameObject.SetActive(visible);
-            if(!visible){previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
+            var actor=owner.IsDead?owner.Spectating:owner;
+            var uiRoot=UI.UiRoot.Instance;
+            bool panelPress=actor!=null&&uiRoot!=null&&uiRoot.Page==UI.UiPage.Terminal&&hands.HasPanelPress(actor);
+            bool visible=(!UI.UiInputGate.Modal||panelPress)&&actor!=null&&!actor.IsDead;
+            if(actor!=viewed)
+            {
+                viewed=actor;viewedTool=actor==null?null:actor.GetComponent<HarpoonTool>();
+                shotFx.BindSource(viewedTool);
+                if(viewedTool!=null)observedShot=viewedTool.ShotSequence;
+                if(actor!=null)previousPosition=actor.transform.position;
+            }
+            visible&=viewedTool!=null;
+            hands.SetVisible(visible);
+            if(!visible){model.gameObject.SetActive(false);previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
-            bool controlling=Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
+            bool controlling=actor==owner&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
             var mouse=Mouse.current;
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
             Vector3 desiredSway=new Vector3(Mathf.Clamp(-look.x*.00005f,-.0035f,.0035f),Mathf.Clamp(-look.y*.00004f,-.0025f,.0025f),0);
             sway=Vector3.Lerp(sway,desiredSway,1-Mathf.Exp(-12*dt));
-            float movement=Vector3.Distance(owner.transform.position,previousPosition);
-            previousPosition=owner.transform.position;
+            float movement=Vector3.Distance(actor.transform.position,previousPosition);
+            previousPosition=actor.transform.position;
             float speed=movement<.5f&&dt>.0001f?Mathf.Min(3,movement/dt):0;
             bobClock+=dt*speed*2.1f;
             float bobAmount=Mathf.Clamp01(speed*.4f);
             Vector3 bob=new Vector3(Mathf.Sin(bobClock)*.0012f,Mathf.Sin(bobClock*2)*.0015f,0)*bobAmount;
-            bool hasLine=tool!=null&&((tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired)||tool.OwnsFriendTether);
+            bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether;
+            if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
+            observedShot=viewedTool.ShotSequence;
             if(statusLamp!=null)statusLamp.enabled=hasLine;
             // The receiver's damped spring is kicked only by the accepted server-shot event.
             float remaining=dt;
@@ -86,16 +113,18 @@ namespace Raid
                 float step=Mathf.Min(remaining,.008f);remaining-=step;
                 recoilVelocity+=(-recoil*260-recoilVelocity*22)*step;recoil=Mathf.Clamp(recoil+recoilVelocity*step,-.004f,.055f);
             }
-            float aim=Nereid.NereidAim.Blend;
+            float aim=actor==owner?Nereid.NereidAim.Blend:0;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
             model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
+            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,speed,aim,dt,panelPress));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 
         void BuildModel()
         {
+            hands=new DiveHands(this,view.transform);
             model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
             // Four axial rings and an eight-sided profile bevel every receiver edge.
             Box("Machined receiver",new Vector3(0,0,0),new Vector3(.108f,.088f,.232f),.012f,steel);
@@ -250,6 +279,7 @@ namespace Raid
 
         void ReleaseModel()
         {
+            if(hands!=null){hands.Release();hands=null;}viewed=null;viewedTool=null;
             if(tool!=null)tool.ShotVisual-=OnAcceptedShot;
             if(shotFx!=null){shotFx.Release();Destroy(shotFx.gameObject);shotFx=null;}
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}

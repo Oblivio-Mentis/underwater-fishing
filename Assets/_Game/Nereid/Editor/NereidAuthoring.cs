@@ -38,7 +38,7 @@ namespace Raid.Nereid.Editor
             root.gameObject.AddComponent<NereidFeedingReaction>();
             root.gameObject.AddComponent<NereidAim>();
             vessel.sealedRooms=new[]{new Bounds(new Vector3(0,2.05f,-1),new Vector3(11.8f,4.08f,14.2f)),new Bounds(new Vector3(0,2.3f,6.5f),new Vector3(11.8f,4.58f,3)),new Bounds(new Vector3(0,1.65f,-12),new Vector3(11.8f,3.28f,8.05f))};
-            vessel.cargoRail=new[]{new Vector3(8,.4f,-14),new Vector3(8,6.1f,-14),new Vector3(0,6.1f,-14),new Vector3(0,6.1f,-3)};
+            vessel.cargoRail=new[]{new Vector3(11.5f,-8.2f,-14),new Vector3(11.5f,6.1f,-14),new Vector3(0,6.1f,-14),new Vector3(0,6.1f,-3)};
             HideOldArchitecture();
             Import("Nereid_Exterior");Import("Nereid_Interior");
             ImportCreature();
@@ -126,7 +126,7 @@ namespace Raid.Nereid.Editor
             var world=Object.FindAnyObjectByType<RaidWorld>();
             string tuningPath=Folder+"/NereidWorld.asset";var tuning=AssetDatabase.LoadAssetAtPath<WorldTuning>(tuningPath);
             if(tuning==null){tuning=Object.Instantiate(world.tuning);tuning.name="NereidWorld";AssetDatabase.CreateAsset(tuning,tuningPath);}
-            tuning.cargoPosition=root.TransformPoint(new Vector3(8,.4f,-14));tuning.terminalPosition=root.TransformPoint(new Vector3(0,1,-3));world.tuning=tuning;EditorUtility.SetDirty(tuning);EditorUtility.SetDirty(world);
+            tuning.cargoPosition=root.TransformPoint(vessel.cargoRail[0]);tuning.terminalPosition=root.TransformPoint(new Vector3(0,1,-3));world.tuning=tuning;EditorUtility.SetDirty(tuning);EditorUtility.SetDirty(world);
             world.container.position=tuning.cargoPosition;
             var label=GameObject.Find("CARGO / WINCH");if(label!=null)label.SetActive(false);
             Solid("Stern airlock landing",new Vector3(7.25f,-.08f,-14),new Vector3(2.7f,.2f,3.1f),"Nereid_Grate",true);
@@ -137,7 +137,7 @@ namespace Raid.Nereid.Editor
                 Solid("Dock handrail",new Vector3(8,1.25f,-14+side*2.1f),new Vector3(4,.08f,.08f),"Nereid_Ochre");
             }
             Solid("Overhead cargo rail",new Vector3(0,6.9f,-8.5f),new Vector3(.28f,.35f,12),"Nereid_Dark");
-            Solid("Stern cargo transverse rail",new Vector3(4,6.9f,-14),new Vector3(8.3f,.35f,.28f),"Nereid_Dark");
+            Solid("Stern cargo transverse rail",new Vector3(5.75f,6.9f,-14),new Vector3(11.8f,.35f,.28f),"Nereid_Dark");
             Solid("Cargo rail support",new Vector3(8,3.4f,-16),new Vector3(.23f,6.9f,.3f),"Nereid_Steel");
             Solid("Sealed reservoir overhead hopper",new Vector3(0,4.95f,-3),new Vector3(2.6f,.7f,2.6f),"Nereid_Steel");
             Solid("Reservoir delivery throat",new Vector3(0,3.65f,-3),new Vector3(.8f,1.2f,.8f),"Nereid_Dark");
@@ -286,7 +286,22 @@ namespace Raid.Nereid.Editor
             var positions=new[]{new Vector3(22,-2,-22),new Vector3(27,-3,-26),new Vector3(23,-5,-34),new Vector3(33,-5,-31)};
             var counters=new Dictionary<int,int>();
             foreach(var fish in Object.FindObjectsByType<FishActor>().OrderBy(f=>f.transform.GetSiblingIndex()))
-            {int i;counters.TryGetValue(fish.depthTier,out i);fish.transform.position=positions[i%positions.Length];counters[fish.depthTier]=i+1;EditorUtility.SetDirty(fish.transform);}
+            {
+                counters.TryGetValue(fish.depthTier,out int i);
+                int shoal = i % positions.Length;
+                fish.transform.position = positions[shoal];
+                fish.fishId = new[] { "Lanternfish", "Bristlefish", "Needlefish", "Sailray" }[shoal];
+                fish.gameObject.name = $"Depth {fish.depthTier} {fish.fishId}";
+                if (shoal == 2 || shoal == 3)
+                {
+                    fish.biomass = (shoal == 2 ? 4 : 8) * fish.depthTier;
+                    fish.offering = shoal == 2 ? 2 : 9;
+                    fish.power = (shoal == 2 ? .8f : 1.7f) * fish.depthTier;
+                }
+                counters[fish.depthTier] = i + 1;
+                EditorUtility.SetDirty(fish);
+                EditorUtility.SetDirty(fish.transform);
+            }
             counters.Clear();
             foreach(var loot in Object.FindObjectsByType<LootActor>().OrderBy(l=>l.transform.GetSiblingIndex()))
             {int i;counters.TryGetValue(loot.tier,out i);loot.transform.position=new Vector3(24+i*4,-6,-37-i*3);counters[loot.tier]=i+1;EditorUtility.SetDirty(loot.transform);}
@@ -404,10 +419,11 @@ namespace Raid.Nereid.Editor
             var old=GameObject.Find("Central catch reservoir");if(old!=null)foreach(var c in old.GetComponents<Collider>())c.enabled=false;
             var v=new List<Vector3>();var tri=new List<int>();const int count=32;
             foreach(float y in new[]{.02f,3.13f})for(int i=0;i<count;i++){float a=i*Mathf.PI*2/count;v.Add(new Vector3(Mathf.Cos(a)*1.83f,y,Mathf.Sin(a)*1.83f));}
-            for(int i=0;i<count;i++){int j=(i+1)%count;tri.AddRange(new[]{i,j,i+count,j,j+count,i+count});}
-            for(int i=1;i<count-1;i++){tri.AddRange(new[]{0,i+1,i,count,count+i,count+i+1});}
+            for(int i=0;i<count;i++){int j=(i+1)%count;tri.AddRange(new[]{i,i+count,j,j,i+count,j+count});}
+            for(int i=1;i<count-1;i++){tri.AddRange(new[]{0,i,i+1,count,count+i+1,count+i});}
             var mesh=new Mesh{name="Actual cylindrical reservoir collision"};mesh.SetVertices(v);mesh.SetTriangles(tri,0);mesh.RecalculateNormals();mesh.RecalculateBounds();
-            var go=new GameObject("Cylindrical tank collision");go.transform.SetParent(root,false);go.transform.localPosition=new Vector3(0,0,-3);go.AddComponent<MeshCollider>().sharedMesh=SaveMesh("PressureTankCollision",mesh);
+            var go=new GameObject("Cylindrical tank collision");go.transform.SetParent(root,false);go.transform.localPosition=new Vector3(0,0,-3);
+            var wall=go.AddComponent<MeshCollider>();wall.sharedMesh=SaveMesh("PressureTankCollision",mesh);wall.convex=true;
         }
 
         static void OceanSilhouettes()

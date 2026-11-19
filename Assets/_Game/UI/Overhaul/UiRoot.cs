@@ -22,6 +22,7 @@ namespace Raid.UI
         Canvas canvas;
         bool computerSurface;
         Camera viewCamera;
+        readonly Vector3[] terminalCorners=new Vector3[4];
         float desiredFov=80;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
@@ -37,7 +38,7 @@ namespace Raid.UI
         UiPage crewBack=UiPage.Pause;
         Action confirmAction;
         RaidWorld subscribedWorld;
-        bool connectedBefore,overlayBefore,replyReceived,wasPulled;
+        bool connectedBefore,overlayBefore,replyReceived,wasPulled,wasDead;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
         [SerializeField,HideInInspector] float initialVolume=1;
         WorldAction pendingAction;
@@ -98,7 +99,9 @@ namespace Raid.UI
             Page=value;
             if(value!=UiPage.Terminal)Context.SelectedConsole=null;
             ConfigureSurface(value);
-            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4),new Vector2(value==UiPage.None?760:1080,38));
+            float boardMargin=computerSurface?(canvasRect.rect.height-terminal.Root.rect.height)*.5f:0;
+            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4-boardMargin),new Vector2(value==UiPage.None?760:1080,38));
+            if(pendingText!=null)pendingText.rectTransform.anchoredPosition=new Vector2(0,22+boardMargin);
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
@@ -162,6 +165,13 @@ namespace Raid.UI
                     if(confirmation.gameObject.activeSelf)CancelConfirmation();ShowPage(connected?UiPage.None:UiPage.Main);
                     if(!connected)Toast(UiText.LostHost,true);
                 }
+                bool dead=connected && Context.Player.IsDead;
+                if(dead && !wasDead)
+                {
+                    if(confirmation.gameObject.activeSelf)CancelConfirmation();
+                    if(Page!=UiPage.None)ShowPage(UiPage.None);
+                }
+                wasDead=dead;
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {
@@ -205,6 +215,7 @@ namespace Raid.UI
             if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
             else
             {
+                if(station!=null)Context.Player.TouchTerminal(station.kind);
                 ShowPage(UiPage.Terminal);
                 terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
             }
@@ -268,8 +279,22 @@ namespace Raid.UI
             viewCamera=Context.Player.GetComponentInChildren<Camera>();desiredFov=Settings.fov;
             if(computerSurface && viewCamera!=null && Context.SelectedConsole!=null)
             {
-                float distance=Vector3.Distance(viewCamera.transform.position,Context.SelectedConsole.screenAnchor.position);
-                desiredFov=Mathf.Clamp(2*Mathf.Atan(Context.SelectedConsole.screenScale*810*.65f/Mathf.Max(.5f,distance))*Mathf.Rad2Deg,34,80);
+                var face=terminal.Root;
+                var center=face.TransformPoint(face.rect.center);
+                var eye=viewCamera.transform.position;
+                var toScreen=center-eye;
+                if(toScreen.sqrMagnitude<.0001f)return;
+                Context.Player.LookAtConsole(center);
+                var inverse=Quaternion.Inverse(Quaternion.LookRotation(toScreen));
+                face.GetWorldCorners(terminalCorners);
+                float tangent=0;
+                foreach(var corner in terminalCorners)
+                {
+                    var v=inverse*(corner-eye);
+                    float extent=Mathf.Max(Mathf.Abs(v.y),Mathf.Abs(v.x)/Mathf.Max(.1f,viewCamera.aspect));
+                    tangent=Mathf.Max(tangent,extent/Mathf.Max(.04f,v.z));
+                }
+                desiredFov=Mathf.Clamp(2*Mathf.Atan(tangent*1.10f)*Mathf.Rad2Deg,34,115);
             }
         }
         void LateUpdate()

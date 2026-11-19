@@ -169,7 +169,16 @@ namespace Raid.Nereid
 #endif
         void Swallow(int count)
         {
-            SwallowedFishObserved+=count;swallowAt=Time.time;
+            SwallowedFishObserved+=count;
+            PlaySwallow();
+        }
+        public void BiteDiver()
+        {
+            if(ready)PlaySwallow();
+        }
+        void PlaySwallow()
+        {
+            swallowAt=Time.time;
             voice.pitch=1;
             if(voice.isActiveAndEnabled&&Time.time>=nextSwallowSound){nextSwallowSound=Time.time+.26f;voice.PlayOneShot(swallowClip,.7f);}
             if(creature!=null)creature.ConfirmedSwallow();

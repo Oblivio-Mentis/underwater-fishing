@@ -17,6 +17,14 @@ namespace Raid
         private Collider shape;
         private Vector3 spawn;
         private bool enabledAtDepth;
+        private bool hasReefBerth;
+
+        internal void SetReefBerth(Vector3 positionOnBed)
+        {
+            hasReefBerth=true;
+            transform.position=spawn=positionOnBed;
+            if(NetworkObject!=null && IsServerInitialized)position.Value=spawn;
+        }
         private void Awake() { body=GetComponent<Renderer>(); shape=GetComponent<Collider>(); spawn=transform.position; }
         private static long NewId()=>System.BitConverter.ToInt64(System.Guid.NewGuid().ToByteArray(),0)&long.MaxValue;
         public override void OnStartServer() { enabledAtDepth=false; visible.Value=false; carrier=null; carrierOwner.Value=-1; itemId=NewId(); position.Value=spawn; }
@@ -39,7 +47,11 @@ namespace Raid
             if(!IsServerInitialized) return;
             if(carrier!=null)
             {
-                if(carrier.IsHelpless) carrier=null;
+                if(carrier.IsHelpless)
+                {
+                    carrier=null;
+                    if(hasReefBerth)transform.position=spawn;
+                }
                 else transform.position=carrier.transform.position+carrier.transform.right*.8f;
             }
             position.Value=transform.position;

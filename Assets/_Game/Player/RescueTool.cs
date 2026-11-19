@@ -35,7 +35,7 @@ namespace Raid
             float range=2.5f;
             foreach(var other in DiverMotor.ServerDivers)
             {
-                if(other==motor || (!other.IsHelpless && !other.IsTrapped)) continue;
+                if(other==motor || !other.CanBeRescued) continue;
                 float distance=Vector3.Distance(other.transform.position,transform.position);
                 if(distance<range) { range=distance; nearest=other; }
             }

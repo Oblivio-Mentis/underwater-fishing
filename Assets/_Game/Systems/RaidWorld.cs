@@ -68,6 +68,7 @@ namespace Raid
         }
         public override void OnStartClient()
         {
+            WetCargoShoal.Attach(this);
             snapshot.OnChange+=OnSnapshot;
             OnSnapshot("",snapshot.Value,false);
             interact=new InputAction("Use",InputActionType.Button,"<Keyboard>/e"); interact.Enable();
@@ -204,15 +205,14 @@ namespace Raid
                             { loot.Consume(); success=true; break; }
                         break;
                     }
-                    var item=new CatchItem(fish.CargoId,fish.biomass,fish.chitin,fish.offering,fish.cargoSize,fish.depthTier);
-                    if(team.LoadCargo(item,progression)) { success=tool.TakeCargo(); if(!success) team.cargo.RemoveAll(x=>x.id==item.id); }
+                    success = tool.UnloadCatches(team, progression);
                     break;
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
                 default:
                     var upgrade=(Upgrade)((int)action-(int)WorldAction.Reel);
                     success=team.Buy(upgrade,AtBase,progression); break;
             }
-            if(success) { Publish(); Save(); }
+            if(success) { diver.ConfirmInteraction(); Publish(); Save(); }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
             Respond(sender,requestId,success,success?"ok":"unavailable");
         }

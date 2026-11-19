@@ -25,14 +25,60 @@ namespace Raid
         private LineRenderer _line;
         private float _nextHeartbeat, _nextFire, _lastControls;
         private bool _reelHeld, _assistHeld;
-        private HarpoonTool _assistant;
-        private float _assistedUntil;
+        private readonly SyncVar<NetworkObject> _assistTarget = new();
+        private readonly SyncVar<NetworkObject> _assistant = new();
+        public struct PocketCatch
+        {
+            public NetworkObject species;
+            public long id;
+        }
+        private readonly SyncVar<PocketCatch> _pocketA = new(), _pocketB = new(), _pocketC = new();
+        private readonly SyncVar<int> _slot = new(), _shotSequence = new();
+        private InputAction[] _select;
+        private InputAction _wheel;
         private float _friendObstructed, _friendLastPull, _friendRefuseUntil, _friendExpiresAt;
         private bool _ownsFriendTuning;
 
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
-        public FishActor CarriedFish => _fish != null && _fish.Mode == FishMode.Captured ? _fish : null;
+        public int ActiveSlot => _slot.Value;
+        public int ShotSequence => _shotSequence.Value;
+        public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
+        public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
+        public bool HandsFull => _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
+        public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value.id > 0 ? 1 : 0)
+            + (_pocketB.Value.id > 0 ? 1 : 0) + (_pocketC.Value.id > 0 ? 1 : 0);
+        public bool HasFullCreel => _pocketA.Value.id > 0 && _pocketB.Value.id > 0 && _pocketC.Value.id > 0;
+        public int SmallestCatchSize => _pocketA.Value.id > 0 || _pocketB.Value.id > 0 || _pocketC.Value.id > 0
+            ? 1 : HandsFull ? _fish.cargoSize : 0;
+        public FishActor CarriedFish => HandsFull ? _fish : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
+
+        private SyncVar<PocketCatch> Pocket(int slot) => slot switch { 2 => _pocketA, 3 => _pocketB, 4 => _pocketC, _ => null };
+
+        public FishActor FishInSlot(int slot)
+        {
+            var pocket = Pocket(slot);
+            var species = pocket == null ? null : pocket.Value.species;
+            return species == null ? null : species.GetComponent<FishActor>();
+        }
+
+        public long CatchIdInSlot(int slot) => Pocket(slot)?.Value.id ?? 0;
+
+        public bool SelectSlot(int slot)
+        {
+            if (!IsClientInitialized || !IsOwner || UI.UiInputGate.Blocked || !CanSelect(slot)) return false;
+            SelectSlotServer(slot);
+            return true;
+        }
+
+        private bool CanSelect(int slot) => slot >= 0 && slot < 5 && !Motor.IsHelpless && !HandsFull
+            && !TetherActive && _fish == null && AssistTarget == null;
+
+        [ServerRpc(RequireOwnership = true)]
+        private void SelectSlotServer(int slot)
+        {
+            if (CanSelect(slot)) _slot.Value = slot;
+        }
         public bool OwnsFriendTether => _friendTarget.Value != null;
         public bool IsPulled => _friendSource.Value != null;
         public bool TetherActive => OwnsFriendTether || IsPulled;
@@ -41,9 +87,7 @@ namespace Raid
         public float TetherOptOutRemaining => _optOutRemaining.Value;
         public float TetherMaxRange => Mathf.Min(Safe(tuning == null ? 0 : tuning.maxRange, 0, 0, 100), Safe(friendTetherTuning == null ? 12 : friendTetherTuning.maximumRange, 12, 2, 20));
         public bool Reeling => IsServerInitialized && _reelHeld && Time.unscaledTime - _lastControls < tuning.inputTimeout;
-        public bool IsAssisted => IsServerInitialized && _assistant != null && _assistant._assistHeld
-            && Time.unscaledTime < _assistedUntil && _assistant.Motor.Oxygen > 0f
-            && Vector3.Distance(transform.position, _assistant.transform.position) <= tuning.assistRange;
+        public bool IsAssisted => _assistant.Value != null;
 
         private void Awake()
         {
@@ -70,11 +114,8 @@ namespace Raid
 
         public override void OnStopServer()
         {
-            ReleaseOutgoingFriend();
-            ReleaseIncomingFriend();
-            if (_fish != null) _fish.ReleaseHook(this);
+            ReleaseAll(false);
             ServerTools.Remove(this);
-            _assistant = null;
         }
 
         public override void OnStartClient()
@@ -94,6 +135,10 @@ namespace Raid
             _fire = _actions.AddAction("FireAndReel", InputActionType.Button, "<Mouse>/leftButton");
             _release = _actions.AddAction("Release", InputActionType.Button, "<Keyboard>/r");
             _assist = _actions.AddAction("Assist", InputActionType.Button, "<Keyboard>/e");
+            _select = new InputAction[5];
+            for (int slot = 0; slot < _select.Length; slot++)
+                _select[slot] = _actions.AddAction("Slot" + (slot + 1), InputActionType.Button, "<Keyboard>/" + (slot + 1));
+            _wheel = _actions.AddAction("Cycle", InputActionType.Value, "<Mouse>/scroll/y");
             _actions.Enable();
         }
 
@@ -110,21 +155,40 @@ namespace Raid
             bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
             // A pulled player can always refuse with R while focused, including from a local menu.
             // All firing/reeling/assisting remains behind the shared gameplay-input gate.
-            if (controlling && _fire.WasPressedThisFrame() && _fish == null && !TetherActive) FireServer();
+            if (controlling && !Motor.IsHelpless)
+            {
+                for (int i = 0; i < _select.Length; i++)
+                    if (_select[i].WasPressedThisFrame()) SelectSlot(i);
+                float wheel = _wheel.ReadValue<float>();
+                if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? 4 : 1)) % 5);
+            }
+            if (controlling && ActiveSlot == 0 && AssistTarget == null && _fire.WasPressedThisFrame() && _fish == null && !TetherActive) FireServer();
             if (Application.isFocused && _release.WasPressedThisFrame() && (controlling || IsPulled)) ReleaseServer();
             if (Time.unscaledTime < _nextHeartbeat) return;
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
-            SetControlsServer(controlling && _fire.IsPressed(), controlling && _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist));
+            bool gripInput = _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist || AssistTarget != null)
+                || ActiveSlot == 1 && _fire.IsPressed();
+            bool reel = controlling && ActiveSlot == 0 && _fire.IsPressed();
+            bool assist = controlling && gripInput;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!UI.UiInputGate.Blocked)
+            {
+                reel |= Time.unscaledTime < _qaReelUntil;
+                assist |= Time.unscaledTime < _qaGripUntil;
+            }
+#endif
+            SetControlsServer(reel, assist);
         }
 
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
-            if (tuning == null || _fish != null || TetherActive || Motor.Oxygen <= 0f || Time.unscaledTime < _nextFire) return;
+            if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Motor.Oxygen <= 0f || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
-            ShotVisualTarget(Owner,eye,didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange);
+            _shotSequence.Value++;
+            ShotVisualObservers(eye,didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange);
             var friend = didHit ? hit.collider.GetComponentInParent<DiverMotor>() : null;
             if (friend != null)
             {
@@ -132,26 +196,28 @@ namespace Raid
                 return; // Hitting a player never falls through to threat damage.
             }
             var fish = didHit?hit.collider.GetComponentInParent<FishActor>():null;
-            if (fish != null && fish.TryHook(this))
+            if (fish != null && (fish.RequiresPartner || !HasFullCreel) && fish.TryHook(this))
             {
                 _fish = fish;
                 _fishObject.Value = fish.NetworkObject;
             }
-            else ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
+            else if (fish == null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
         }
 
         [ServerRpc(RequireOwnership = true)]
         private void SetControlsServer(bool reel, bool assist)
         {
-            _reelHeld = reel;
-            _assistHeld = assist;
+            _reelHeld = reel && !Motor.IsHelpless && ActiveSlot == 0;
+            _assistHeld = assist && !Motor.IsHelpless && ActiveSlot <= 1;
             _lastControls = Time.unscaledTime;
         }
 
         // Acknowledges a real accepted shot, including misses; attachment still comes from replicated hook state.
-        [TargetRpc]
-        private void ShotVisualTarget(FishNet.Connection.NetworkConnection target,Vector3 origin,Vector3 endpoint)
-        {ShotVisual?.Invoke(origin,endpoint);}
+        [ObserversRpc]
+        private void ShotVisualObservers(Vector3 origin, Vector3 endpoint)
+        {
+            ShotVisual?.Invoke(origin, endpoint);
+        }
 
         [ServerRpc(RequireOwnership = true)]
         private void ReleaseServer()
@@ -160,7 +226,10 @@ namespace Raid
             _friendRefuseUntil = Time.unscaledTime + Safe(friendTetherTuning.optOutSeconds, 3, 3, 10);
             _optOutRemaining.Value = _friendRefuseUntil - Time.unscaledTime;
             if (IsPulled) { ReleaseIncomingFriend(); return; }
-            DropCargo();
+            if (OwnsFriendTether) { ReleaseOutgoingFriend(); return; }
+            if (AssistTarget != null) { DetachGrip(); _assistHeld = false; return; }
+            if (_fish != null) _fish.ReleaseHook(this);
+            else EmptyPocket(ActiveSlot, true);
         }
 
         /// <summary>Local-owner UI action. The server still checks ownership through ReleaseServer.</summary>
@@ -170,18 +239,29 @@ namespace Raid
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private float _qaReelUntil, _qaGripUntil;
+
+        internal bool QaHoldOwned(bool grip, float duration)
+        {
+            if (!IsClientInitialized || !IsOwner || Motor.IsHelpless || UI.UiInputGate.Blocked) return false;
+            float until = Time.unscaledTime + Mathf.Clamp(duration, 0, 15);
+            if (grip) _qaGripUntil = until;
+            else _qaReelUntil = until;
+            return true;
+        }
+
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
         internal bool QaFireOwned()
         {
             if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null || Motor.Oxygen <= 0
-                || UI.UiInputGate.Blocked || _fish != null || TetherActive) return false;
+                || UI.UiInputGate.Blocked || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
             FireServer(); return true;
         }
 
         internal bool QaReleaseOwned()
         {
             if (!IsClientInitialized || !IsOwner || (UI.UiInputGate.Blocked && !IsPulled)
-                || (_fish == null && !TetherActive)) return false;
+                || (_fish == null && FishInSlot(ActiveSlot) == null && AssistTarget == null && !TetherActive)) return false;
             ReleaseServer(); return true;
         }
 #endif
@@ -189,50 +269,159 @@ namespace Raid
         public void DropCargo()
         {
             if (!IsServerInitialized) return;
+            ReleaseAll();
+        }
+
+        private void ReleaseAll(bool showDrops = true)
+        {
             ReleaseOutgoingFriend();
             ReleaseIncomingFriend();
+            DetachGrip();
+            ToolOf(_assistant.Value)?.DetachGrip();
             if (_fish != null) _fish.ReleaseHook(this);
+            for (int slot = 2; slot < 5; slot++) EmptyPocket(slot, showDrops);
         }
+
+        public bool DropOneCatch()
+        {
+            if (!IsServerInitialized) return false;
+            if (HandsFull) { _fish.ReleaseHook(this); return true; }
+            return EmptyPocket(FirstOccupiedPocket(), true);
+        }
+
+        private int FirstOccupiedPocket()
+        {
+            if (CatchIdInSlot(ActiveSlot) > 0) return ActiveSlot;
+            for (int slot = 2; slot < 5; slot++)
+                if (CatchIdInSlot(slot) > 0) return slot;
+            return -1;
+        }
+
+        private bool EmptyPocket(int slot, bool showEscape)
+        {
+            var pocket = Pocket(slot);
+            if (pocket == null || pocket.Value.id == 0) return false;
+            var fish = FishInSlot(slot);
+            pocket.Value = default;
+            if (showEscape && fish != null && !Motor.IsInside)
+                FishReleasedObservers(fish.SpeciesId, transform.position, transform.rotation);
+            return true;
+        }
+
+        [ObserversRpc]
+        private void FishReleasedObservers(string species, Vector3 position, Quaternion rotation) =>
+            CatchFishModel.Release(species, position, rotation);
 
         public bool TakeCargo()
         {
-            if (!IsServerInitialized || CarriedFish == null) return false;
-            return _fish.MarkTransported(this);
+            if (!IsServerInitialized) return false;
+            return HandsFull ? _fish.MarkTransported(this) : EmptyPocket(FirstOccupiedPocket(), false);
+        }
+
+        internal bool UnloadCatches(TeamProgress team, ProgressionTuning progression)
+        {
+            if (!IsServerInitialized) return false;
+            bool loaded = false;
+            if (HandsFull)
+            {
+                var item = _fish.ToCargo(_fish.CargoId);
+                if (team.LoadCargo(item, progression))
+                {
+                    loaded = _fish.MarkTransported(this);
+                    if (!loaded) team.cargo.RemoveAll(entry => entry.id == item.id);
+                }
+            }
+            for (int slot = 2; slot < 5; slot++)
+            {
+                var species = FishInSlot(slot);
+                if (species == null || !team.LoadCargo(species.ToCargo(CatchIdInSlot(slot)), progression)) continue;
+                EmptyPocket(slot, false);
+                loaded = true;
+            }
+            return loaded;
+        }
+
+        internal bool StowCapture(FishActor fish)
+        {
+            if (!IsServerInitialized || _fish != fish || fish.RequiresPartner) return false;
+            for (int slot = 2; slot < 5; slot++)
+            {
+                var pocket = Pocket(slot);
+                if (pocket.Value.id != 0) continue;
+                // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
+                pocket.Value = new PocketCatch { species = fish.NetworkObject, id = fish.CargoId };
+                _fish = null;
+                _fishObject.Value = null;
+                return true;
+            }
+            return false;
         }
 
         public void NotifyFishLost(FishActor fish)
         {
-            if (!IsServerInitialized || fish != _fish) return;
-            _fish = null;
-            _fishObject.Value = null;
+            if (!IsServerInitialized || fish == null) return;
+            if (_fish == fish)
+            {
+                _fish = null;
+                _fishObject.Value = null;
+                ToolOf(_assistant.Value)?.DetachGrip();
+            }
         }
 
         private void FixedUpdate()
         {
-            if (IsServerInitialized)
+            if (!IsServerInitialized) return;
+            if (Motor.IsHelpless)
             {
-                _optOutRemaining.Value = Mathf.Max(0, _friendRefuseUntil - Time.unscaledTime);
-                TickFriendTether();
+                ReleaseAll();
+                _reelHeld = _assistHeld = false;
+                return;
             }
-            if (!IsServerInitialized || tuning == null || !_assistHeld || Motor.Oxygen <= 0f
-                || TetherActive || Time.unscaledTime - _lastControls >= tuning.inputTimeout) return;
-            HarpoonTool nearest = null;
-            float bestDistance = tuning.assistRange * tuning.assistRange;
-            foreach (var tool in ServerTools)
+            _optOutRemaining.Value = Mathf.Max(0, _friendRefuseUntil - Time.unscaledTime);
+            TickFriendTether();
+            TickGrip();
+        }
+
+        private void TickGrip()
+        {
+            if (!_assistHeld || tuning == null || TetherActive || _fish != null || ActiveSlot > 1
+                || Time.unscaledTime - _lastControls >= tuning.inputTimeout)
+            { DetachGrip(); return; }
+            var shooter = ToolOf(_assistTarget.Value);
+            float reach = Mathf.Min(2.4f, tuning.assistRange);
+            if (shooter != null)
             {
-                if (tool == this || tool._fish == null || tool._fish.Mode == FishMode.Captured) continue;
-                float distance = (tool.transform.position - transform.position).sqrMagnitude;
-                if (distance > bestDistance || tool.gameObject.scene != gameObject.scene) continue;
-                Vector3 from = transform.position + Vector3.up * 0.6f;
-                Vector3 to = tool.transform.position + Vector3.up * 0.6f;
-                if (Physics.Raycast(from, (to - from).normalized, out var hit, Vector3.Distance(from, to), tuning.hitMask, QueryTriggerInteraction.Ignore)
-                    && hit.collider.GetComponentInParent<HarpoonTool>() != tool) continue;
-                bestDistance = distance;
-                nearest = tool;
+                if (!CanGrip(shooter, reach + .45f)) { DetachGrip(); return; }
             }
-            if (nearest == null) return;
-            nearest._assistant = this;
-            nearest._assistedUntil = Time.unscaledTime + tuning.inputTimeout;
+            else
+            {
+                float nearest = reach;
+                foreach (var candidate in ServerTools)
+                {
+                    if (!CanGrip(candidate, nearest)) continue;
+                    shooter = candidate;
+                    nearest = Vector3.Distance(transform.position, candidate.transform.position);
+                }
+                if (shooter == null) return;
+                _assistTarget.Value = shooter.NetworkObject;
+                shooter._assistant.Value = NetworkObject;
+            }
+            // Pull both divers as one team. The motor sweeps collisions even when the helper is tugged toward the shooter.
+            Vector3 toShooter = shooter.transform.position - transform.position;
+            if (toShooter.magnitude > 1.15f)
+                Motor.ApplyTetherMotion(toShooter.normalized * Mathf.Min(toShooter.magnitude - 1.15f, 5f * Time.fixedDeltaTime));
+        }
+
+        private bool CanGrip(HarpoonTool shooter, float reach) => shooter != null && shooter != this
+            && shooter.gameObject.scene == gameObject.scene && shooter._fish != null && shooter._fish.Mode != FishMode.Captured
+            && !shooter.Motor.IsHelpless && !shooter.TetherActive && (shooter._assistant.Value == null || shooter._assistant.Value == NetworkObject)
+            && (shooter.transform.position - transform.position).sqrMagnitude <= reach * reach && FriendLineVisible(shooter);
+
+        private void DetachGrip()
+        {
+            var shooter = ToolOf(_assistTarget.Value);
+            if (shooter != null && shooter._assistant.Value == NetworkObject) shooter._assistant.Value = null;
+            _assistTarget.Value = null;
         }
 
         private void LateUpdate()
@@ -249,7 +438,7 @@ namespace Raid
         bool TryHookFriend(HarpoonTool target)
         {
             if (target == null || target == this || !CanTetherParticipant(this) || !CanTetherParticipant(target)) return false;
-            if (TetherActive || _fish != null || target.TetherActive || HasFishingLine(target)) return false;
+            if (TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull || HasFishingLine(target)) return false;
             if (target.gameObject.scene != gameObject.scene || Time.unscaledTime < target._friendRefuseUntil) return false;
             if (Vector3.Distance(transform.position, target.transform.position) > TetherMaxRange || !FriendLineVisible(target)) return false;
             _friendTarget.Value = target.NetworkObject;

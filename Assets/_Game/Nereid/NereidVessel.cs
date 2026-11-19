@@ -17,7 +17,13 @@ namespace Raid.Nereid
         RaidWorld world;
         float railFraction=-1;
 
-        void Awake() { Active=this; }
+        void Awake()
+        {
+            Active=this;
+            var reef=new GameObject("NEREID fishing grounds");
+            reef.transform.SetParent(transform,true);
+            reef.AddComponent<NereidReef>();
+        }
         void OnDestroy() { if(Active==this)Active=null; }
 
         public bool ContainsSealed(Vector3 point)
@@ -26,6 +32,15 @@ namespace Raid.Nereid
             point=transform.InverseTransformPoint(point);
             foreach(var room in sealedRooms)if(room.Contains(point))return true;
             return false;
+        }
+
+        public bool InsideJaws(Vector3 chest)
+        {
+            Vector3 local=transform.InverseTransformPoint(chest);
+            if(local.z<7.72f || local.z>9.42f)return false;
+            float lateral=local.x/1.54f;
+            float vertical=(local.y-1.45f)/1.49f;
+            return lateral*lateral+vertical*vertical<1f;
         }
 
         void LateUpdate()

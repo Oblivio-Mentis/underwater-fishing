@@ -20,12 +20,18 @@ namespace Raid.UI
         [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
         [Serializable] public sealed class Snapshot
         {
+            public bool dead,consumed,canReturn;
+            public int watchedOwner=-1;
             public string request,page,error,cursor,worldMessage,scene;
             public bool connected,pending,inputBlocked,atBase,lastSuccess,wave;
             public int width,height,owner,players,events,canvases,audioListeners,stockLoss;
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,volume,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
+            public string[] pockets;
+            public string heldSpecies;
+            public bool handsFull;
+            public int activeSlot, helperOwner=-1, assistedOwner=-1, cageSwimmers;
             public FishRouteState fishRoute;
             public int observedBurps;
             public long observedSwallows;
@@ -170,8 +176,25 @@ namespace Raid.UI
         }
         void Execute(Request r)
         {
+            if(r.action=="view" || r.action=="spectate" || r.action=="return_to_ship")
+            {
+                var diver=UiRoot.Instance.Context.Player;
+                if(diver==null || !diver.IsOwner || UiRoot.Instance.Page!=UiPage.None)throw new InvalidOperationException("Local HUD required");
+                if(r.action=="spectate")diver.CycleSpectator();
+                else if(r.action=="return_to_ship")diver.RequestRespawn();
+                else diver.LookAtConsole(diver.transform.position+Vector3.up*.6f+Quaternion.Euler(r.number2,r.number,0)*Vector3.forward*10f);
+                return;
+            }
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
+            if (r.action == "slot" || r.action == "fish_reel" || r.action == "fish_grip")
+            {
+                var tool = UiRoot.Instance.Context.Harpoon;
+                bool accepted = tool != null && (r.action == "slot" ? tool.SelectSlot(Mathf.RoundToInt(r.number))
+                    : tool.QaHoldOwned(r.action == "fish_grip", r.number));
+                if (!accepted) throw new InvalidOperationException("Owned fishing controls are currently unavailable");
+                return;
+            }
             if(r.action=="fire"||r.action=="harpoon_release")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;
@@ -240,8 +263,24 @@ namespace Raid.UI
                 var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;
                 snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
                 snapshot.tetherRefusal=tool.TetherOptOutRemaining;
+                snapshot.activeSlot = tool.ActiveSlot;
+                snapshot.handsFull = tool.HandsFull;
+                snapshot.heldSpecies = tool.CarriedFish == null ? "" : tool.CarriedFish.SpeciesId;
+                snapshot.pockets = Enumerable.Range(2,3).Select(i => tool.FishInSlot(i)?.SpeciesId ?? "").ToArray();
+                snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
+                snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }
-            if(world!=null) snapshot.fishRoute=world.FishRoute;
+            if(world!=null)
+            {
+                snapshot.fishRoute=world.FishRoute;
+                if(player!=null)
+                {
+                    snapshot.dead=player.IsDead;snapshot.consumed=player.IsConsumed;snapshot.canReturn=player.CanRespawn;
+                    snapshot.watchedOwner=player.Spectating==null?-1:player.Spectating.OwnerId;
+                }
+                var shoal = world.container == null ? null : world.container.GetComponentInChildren<WetCargoShoal>();
+                snapshot.cageSwimmers = shoal == null ? 0 : shoal.Count;
+            }
             var mouth=UnityEngine.Object.FindAnyObjectByType<Nereid.NereidFeedingReaction>();
             if(mouth!=null){snapshot.observedBurps=mouth.BurpCount;snapshot.observedSwallows=mouth.SwallowedFishObserved;}
             if(observedFx!=null)
