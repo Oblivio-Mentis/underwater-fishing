@@ -14,6 +14,7 @@ namespace Raid.Nereid
         readonly List<Material> owned=new();
         Material steel, charcoal, trim, paint, amber, cold, signal;
         Transform surface, gauge, impeller;
+        PressureTransferFlow transfer;
         TMP_Text display;
         AudioSource pump;
         AudioClip pumpSound;
@@ -46,6 +47,7 @@ namespace Raid.Nereid
             BuildPad(2,true,OuterX-.39f,-1.92f,-1);
             BuildPad(3,true,OuterX+.39f,1.92f,1);
             BuildWater();BuildPump();
+            if(surface!=null)transfer=PressureTransferFlow.Install(transform,surface.GetComponent<MeshRenderer>(),steel,charcoal,trim);
             ApplyDoors(AirlockSnapshot.Dry);
         }
 
@@ -190,6 +192,7 @@ namespace Raid.Nereid
             if(surface!=null){surface.gameObject.SetActive(water>.006f&&water<.997f);surface.localPosition=new Vector3(OuterX*.5f,Mathf.Lerp(-.12f,Height+.05f,water),0);}
             gauge.localPosition=new Vector3(4.34f,Mathf.Lerp(.19f,3.8f,water),2.9f);
             bool running=s.Phase==AirlockPhase.Flooding||s.Phase==AirlockPhase.Draining;
+            if(transfer!=null)transfer.Present(s.Phase,surface.localPosition.y);
             if(running)impeller.Rotate(0,0,Time.deltaTime*240);
             pump.mute=!Application.isFocused;
             if(running&&!pump.isPlaying)pump.Play();else if(!running&&pump.isPlaying)pump.Stop();
