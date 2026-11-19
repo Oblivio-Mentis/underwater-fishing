@@ -172,8 +172,8 @@ namespace Raid.UI
                     hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
-                    if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
-                    else if(!worldMessage.StartsWith("SAVE ERROR")&&!worldMessage.StartsWith("Подача остановлена"))lastSaveMessage="";
+                    if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена:")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
+                    else if(!worldMessage.StartsWith("SAVE ERROR")&&!worldMessage.StartsWith("Подача остановлена:"))lastSaveMessage="";
                 }
                 if(menu.Root.gameObject.activeSelf)menu.Refresh();UpdatePending();
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");

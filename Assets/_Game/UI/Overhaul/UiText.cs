@@ -28,7 +28,7 @@ namespace Raid.UI
             }
             return raw;
         }
-        public const string QuoteChanged="Уровень или цена изменились. Проверьте улучшение и подтвердите заново";
+        public const string QuoteChanged="Состав улова, уровень или цена изменились. Повторите действие";
         public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
     }
 }
