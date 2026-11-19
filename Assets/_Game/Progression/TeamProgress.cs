@@ -21,7 +21,7 @@ namespace Raid
         public FeedingOutcome outcome;
         public int required, paid;
         public float deficit;
-        public bool Attack => deficit > 0f;
+        public bool Attack => outcome == FeedingOutcome.None;
     }
 
     /// <summary>Host-owned rules. Call from the server thread; serialized fields are save/snapshot data.</summary>

@@ -114,15 +114,18 @@ namespace Raid
             TickAirlock();
             TickRouteClock();
             team.TickHoist(Time.fixedDeltaTime,progression);
-            if(team.TickHunger(Time.fixedDeltaTime,progression))
+            // A defense belongs to the deadline that just expired. The next feeding
+            // interval stays full in the save and begins ticking when defense ends.
+            if((threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
             {
                 var report=team.EvaluateHunger(progression);
                 message.Value="Feeding: "+report.outcome+" ("+report.paid+"/"+report.required+")";
-                if(report.Attack && threats!=null && !threats.WaveActive)
+                if(report.Attack && threats!=null)
                 {
                     waveLossBudget=Mathf.Min(progression.maximumStockLossCount,Mathf.FloorToInt(team.tank.Count*progression.maximumStockLossFraction));
                     threats.StartWave(report.deficit,Mathf.Max(1,team.highestDepth-1));
                 }
+                Publish();
             }
             if(transitionRemaining>0)
             {
