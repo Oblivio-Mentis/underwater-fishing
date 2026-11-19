@@ -22,6 +22,7 @@ namespace Raid.UI
         Canvas canvas;
         bool computerSurface;
         Camera viewCamera;
+        readonly Vector3[] terminalCorners=new Vector3[4];
         float desiredFov=80;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
@@ -276,8 +277,22 @@ namespace Raid.UI
             viewCamera=Context.Player.GetComponentInChildren<Camera>();desiredFov=Settings.fov;
             if(computerSurface && viewCamera!=null && Context.SelectedConsole!=null)
             {
-                float distance=Vector3.Distance(viewCamera.transform.position,Context.SelectedConsole.screenAnchor.position);
-                desiredFov=Mathf.Clamp(2*Mathf.Atan(Context.SelectedConsole.screenScale*810*.65f/Mathf.Max(.5f,distance))*Mathf.Rad2Deg,34,80);
+                var face=terminal.Root;
+                var center=face.TransformPoint(face.rect.center);
+                var eye=viewCamera.transform.position;
+                var toScreen=center-eye;
+                if(toScreen.sqrMagnitude<.0001f)return;
+                Context.Player.LookAtConsole(center);
+                var inverse=Quaternion.Inverse(Quaternion.LookRotation(toScreen));
+                face.GetWorldCorners(terminalCorners);
+                float tangent=0;
+                foreach(var corner in terminalCorners)
+                {
+                    var v=inverse*(corner-eye);
+                    float extent=Mathf.Max(Mathf.Abs(v.y),Mathf.Abs(v.x)/Mathf.Max(.1f,viewCamera.aspect));
+                    tangent=Mathf.Max(tangent,extent/Mathf.Max(.04f,v.z));
+                }
+                desiredFov=Mathf.Clamp(2*Mathf.Atan(tangent*1.10f)*Mathf.Rad2Deg,34,115);
             }
         }
         void LateUpdate()
