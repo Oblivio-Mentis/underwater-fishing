@@ -98,7 +98,7 @@ namespace Raid.Nereid.Editor
             Place(angler+new Vector3(0,.3f,7.5f));
             yield return Wait("Nearby passive angler watches the diver in murky water",()=>
                 threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
-                UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.04f && RenderSettings.fogDensity<.06f);
+                UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.03f && RenderSettings.fogDensity<.05f);
             float health=diver.Oxygen;
             Place(angler+new Vector3(0,.1f,3.6f));
             yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);

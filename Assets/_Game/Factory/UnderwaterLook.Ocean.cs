@@ -105,12 +105,12 @@ namespace Raid
             {
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
-                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.049f,wetBlend);
-                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.038f,.124f,.17f);
+                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.038f,wetBlend);
+                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.025f,.098f,.148f);
                 // Match the reef's custom transmission to the visible range of fish and hull materials.
                 Shader.SetGlobalVector(ReefClarityShader,abyss
                     ?new Vector4(.0072f,.82f,1f,0f)
-                    :new Vector4(.0023f,1.14f,.68f,0f));
+                    :new Vector4(.00136f,1.17f,.68f,0f));
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
                 RenderSettings.fogColor=Color.Lerp(initialColor,fogTint,wetBlend);
