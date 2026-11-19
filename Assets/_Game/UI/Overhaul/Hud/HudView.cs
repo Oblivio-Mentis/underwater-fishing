@@ -175,8 +175,10 @@ namespace Raid.UI
                     bool carryingLoot=false;foreach(var loot in context.Loot)if(loot!=null && loot.CarrierOwnerId==player.OwnerId){carryingLoot=true;break;}
                     prompt=carryingLoot?UiText.HudLootOccupied:UiText.HudLootPrompt;color=carryingLoot?UiTheme.Amber:UiTheme.Text;break;
                 case UiInteraction.Assist:
+                    if(reel.Visible)break;
                     prompt=context.Harpoon.ActiveSlot==1?"ЛКМ — держать напарника":UiText.HudAssistPrompt;break;
                 case UiInteraction.Fish:
+                    if(reel.Visible)break;
                     if(context.AimedFish!=null)
                     {
                         if(context.AimedFish.Mode==FishMode.Roam)prompt=context.Harpoon.ActiveSlot!=0?"1 — выбрать гарпун":context.AimedFish.RequiresPartner?"ЛКМ — зацепить · нужны двое":UiText.HudFishPrompt;
@@ -185,7 +187,7 @@ namespace Raid.UI
                     }
                     break;
             }
-            if(context.Harpoon!=null && context.Harpoon.AssistTarget!=null)
+            if(!reel.Visible && context.Harpoon!=null && context.Harpoon.AssistTarget!=null)
             {
                 prompt="Держите напарника";detail=context.Harpoon.ActiveSlot==1?"Отпустите ЛКМ или E, чтобы разжать захват":"Отпустите E, чтобы разжать захват";color=UiTheme.Green;
             }

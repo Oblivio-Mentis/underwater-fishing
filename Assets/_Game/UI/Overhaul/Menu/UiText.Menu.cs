@@ -8,9 +8,6 @@ namespace Raid.UI
         public const string MenuService = "NEREID / СЛУЖБА ЭКСПЕДИЦИЙ";
         public const string MenuMainTitle = "Подготовка к погружению";
         public const string MenuMainSubtitle = "Один водолаз или экипаж до пяти человек";
-        public const string MenuMainHeading = "ВЫХОД\nНА ГЛУБИНУ";
-        public const string MenuMainDescription = "Ловите рыбу за бортом. Верните улов в донную клеть и выберите, что отправить в цех или в пасть левиафана.";
-        public const string MenuMainLoop = "ПОГРУЖЕНИЕ / УЛОВ / МАТЕРИАЛЫ / УЛУЧШЕНИЯ";
         public const string MenuCreate = "Создать сессию";
         public const string MenuJoin = "Присоединиться";
         public const string MenuSettings = "Настройки";
@@ -74,7 +71,6 @@ namespace Raid.UI
         public const string MenuDisconnectClient = "Вы вернётесь в главное меню. Прогресс экипажа остаётся у хоста.";
         public const string MenuQuitTitle = "Выйти из игры?";
         public const string MenuQuitDescription = "Приложение будет закрыто. Если вы хост, подключённые участники потеряют соединение.";
-        public const string MenuFooterOffline = "Создайте сессию или присоединитесь к экипажу";
         public const string MenuFooterOnline = "Esc — назад к предыдущему экрану";
 
         public static string MenuBuild => "Версия " + Application.version;

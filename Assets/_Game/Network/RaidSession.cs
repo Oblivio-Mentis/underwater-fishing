@@ -15,7 +15,7 @@ namespace Raid
         public Multipass multipass;
         public Camera menuCamera;
         public SteamLobby lobby;
-        public string Status { get; private set; } = "Выберите подключение";
+        public string Status { get; private set; } = "";
         public bool Busy { get; private set; }
         public bool SteamMode { get; private set; }
         public bool Connected => manager.IsClientStarted;

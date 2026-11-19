@@ -73,6 +73,11 @@ namespace Raid.UI
         public void Open(UiPage value)
         {
             page = value;
+            bool landing = page == UiPage.Main;
+            Root.sizeDelta = landing ? new Vector2(840, 642) : new Vector2(1180, 810);
+            float headingWidth = Root.sizeDelta.x - 200;
+            title.rectTransform.sizeDelta = new Vector2(headingWidth, 56);
+            subtitle.rectTransform.sizeDelta = new Vector2(headingWidth, 32);
             headerSymbol.sprite=DiveInstruments.Art(value switch {
                 UiPage.Crew=>DiveInstruments.Mark.Helmet,UiPage.Connection=>DiveInstruments.Mark.Compass,
                 UiPage.Settings=>DiveInstruments.Mark.Spear,UiPage.Pause=>DiveInstruments.Mark.Helmet,
@@ -99,7 +104,9 @@ namespace Raid.UI
             bool connected = session != null && session.Connected;
             bool offlineAvailable = session != null && !busy && !connected;
             solo.interactable=offlineAvailable;
-            UiKit.Set(mainStatus, session == null ? UiText.MenuConnectionMissing : session.Status);
+            var status=session == null ? UiText.MenuConnectionMissing : session.Status;
+            mainStatus.gameObject.SetActive(!string.IsNullOrWhiteSpace(status));
+            UiKit.Set(mainStatus, status);
             if (page == UiPage.Connection)
             {
                 var lobby = session == null ? null : session.lobby;
@@ -157,28 +164,15 @@ namespace Raid.UI
 
         void BuildMain()
         {
-            RectTransform ignored; var root = Page(UiPage.Main, false, out ignored);
-            ignored.gameObject.SetActive(false);
-            var row = UiKit.Row(root, "MainColumns", 44); UiKit.Fill(row);
-            var intro = UiKit.Column(row, "ExpeditionBrief", 18); UiKit.Size(intro, width: 515, flexibleWidth: 1);
-            var chart=UiKit.Panel(intro,"Vessel station profile",UiTheme.Panel);UiKit.Tile(chart);UiKit.Size(chart,184);
-            var plate=UiKit.Symbol(chart.transform,"NEREID profile",DiveInstruments.Mark.Submarine,UiTheme.Cyan);
-            UiKit.Fill(plate.rectTransform,26);
-            var shipName=UiKit.Label(chart.transform,"Vessel designation","NEREID",22,UiTheme.Text);
-            UiKit.Place(shipName.rectTransform,Vector2.up,Vector2.up,new Vector2(18,-8),new Vector2(160,33));
-            Line(intro, "Description", UiText.MenuMainDescription, 82, 23);
-
-            var rule = UiKit.Panel(intro, "Rule", UiTheme.Edge); UiKit.Size(rule, 2);
-            var statusScroll = UiKit.Scroll(intro, "SessionMessage", out var statusContent); UiKit.Size(statusScroll, 104);
-            mainStatus = UiKit.Label(statusContent, "Status", UiText.MenuConnectionMissing, 21, UiTheme.Muted);
-
-            var actions = UiKit.Column(row, "MainActions", 16); UiKit.Size(actions, width: 480, flexibleWidth: 1);
-            solo=UiKit.Button(actions,"SoloDive","Играть одному",()=>StartConnection(s=>s.HostLocal()),true,68);
-            UiKit.Button(actions, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); }, height: 68);
-            UiKit.Button(actions, "JoinSession", UiText.MenuJoin, () => { createIntent = false; localTest = false; app.ShowPage(UiPage.Connection); }, height: 68);
-            UiKit.Button(actions, "MainSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
-            UiKit.Button(actions, "MainQuit", UiText.MenuQuit, RequestQuit, height: 60);
-            Line(actions, "NavigationHelp", UiText.MenuFooterOffline, 88, 21, UiTheme.Muted);
+            Page(UiPage.Main, false, out var actions);
+            solo=UiKit.Button(actions,"SoloDive","Играть одному",()=>StartConnection(s=>s.HostLocal()),true,82);
+            var multiplayer = UiKit.Row(actions, "Multiplayer", 16);UiKit.Size(multiplayer, 70);
+            UiKit.Button(multiplayer, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); });
+            UiKit.Button(multiplayer, "JoinSession", UiText.MenuJoin, () => { createIntent = false; localTest = false; app.ShowPage(UiPage.Connection); });
+            var utility = UiKit.Row(actions, "Options", 16);UiKit.Size(utility, 60);
+            UiKit.Button(utility, "MainSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings));
+            UiKit.Button(utility, "MainQuit", UiText.MenuQuit, RequestQuit);
+            mainStatus = Line(actions, "Session status", "", 88, 23, UiTheme.Amber);
         }
 
         void BuildConnection()
