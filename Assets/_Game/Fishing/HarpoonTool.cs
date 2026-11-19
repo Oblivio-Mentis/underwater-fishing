@@ -187,7 +187,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
-            if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Motor.Oxygen <= 0f || Time.unscaledTime < _nextFire) return;
+            if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
@@ -264,7 +264,7 @@ namespace Raid
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
         internal bool QaFireOwned()
         {
-            if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null || Motor.Oxygen <= 0
+            if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null
                 || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
             FireServer(); return true;
         }
@@ -529,7 +529,7 @@ namespace Raid
 
         static bool CanTetherParticipant(HarpoonTool tool) => tool != null && tool.IsServerInitialized && tool.Owner.IsActive
             && tool.tuning != null && tool.friendTetherTuning != null && tool.Motor != null && tool.Motor.tuning != null
-            && !tool.Motor.IsHelpless && tool.Motor.Oxygen > 0;
+            && !tool.Motor.IsHelpless;
         static bool HasFishingLine(HarpoonTool tool) => tool._fish != null && tool._fish.Mode >= FishMode.Hooked && tool._fish.Mode <= FishMode.Tired;
         static HarpoonTool ToolOf(NetworkObject target) => target == null ? null : target.GetComponent<HarpoonTool>();
         static DiverMotor MotorOf(NetworkObject target) => target == null ? null : target.GetComponent<DiverMotor>();

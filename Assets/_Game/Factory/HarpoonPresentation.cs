@@ -17,7 +17,7 @@ namespace Raid
         Camera view;
         DiverMotor owner;
         HarpoonTool tool;
-        Transform model,legacyModel,reel,loadedBolt,slide;
+        Transform model,legacyModel,reel,loadedBolt,slide,staticHousing,buildParent;
         HarpoonShotFx shotFx;
         DiveHands hands;
         DiverMotor viewed;
@@ -126,6 +126,8 @@ namespace Raid
         {
             hands=new DiveHands(this,view.transform);
             model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
+            staticHousing=DiveOutfit.Pivot(model,"Pressure assembly",Vector3.zero);
+            buildParent=staticHousing;
             // Four axial rings and an eight-sided profile bevel every receiver edge.
             Box("Machined receiver",new Vector3(0,0,0),new Vector3(.108f,.088f,.232f),.012f,steel);
             Box("Rear shock block",new Vector3(0,-.004f,-.127f),new Vector3(.095f,.075f,.035f),.009f,dark);
@@ -179,6 +181,12 @@ namespace Raid
             Tube("Hydraulic hose",new[]{new Vector3(-.041f,-.031f,-.098f),new Vector3(-.071f,-.062f,-.14f),new Vector3(-.054f,-.098f,-.15f),new Vector3(.012f,-.078f,-.117f)},.006f,dark,8);
             Tube("Hose ferrule",new[]{new Vector3(-.041f,-.031f,-.098f),new Vector3(-.051f,-.042f,-.113f)},.008f,steel,8);
 
+            Tube("Lower frame spar",new[]{new Vector3(0,-.042f,-.09f),new Vector3(0,-.063f,-.23f),new Vector3(0,-.035f,-.255f)},.012f,steel,8);
+            Box("Resilient shoulder pad",new Vector3(0,-.016f,-.248f),new Vector3(.073f,.107f,.035f),.013f,dark);
+            Box("Ochre breech cover",new Vector3(0,.013f,-.138f),new Vector3(.084f,.065f,.088f),.012f,amber);
+            for(int i=0;i<3;i++)
+                Box("Foregrip rib "+i,new Vector3(0,-.018f,.117f+i*.025f),new Vector3(.066f,.045f,.014f),.005f,dark);
+            buildParent=model;
             // Forearm enters from below the camera; compact finger pieces wrap the safety grip.
             Tube("Diving sleeve",new[]{new Vector3(.12f,-.244f,-.16f),new Vector3(.053f,-.13f,-.095f)},.045f,amber,10,null,.040f);
             Tube("Sealed glove cuff",new[]{new Vector3(.057f,-.14f,-.101f),new Vector3(.04f,-.103f,-.083f)},.043f,dark,10,null,.037f);
@@ -194,6 +202,44 @@ namespace Raid
             var muzzle=new GameObject("Harpoon muzzle anchor").transform;muzzle.SetParent(model,false);muzzle.localPosition=new Vector3(0,.025f,.34f);
             var fx=new GameObject("Owned harpoon shot presentation");fx.transform.SetParent(view.transform,false);shotFx=fx.AddComponent<HarpoonShotFx>();
             shotFx.Initialize(tool,muzzle,loadedBolt,reel,steel);tool.ShotVisual+=OnAcceptedShot;
+        }
+
+        // The diver carries the same assembled receiver, bolt and drum as the camera model.
+        // Batch each rigid mechanism by material so additional crew do not add a draw for every screw.
+        internal bool MakeWorldModel(Transform worldGun,List<Mesh> worldMeshes,out Transform bolt,out Transform drum,out Transform muzzle,out Transform shuttle)
+        {
+            bolt=drum=muzzle=shuttle=null;
+            if(staticHousing==null || loadedBolt==null || slide==null)return false;
+            CopyRigidGroup(staticHousing,worldGun,worldMeshes);
+            bolt=CopyRigidGroup(loadedBolt,worldGun,worldMeshes);
+            drum=CopyRigidGroup(reel,worldGun,worldMeshes);
+            shuttle=CopyRigidGroup(slide,worldGun,worldMeshes);
+            muzzle=DiveOutfit.Pivot(worldGun,"Cable guide",new Vector3(0,.025f,.34f));
+            return true;
+        }
+
+        Transform CopyRigidGroup(Transform source,Transform target,List<Mesh> owned)
+        {
+            var group=DiveOutfit.Pivot(target,source.name,source.localPosition);
+            var batches=new Dictionary<Material,List<CombineInstance>>();
+            var inverse=source.worldToLocalMatrix;
+            foreach(var renderer in source.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if(renderer==statusLamp)continue;
+                var material=renderer.sharedMaterial;
+                if(!batches.TryGetValue(material,out var parts))
+                    batches.Add(material,parts=new List<CombineInstance>());
+                parts.Add(new CombineInstance{mesh=renderer.GetComponent<MeshFilter>().sharedMesh,transform=inverse*renderer.transform.localToWorldMatrix});
+            }
+            foreach(var batch in batches)
+            {
+                var mesh=new Mesh{name=source.name+" / "+batch.Key.name,hideFlags=HideFlags.DontSave};
+                mesh.CombineMeshes(batch.Value.ToArray(),true,true);owned.Add(mesh);
+                var part=DiveOutfit.Pivot(group,batch.Key.name,Vector3.zero);
+                part.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+                part.gameObject.AddComponent<MeshRenderer>().sharedMaterial=batch.Key;
+            }
+            return group;
         }
 
         void OnAcceptedShot(Vector3 origin,Vector3 endpoint){recoilVelocity+=1.05f;}
@@ -215,7 +261,7 @@ namespace Raid
         {
             mesh.name=name+" / owned view mesh";mesh.hideFlags=HideFlags.DontSave;meshes.Add(mesh);
             var part=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));part.hideFlags=HideFlags.DontSave;
-            part.transform.SetParent(parent!=null?parent:model,false);part.transform.localPosition=position;part.transform.localRotation=rotation;
+            part.transform.SetParent(parent!=null?parent:buildParent,false);part.transform.localPosition=position;part.transform.localRotation=rotation;
             part.GetComponent<MeshFilter>().sharedMesh=mesh;var renderer=part.GetComponent<MeshRenderer>();renderer.sharedMaterial=material;
             renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=false;renderer.lightProbeUsage=LightProbeUsage.Off;
             return part.transform;

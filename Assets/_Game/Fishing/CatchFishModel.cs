@@ -116,6 +116,15 @@ namespace Raid
                     body.Quad(Point(rings[ring], a), Point(rings[ring], b), Point(rings[ring+1], b), Point(rings[ring+1], a), color);
                 }
 
+            // Close the nose and tail rings so an axial harpoon shot hits the visible silhouette.
+            for(int side=0;side<segments;side++)
+            {
+                float a=side*Mathf.PI*2/segments, b=(side+1)*Mathf.PI*2/segments;
+                body.Fin(Vector3.forward*rings[0].x,Point(rings[0],b),Point(rings[0],a),0);
+                var nose=rings[rings.Length-1];
+                body.Fin(Vector3.forward*nose.x,Point(nose,a),Point(nose,b),0);
+            }
+
             foreach (int sign in new[] {-1,1})
             {
                 if (bristle)
