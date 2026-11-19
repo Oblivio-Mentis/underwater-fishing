@@ -20,6 +20,8 @@ Shader "RAID/Nereid Reef"
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
+            // Squared-distance extinction, diffuse skylight and work-light attenuation at this depth.
+            float3 _NereidReefClarity;
             // This large generated terrain is shared by both Forward renderers. Read the three
             // actual spot lights so distant per-object light selection cannot move their footprints.
             float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
@@ -99,12 +101,12 @@ Shader "RAID/Nereid Reef"
                 float face=abs(dot(n,-toSurface/d));
                 float rim=(1.-face)*(1.-face);
                 float wrapped=.32+.68*face;
-                float clarity=exp2(-d*d*.0072);
-                half3 closeColor=rgb*.82+pool*(base*(wrapped*1.45)+half3(.016,.027,.028)*(.4+grain)*wrapped);
+                float clarity=exp2(-d*d*_NereidReefClarity.x);
+                half3 closeColor=rgb*_NereidReefClarity.y+pool*(base*(wrapped*1.45)+half3(.016,.027,.028)*(.4+grain)*wrapped);
                 closeColor+=_Hide*pool*rim*half3(.025,.092,.103);
                 half3 murk=lerp(WaterColumnColor(toSurface/d),closeColor,clarity);
                 half3 workLight=base*HullIrradiance(i.pos,n)*(.86+.18*grain);
-                half3 workTransmission=lerp(transmit,exp2(-d*half3(.14,.114,.10)),_NereidTurbidity);
+                half3 workTransmission=lerp(transmit,exp2(-d*_NereidReefClarity.z*half3(.14,.114,.10)),_NereidTurbidity);
                 return half4(lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission,1);
             }
             ENDHLSL

@@ -19,6 +19,7 @@ namespace Raid
         static readonly int LampOriginShader=Shader.PropertyToID("_NereidLampOriginRange");
         static readonly int LampConeShader=Shader.PropertyToID("_NereidLampCone");
         static readonly int WaterTintShader=Shader.PropertyToID("_NereidWaterTint");
+        static readonly int ReefClarityShader=Shader.PropertyToID("_NereidReefClarity");
         public float WaterBlend=>wetBlend;
 
         void SaveOceanSettings()
@@ -81,13 +82,17 @@ namespace Raid
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
             if(wetBlend<=0 && !appliedFog)return;
             UpdateDiveLamp(wet);
+            bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
             if(wetBlend>0)
             {
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
-                bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
-                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.084f,wetBlend);
-                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.044f,.103f,.128f);
+                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.049f,wetBlend);
+                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.075f,.164f,.195f);
+                // Match the reef's custom transmission to the visible range of fish and hull materials.
+                Shader.SetGlobalVector(ReefClarityShader,abyss
+                    ?new Vector4(.0072f,.82f,1f,0f)
+                    :new Vector4(.0023f,1.14f,.68f,0f));
                 RenderSettings.fogColor=Color.Lerp(initialColor,waterTint,wetBlend);
                 Shader.SetGlobalColor(WaterTintShader,waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
@@ -96,7 +101,7 @@ namespace Raid
             Shader.SetGlobalFloat(WaterShader,wetBlend);
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
-                color.postExposure.Override(Mathf.Lerp(.12f,-.19f,wetBlend));
+                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.19f:.28f,wetBlend));
                 color.saturation.Override(Mathf.Lerp(-5,-12,wetBlend));
                 color.contrast.Override(Mathf.Lerp(8,3,wetBlend));
             }

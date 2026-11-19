@@ -32,6 +32,10 @@ namespace Raid
             manager.ClientManager.OnClientConnectionState += OnClientState;
             manager.ServerManager.OnServerConnectionState += OnServerState;
             string[] args = Environment.GetCommandLineArgs();
+            int portIndex = Array.IndexOf(args, "-raid-local-port");
+            if (portIndex >= 0 && portIndex + 1 < args.Length &&
+                ushort.TryParse(args[portIndex + 1], out ushort port) && port > 0)
+                localTransport.SetPort(port);
             if (Array.IndexOf(args, "-raid-host") >= 0) HostLocal();
             if (Array.IndexOf(args, "-raid-client") >= 0) JoinLocal();
         }

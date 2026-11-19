@@ -98,7 +98,7 @@ namespace Raid.Nereid.Editor
             Place(angler+new Vector3(0,.3f,7.5f));
             yield return Wait("Nearby passive angler watches the diver in murky water",()=>
                 threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
-                UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.076f);
+                UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.04f && RenderSettings.fogDensity<.06f);
             float health=diver.Oxygen;
             Place(angler+new Vector3(0,.1f,3.6f));
             yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
@@ -118,6 +118,7 @@ namespace Raid.Nereid.Editor
             Stage(2);
             yield return Wait("Depth two active",()=>threats.Reef.Active&&threats.Reef.Deep);
             FillCreel();Place(threats.Reef.Eel+Vector3.forward*1.2f);
+            yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.10f);
             yield return Wait("Eel warns with three occupied pockets",()=>threats.Reef.EelPhase==1&&tool.HasFullCreel);
             if(!tool.DropOneCatch())throw new InvalidOperationException("Could not drop the selected catch.");
             yield return Wait("Dropped fish diverts eel",()=>threats.Reef.EelPhase==3&&tool.CatchCount==2);
