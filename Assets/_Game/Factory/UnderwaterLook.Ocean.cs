@@ -8,15 +8,15 @@ namespace Raid
         DiverMotor viewed;
         bool initialFog,appliedFog;
         FogMode initialMode;
-        float initialDensity,wetBlend,threatBlend;
+        float initialDensity,wetBlend;
         Color initialColor;
-        const float BeamCandela=76f;
+        const float BeamCandela=58f;
         Light diveLamp;
         static readonly int WaterShader=Shader.PropertyToID("_NereidTurbidity");
         static readonly int LampShader=Shader.PropertyToID("_NereidLampForward");
         static readonly int LampOriginShader=Shader.PropertyToID("_NereidLampOriginRange");
+        static readonly int WaterTintShader=Shader.PropertyToID("_NereidWaterTint");
         public float WaterBlend=>wetBlend;
-        public float ProximityFear=>threatBlend;
 
         void SaveOceanSettings()
         {
@@ -54,9 +54,6 @@ namespace Raid
             bool wet=IsEyeUnderwater();
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
-            float danger=wet && !viewed.IsDead && ThreatDirector.Instance!=null?
-                ThreatDirector.Instance.NearbyDanger(camera.transform.position):0;
-            threatBlend=Mathf.MoveTowards(threatBlend,danger,dt*(danger>threatBlend?1.5f:.47f));
             if(wetBlend<=0 && !appliedFog)return;
             if(wetBlend>0)
             {
@@ -64,7 +61,10 @@ namespace Raid
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
                 bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
                 RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.084f,wetBlend);
-                RenderSettings.fogColor=Color.Lerp(initialColor,new Color(.029f,.077f,.093f),wetBlend);
+                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.044f,.103f,.128f);
+                RenderSettings.fogColor=Color.Lerp(initialColor,waterTint,wetBlend);
+                Shader.SetGlobalColor(WaterTintShader,waterTint);
+                if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
                 if(diveLamp!=null)
                 {
                     var t=diveLamp.transform;var p=t.position;
@@ -77,18 +77,19 @@ namespace Raid
             if(diveLamp!=null){diveLamp.enabled=wetBlend>.04f;diveLamp.intensity=BeamCandela*wetBlend;}
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
-                color.postExposure.Override(Mathf.Lerp(.12f,-.42f,wetBlend));
-                color.saturation.Override(Mathf.Lerp(-5,-25,wetBlend));
-                color.contrast.Override(Mathf.Lerp(8,14,wetBlend));
+                color.postExposure.Override(Mathf.Lerp(.12f,-.19f,wetBlend));
+                color.saturation.Override(Mathf.Lerp(-5,-12,wetBlend));
+                color.contrast.Override(Mathf.Lerp(8,3,wetBlend));
             }
             if(profile!=null && profile.TryGet<Vignette>(out var vignette))
-                vignette.intensity.Override(.16f+wetBlend*(.08f+threatBlend*.095f));
+                vignette.intensity.Override(Mathf.Lerp(.16f,.14f,wetBlend));
         }
 
         void ResetFog()
         {
             RenderSettings.fog=initialFog;RenderSettings.fogMode=initialMode;
             RenderSettings.fogDensity=initialDensity;RenderSettings.fogColor=initialColor;
+            if(camera!=null)camera.backgroundColor=initialColor;
             appliedFog=false;Shader.SetGlobalFloat(WaterShader,0);
         }
 

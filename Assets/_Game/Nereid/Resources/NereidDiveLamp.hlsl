@@ -12,6 +12,6 @@ float NereidBeam(float3 positionWS)
     float spot=smoothstep(.8290,.9511,axis); // 68 degree penumbra, 36 degree core.
     float q=distance2/max(.001,_NereidLampOriginRange.w*_NereidLampOriginRange.w);
     float window=saturate(1.-q*q);
-    return spot*window*window*min(6.,76./(distance2+4.));
+    return spot*window*window*min(3.2,58./(distance2+5.));
 }
 #endif

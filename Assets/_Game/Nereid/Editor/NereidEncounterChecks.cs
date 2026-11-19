@@ -96,8 +96,8 @@ namespace Raid.Nereid.Editor
             yield return Wait("Depth one active",()=>threats.Reef.Active&&!threats.Reef.Deep);
             var angler=threats.tuning.predatorSpawn;
             Place(angler+new Vector3(0,.3f,7.5f));
-            yield return Wait("Nearby passive predator raises diver pulse in murky water",()=>
-                threats.AnglerStage==ThreatDirector.HuntStage.Watching && UnderwaterLook.Instance.ProximityFear>.16f &&
+            yield return Wait("Nearby passive angler watches the diver in murky water",()=>
+                threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
                 UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.076f);
             float health=diver.Oxygen;
             Place(angler+new Vector3(0,.1f,3.6f));

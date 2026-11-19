@@ -16,4 +16,5 @@ No new hooks authorized; implement explicit brief first.
 ## Mechanic specs
 See Docs/BRIEF.md sections3-12. Tuning in Assets/_Game/Data assets; no shop currency or reset.
 ## Changelog
+2026-11-19 · По итогам плейтеста утвердили тон тёмной промысловой экспедиции. Приближение хищника читается по его позе и поведению, экипаж ориентируется по рельефу и рабочему свету.
 2026-11-18: adopted supplied brief, Steam prioritized by explicit user request.
