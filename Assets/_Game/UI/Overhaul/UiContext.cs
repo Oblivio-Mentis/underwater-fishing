@@ -49,13 +49,9 @@ namespace Raid.UI
             foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
-            var playerCamera=Player.GetComponentInChildren<Camera>();RaycastHit consoleHit;
-            if(playerCamera!=null && Physics.Raycast(playerCamera.transform.position,playerCamera.transform.forward,out consoleHit,4f,~0,QueryTriggerInteraction.Ignore))
-            {
-                var station=consoleHit.collider.GetComponentInParent<ShipConsole>();
-                if(station!=null && station.InRange(Player)){AimedConsole=station;Interaction=UiInteraction.Terminal;return;}
-            }
-            if(NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
+            AimedConsole=ShipConsole.ResolveSight(Player,Player.GetComponentInChildren<Camera>());
+            if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}
+            if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
             var camera=Camera.main;RaycastHit hit;
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
             {

@@ -3,24 +3,24 @@ namespace Raid.UI
 {
     public static class UiTheme
     {
-        public static readonly Color Steel = Hex("142A34");
-        public static readonly Color Panel = Hex("1D3740");
-        public static readonly Color Edge = Hex("42616A");
-        public static readonly Color Text = Hex("E5EFF1");
-        public static readonly Color Muted = Hex("93ADB5");
-        public static readonly Color Cyan = Hex("32B8C5");
-        public static readonly Color Green = Hex("6CC3A4");
-        public static readonly Color Amber = Hex("E6A64C");
-        public static readonly Color Red = Hex("D75E58");
+        public static readonly Color Steel = Hex("122024");
+        public static readonly Color Panel = Hex("223438");
+        public static readonly Color Edge = Hex("58706C");
+        public static readonly Color Text = Hex("F0F3E9");
+        public static readonly Color Muted = Hex("A8BEB5");
+        public static readonly Color Cyan = Hex("9BD6C4");
+        public static readonly Color Green = Hex("82D283");
+        public static readonly Color Amber = Hex("F0BC68");
+        public static readonly Color Red = Hex("F48065");
         static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
     }
     // Local presentation state only. The server continues validating every action.
     public static class UiInputGate
     {
-        public static bool Active, Modal, AllowAssist;
+        public static bool Active, Modal, AllowAssist, PointerReserved;
         public static float ResumeAt;
         public static bool Blocked => Active && (Modal || Time.unscaledTime < ResumeAt || !Application.isFocused);
-        public static void Reset() { Active=false; Modal=false; AllowAssist=false; ResumeAt=0; }
+        public static void Reset() { Active=false; Modal=false; AllowAssist=false; PointerReserved=false; ResumeAt=0; }
     }
     public enum UiPage { None, Main, Connection, Crew, Terminal, Cargo, Pause, Settings }
     public interface IUiController

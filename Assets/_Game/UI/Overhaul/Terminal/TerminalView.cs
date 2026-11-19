@@ -33,7 +33,7 @@ namespace Raid.UI
             string[] names={UiText.BiomassLabel,UiText.ChitinLabel,UiText.ScrapLabel,UiText.ElectronicsLabel};
             for(int i=0;i<4;i++)
             {
-                var panel=UiKit.Panel(resourceRow,"Resource"+i,UiTheme.Panel);UiKit.Size(panel,66,flexibleWidth:1);
+                var panel=UiKit.Panel(resourceRow,"Resource"+i,UiTheme.Panel);UiKit.Tile(panel);UiKit.Size(panel,66,flexibleWidth:1);
                 var body=UiKit.Column(panel.transform,"Layout",0);UiKit.Fill(body,10);
                 TerminalParts.Text(body,"Name",names[i],22,17,UiTheme.Muted);resources[i]=TerminalParts.Text(body,"Amount","—",28,26);
             }

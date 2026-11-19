@@ -14,11 +14,12 @@ namespace Raid.UI
         readonly RectTransform surface, body;
         readonly Dictionary<UiPage, RectTransform> pages = new Dictionary<UiPage, RectTransform>();
         readonly TMP_Text title, subtitle, footer;
+        readonly Image headerSymbol;
         readonly Button back;
         UiPage page;
         bool createIntent = true, localTest;
 
-        Button createIntentButton, joinIntentButton, steamTab, localTab;
+        Button solo,createIntentButton, joinIntentButton, steamTab, localTab;
         RectTransform steamSection, localSection, steamCreateSection, steamJoinSection;
         TMP_Text mainStatus, steamState, connectionStatus, connectionBusy, crewCount, crewRole, crewLobby;
         TMP_InputField lobbyInput, addressInput;
@@ -45,12 +46,14 @@ namespace Raid.UI
             surface = UiKit.Frame(parent, "MenuView", 1180, 810);
             Root = (RectTransform)surface.parent;
 
+            headerSymbol=UiKit.Symbol(surface,"Page symbol",DiveInstruments.Mark.Submarine,UiTheme.Cyan);
+            SetArea(headerSymbol.rectTransform,new Vector2(30,-33),new Vector2(110,90));
             var micro = UiKit.Label(surface, "Service", UiText.MenuService, 18, UiTheme.Cyan);
-            SetArea(micro.rectTransform, new Vector2(32, -18), new Vector2(1100, 26));
+            SetArea(micro.rectTransform, new Vector2(168, -19), new Vector2(950, 26));
             title = UiKit.Label(surface, "Title", UiText.MenuMainTitle, 40);
-            SetArea(title.rectTransform, new Vector2(30, -52), new Vector2(1108, 56));
+            SetArea(title.rectTransform, new Vector2(166, -52), new Vector2(970, 56));
             subtitle = UiKit.Label(surface, "Subtitle", "", 21, UiTheme.Muted);
-            SetArea(subtitle.rectTransform, new Vector2(32, -112), new Vector2(1100, 32));
+            SetArea(subtitle.rectTransform, new Vector2(168, -112), new Vector2(950, 32));
             var rule = UiKit.Panel(surface, "HeaderRule", UiTheme.Edge);
             rule.rectTransform.anchorMin = new Vector2(0, 1); rule.rectTransform.anchorMax = Vector2.one;
             rule.rectTransform.pivot = new Vector2(.5f, 1); rule.rectTransform.anchoredPosition = new Vector2(0, -155); rule.rectTransform.sizeDelta = new Vector2(-64, 2);
@@ -70,6 +73,10 @@ namespace Raid.UI
         public void Open(UiPage value)
         {
             page = value;
+            headerSymbol.sprite=DiveInstruments.Art(value switch {
+                UiPage.Crew=>DiveInstruments.Mark.Helmet,UiPage.Connection=>DiveInstruments.Mark.Compass,
+                UiPage.Settings=>DiveInstruments.Mark.Spear,UiPage.Pause=>DiveInstruments.Mark.Helmet,
+                _=>DiveInstruments.Mark.Submarine });
             foreach (var entry in pages) entry.Value.gameObject.SetActive(entry.Key == value);
             back.gameObject.SetActive(value != UiPage.Main);
             if (value == UiPage.Main) { UiKit.Set(title, UiText.MenuBrand); UiKit.Set(subtitle, UiText.MenuMainSubtitle); }
@@ -91,6 +98,7 @@ namespace Raid.UI
             bool busy = session != null && session.Busy;
             bool connected = session != null && session.Connected;
             bool offlineAvailable = session != null && !busy && !connected;
+            solo.interactable=offlineAvailable;
             UiKit.Set(mainStatus, session == null ? UiText.MenuConnectionMissing : session.Status);
             if (page == UiPage.Connection)
             {
@@ -154,16 +162,20 @@ namespace Raid.UI
             ignored.gameObject.SetActive(false);
             var row = UiKit.Row(root, "MainColumns", 44); UiKit.Fill(row);
             var intro = UiKit.Column(row, "ExpeditionBrief", 18); UiKit.Size(intro, width: 515, flexibleWidth: 1);
-            Line(intro, "Heading", UiText.MenuMainHeading, 144, 56, UiTheme.Cyan);
-            Line(intro, "Description", UiText.MenuMainDescription, 160, 25);
-            Line(intro, "Loop", UiText.MenuMainLoop, 58, 18, UiTheme.Muted);
+            var chart=UiKit.Panel(intro,"Vessel station profile",UiTheme.Panel);UiKit.Tile(chart);UiKit.Size(chart,184);
+            var plate=UiKit.Symbol(chart.transform,"NEREID profile",DiveInstruments.Mark.Submarine,UiTheme.Cyan);
+            UiKit.Fill(plate.rectTransform,26);
+            var shipName=UiKit.Label(chart.transform,"Vessel designation","NEREID",22,UiTheme.Text);
+            UiKit.Place(shipName.rectTransform,Vector2.up,Vector2.up,new Vector2(18,-8),new Vector2(160,33));
+            Line(intro, "Description", UiText.MenuMainDescription, 82, 23);
+
             var rule = UiKit.Panel(intro, "Rule", UiTheme.Edge); UiKit.Size(rule, 2);
             var statusScroll = UiKit.Scroll(intro, "SessionMessage", out var statusContent); UiKit.Size(statusScroll, 104);
             mainStatus = UiKit.Label(statusContent, "Status", UiText.MenuConnectionMissing, 21, UiTheme.Muted);
 
             var actions = UiKit.Column(row, "MainActions", 16); UiKit.Size(actions, width: 480, flexibleWidth: 1);
-            Line(actions, "Heading", UiText.MenuMainTitle, 56, 28);
-            UiKit.Button(actions, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); }, true, 68);
+            solo=UiKit.Button(actions,"SoloDive","Играть одному",()=>StartConnection(s=>s.HostLocal()),true,68);
+            UiKit.Button(actions, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); }, height: 68);
             UiKit.Button(actions, "JoinSession", UiText.MenuJoin, () => { createIntent = false; localTest = false; app.ShowPage(UiPage.Connection); }, height: 68);
             UiKit.Button(actions, "MainSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
             UiKit.Button(actions, "MainQuit", UiText.MenuQuit, RequestQuit, height: 60);
@@ -245,7 +257,7 @@ namespace Raid.UI
             crewRole = UiKit.Label(summary, "Role", "", 22, UiTheme.Muted); UiKit.Size(crewRole, width: 350);
             for (int i = 0; i < 5; i++)
             {
-                var panel = UiKit.Panel(content, "CrewSlot" + (i + 1), UiTheme.Panel); UiKit.Size(panel, 62);
+                var panel = UiKit.Panel(content, "CrewSlot" + (i + 1), UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 62);
                 var layout = UiKit.Row(panel.transform, "Row", 14, 9); UiKit.Fill(layout);
                 var mark = UiKit.Panel(layout, "Signal", UiTheme.Edge); UiKit.Size(mark, width: 5);
                 var number = UiKit.Label(layout, "Slot", (i + 1).ToString("00"), 25, UiTheme.Muted); UiKit.Size(number, width: 48);
@@ -268,7 +280,7 @@ namespace Raid.UI
         void BuildPause()
         {
             Page(UiPage.Pause, false, out var content);
-            Line(content, "Help", UiText.MenuPauseDescription, 94, 25, UiTheme.Muted);
+
             UiKit.Button(content, "PauseResume", UiText.MenuResume, () => app.ShowPage(UiPage.None), true, 64);
             UiKit.Button(content, "PauseSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
             UiKit.Button(content, "PauseCrew", UiText.MenuCrew, () => app.ShowPage(UiPage.Crew), height: 60);
@@ -294,7 +306,7 @@ namespace Raid.UI
 
         void AddSetting(Transform parent, string name, string caption, float min, float max, Func<float> read, Action<float> write, Func<float, string> format)
         {
-            var panel = UiKit.Panel(parent, name + "Setting", UiTheme.Panel); UiKit.Size(panel, 92);
+            var panel = UiKit.Panel(parent, name + "Setting", UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 92);
             var column = UiKit.Column(panel.transform, "Content", 8, 12); UiKit.Fill(column);
             var heading = UiKit.Row(column, "Heading", 16); UiKit.Size(heading, 28);
             var label = UiKit.Label(heading, "Label", caption, 21, UiTheme.Muted); UiKit.Size(label, flexibleWidth: 1);

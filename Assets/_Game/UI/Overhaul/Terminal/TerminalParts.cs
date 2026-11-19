@@ -12,6 +12,8 @@ namespace Raid.UI
             var surface=UiKit.Frame(parent,name,width,height);root=(RectTransform)surface.parent;
             var column=UiKit.Column(surface,"Layout",12);UiKit.Fill(column,24);
             var heading=UiKit.Row(column,"Heading",20);UiKit.Size(heading,62);
+            var icon=UiKit.Symbol(heading,"Station symbol",name=="CargoView"?DiveInstruments.Mark.Glove:DiveInstruments.Mark.Submarine,UiTheme.Cyan);
+            UiKit.Size(icon,50,68);
             var titles=UiKit.Column(heading,"Titles",0);UiKit.Size(titles,62,flexibleWidth:1);
             var eyebrow=UiKit.Label(titles,"Kicker",kicker,17,UiTheme.Cyan);UiKit.Size(eyebrow,22);
             var label=UiKit.Label(titles,"Title",title,30);UiKit.Size(label,40);
@@ -20,7 +22,7 @@ namespace Raid.UI
         }
         public static RectTransform Card(Transform parent,string name,float height)
         {
-            var panel=UiKit.Panel(parent,name,UiTheme.Panel);UiKit.Size(panel,height,flexibleWidth:1);
+            var panel=UiKit.Panel(parent,name,UiTheme.Panel);UiKit.Tile(panel);UiKit.Size(panel,height,flexibleWidth:1);
             var body=UiKit.Column(panel.transform,"CardLayout",6);UiKit.Fill(body,16);return body;
         }
         public static TMP_Text Text(Transform parent,string name,string value,float height=30,float size=21,Color? color=null)

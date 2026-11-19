@@ -60,7 +60,7 @@ namespace Raid.UI
         public static string HudDepthState(bool inside) => inside?"НА БОРТУ":"ПОД ВОДОЙ";
         public static string HudFood(int amount,int required) => "Пища  "+amount+" / "+required;
         public static string HudHungerTime(float seconds) => Time(seconds);
-        public static string HudConsolePrompt(ShipConsole console) => "E — "+console.Caption;
+        public static string HudConsolePrompt(ShipConsole console) => "ЛКМ — "+console.Caption;
         public static string HudConsoleAction(ShipConsoleKind kind) => kind==ShipConsoleKind.Process?"Переработать всю рыбу":kind==ShipConsoleKind.Feed?"Отдать всю рыбу":kind==ShipConsoleKind.Upgrades?"Улучшения снаряжения":kind==ShipConsoleKind.Reservoir?"Улов и состояние кормления":"Глубина и возвращение";
         public static string HudTetherActor(DiverMotor other,bool pulled) => (pulled?"ТРОС ОТ ":"ТРОС К ")+(other==null?(pulled?"НАПАРНИКА":"НАПАРНИКУ"):"ВОДОЛАЗ"+(pulled?"А ":"У ")+(other.OwnerId+1).ToString("00"));
         public static string HudTetherDistance(float distance,float maximum) => "Дистанция "+distance.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" / "+maximum.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" м";
