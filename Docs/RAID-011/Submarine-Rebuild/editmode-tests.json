@@ -1,5 +1,5 @@
 {
-  "job_id": "ba08b1e5951f485fa721a2ef89d92dee",
+  "job_id": "830f7a1541b04e57ac6e5f22b7da5c35",
   "status": "succeeded",
   "result": {
     "mode": "EditMode",
@@ -8,7 +8,7 @@
       "passed": 36,
       "failed": 0,
       "skipped": 0,
-      "durationSeconds": 0.2064379,
+      "durationSeconds": 1.016665,
       "resultState": "Passed"
     },
     "results": [
@@ -16,7 +16,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)",
         "state": "Passed",
-        "durationSeconds": 0.029152,
+        "durationSeconds": 0.0282458,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -25,7 +25,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)",
         "state": "Passed",
-        "durationSeconds": 0.0000651,
+        "durationSeconds": 0.0000875,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -34,7 +34,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)",
         "state": "Passed",
-        "durationSeconds": 0.0000211,
+        "durationSeconds": 0.0000321,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -52,7 +52,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)",
         "state": "Passed",
-        "durationSeconds": 0.0000153,
+        "durationSeconds": 0.0000198,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -61,7 +61,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)",
         "state": "Passed",
-        "durationSeconds": 0.0000159,
+        "durationSeconds": 0.0000184,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -70,7 +70,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)",
         "state": "Passed",
-        "durationSeconds": 0.0000168,
+        "durationSeconds": 0.0000192,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -79,7 +79,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)",
         "state": "Passed",
-        "durationSeconds": 0.0000155,
+        "durationSeconds": 0.000016,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -88,7 +88,7 @@
         "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)",
         "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)",
         "state": "Passed",
-        "durationSeconds": 0.0000158,
+        "durationSeconds": 0.0000163,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -97,7 +97,7 @@
         "name": "InvalidAgeCannotReserveStock",
         "fullName": "Raid.Tests.FishFlowStopTests.InvalidAgeCannotReserveStock",
         "state": "Passed",
-        "durationSeconds": 0.000087,
+        "durationSeconds": 0.0001059,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -106,7 +106,7 @@
         "name": "DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation",
         "fullName": "Raid.Tests.FishRouteQuoteTests.DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation",
         "state": "Passed",
-        "durationSeconds": 0.0033928,
+        "durationSeconds": 0.0007635,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -115,7 +115,7 @@
         "name": "EqualCountReplacementInvalidatesFishConfirmation",
         "fullName": "Raid.Tests.FishRouteQuoteTests.EqualCountReplacementInvalidatesFishConfirmation",
         "state": "Passed",
-        "durationSeconds": 0.0010861,
+        "durationSeconds": 0.0019185,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -124,7 +124,7 @@
         "name": "YieldChangeAndNewFoodRequirementInvalidateConfirmation",
         "fullName": "Raid.Tests.FishRouteQuoteTests.YieldChangeAndNewFoodRequirementInvalidateConfirmation",
         "state": "Passed",
-        "durationSeconds": 0.000111,
+        "durationSeconds": 0.0001419,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -133,7 +133,7 @@
         "name": "CargoCapacityAndDuplicateIdentityAreEnforced",
         "fullName": "Raid.Tests.TeamProgressTests.CargoCapacityAndDuplicateIdentityAreEnforced",
         "state": "Passed",
-        "durationSeconds": 0.0031449,
+        "durationSeconds": 0.003987,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -142,7 +142,7 @@
         "name": "CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved",
         "fullName": "Raid.Tests.TeamProgressTests.CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved",
         "state": "Passed",
-        "durationSeconds": 0.0317976,
+        "durationSeconds": 0.0336191,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -151,7 +151,7 @@
         "name": "DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding",
         "fullName": "Raid.Tests.TeamProgressTests.DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding",
         "state": "Passed",
-        "durationSeconds": 0.0005598,
+        "durationSeconds": 0.000636,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -160,7 +160,7 @@
         "name": "DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce",
         "fullName": "Raid.Tests.TeamProgressTests.DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce",
         "state": "Passed",
-        "durationSeconds": 0.0178069,
+        "durationSeconds": 0.0177607,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -169,7 +169,7 @@
         "name": "DeliverySnapshotsItemAndCountsLifetimeOnlyOnce",
         "fullName": "Raid.Tests.TeamProgressTests.DeliverySnapshotsItemAndCountsLifetimeOnlyOnce",
         "state": "Passed",
-        "durationSeconds": 0.0004233,
+        "durationSeconds": 0.0003354,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -178,7 +178,7 @@
         "name": "DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials",
         "fullName": "Raid.Tests.TeamProgressTests.DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials",
         "state": "Passed",
-        "durationSeconds": 0.000655,
+        "durationSeconds": 0.0004475,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -187,7 +187,7 @@
         "name": "FailedDefenseLimitsStockLossAndPreservesPermanentProgress",
         "fullName": "Raid.Tests.TeamProgressTests.FailedDefenseLimitsStockLossAndPreservesPermanentProgress",
         "state": "Passed",
-        "durationSeconds": 0.0005333,
+        "durationSeconds": 0.0004611,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -196,7 +196,7 @@
         "name": "FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)",
         "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)",
         "state": "Passed",
-        "durationSeconds": 0.0023805,
+        "durationSeconds": 0.0040783,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -205,7 +205,7 @@
         "name": "FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)",
         "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)",
         "state": "Passed",
-        "durationSeconds": 0.0001722,
+        "durationSeconds": 0.0003227,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -214,7 +214,7 @@
         "name": "FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)",
         "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)",
         "state": "Passed",
-        "durationSeconds": 0.0001571,
+        "durationSeconds": 0.0004239,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -223,7 +223,7 @@
         "name": "FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)",
         "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)",
         "state": "Passed",
-        "durationSeconds": 0.0001504,
+        "durationSeconds": 0.0002197,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -232,7 +232,7 @@
         "name": "FishCanBeConsumedOnlyOnce(True)",
         "fullName": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(True)",
         "state": "Passed",
-        "durationSeconds": 0.0004974,
+        "durationSeconds": 0.0007633,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -241,7 +241,7 @@
         "name": "FishCanBeConsumedOnlyOnce(False)",
         "fullName": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(False)",
         "state": "Passed",
-        "durationSeconds": 0.0001679,
+        "durationSeconds": 0.0001795,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -250,7 +250,7 @@
         "name": "HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn",
         "fullName": "Raid.Tests.TeamProgressTests.HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn",
         "state": "Passed",
-        "durationSeconds": 0.0008305,
+        "durationSeconds": 0.0007908,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -259,7 +259,7 @@
         "name": "LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging",
         "fullName": "Raid.Tests.TeamProgressTests.LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging",
         "state": "Passed",
-        "durationSeconds": 0.0002775,
+        "durationSeconds": 0.0004539,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -268,7 +268,7 @@
         "name": "MaximumUpgradeLevelCannotSpendResourcesAgain",
         "fullName": "Raid.Tests.TeamProgressTests.MaximumUpgradeLevelCannotSpendResourcesAgain",
         "state": "Passed",
-        "durationSeconds": 0.0002333,
+        "durationSeconds": 0.0003011,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -277,7 +277,7 @@
         "name": "MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything",
         "fullName": "Raid.Tests.TeamProgressTests.MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything",
         "state": "Passed",
-        "durationSeconds": 0.0003398,
+        "durationSeconds": 0.0003502,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -286,7 +286,7 @@
         "name": "MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce",
         "fullName": "Raid.Tests.TeamProgressTests.MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce",
         "state": "Passed",
-        "durationSeconds": 0.0005321,
+        "durationSeconds": 0.0004944,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -295,7 +295,7 @@
         "name": "SaveRoundTripPreservesProgressFeedingAndMidHoistCargo",
         "fullName": "Raid.Tests.TeamProgressTests.SaveRoundTripPreservesProgressFeedingAndMidHoistCargo",
         "state": "Passed",
-        "durationSeconds": 0.0146322,
+        "durationSeconds": 0.0160915,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -304,7 +304,7 @@
         "name": "StockLossAlsoObeysFractionalCapForSmallStock",
         "fullName": "Raid.Tests.TeamProgressTests.StockLossAlsoObeysFractionalCapForSmallStock",
         "state": "Passed",
-        "durationSeconds": 0.0004595,
+        "durationSeconds": 0.0003684,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -313,7 +313,7 @@
         "name": "UpgradePriceScalesAndChargesExactMaterials",
         "fullName": "Raid.Tests.TeamProgressTests.UpgradePriceScalesAndChargesExactMaterials",
         "state": "Passed",
-        "durationSeconds": 0.0005336,
+        "durationSeconds": 0.0003697,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -322,7 +322,7 @@
         "name": "WinchUpgradeActuallyIncreasesCapacityAndShortensCycle",
         "fullName": "Raid.Tests.TeamProgressTests.WinchUpgradeActuallyIncreasesCapacityAndShortensCycle",
         "state": "Passed",
-        "durationSeconds": 0.002095,
+        "durationSeconds": 0.0014161,
         "message": null,
         "stackTrace": null,
         "output": ""
@@ -331,7 +331,7 @@
         "name": "ZeroOfferingLootCannotBeFedOrDiscardedByFeeding",
         "fullName": "Raid.Tests.TeamProgressTests.ZeroOfferingLootCannotBeFedOrDiscardedByFeeding",
         "state": "Passed",
-        "durationSeconds": 0.000326,
+        "durationSeconds": 0.0003115,
         "message": null,
         "stackTrace": null,
         "output": ""
