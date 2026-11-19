@@ -29,7 +29,7 @@ namespace Raid
                 Release();if(Time.unscaledTime<searchAt)return;
                 searchAt=Time.unscaledTime+.3f;director=Object.FindAnyObjectByType<ThreatDirector>();
             }
-            if(director==null||!director.IsClientInitialized){RestoreOriginals();return;}
+            if(director==null||director.NetworkObject==null||!director.IsClientInitialized){RestoreOriginals();return;}
             if(visuals.Count==0&&skin!=null&&dark!=null&&tooth!=null)
             {
                 foreach(Transform child in director.transform)

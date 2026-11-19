@@ -57,7 +57,7 @@ namespace Raid
             saveFailed=false;
             travelDisplay.Value=0; stockLossDisplay.Value=0;
             atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
-            savePath=Path.Combine(Application.persistentDataPath,"team-progress.json");
+            savePath=Path.Combine(Application.persistentDataPath,UI.UiInputGate.Active?"raid011-team-progress.json":"team-progress.json");
             string[] args=Environment.GetCommandLineArgs();
             int saveArg=Array.IndexOf(args,"-raid-save");
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];

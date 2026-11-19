@@ -87,7 +87,7 @@ namespace Raid.UI
         public const string CargoAtBase="Грузовые операции доступны во время экспедиции";
         public const string LoadReady="Улов можно загрузить";
         public const string HoistReady="Контейнер готов к подъёму";
-        public const string CargoReturnHint="Для возвращения на базу завершите цикл и подойдите к терминалу резервуара.";
+        public const string CargoReturnHint="Для возвращения на базу завершите цикл и подойдите к навигационному компьютеру.";
         public const string CargoLoadingHint="Рыба в контейнере ещё не доставлена. Запустите подъём и дождитесь разгрузки.";
         public const string CargoRaisingHint="Контейнер поднимается. Новая загрузка временно закрыта.";
         public const string CargoUnloadingHint="Улов передаётся в резервуар после завершения разгрузки.";

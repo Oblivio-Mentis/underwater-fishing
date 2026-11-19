@@ -77,7 +77,7 @@ namespace Raid.UI
                 UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
                 UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired));
                 if(equipment)UiKit.Set(summary,ctx.AtBase?"Общее оборудование экипажа · установка на базе":"Установка оборудования доступна на базе");
-                if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  Для перехода вернитесь в лодку");
+                if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
                 string reason=TerminalParts.BaseReason(app);
                 UiKit.Set(footer,ctx.World.TravelRemaining>0?UiText.TravelRemaining(ctx.World.TravelRemaining):!string.IsNullOrEmpty(reason)?reason:UiText.CargoSummary(view,ctx.Tuning));
                 if(equipment&&string.IsNullOrEmpty(reason))UiKit.Set(footer,"Улучшения действуют на весь экипаж");
@@ -113,17 +113,20 @@ namespace Raid.UI
                 TerminalParts.Text(empty,"Description",foodOnly?UiText.NoFoodHint:UiText.NoStockHint,66,22,UiTheme.Muted);return;
             }
             if(!foodOnly)TerminalParts.Text(content,"ListHint",UiText.StockIdentityHint,32,20,UiTheme.Muted);
+            if(ShipConsole.Stations.Count>0 && items.Any(item=>item.offering>0))
+            {
+                var hint=TerminalParts.Text(content,"RouteHint","",32,20,UiTheme.Cyan);
+                refreshRows.Add(()=>UiKit.Set(hint,app.Context.World.FishRoute.active?UiText.RouteBusy:"Подача всей рыбы: пульты по сторонам резервуара"));
+            }
             for(int i=0;i<items.Count;i++)AddItem(items[i],i,foodOnly);
         }
         void AddItem(CatchItem item,int index,bool feedOnly)
         {
             if(ShipConsole.Stations.Count>0 && item.offering>0)
             {
-                var card=TerminalParts.Card(content,"Catch_"+item.id,116);
+                var card=TerminalParts.Card(content,"Catch_"+item.id,100);
                 TerminalParts.Text(card,"Title",UiText.ItemTitle(index,item),30,25);
                 TerminalParts.Text(card,"Yield",UiText.YieldLabel(item)+"  •  "+UiText.FoodValue(item.offering),26,20,UiTheme.Muted);
-                var routeHint=TerminalParts.Text(card,"RouteHint","",24,18,UiTheme.Cyan);
-                refreshRows.Add(()=>UiKit.Set(routeHint,app.Context.World.FishRoute.active?UiText.RouteBusy:"Подача рыбы: пульты по сторонам резервуара"));
                 return;
             }
             long id=item.id;var body=TerminalParts.Card(content,"Catch_"+id,192);

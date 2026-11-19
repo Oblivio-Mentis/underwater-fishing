@@ -10,7 +10,7 @@ namespace Raid
         readonly List<long> routeIds=new();
         float nextRoutePublish;
         public FishRouteState FishRoute => fishRoute.Value;
-        public bool IsRouting(long id) => fishRoute.Value.active && routeIds.Contains(id);
+        bool IsRouting(long id) => fishRoute.Value.active && routeIds.Contains(id);
         void ResetFishRoute() { routeIds.Clear();fishRoute.Value=default;nextRoutePublish=0;routeElapsed=0; }
         bool BeginFishRoute(bool feeding)
         {

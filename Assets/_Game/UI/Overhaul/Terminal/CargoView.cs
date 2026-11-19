@@ -63,7 +63,7 @@ namespace Raid.UI
             float duration=Mathf.Max(.01f,baseDuration/Mathf.Max(1,1+view.winchLevel*ctx.Tuning.winchSpeedPerLevel));
             UiKit.Fraction(phaseBar,view.hoistPhase==HoistPhase.Loading?0:1-view.hoistRemaining/duration);
             UiKit.Set(remaining,view.hoistPhase==HoistPhase.Loading?UiText.CargoPhaseSequence:UiText.CargoRemaining(view.hoistRemaining));
-            UiKit.Set(description,view.hoistPhase==HoistPhase.Loading?UiText.CargoLoadingHint:view.hoistPhase==HoistPhase.Raising?UiText.CargoRaisingHint:view.hoistPhase==HoistPhase.Unloading?UiText.CargoUnloadingHint:UiText.CargoReturningHint);
+            UiKit.Set(description,view.hoistPhase==HoistPhase.Loading?(view.cargo.Count==0?"Загрузите улов, затем запустите подъём.":UiText.CargoLoadingHint):view.hoistPhase==HoistPhase.Raising?UiText.CargoRaisingHint:view.hoistPhase==HoistPhase.Unloading?UiText.CargoUnloadingHint:UiText.CargoReturningHint);
             TerminalParts.ButtonReason(load,loadReason,LoadReason(),UiText.LoadReady);TerminalParts.ButtonReason(hoist,hoistReason,HoistReason(),UiText.HoistReady);
             UiKit.Set(stock,UiText.DeliveredStock(view.tank.Count));
             string unavailable=TerminalParts.BaseReason(app,true);UiKit.Set(status,unavailable);

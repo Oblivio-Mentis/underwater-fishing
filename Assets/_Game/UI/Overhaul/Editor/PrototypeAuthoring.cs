@@ -27,6 +27,10 @@ namespace Raid.UI.Editor
                 weapon.amber=AssetDatabase.LoadAssetAtPath<Material>(mats+"Enamel_safety_ochre.mat");
                 weapon.dark=AssetDatabase.LoadAssetAtPath<Material>(mats+"Machine_dark_steel.mat");
                 weapon.cyan=AssetDatabase.LoadAssetAtPath<Material>(mats+"Inspection_cyan_emission.mat");
+                var creature=factory.GetComponent<ThreatPresentation>();if(creature==null)creature=factory.gameObject.AddComponent<ThreatPresentation>();
+                creature.steel=weapon.steel;creature.dark=weapon.dark;creature.cyan=weapon.cyan;creature.amber=weapon.amber;
+                creature.skin=AssetDatabase.LoadAssetAtPath<Material>(mats+"Living_mouth_skin.mat");
+                creature.tooth=AssetDatabase.LoadAssetAtPath<Material>(mats+"Mouth_ivory_teeth.mat");
                 var threats=Object.FindAnyObjectByType<ThreatDirector>();
                 if(threats!=null)threats.factoryWaveRoute=new[]{new Vector3(9,1.5f,-11.05f),new Vector3(0,1.5f,-11.05f),new Vector3(0,1.5f,-6),new Vector3(0,1.5f,-4.8f)};
             }

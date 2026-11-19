@@ -37269,6 +37269,7 @@ GameObject:
   - component: {fileID: 951072088}
   - component: {fileID: 951072090}
   - component: {fileID: 951072091}
+  - component: {fileID: 951072092}
   m_Layer: 0
   m_Name: RAID011 Physical factory
   m_TagString: Untagged
@@ -37459,6 +37460,24 @@ MonoBehaviour:
   amber: {fileID: 2100000, guid: 2b5d92db868d68245a7ec9004fa8670b, type: 2}
   dark: {fileID: 2100000, guid: 55ec441ac3d38734eb871731b52079c8, type: 2}
   cyan: {fileID: 2100000, guid: c46789dffd9e8564a9f3001baa8e3a38, type: 2}
+--- !u!114 &951072092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 951072087}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d37695f00e2b45aa923f76a10586163b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.ThreatPresentation
+  steel: {fileID: 2100000, guid: 7b170e493b0850c4399908940618c3e3, type: 2}
+  skin: {fileID: 2100000, guid: f6a8fbb6c2f82e34590edbe104366a2a, type: 2}
+  dark: {fileID: 2100000, guid: 55ec441ac3d38734eb871731b52079c8, type: 2}
+  tooth: {fileID: 2100000, guid: 524caa651d01a004f95cd085bf4fb5c4, type: 2}
+  cyan: {fileID: 2100000, guid: c46789dffd9e8564a9f3001baa8e3a38, type: 2}
+  amber: {fileID: 2100000, guid: 2b5d92db868d68245a7ec9004fa8670b, type: 2}
 --- !u!1 &952902265
 GameObject:
   m_ObjectHideFlags: 0
