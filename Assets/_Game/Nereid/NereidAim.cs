@@ -49,7 +49,7 @@ namespace Raid.Nereid
             bool held=Mouse.current!=null&&Mouse.current.rightButton.isPressed;
             if(!held)releaseRequired=false;
             if(player!=owned){RestoreSensitivity(player);player=owned;Clear();releaseRequired=held;}
-            bool available=ui!=null&&ui.Context.Connected&&player!=null&&player.NetworkObject!=null&&player.IsOwner&&player.IsClientInitialized&&!player.IsHelpless;
+            bool available=ui!=null&&ui.Context.Connected&&player!=null&&player.NetworkObject!=null&&player.IsOwner&&player.IsClientInitialized&&!player.IsHelpless&&!player.IsDead&&ui.Context.Harpoon!=null&&ui.Context.Harpoon.ActiveSlot==0&&!ui.Context.Harpoon.HandsFull;
             bool permitted=available&&ui.Page==UiPage.None&&!UiInputGate.Blocked&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if(backgroundQaMouse!=null)

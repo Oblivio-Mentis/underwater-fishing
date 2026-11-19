@@ -26,7 +26,7 @@ namespace Raid.UI
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
         public bool HasCargo => Harpoon!=null && Harpoon.CarriedFish!=null || Player!=null && Loot.Any(l=>l!=null && l.CarrierOwnerId==Player.OwnerId);
-        public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.CarriedFish.cargoSize:HasCargo?1:0;
+        public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.SmallestCatchSize:HasCargo?1:0;
         public DiverMotor RescueTarget {get;private set;}
         public HarpoonTool AssistTarget {get;private set;}
         public LootActor AimedLoot {get;private set;}
