@@ -202,30 +202,27 @@ namespace Raid.UI
             if(station!=null&&!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
             if(station==null&&ShipConsole.Stations.Count>0)return;
             Context.SelectedConsole=station;
-            if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ConfirmFishRoute(station.kind==ShipConsoleKind.Feed);
+            if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
             else
             {
                 ShowPage(UiPage.Terminal);
                 terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
             }
         }
-        void ConfirmFishRoute(bool feeding)
+        void ToggleFishRoute(bool feeding)
         {
             var view=Context.View;if(view==null)return;
-            if(Context.World.FishRoute.active){Toast(UiText.RouteBusy);return;}
+            var route=Context.World.FishRoute;
+            if(route.active)
+            {
+                if(route.feeding!=feeding){Toast("Другая линия занята");return;}
+                if(route.stopping){Toast("Подача закрыта. Рыба в трубе завершает путь");return;}
+                Send(feeding?WorldAction.StopFeeding:WorldAction.StopProcessing,route.sequence);return;
+            }
             if(!feeding&&!Context.AtBase){Toast(UiText.ProcessAtBase);return;}
             var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
-            int count=fish.Count;long food=0,biomass=0,chitin=0;
             long quoted=FishRouteQuote.Compute(fish,Context.FoodRequired);
-            var station=Context.SelectedConsole;
-            foreach(var item in fish){food+=item.offering;biomass+=item.biomass;chitin+=item.chitin;}
-            string detail=feeding?"Пища: "+food+" / нужно "+Context.FoodRequired:"Выход: биомасса "+biomass+", хитин "+chitin;
-            Confirm(feeding?"Отдать всю рыбу чудовищу?":"Переработать всю рыбу?", "Рыбы: "+count+"\n"+detail+"\n\n"+(feeding?"Рыба уйдёт по правой трубе в пасть. Материалов из неё не будет.":"Рыба уйдёт по левой трубе на конвейер. Материалы поступят после обработки."),()=>
-            {
-                if(station==null || !station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
-                if(Context.View==null || FishRouteQuote.Compute(Context.View.tank,Context.FoodRequired)!=quoted){Toast(UiText.QuoteChanged,true);return;}
-                Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
-            });
+            Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
         }
         public void Send(WorldAction action,long id=0)
         {
@@ -242,6 +239,7 @@ namespace Raid.UI
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();
             if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
             if(pendingAction==WorldAction.ProcessAll||pendingAction==WorldAction.FeedAll)return Context.World.FishRoute.sequence.ToString();
+            if(pendingAction==WorldAction.StopProcessing||pendingAction==WorldAction.StopFeeding)return Context.World.FishRoute.sequence+"/"+Context.World.FishRoute.stopping+"/"+Context.World.FishRoute.active;
             return Context.World.CurrentDepth+"/"+Context.AtBase+"/"+(Context.World.TravelRemaining>0);
         }
         void OnCommandReply(int requestId,bool success,string reason)

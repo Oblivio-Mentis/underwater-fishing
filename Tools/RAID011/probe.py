@@ -10,7 +10,7 @@ def state(directory):
     for _ in range(10):
         try:
             return json.loads((Path(directory) / "state.json").read_text(encoding="utf-8"))
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, PermissionError, json.JSONDecodeError):
             time.sleep(0.05)
     raise RuntimeError("Development UI probe state unavailable")
 

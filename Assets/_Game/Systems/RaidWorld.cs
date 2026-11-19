@@ -8,7 +8,7 @@ using UnityEngine.InputSystem;
 
 namespace Raid
 {
-    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll }
+    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding }
 
     public sealed partial class RaidWorld : NetworkBehaviour
     {
@@ -165,7 +165,7 @@ namespace Raid
                 return;
             }
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
-            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && ShipConsole.Stations.Count==0)
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.StopProcessing || action==WorldAction.StopFeeding) && ShipConsole.Stations.Count==0)
             {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
@@ -192,6 +192,8 @@ namespace Raid
                 case WorldAction.Feed: success=team.Feed(id); break;
                 case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
                 case WorldAction.FeedAll: success=BeginFishRoute(true); break;
+                case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;
+                case WorldAction.StopFeeding: success=StopFishRoute(true,id); break;
                 case WorldAction.LoadCargo:
                     var tool=diver.GetComponent<HarpoonTool>(); var fish=tool!=null?tool.CarriedFish:null;
                     if(AtBase || team.hoistPhase!=HoistPhase.Loading) break;

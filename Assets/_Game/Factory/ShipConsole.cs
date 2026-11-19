@@ -19,8 +19,8 @@ namespace Raid
         public bool InRange(DiverMotor diver) => diver!=null && (diver.transform.position-transform.position).sqrMagnitude<=range*range;
         public bool Supports(WorldAction action)
         {
-            if(action==WorldAction.ProcessAll)return kind==ShipConsoleKind.Process;
-            if(action==WorldAction.FeedAll)return kind==ShipConsoleKind.Feed;
+            if(action==WorldAction.ProcessAll||action==WorldAction.StopProcessing)return kind==ShipConsoleKind.Process;
+            if(action==WorldAction.FeedAll||action==WorldAction.StopFeeding)return kind==ShipConsoleKind.Feed;
             if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades;
             if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return)return kind==ShipConsoleKind.Depths;
             return kind==ShipConsoleKind.Reservoir;

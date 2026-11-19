@@ -22,6 +22,19 @@ namespace Raid
             message.Value=feeding?"Рыба направлена к чудовищу":"Рыба направлена на переработку";
             return true;
         }
+        bool StopFishRoute(bool feeding,long sequence)
+        {
+            var state=fishRoute.Value;
+            if(!state.active||state.stopping||state.feeding!=feeding||state.sequence!=sequence)return false;
+            state.elapsed=Mathf.Max(state.elapsed,routeElapsed);
+            int entered=Mathf.Max(state.completed,FishFlow.EnteredPipe(state.elapsed,routeIds.Count));
+            if(entered<routeIds.Count)routeIds.RemoveRange(entered,routeIds.Count-entered);
+            state.total=entered;state.stopping=true;
+            if(state.completed>=entered){state.active=false;routeIds.Clear();}
+            fishRoute.Value=state;
+            message.Value=state.active?"Подача остановлена. Рыба в трубе завершает путь":"Подача остановлена. Оставшаяся рыба в резервуаре";
+            return true;
+        }
         float routeElapsed;
         void TickRouteClock()
         {

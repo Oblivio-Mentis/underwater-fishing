@@ -6,6 +6,8 @@ namespace Raid.Factory
     {
         FactoryVisuals visuals;
         int observedSequence=-1;
+        int observedTotal=-1;
+        bool observedStopping;
         bool connected;
         float nextRead;
         void Awake() { visuals=GetComponent<FactoryVisuals>(); }
@@ -20,9 +22,11 @@ namespace Raid.Factory
             }
             connected=true;var state=world.FishRoute;
             if(!state.active){if(state.sequence==0)observedSequence=-1;if(visuals.IsPlaying)visuals.StopBatch();return;}
-            if(observedSequence==state.sequence)return;observedSequence=state.sequence;
+            if(observedSequence==state.sequence&&observedTotal==state.total&&observedStopping==state.stopping)return;
+            bool newSequence=observedSequence!=state.sequence;
+            observedSequence=state.sequence;observedTotal=state.total;observedStopping=state.stopping;
             visuals.PlayBatch(state.feeding,state.total,state.sequence,state.elapsed);
-            UnderwaterLook.Instance?.Valve();
+            if(newSequence)UnderwaterLook.Instance?.Valve();
         }
     }
 }

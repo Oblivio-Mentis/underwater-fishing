@@ -153,7 +153,7 @@ namespace Raid.UI
                     if(item.offering>0 || item.biomass>0 || item.chitin>0)fishCount++;else technicalCount++;
                 }
                 UiKit.Set(stockValue,fishCount.ToString());UiKit.Set(stockDetail,UiText.HudStockDetail(technicalCount));
-                if(context.World.FishRoute.active)UiKit.Set(stockDetail,(context.World.FishRoute.feeding?"Скормлено ":"Обработано ")+context.World.FishRoute.completed+" / "+context.World.FishRoute.total);
+                if(context.World.FishRoute.active)UiKit.Set(stockDetail,(context.World.FishRoute.stopping?"Клапан закрыт · ":context.World.FishRoute.feeding?"Кормление · ":"Переработка · ")+context.World.FishRoute.completed+" / "+context.World.FishRoute.total);
                 int foodRequired=context.FoodRequired;
                 bool wave=context.Threats!=null && context.Threats.WaveActive;
                 UiKit.Set(hungerTime,UiText.HudHungerTime(view.hungerRemaining));
@@ -253,6 +253,13 @@ namespace Raid.UI
                     {
                         prompt=UiText.HudConsolePrompt(console);detail=UiText.HudConsoleAction(console.kind);
                         color=console.kind==ShipConsoleKind.Feed?UiTheme.Amber:UiTheme.Cyan;
+                        if(console.kind==ShipConsoleKind.Feed||console.kind==ShipConsoleKind.Process)
+                        {
+                            var route=context.World.FishRoute;
+                            bool matching=route.feeding==(console.kind==ShipConsoleKind.Feed);
+                            prompt=route.active&&matching&&!route.stopping?"E — остановить подачу":"E — запустить подачу";
+                            detail=route.active?(route.stopping?"Клапан закрыт · рыба в трубе завершает путь":matching?"Повторное нажатие сохранит оставшуюся рыбу":"Другая линия занята"):"Поток из резервуара · повторное нажатие — стоп";
+                        }
                         if(console.kind==ShipConsoleKind.Process&&!context.AtBase){detail=UiText.HudProcessAtBase;color=UiTheme.Amber;}
                     }
                     else {prompt=UiText.HudTerminalPrompt;detail=context.AtBase?UiText.HudTerminalBaseHint:UiText.HudTerminalDiveHint;}

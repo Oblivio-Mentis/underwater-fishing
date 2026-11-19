@@ -13,6 +13,7 @@ namespace Raid
         public FriendTetherTuning friendTetherTuning;
         public Material ropeMaterial;
         public float ReelMultiplier = 1f;
+        public event System.Action<Vector3,Vector3> ShotVisual;
         private static readonly List<HarpoonTool> ServerTools = new();
         private readonly SyncVar<NetworkObject> _fishObject = new();
         private readonly SyncVar<NetworkObject> _friendTarget = new();
@@ -123,6 +124,7 @@ namespace Raid
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
+            ShotVisualTarget(Owner,eye,didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange);
             var friend = didHit ? hit.collider.GetComponentInParent<DiverMotor>() : null;
             if (friend != null)
             {
@@ -145,6 +147,11 @@ namespace Raid
             _assistHeld = assist;
             _lastControls = Time.unscaledTime;
         }
+
+        // Acknowledges a real accepted shot, including misses; attachment still comes from replicated hook state.
+        [TargetRpc]
+        private void ShotVisualTarget(FishNet.Connection.NetworkConnection target,Vector3 origin,Vector3 endpoint)
+        {ShotVisual?.Invoke(origin,endpoint);}
 
         [ServerRpc(RequireOwnership = true)]
         private void ReleaseServer()
