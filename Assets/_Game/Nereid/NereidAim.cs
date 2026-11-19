@@ -19,6 +19,22 @@ namespace Raid.Nereid
         float progress,amount;
         bool releaseRequired;
         DiverMotor player;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Mouse backgroundQaMouse;
+        float backgroundQaUntil;
+        public bool BackgroundQaActive => backgroundQaMouse!=null&&backgroundQaMouse.added&&Time.unscaledTime<backgroundQaUntil;
+
+        public void BeginBackgroundQa(Mouse testMouse,float seconds)
+        {
+            var ui=UiRoot.Instance;
+            if(testMouse==null||testMouse.native||ui==null||!ui.Context.Connected||ui.Page!=UiPage.None||UiInputGate.Modal||Time.unscaledTime<UiInputGate.ResumeAt)
+                throw new System.InvalidOperationException("Background aim QA requires a ready owned HUD and a non-native test mouse");
+            RestoreSensitivity(player);player=ui.Context.Player;
+            backgroundQaMouse=testMouse;backgroundQaUntil=Time.unscaledTime+Mathf.Clamp(seconds,.25f,10);Clear();releaseRequired=false;
+        }
+        public void EndBackgroundQa()
+        {backgroundQaMouse=null;backgroundQaUntil=0;Clear();releaseRequired=true;RestoreSensitivity(player);}
+#endif
 
         void OnEnable()
         {
@@ -35,6 +51,14 @@ namespace Raid.Nereid
             if(player!=owned){RestoreSensitivity(player);player=owned;Clear();releaseRequired=held;}
             bool available=ui!=null&&ui.Context.Connected&&player!=null&&player.NetworkObject!=null&&player.IsOwner&&player.IsClientInitialized&&!player.IsHelpless;
             bool permitted=available&&ui.Page==UiPage.None&&!UiInputGate.Blocked&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if(backgroundQaMouse!=null)
+            {
+                if(!BackgroundQaActive||!available||ui.Page!=UiPage.None||UiInputGate.Modal)EndBackgroundQa();
+                else if(Mouse.current==backgroundQaMouse&&Time.unscaledTime>=UiInputGate.ResumeAt)
+                    permitted=true; // Explicit synthetic-device scope only. No game-input focus gate is modified.
+            }
+#endif
             if(!permitted)
             {
                 Clear();releaseRequired|=held;
@@ -66,6 +90,9 @@ namespace Raid.Nereid
         void OnDisable()
         {
             if(Active!=this)return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            EndBackgroundQa();
+#endif
             Clear();RestoreSensitivity(player);Active=null;
             var ui=UiRoot.Instance;
             if(ui!=null&&ui.Settings!=null&&ui.Page==UiPage.None&&player!=null)
