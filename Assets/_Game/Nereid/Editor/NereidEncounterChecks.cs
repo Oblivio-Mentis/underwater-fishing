@@ -12,7 +12,7 @@ namespace Raid.Nereid.Editor
     // Predators decide, move, telegraph and deal damage on normal FishNet simulation ticks.
     public static class NereidEncounterChecks
     {
-        const BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
+        const BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public;
         sealed class Until
         {
             public string label;
