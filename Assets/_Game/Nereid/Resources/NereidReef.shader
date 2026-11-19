@@ -30,6 +30,12 @@ Shader "RAID/Nereid Reef"
                 float3 p=frac(v.xyx*float3(.1031,.1030,.0973));p+=dot(p,p.yzx+32.33);
                 return frac((p.xx+p.yz)*p.zy);
             }
+            float ReefNoise(float2 p)
+            {
+                float2 i=floor(p),f=frac(p);
+                f=f*f*(3-2*f);
+                return lerp(lerp(jitter(i).x,jitter(i+float2(1,0)).x,f.x),lerp(jitter(i+float2(0,1)).x,jitter(i+1).x,f.x),f.y);
+            }
             float caustic(float2 p,float time)
             {
                 float2 cell=floor(p),f=frac(p);float a=6,b=7;
@@ -40,20 +46,31 @@ Shader "RAID/Nereid Reef"
                     float2 v=d+offset-f;float dist=dot(v,v);
                     b=min(b,max(a,dist));a=min(a,dist);
                 }
-                return 1-smoothstep(.018,.145,b-a);
+                return 1-smoothstep(.0,.22,b-a);
             }
             half4 frag(Vary i):SV_Target
             {
                 float time=_Time.y*.36;
-                float2 p=i.pos.xz*.48+float2(i.pos.y*.11+time*.11,0);
-                p+=.27*sin(p.yx*2.4+float2(time,-time*.86));
+                float2 projected=i.pos.xz+float2(-.28,.24)*i.pos.y;
+                float2 p=projected*float2(.36,.62)+float2(time*.09,time*.027);
+                p+=.38*sin(p.yx*1.42+float2(time,-time*.61));
+                half field=ReefNoise(projected*.103+float2(time*.045,0));
+                half litPool=smoothstep(.31,.83,field)*smoothstep(.22,.74,ReefNoise(projected*.23+field*1.86));
+                half grain=ReefNoise(i.pos.xz*3.1+i.pos.y*.72);
                 half3 n=normalize(i.norm);
                 Light key=GetMainLight(TransformWorldToShadowCoord(i.pos));
                 half shaft=max(0,n.y)*key.shadowAttenuation;
-                half light=.62+.50*saturate(dot(n,normalize(half3(-.42,.91,.23))))+.2*saturate(dot(n,key.direction))*key.shadowAttenuation;
+                half sun=saturate(dot(n,normalize(half3(-.49,.84,-.21))));
+                half light=.43+.54*sun+.14*saturate(dot(n,key.direction))*key.shadowAttenuation;
                 half3 base=i.color.rgb*_Tint.rgb;
-                half3 rgb=base*(light+_Glow)+half3(.13,.34,.29)*caustic(p,time)*shaft*(.42+.25*sin(p.x*.31+p.y*.48));
-                return half4(MixFog(rgb,i.fog),1);
+                half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
+                half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
+                rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool+half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
+                // Wavelength-dependent extinction gives both cliff layers an underwater silhouette.
+                float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
+                half3 transmit=exp(-range*float3(.031,.019,.014));
+                half3 water=half3(.010,.071,.098);
+                return half4(rgb*transmit+water*(1-transmit),1);
             }
             ENDHLSL
         }

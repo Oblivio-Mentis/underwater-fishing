@@ -21,12 +21,12 @@ namespace Raid.Nereid
             lightColumns=new Material(shaftShader){name="Suspended water light"};owned.Add(lightColumns);
 
             var land=new ReefGeometry();
-            const int columns=28,rows=30;
+            const int columns=91,rows=91;
             for(int z=0;z<rows;z++) for(int x=0;x<columns;x++)
             {
-                float wx=6+2.4f*x,wz=-72+2.4f*z;
+                float wx=-142+3.6f*x,wz=-173+3.6f*z;
                 float y=BedHeight(wx,wz);
-                var grit=Color.Lerp(new Color(.079f,.19f,.19f),new Color(.25f,.32f,.247f),Mathf.PerlinNoise(wx*.29f,wz*.23f));
+                var grit=Color.Lerp(new Color(.033f,.085f,.099f),new Color(.157f,.19f,.138f),Mathf.PerlinNoise(wx*.29f,wz*.23f));
                 land.Add(new Vector3(wx,y,wz),grit);
                 if(x>0&&z>0){int c=z*columns+x;land.Quad(c-columns-1,c-1,c,c-columns);}
             }
@@ -37,11 +37,21 @@ namespace Raid.Nereid
                 new(17,-48,5,4),new(23,-53,4,5.5f),new(60,-59,7,10),new(52,-63,4,6),
                 new(42,-10,6,6),new(63,-29,5,10)
             };
-            foreach(var s in shelves) Rock(land,new Vector3(s.x,BedHeight(s.x,s.y)-.32f,s.y),s.z,s.w);
+            var tops=new List<Vector3>();
+            foreach(var s in shelves)tops.Add(Rock(land,new Vector3(s.x,BedHeight(s.x,s.y)-.32f,s.y),s.z,s.w));
             var archTint=new Color(.145f,.208f,.231f);
             land.Tube(new[]{new Vector3(43,-8,-46),new(44,-5.8f,-46.5f),new(47,-4.3f,-47.2f),new(50,-4.6f,-47),new(52.8f,-6.1f,-47)},
                 new[]{1.45f,1.45f,1.25f,1.2f,1.65f},archTint,7,.84f);
+            // Break the arch profile with asymmetric stratified shoulders around its feet.
+            foreach(var foot in new[]{new Vector3(41.5f,0,-46.5f),new(54.2f,0,-48.2f),new(52.4f,0,-44.6f)})
+                for(int i=0;i<4;i++)
+                {
+                    float x=foot.x+Range(-1.6f,1.3f),z=foot.z+Range(-1.8f,1.45f);
+                    Rock(land,new Vector3(x,BedHeight(x,z)-.28f,z),Range(1.25f,2.25f),Range(2.1f,5.2f));
+                }
+            Escarpment(land,0);Escarpment(land,1);
             Publish("Basalt arch and tidal sand",land,rock,true);
+            WaterBackground();
 
             var life=new ReefGeometry();
             for(int group=0;group<30;group++)
@@ -52,12 +62,34 @@ namespace Raid.Nereid
                 int fronds=random.Next(4,9);
                 for(int i=0;i<fronds;i++) Kelp(life,place+new Vector3(Range(-1.6f,1.6f),0,Range(-1.6f,1.6f)),Range(.65f,2.1f));
             }
-            // Pale branching fans mark the clam bed; amber sponges mark the basalt notch.
-            foreach(var s in shelves)
+            var rubble=new ReefGeometry();
+            for(int j=0;j<shelves.Length;j++)
             {
-                var p=new Vector3(s.x-1.4f,BedHeight(s.x,s.y)+s.w*.72f,s.y-.3f);
-                for(int i=0;i<5;i++) Fan(life,p+new Vector3(Range(-.75f,.75f),Range(-.4f,.4f),Range(-.7f,.7f)),i*.83f);
+                var s=shelves[j];
+                if(j%2==0)Fan(life,tops[j]-Vector3.up*.07f,j*1.27f);
+                for(int k=0;k<9;k++)
+                {
+                    float angle=Range(0,6.28f),radius=Range(.96f,1.8f)*s.z;
+                    float x=s.x+Mathf.Cos(angle)*radius,z=s.y+Mathf.Sin(angle)*radius;
+                    var p=new Vector3(x,BedHeight(x,z)-.12f,z);
+                    float pebble=Range(.27f,.97f);
+                    Rock(rubble,p,pebble*1.13f,pebble*Range(.65f,1.32f));
+                    if(new Vector2(x-23,z+28).sqrMagnitude<23)continue;
+                    if(k<3)
+                    {
+                        int stems=random.Next(4,9);
+                        for(int q=0;q<stems;q++)
+                        {
+                            var at=p+new Vector3(Range(-.8f,.8f),.06f,Range(-.8f,.8f));
+                            Sponge(life,at,Range(.4f,.94f));
+                        }
+                        Fan(life,p+Vector3.right*pebble*.6f,angle);
+                    }
+                    else for(int q=0;q<5;q++)
+                        Kelp(life,p+new Vector3(Range(-.85f,.85f),.04f,Range(-.85f,.85f)),Range(.24f,.65f));
+                }
             }
+            Publish("Broken basalt skirts",rubble,rock,false);
             Publish("Ribbon kelp and fan colonies",life,rock,false);
             var beams=new ReefGeometry();
             Vector2[] pools={new(22,-34),new(29,-24),new(32,-38),new(38,-40),new(46,-46),new(52,-43),new(-19,14),new(19,10),new(14,27)};
@@ -76,25 +108,103 @@ namespace Raid.Nereid
             return -17.47f+pad*(Mathf.PerlinNoise(x*.13f,z*.12f)*.83f+Mathf.Sin(z*.7f+x*.28f)*.12f);
         }
 
-        void Rock(ReefGeometry mesh,Vector3 basePoint,float width,float height)
+        Vector3 Rock(ReefGeometry mesh,Vector3 basePoint,float width,float height)
         {
-            int sides=9,start=0;
+            const int sides=8;
             var radii=new float[sides];
-            for(int i=0;i<sides;i++)radii[i]=Range(.78f,1.15f);
-            float spin=Range(0,6),lean=Range(-.26f,.26f);
-            float[] shape={1,.94f,.73f,.44f,.02f},elevation={0,.31f,.67f,.93f,1};
+            for(int i=0;i<sides;i++)radii[i]=Range(.77f,1.15f);
+            float spin=Range(0,6),lean=Range(-.27f,.27f);
+            float[] shape={1,.93f,.83f,.86f,.70f,.68f,.47f,.36f},elevation={0,.18f,.35f,.40f,.61f,.72f,.96f,1};
+            var rings=new Vector3[shape.Length,sides];
             for(int j=0;j<shape.Length;j++)for(int i=0;i<sides;i++)
             {
-                float angle=spin+2*Mathf.PI*i/sides;
-                float r=width*radii[i]*shape[j];
-                var point=basePoint+new Vector3(Mathf.Cos(angle)*r+lean*height*elevation[j],height*elevation[j]+(j==0?0:Range(-.18f,.18f)),Mathf.Sin(angle)*r*.81f);
-                var tint=Color.Lerp(new Color(.062f,.112f,.146f),new Color(.23f,.31f,.284f),elevation[j]*.74f+Range(0,.22f));
-                int vertex=mesh.Add(point,tint);
-                if(j==0 && i==0) start=vertex;
-                if(j==0) continue;
-                int a=start+(j-1)*sides+i,b=start+(j-1)*sides+(i+1)%sides;
-                mesh.Quad(a,a+sides,b+sides,b);
+                float angle=spin+2*Mathf.PI*i/sides,r=width*radii[i]*shape[j];
+                float dip=.08f*height*Mathf.Sin(angle+.55f)*elevation[j];
+                rings[j,i]=basePoint+new Vector3(Mathf.Cos(angle)*r+lean*height*elevation[j],height*elevation[j]+dip,Mathf.Sin(angle)*r*.81f);
             }
+            var basalt=new Color(.037f,.073f,.098f);
+            var lichen=new Color(.106f,.162f,.145f);
+            int last=shape.Length-1;
+            var top=basePoint+new Vector3(lean*height,height,0);
+            for(int i=0;i<sides;i++)
+            {
+                int next=(i+1)%sides;
+                float vein=Range(.79f,1.09f);
+                for(int j=1;j<shape.Length;j++)
+                {
+                    var hue=Color.Lerp(basalt,lichen,elevation[j]*.77f)*vein*(j==3?.66f:1);
+                    Flat(mesh,rings[j-1,i],rings[j,i],rings[j,next],rings[j-1,next],hue);
+                }
+                int c=mesh.Add(top,lichen),a=mesh.Add(rings[last,next],lichen*vein),b=mesh.Add(rings[last,i],lichen);
+                mesh.Face(c,a,b);
+            }
+            return top;
+        }
+
+        static void Flat(ReefGeometry mesh,Vector3 a,Vector3 b,Vector3 c,Vector3 d,Color tone)
+        {
+            int first=mesh.Add(a,tone*.94f);mesh.Add(b,tone);mesh.Add(c,tone*1.03f);mesh.Add(d,tone);
+            mesh.Quad(first,first+1,first+2,first+3);
+        }
+
+        void Escarpment(ReefGeometry mesh,int layer)
+        {
+            // Folded ridges leave low saddles between exposed spurs around the cove.
+            int count=layer==0?87:108;
+            var points=new Vector3[count,4];
+            var center=new Vector3(16,0,-25);
+            for(int i=0;i<count;i++)
+            {
+                float angle=2*Mathf.PI*i/count;
+                var outward=new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
+                float radius=(layer==0?56:88)+4*Mathf.Sin(angle*5+layer)+Range(-2.2f,2.2f);
+                float strata=Mathf.PerlinNoise(5+Mathf.Cos(angle)*(3+layer),12+Mathf.Sin(angle)*(3+layer));
+                float shelf=(layer==0?4:11)+(layer==0?30:49)*Mathf.Pow(strata,1.35f)+4*Mathf.Sin(angle*7+layer);
+                var foot=center+outward*radius;
+                float floor=BedHeight(foot.x,foot.z)-1.2f;
+                points[i,0]=foot+Vector3.up*floor;
+                points[i,1]=foot+outward*2.3f+Vector3.up*(floor+.38f*shelf);
+                points[i,2]=foot+outward*5.4f+Vector3.up*(floor+shelf);
+                points[i,3]=foot+outward*12+Vector3.up*(floor+shelf*Range(.62f,.86f));
+            }
+            for(int i=0;i<count;i++)
+            {
+                int next=(i+1)%count;
+                for(int j=0;j<3;j++)
+                {
+                    var tone=Color.Lerp(new Color(.018f,.050f,.073f),new Color(.075f,.124f,.131f),(.2f+j*.28f)*Range(.76f,1.15f));
+                    Flat(mesh,points[i,j],points[next,j],points[next,j+1],points[i,j+1],tone);
+                }
+            }
+        }
+
+        static void Sponge(ReefGeometry mesh,Vector3 p,float size)
+        {
+            const int sides=7;
+            var axis=new Vector3(.13f,.92f,.11f)*size;
+            var tint=new Color(.32f,.159f,.092f);
+            for(int i=0;i<sides;i++)
+            {
+                float a=i*(2*Mathf.PI/sides),b=(i+1)*(2*Mathf.PI/sides);
+                var va=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a))*size;
+                var vb=new Vector3(Mathf.Cos(b),0,Mathf.Sin(b))*size;
+                Flat(mesh,p+va*.11f,p+axis+va*.16f,p+axis+vb*.16f,p+vb*.11f,tint);
+                Flat(mesh,p+axis+va*.16f,p+axis+va*.096f,p+axis+vb*.096f,p+axis+vb*.16f,tint*1.48f);
+                Flat(mesh,p+axis+va*.096f,p+axis*.78f+va*.059f,p+axis*.78f+vb*.059f,p+axis+vb*.096f,tint*.24f);
+            }
+        }
+
+        void WaterBackground()
+        {
+            var shader=Resources.Load<Shader>("NereidWaterDistance");
+            if(shader==null)return;
+            var shell=GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            shell.name="Water column beyond the cove";shell.transform.SetParent(transform,false);
+            // The shader draws at camera-relative far depth for every observer.
+            var collider=shell.GetComponent<Collider>();collider.enabled=false;Destroy(collider);
+            var backdrop=new Material(shader);owned.Add(backdrop);
+            var renderer=shell.GetComponent<MeshRenderer>();renderer.sharedMaterial=backdrop;renderer.shadowCastingMode=ShadowCastingMode.Off;
+            renderer.receiveShadows=false;renderer.localBounds=new Bounds(Vector3.zero,Vector3.one*4000);
         }
 
         void Kelp(ReefGeometry mesh,Vector3 p,float size)
@@ -108,7 +218,7 @@ namespace Raid.Nereid
                 float t=i/5f;
                 var mid=p+Vector3.up*(size*2.1f*t)+d*size*(.5f*t+.42f*t*t)+side*Mathf.Sin(t*6+yaw)*size*.17f;
                 float w=(Mathf.Sin(t*Mathf.PI)*.21f+.01f)*size;
-                var colour=Color.Lerp(new Color(.04f,.12f,.105f),new Color(.18f,.39f,.21f),t);
+                var colour=Color.Lerp(new Color(.02f,.069f,.06f),new Color(.105f,.245f,.122f),t);
                 int a=mesh.Add(mid-side*w,colour);mesh.Add(mid+d*w*.25f,colour*1.1f);mesh.Add(mid+side*w,colour);
                 if(i==0){start=a;continue;}
                 for(int k=0;k<2;k++){int q=start+(i-1)*3+k;mesh.Quad(q,q+3,q+4,q+1);}
@@ -118,7 +228,7 @@ namespace Raid.Nereid
         static void Fan(ReefGeometry mesh,Vector3 p,float angle)
         {
             Vector3 axis=new(Mathf.Cos(angle),0,Mathf.Sin(angle));
-            var tint=new Color(.52f,.354f,.216f);
+            var tint=new Color(.38f,.216f,.128f);
             for(int k=-2;k<=2;k++)
             {
                 Vector3 stem=p+axis*(k*.23f)+Vector3.up*(.66f-.045f*Mathf.Abs(k));
