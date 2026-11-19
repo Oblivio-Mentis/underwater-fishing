@@ -11,6 +11,7 @@ namespace Raid.Nereid
         static readonly int Positions=Shader.PropertyToID("_NereidWorkLightPositions");
         static readonly int Directions=Shader.PropertyToID("_NereidWorkLightDirections");
         static readonly int Radiance=Shader.PropertyToID("_NereidWorkLightRadiance");
+        static readonly int Seabed=Shader.PropertyToID("_NereidWorkLightSeabed");
         readonly Vector4[] positions=new Vector4[3], directions=new Vector4[3], radiance=new Vector4[3];
         readonly Light[] beams=new Light[5];
         readonly List<Object> owned=new();
@@ -20,12 +21,15 @@ namespace Raid.Nereid
         Material iron, brass, blueLens, amberLens;
         Vector3 landing;
         bool initialized;
+        readonly Dictionary<Renderer,Material[]> originalCoatings=new();
 
         void Awake()
         {
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null){enabled=false;return;}
             vessel=GetComponent<NereidVessel>();
+            FitExteriorCoatings();
             landing=transform.TransformPoint(vessel.cargoRail!=null && vessel.cargoRail.Length>0?vessel.cargoRail[0]:new Vector3(11.5f,-8.2f,-14));
+            Shader.SetGlobalFloat(Seabed,landing.y-1f);
             fixtures=Pivot(transform,"Exterior work lamps",Vector3.zero);
             iron=Finish("Cast pressure housing",new Color(.17f,.23f,.25f),.72f);
             brass=Finish("Retaining collars",new Color(.53f,.34f,.13f),.63f);
@@ -50,6 +54,50 @@ namespace Raid.Nereid
             for(int side=-1;side<=1;side+=2)
                 foreach(float z in new[]{-20f,2.8f})Marker(side,z);
             initialized=true;
+        }
+
+        void FitExteriorCoatings()
+        {
+            var shell=transform.Find("Nereid_Exterior");
+            var shader=Resources.Load<Shader>("NereidHullCoating");
+            if(shell==null || shader==null)return;
+            var finishes=new Dictionary<Material,Material>();
+            foreach(var renderer in shell.GetComponentsInChildren<MeshRenderer>())
+            {
+                var original=renderer.sharedMaterials;
+                var updated=(Material[])original.Clone();
+                bool changed=false;
+                for(int i=0;i<updated.Length;i++)
+                {
+                    var source=original[i];
+                    if(source==null)continue;
+                    if(!finishes.TryGetValue(source,out var finish))
+                    {
+                        Color paint;float metal;
+                        switch(source.name)
+                        {
+                            case "Nereid_Hull":  paint=new Color(.31f,.45f,.48f);metal=.16f;break;
+                            case "Nereid_Steel": paint=new Color(.41f,.49f,.49f);metal=.36f;break;
+                            case "Nereid_Dark":  paint=new Color(.17f,.22f,.23f);metal=.24f;break;
+                            case "Nereid_Grate": paint=new Color(.24f,.30f,.30f);metal=.38f;break;
+                            case "Nereid_Trim":  paint=new Color(.43f,.52f,.51f);metal=.54f;break;
+                            case "Nereid_Ochre": paint=new Color(.61f,.39f,.15f);metal=.15f;break;
+                            default: continue;
+                        }
+                        finish=new Material(shader){name=source.name+" marine finish",hideFlags=HideFlags.DontSave};
+                        finish.SetColor("_BaseColor",paint);
+                        finish.SetFloat("_Metallic",metal);
+                        finish.SetFloat("_Smoothness",source.GetFloat("_Smoothness"));
+                        finishes.Add(source,finish);
+                        owned.Add(finish);
+                    }
+                    updated[i]=finish;
+                    changed=true;
+                }
+                if(!changed)continue;
+                originalCoatings.Add(renderer,original);
+                renderer.sharedMaterials=updated;
+            }
         }
 
         Light Fixture(string label,Vector3 mount,Vector3 target,Color color,Material lens,float intensity,float range,float inner,float outer)
@@ -238,6 +286,8 @@ namespace Raid.Nereid
 
         void OnDestroy()
         {
+            foreach(var pair in originalCoatings)
+                if(pair.Key!=null)pair.Key.sharedMaterials=pair.Value;
             if(fixtures!=null)Destroy(fixtures.gameObject);
             foreach(var asset in owned)if(asset!=null)Destroy(asset);
         }
