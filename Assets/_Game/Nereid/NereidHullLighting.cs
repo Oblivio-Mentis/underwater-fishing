@@ -14,6 +14,7 @@ namespace Raid.Nereid
         static readonly int Seabed=Shader.PropertyToID("_NereidWorkLightSeabed");
         readonly Vector4[] positions=new Vector4[3], directions=new Vector4[3], radiance=new Vector4[3];
         readonly Light[] beams=new Light[5];
+        readonly MeshRenderer[] waterBeams=new MeshRenderer[3];
         readonly List<Object> owned=new();
         readonly bool[] nearby=new bool[5];
         Transform fixtures, cradle;
@@ -43,6 +44,7 @@ namespace Raid.Nereid
                 new Color(.68f,.87f,1f),blueLens,1550,23,43,67);
             beams[2]=Fixture("Stern return flood",new Vector3(6.8f,-2.37f,-19.7f),transform.TransformPoint(new Vector3(10.6f,-8.62f,-20.7f)),
                 new Color(.77f,.91f,.91f),blueLens,1700,24,42,65);
+            BuildWaterBeams();
             var cargo=beams[0];
             cargo.shadows=LightShadows.Hard;cargo.shadowNearPlane=.23f;cargo.shadowNormalBias=.18f;
             cargo.GetUniversalAdditionalLightData().additionalLightsShadowResolutionTier=UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow;
@@ -54,6 +56,35 @@ namespace Raid.Nereid
             for(int side=-1;side<=1;side+=2)
                 foreach(float z in new[]{-20f,2.8f})Marker(side,z);
             initialized=true;
+        }
+
+        void BuildWaterBeams()
+        {
+            var shader=Resources.Load<Shader>("NereidWorkBeam");
+            if(shader==null || !shader.isSupported)return;
+            var material=new Material(shader){name="Work light in suspended water",hideFlags=HideFlags.DontSave};
+            owned.Add(material);
+            var shape=new ReefGeometry();
+            shape.Tube(new[]{Vector3.zero,Vector3.forward},new[]{.001f,1f},Color.white,24);
+            var mesh=shape.Mesh("Submerged spot light bounds");
+            owned.Add(mesh);
+            for(int i=0;i<waterBeams.Length;i++)
+            {
+                var lamp=beams[i];
+                var volume=Pivot(lamp.transform,"Illuminated water",Vector3.zero);
+                float length=lamp.range/lamp.transform.lossyScale.z;
+                float radius=length*Mathf.Tan(lamp.spotAngle*.5f*Mathf.Deg2Rad);
+                volume.localScale=new Vector3(radius,radius,length);
+                volume.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+                var renderer=waterBeams[i]=volume.gameObject.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial=material;
+                var properties=new MaterialPropertyBlock();
+                properties.SetFloat("_FloodIndex",i);
+                renderer.SetPropertyBlock(properties);
+                renderer.shadowCastingMode=ShadowCastingMode.Off;
+                renderer.receiveShadows=false;
+                renderer.enabled=false;
+            }
         }
 
         void FitExteriorCoatings()
@@ -249,6 +280,9 @@ namespace Raid.Nereid
             if(direction.sqrMagnitude>.001f)
                 cradle.rotation=Quaternion.RotateTowards(cradle.rotation,Quaternion.LookRotation(direction,transform.up),Time.deltaTime*175);
             var camera=Camera.main;
+            var underwater=UnderwaterLook.Instance;
+            bool scatter=camera!=null && underwater!=null && underwater.WaterBlend>.01f &&
+                camera.TryGetComponent<UniversalAdditionalCameraData>(out var cameraData) && cameraData.requiresDepthTexture;
             for(int i=0;i<beams.Length;i++)
             {
                 var light=beams[i];var tr=light.transform;
@@ -257,6 +291,7 @@ namespace Raid.Nereid
                 bool active=camera!=null && (camera.transform.position-tr.position).sqrMagnitude<distance*distance;
                 if(active!=nearby[i]){light.enabled=active;nearby[i]=active;}
                 if(i>=positions.Length)continue;
+                if(waterBeams[i]!=null)waterBeams[i].enabled=scatter && active && light.isActiveAndEnabled;
                 float outer=Mathf.Cos(light.spotAngle*Mathf.Deg2Rad*.5f);
                 float inner=Mathf.Cos(light.innerSpotAngle*Mathf.Deg2Rad*.5f);
                 var pos=tr.position;var axis=tr.forward;var tint=light.color.linear;
