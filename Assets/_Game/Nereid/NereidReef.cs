@@ -50,7 +50,9 @@ namespace Raid.Nereid
                     Rock(land,new Vector3(x,BedHeight(x,z)-.28f,z),Range(1.25f,2.25f),Range(2.1f,5.2f));
                 }
             Escarpment(land,0);Escarpment(land,1);
-            Publish("Basalt arch and tidal sand",land,rock,true);
+            var ground=Publish("Basalt arch and tidal sand",land,rock,true);
+            Physics.SyncTransforms();
+            NereidSalvage.Place(ground.GetComponent<MeshCollider>(),rock,owned);
             WaterBackground();
 
             var life=new ReefGeometry();
@@ -71,6 +73,7 @@ namespace Raid.Nereid
                 {
                     float angle=Range(0,6.28f),radius=Range(.96f,1.8f)*s.z;
                     float x=s.x+Mathf.Cos(angle)*radius,z=s.y+Mathf.Sin(angle)*radius;
+                    if(NereidSalvage.Reserved(x,z))continue;
                     var p=new Vector3(x,BedHeight(x,z)-.12f,z);
                     float pebble=Range(.27f,.97f);
                     Rock(rubble,p,pebble*1.13f,pebble*Range(.65f,1.32f));
@@ -209,6 +212,7 @@ namespace Raid.Nereid
 
         void Kelp(ReefGeometry mesh,Vector3 p,float size)
         {
+            if(NereidSalvage.Reserved(p.x,p.z))return;
             float yaw=Range(0,6);
             var d=new Vector3(Mathf.Cos(yaw),0,Mathf.Sin(yaw));
             var side=Vector3.Cross(Vector3.up,d);
@@ -238,7 +242,7 @@ namespace Raid.Nereid
             }
         }
 
-        void Publish(string label,ReefGeometry geometry,Material material,bool solid)
+        GameObject Publish(string label,ReefGeometry geometry,Material material,bool solid)
         {
             var piece=new GameObject(label);
             // Authored points are world-space metres, independent of the 2x vessel scale.
@@ -249,6 +253,7 @@ namespace Raid.Nereid
             renderer.sharedMaterial=material;
             if(material==lightColumns){renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=false;}
             if(solid)piece.AddComponent<MeshCollider>().sharedMesh=mesh;
+            return piece;
         }
 
         void OnDestroy(){foreach(var asset in owned)if(asset!=null)Destroy(asset);}
