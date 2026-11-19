@@ -64,7 +64,15 @@ namespace Raid
                 transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
             }
             bool struggling = actor != null && (actor.Mode == FishMode.Struggling || actor.Startled);
-            float wave = Mathf.Sin(Time.time * (struggling ? 12 : 5.5f) + phase);
+            float clock=Time.time, offset=phase;
+            if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
+            {
+                // All peers articulate the collider and the fin holding the bolt at the same network phase.
+                var timer=actor.TimeManager;
+                clock=(float)(timer.TicksToTime(timer.Tick)+timer.GetTickElapsedAsDouble());
+                offset=actor.ObjectId*2.39996f;
+            }
+            float wave = Mathf.Sin(clock * (struggling ? 12 : 5.5f) + offset);
             tail.localRotation = Quaternion.Euler(0, wave * (struggling ? 30 : 16), 0);
         }
 
