@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -143,7 +144,10 @@ namespace Raid.Nereid.Editor
             // Restrained ochre belongs only to the machine's actual moving entry hazard.
             var workshop=runtime.transform.Find("Aft processing workshop");
             if(workshop!=null)foreach(var renderer in workshop.GetComponentsInChildren<Renderer>(true))
+            {
                 if(renderer.name=="Conveyor guard rail")renderer.sharedMaterial=ochre;
+                if(renderer.name=="Hopper safety bracket")renderer.sharedMaterial=trim;
+            }
         }
 
         static void Graft(Transform parent,Raid.Factory.FactoryVisuals runtime)
@@ -166,8 +170,7 @@ namespace Raid.Nereid.Editor
             bool monitor=station.kind==ShipConsoleKind.Upgrades||station.kind==ShipConsoleKind.Depths||station.kind==ShipConsoleKind.Reservoir;
             if(!monitor)
             {
-                Box("Sloping selector support",root,new Vector3(0,.68f,.03f),new Vector3(.69f,.8f,.53f),dark,.05f);
-                foreach(int side in new[]{-1,1})Box("Selector casing side reinforcement",root,new Vector3(side*.55f,1.22f,.01f),new Vector3(.08f,.66f,.58f),trim,.02f);
+                RouteConsole(station,root);
                 Combine(root,"Console_"+station.name);return;
             }
             if(station.screenAnchor==null)return;
@@ -197,6 +200,49 @@ namespace Raid.Nereid.Editor
                 var socket=Part("Console lower service fastener",root,Lathe(new[]{new Vector2(0,0),new Vector2(.05f,0),new Vector2(.05f,.045f),new Vector2(0,.045f)},8),trim,centre+new Vector3(side*(width*.5f+.06f),-height*.5f-.05f,-.09f));socket.localRotation=Quaternion.Euler(90,0,0);
             }
             Combine(root,"Console_"+station.name);
+        }
+
+        static void RouteConsole(ShipConsole station,Transform root)
+        {
+            // The original interaction plane stays exactly where it was. Only its visible housing is replaced.
+            foreach(Transform child in station.transform)
+            {
+                if(child==root||child==station.screenAnchor)continue;
+                foreach(var renderer in child.GetComponentsInChildren<Renderer>(true))renderer.enabled=false;
+            }
+            bool feeding=station.kind==ShipConsoleKind.Feed;
+            var signal=Mat(feeding?"Feeding selector button":"Processing selector button",
+                feeding?new Color(.87f,.46f,.12f):new Color(.12f,.65f,.71f),.18f,.36f,1.3f);
+            Box("Selector cast foot",root,new Vector3(.055f,.11f,.025f),new Vector3(.87f,.19f,.64f),dark,.06f);
+            Box("Offset selector pedestal",root,new Vector3(.075f,.55f,.07f),new Vector3(.62f,.76f,.49f),steel,.07f);
+            Box("Selector maintenance panel",root,new Vector3(.075f,.57f,-.19f),new Vector3(.46f,.5f,.035f),dark,.025f);
+            Box("Selector head casting",root,new Vector3(.025f,1.045f,.04f),new Vector3(1.03f,.34f,.68f),dark,.07f);
+            var deck=Group("Angled route input deck",root,new Vector3(.025f,1.28f,-.015f));
+            deck.localRotation=Quaternion.Euler(-32,0,0);
+            Box("Chamfered selector deck",deck,Vector3.zero,new Vector3(1.12f,.12f,.77f),steel,.045f);
+            Box("Button inset plate",deck,new Vector3(-.10f,.068f,-.015f),new Vector3(.62f,.035f,.57f),dark,.035f);
+            Part("Guarded actuator steel seat",deck,Lathe(new[]{new Vector2(0,.085f),new Vector2(.235f,.085f),new Vector2(.26f,.105f),new Vector2(.26f,.145f),new Vector2(.235f,.165f),new Vector2(0,.165f)},32),trim,new Vector3(-.10f,0,-.015f));
+            Part("Raised physical all-fish button",deck,Lathe(new[]{new Vector2(0,.155f),new Vector2(.19f,.155f),new Vector2(.203f,.177f),new Vector2(.203f,.228f),new Vector2(.18f,.247f),new Vector2(0,.247f)},32),signal,new Vector3(-.10f,0,-.015f));
+            // The raised edge guards identify the physical press surface from oblique player-camera angles.
+            foreach(int side in new[]{-1,1})
+            {
+                Box("Actuator protective shoulder",deck,new Vector3(side*.46f,.145f,.015f),new Vector3(.10f,.21f,.60f),trim,.035f);
+                Box("Short selector edge stripe",deck,new Vector3(side*.45f,.257f,-.16f),new Vector3(.065f,.015f,.20f),feeding?ochre:signal,.005f);
+            }
+            Box("Asymmetric control housing shoulder",root,new Vector3(.48f,1.18f,.13f),new Vector3(.17f,.39f,.35f),steel,.045f);
+            Box("Selector function plaque",root,new Vector3(.02f,.985f,-.345f),new Vector3(.99f,.36f,.045f),dark,.028f);
+            RouteLabel(feeding?"КОРМЛЕНИЕ":"ПЕРЕРАБОТКА",root,new Vector3(.02f,1.055f,-.373f),.112f,new Vector2(.96f,.14f),new Color(.88f,.93f,.89f));
+            RouteLabel(feeding?"E · ВСЯ РЫБА В ПАСТЬ":"E · ВСЯ РЫБА В ЦЕХ",root,new Vector3(.02f,.92f,-.373f),.072f,new Vector2(.96f,.13f),feeding?new Color(.92f,.65f,.3f):new Color(.25f,.8f,.84f));
+        }
+
+        static void RouteLabel(string text,Transform parent,Vector3 position,float size,Vector2 bounds,Color color)
+        {
+            var go=Group("Route function / "+text,parent,position);
+            var label=go.gameObject.AddComponent<TextMeshPro>();
+            label.font=AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/_Game/UI/Overhaul/Fonts/PTSans-SDF.asset");
+            label.text=text;label.fontSize=size*10;label.color=color;label.alignment=TextAlignmentOptions.Center;
+            label.textWrappingMode=TextWrappingModes.NoWrap;label.overflowMode=TextOverflowModes.Overflow;
+            label.rectTransform.sizeDelta=bounds;label.ForceMeshUpdate();
         }
 
         static Transform Group(string name,Transform parent,Vector3 position=default)
@@ -318,7 +364,7 @@ namespace Raid.Nereid.Editor
         }
         static void Combine(Transform root,string name)
         {
-            var filters=root.GetComponentsInChildren<MeshFilter>(true).Where(f=>f.GetComponent<MeshRenderer>()!=null&&!AssetDatabase.Contains(f.sharedMesh)).ToArray();
+            var filters=root.GetComponentsInChildren<MeshFilter>(true).Where(f=>f.GetComponent<MeshRenderer>()!=null&&f.GetComponent<TMP_Text>()==null&&!AssetDatabase.Contains(f.sharedMesh)).ToArray();
             foreach(var group in filters.GroupBy(f=>f.GetComponent<MeshRenderer>().sharedMaterial))
             {
                 var items=group.ToArray();var combines=new CombineInstance[items.Length];
