@@ -178,6 +178,14 @@ namespace Raid.Nereid.Editor
             }
             Light("Stern dock light",new Vector3(7.6f,3.3f,-14),new Color(1,.7f,.4f),7,6,true);
             Light("Bow reflected ocean light",new Vector3(-6,5,14),new Color(.28f,.54f,.7f),20,14,false);
+            var waterLight=new GameObject("Daylight above the bow");
+            waterLight.transform.SetParent(root,false);
+            waterLight.transform.localPosition=new Vector3(8,14,17);
+            waterLight.transform.LookAt(root.TransformPoint(new Vector3(0,1.6f,9)));
+            var blueShaft=waterLight.AddComponent<Light>();
+            blueShaft.type=LightType.Spot;blueShaft.color=new Color(.44f,.77f,.91f);
+            blueShaft.intensity=1900;blueShaft.range=27;blueShaft.spotAngle=86;blueShaft.innerSpotAngle=52;
+            blueShaft.shadows=LightShadows.Soft;
             foreach(int side in new[]{-1,1})
             {
                 var position=new Vector3(side*5,4,7);
