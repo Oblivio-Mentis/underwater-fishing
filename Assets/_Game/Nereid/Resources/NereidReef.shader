@@ -90,12 +90,13 @@ Shader "RAID/Nereid Reef"
                 if (_BasaltLayers > .5)
                 {
                     // World-space bedding follows the formation across its differently scaled facets.
-                    float uplift=ReefNoise(i.pos.xz*.16);
-                    float bed=i.pos.y*.43+dot(i.pos.xz,float2(.105,-.073))+uplift*.72;
-                    float seam=1-smoothstep(.02,.15,abs(frac(bed)-.5));
-                    float mineral=ReefNoise(float2(bed*1.4,dot(i.pos.xz,float2(.12,.08))));
-                    base=lerp(half3(.062,.100,.116),half3(.164,.213,.198),mineral)
-                        *(.80+.20*saturate(n.y+.4))*(1-.23*seam);
+                    float2 fracture=i.pos.xz*.27+i.pos.y*float2(.11,-.13);
+                    float uplift=ReefNoise(fracture);
+                    float bed=i.pos.y*.38+dot(i.pos.xz,float2(.105,-.073))+uplift*.95;
+                    float seam=(1-smoothstep(.014,.088,abs(frac(bed)-.5)))*smoothstep(.28,.72,uplift);
+                    float mineral=.72*uplift+.28*ReefNoise(fracture*2.7+bed*.13);
+                    base=lerp(half3(.062,.099,.114),half3(.16,.21,.19),mineral)
+                        *(.80+.20*saturate(n.y+.4))*(1-.13*seam);
                 }
                 half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
                 half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
