@@ -169,6 +169,23 @@ namespace Raid
             if (IsClientInitialized && IsOwner && TetherActive) ReleaseServer();
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
+        internal bool QaFireOwned()
+        {
+            if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null || Motor.Oxygen <= 0
+                || UI.UiInputGate.Blocked || _fish != null || TetherActive) return false;
+            FireServer(); return true;
+        }
+
+        internal bool QaReleaseOwned()
+        {
+            if (!IsClientInitialized || !IsOwner || (UI.UiInputGate.Blocked && !IsPulled)
+                || (_fish == null && !TetherActive)) return false;
+            ReleaseServer(); return true;
+        }
+#endif
+
         public void DropCargo()
         {
             if (!IsServerInitialized) return;

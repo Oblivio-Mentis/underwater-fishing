@@ -14,6 +14,7 @@ namespace Raid.UI
     // Explicit opt-in local QA driver. Only UI callbacks and owned-player actions;
     // no direct server state, save edits or code execution.
     // Omitted from non-development players; inactive unless -raid-ui-probe <directory> is provided.
+    [DefaultExecutionOrder(350)]
     public sealed class UiQaProbe : MonoBehaviour
     {
         [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
@@ -29,6 +30,10 @@ namespace Raid.UI
             public bool tetherActive,isPulled;
             public int tetherOwner=-1,tetherTarget=-1;
             public float tetherRefusal;
+            public string harpoonPhase;
+            public int harpoonShots;
+            public bool harpoonAttached,harpoonSawFlight,harpoonSawAttach,harpoonSawRetract;
+            public float harpoonShotAge,harpoonSpool,harpoonTipX,harpoonTipY,harpoonTipZ,harpoonEndX,harpoonEndY,harpoonEndZ;
             public Control[] controls;
         }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
@@ -43,6 +48,10 @@ namespace Raid.UI
         float aimReleaseAt;
         bool aimReleasePending;
         static UiQaProbe aimTestOwner;
+        HarpoonTool observedTool;
+        HarpoonShotFx observedFx;
+        int observedShots=-1;
+        bool sawFlight,sawAttach,sawRetract;
 
         // Available to Editor MCP as well as the explicit file driver. Never compiled into a release player.
         public void BeginAimTest(float seconds=5)
@@ -113,6 +122,18 @@ namespace Raid.UI
         {if(state==UnityEditor.PlayModeStateChange.ExitingPlayMode)EndAimTest();}
 #endif
         void OnDisable(){EndAimTest();}
+        void LateUpdate()
+        {
+            var root=UiRoot.Instance;var tool=root==null?null:root.Context.Harpoon;
+            if(observedTool!=tool){observedTool=tool;observedFx=null;observedShots=-1;sawFlight=sawAttach=sawRetract=false;}
+            if(tool==null)return;
+            if(observedFx==null)observedFx=tool.GetComponentInChildren<HarpoonShotFx>(true);
+            if(observedFx==null)return;
+            if(observedShots!=observedFx.AcceptedShotCount){observedShots=observedFx.AcceptedShotCount;sawFlight=sawAttach=sawRetract=false;}
+            sawFlight|=observedFx.Phase==HarpoonShotFx.CablePhase.Flying;
+            sawAttach|=observedFx.Phase==HarpoonShotFx.CablePhase.Attached&&observedFx.HasConfirmedAttachment;
+            sawRetract|=observedFx.Phase==HarpoonShotFx.CablePhase.Retracting;
+        }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
         {
@@ -148,6 +169,13 @@ namespace Raid.UI
         {
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
+            if(r.action=="fire"||r.action=="harpoon_release")
+            {
+                var tool=UiRoot.Instance.Context.Harpoon;
+                if(tool==null||!(r.action=="fire"?tool.QaFireOwned():tool.QaReleaseOwned()))
+                    throw new InvalidOperationException("Owned harpoon action blocked by connection, UI or current cargo/tether state");
+                return; // This acknowledges dispatch only. harpoonShots changes only after the server accepts a shot.
+            }
             if(r.action=="console")
             {
                 var station=ShipConsole.Stations.FirstOrDefault(s=>s!=null&&s.name==r.name);
@@ -209,6 +237,14 @@ namespace Raid.UI
                 var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;
                 snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
                 snapshot.tetherRefusal=tool.TetherOptOutRemaining;
+            }
+            if(observedFx!=null)
+            {
+                var fx=observedFx;var tip=fx.VisualTip;var end=fx.ServerShotEndpoint;
+                snapshot.harpoonPhase=fx.Phase.ToString();snapshot.harpoonShots=fx.AcceptedShotCount;snapshot.harpoonAttached=fx.HasConfirmedAttachment;
+                snapshot.harpoonSawFlight=sawFlight;snapshot.harpoonSawAttach=sawAttach;snapshot.harpoonSawRetract=sawRetract;
+                snapshot.harpoonShotAge=fx.AcceptedShotCount>0?fx.ShotAge:-1;snapshot.harpoonSpool=fx.SpoolDegrees;
+                snapshot.harpoonTipX=tip.x;snapshot.harpoonTipY=tip.y;snapshot.harpoonTipZ=tip.z;snapshot.harpoonEndX=end.x;snapshot.harpoonEndY=end.y;snapshot.harpoonEndZ=end.z;
             }
             if(player!=null){snapshot.owner=player.OwnerId;snapshot.x=player.transform.position.x;snapshot.y=player.transform.position.y;snapshot.z=player.transform.position.z;snapshot.oxygen=player.Oxygen;snapshot.stress=player.PressureStress;snapshot.depth=player.Depth;snapshot.lookMultiplier=player.LocalLookMultiplier;}
             var camera=player==null?null:player.GetComponentInChildren<Camera>();if(camera!=null){snapshot.actualFov=camera.fieldOfView;snapshot.aimYaw=camera.transform.eulerAngles.y;snapshot.aimPitch=Mathf.DeltaAngle(0,camera.transform.eulerAngles.x);}
