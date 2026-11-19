@@ -1,0 +1,31 @@
+{
+  "method": "Blender FBX export and reimport, transformed back to Unity coordinates; root must still verify Unity-imported bounds",
+  "result": {
+    "Interior": {
+      "unity_metre_bounds_min": [
+        -6.925000190734863,
+        -0.23000121116638184,
+        -16.934999465942383
+      ],
+      "unity_metre_bounds_max": [
+        7.0,
+        4.600000381469727,
+        8.300000190734863
+      ],
+      "imported_meshes": 8
+    },
+    "Exterior": {
+      "unity_metre_bounds_min": [
+        -10.695561408996582,
+        -4.055312633514404,
+        -31.450000762939453
+      ],
+      "unity_metre_bounds_max": [
+        10.695561408996582,
+        12.899999618530273,
+        12.030216217041016
+      ],
+      "imported_meshes": 9
+    }
+  }
+}

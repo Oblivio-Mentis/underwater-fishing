@@ -1,0 +1,52 @@
+{
+  "coordinates": "Unity metres, x right, y up, z bow; geometry built in Blender(x,-z,y), exported FBX -Z forward/Y up",
+  "materials": [
+    "Nereid_Hull",
+    "Nereid_Steel",
+    "Nereid_Dark",
+    "Nereid_Trim",
+    "Nereid_Ochre",
+    "Nereid_Grate",
+    "Nereid_Window",
+    "Nereid_Lamp",
+    "Nereid_Rubber"
+  ],
+  "models": {
+    "Interior": {
+      "file": "Nereid_Interior.fbx",
+      "objects": 8,
+      "triangles": 111832,
+      "unity_bounds_min": [
+        -6.925000190734863,
+        -0.23000000417232513,
+        -16.934999465942383
+      ],
+      "unity_bounds_max": [
+        7.0,
+        4.599999904632568,
+        8.300000190734863
+      ]
+    },
+    "Exterior": {
+      "file": "Nereid_Exterior.fbx",
+      "objects": 9,
+      "triangles": 67928,
+      "unity_bounds_min": [
+        -10.695561408996582,
+        -4.05531120300293,
+        -31.450000762939453
+      ],
+      "unity_bounds_max": [
+        10.695561408996582,
+        12.90000057220459,
+        12.030216217041016
+      ]
+    }
+  },
+  "openings": {
+    "main_windows": "x=+-5.87 reveals to+-6.89; z=-7.8..6.55; y0.87..3.24",
+    "main_to_aft": "z=-8,width3.04,height3.15",
+    "aft_starboard_exit": "x5.8..7,z-15.6..-12.4,y0..3.0",
+    "bow_mouth": "z7.6,centre(0,1.85),width5.1,height3.58"
+  }
+}
