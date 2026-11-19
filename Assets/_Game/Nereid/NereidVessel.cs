@@ -28,6 +28,15 @@ namespace Raid.Nereid
             return false;
         }
 
+        public bool InsideJaws(Vector3 chest)
+        {
+            Vector3 local=transform.InverseTransformPoint(chest);
+            if(local.z<7.72f || local.z>9.42f)return false;
+            float lateral=local.x/1.54f;
+            float vertical=(local.y-1.45f)/1.49f;
+            return lateral*lateral+vertical*vertical<1f;
+        }
+
         void LateUpdate()
         {
             if(world==null)world=RaidWorld.Instance;

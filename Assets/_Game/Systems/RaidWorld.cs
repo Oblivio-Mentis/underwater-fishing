@@ -212,7 +212,7 @@ namespace Raid
                     var upgrade=(Upgrade)((int)action-(int)WorldAction.Reel);
                     success=team.Buy(upgrade,AtBase,progression); break;
             }
-            if(success) { Publish(); Save(); }
+            if(success) { diver.ConfirmInteraction(); Publish(); Save(); }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
             Respond(sender,requestId,success,success?"ok":"unavailable");
         }

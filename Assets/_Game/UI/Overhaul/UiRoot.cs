@@ -205,6 +205,7 @@ namespace Raid.UI
             if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
             else
             {
+                if(station!=null)Context.Player.TouchTerminal(station.kind);
                 ShowPage(UiPage.Terminal);
                 terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
             }

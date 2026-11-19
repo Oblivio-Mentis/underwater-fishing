@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 namespace Raid
 {
     [RequireComponent(typeof(CharacterController))]
-    public sealed class DiverMotor : NetworkBehaviour
+    public sealed partial class DiverMotor : NetworkBehaviour
     {
         public static readonly System.Collections.Generic.List<DiverMotor> ServerDivers = new();
         public DiverTuning tuning;
@@ -21,6 +21,9 @@ namespace Raid
             public float Stress;
             public bool Inside;
             public bool Trapped;
+            public float Pitch;
+            public Quaternion BodyRotation;
+            public bool Dead, Consumed, Sprinting, MayReturn;
         }
 
         private readonly SyncVar<DiverState> _state = new();
@@ -53,7 +56,7 @@ namespace Raid
         // Ground contacts are authoritative on the server; remote replicas do not run a CharacterController.
         public bool IsGrounded => NetworkObject!=null && IsServerInitialized && _controller!=null && _controller.enabled && _controller.isGrounded;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
-        public bool IsHelpless => Oxygen <= 0f;
+        public bool IsHelpless => IsDead || Oxygen <= 0f;
         public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f : _state.Value.Trapped;
         public Vector3 AimDirection => Quaternion.Euler(_serverPitch, _serverYaw, 0f) * Vector3.forward;
 
@@ -83,6 +86,7 @@ namespace Raid
             {
                 Position = transform.position,
                 Yaw = _serverYaw,
+                BodyRotation = transform.rotation,
                 Oxygen = tuning.oxygenCapacity,
                 Inside = IsSealedInterior(transform.position)
             };
@@ -91,6 +95,7 @@ namespace Raid
         public override void OnStopServer()
         {
             ServerDivers.Remove(this);
+            RemoveDeathBody();
             _controller.enabled = false;
             _serverInput = Vector3.zero;
             ResetIndoorMovement();
@@ -98,6 +103,7 @@ namespace Raid
 
         public override void OnStartClient()
         {
+            ClientCrew.Add(this);
             if (!IsServerInitialized)
             {
                 transform.SetPositionAndRotation(_state.Value.Position, Quaternion.Euler(0f, _state.Value.Yaw, 0f));
@@ -124,6 +130,9 @@ namespace Raid
 
         public override void OnStopClient()
         {
+            ClientCrew.Remove(this);
+            Spectating=null;
+            if(deathShade!=null)Destroy(deathShade.transform.parent.gameObject);
             _localJumpQueued=false;
             if (_camera == null) return;
             _actions?.Disable();
@@ -157,6 +166,12 @@ namespace Raid
             if (!UI.UiInputGate.Active && _release.WasPressedThisFrame()) SetCursor(false);
             if (!UI.UiInputGate.Active && _capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
             bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
+            if(IsDead)
+            {
+                if(controlling && _capture.WasPressedThisFrame())CycleSpectator();
+                if(controlling && CanRespawn && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)RequestRespawn();
+                return;
+            }
             if (controlling)
             {
                 Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
@@ -177,6 +192,7 @@ namespace Raid
         [ServerRpc]
         private void SubmitInput(Vector3 axes, float yaw, float pitch, bool sprint)
         {
+            if(IsDead)return;
             if (!Finite(axes.x) || !Finite(axes.y) || !Finite(axes.z) || !Finite(yaw) || !Finite(pitch)) return;
             if(UsesIndoorWalking(transform.position))
             {
@@ -202,6 +218,7 @@ namespace Raid
         {
             if (!IsServerInitialized) return;
             DiverState state = _state.Value;
+            if(state.Dead){AdvanceDeath(state);return;}
             bool active = Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
             Vector3 axes = active && state.Oxygen > 0f && !IsTrapped ? _serverInput : Vector3.zero;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
@@ -240,6 +257,9 @@ namespace Raid
 
             state.Position = transform.position;
             state.Yaw = _serverYaw;
+            state.Pitch = _serverPitch;
+            state.BodyRotation=transform.rotation;
+            state.Sprinting=_serverSprint && active && axes.sqrMagnitude>.04f && (state.Position-_previousPosition).sqrMagnitude>.000001f;
             state.Inside = IsSealedInterior(state.Position);
             state.Trapped = _trappedTime > 0;
             state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery : -1f) * Time.fixedDeltaTime,
@@ -252,6 +272,12 @@ namespace Raid
                 state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*Time.fixedDeltaTime);
             _previousPosition = state.Position;
             _state.Value = state;
+            var vesselHere=Nereid.NereidVessel.Active;
+            if(vesselHere!=null)
+            {
+                bool swallowed=vesselHere.InsideJaws(state.Position+Vector3.up*.35f);
+                if(swallowed || state.Oxygen<=0f){BeginDeath(swallowed);return;}
+            }
             _trappedTime = Mathf.Max(0f, _trappedTime-Time.fixedDeltaTime);
             _helplessTime = state.Oxygen <= 0f ? _helplessTime+Time.fixedDeltaTime : 0f;
             if (_helplessTime >= tuning.helplessWindow)
@@ -263,7 +289,7 @@ namespace Raid
 
         public void ApplyExternalMotion(Vector3 displacement)
         {
-            if (!IsServerInitialized || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
+            if (!IsServerInitialized || IsDead || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
             _controller.Move(Vector3.ClampMagnitude(displacement, 2f));
         }
         public void ApplyTetherMotion(Vector3 displacement)
@@ -278,7 +304,7 @@ namespace Raid
 
         public void Teleport(Vector3 position)
         {
-            if (!IsServerInitialized) return;
+            if (!IsServerInitialized || IsDead) return;
             _controller.enabled=false; transform.position=position; _controller.enabled=true;
             _previousPosition=position;
             ResetIndoorMovement();_wasWalking=UsesIndoorWalking(position);
@@ -288,14 +314,21 @@ namespace Raid
 
         public void DamageOxygen(float amount)
         {
-            if (!IsServerInitialized) return;
+            if (!IsServerInitialized || IsDead) return;
             var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)); _state.Value=state;
+            if(state.Oxygen<=0 && Nereid.NereidVessel.Active!=null)BeginDeath(false);
         }
 
-        public void Trap() { if(IsServerInitialized) _trappedTime=tuning.trappedDuration; }
+        public void Trap() { if(IsServerInitialized && !IsDead) _trappedTime=tuning.trappedDuration; }
         public void Rescue()
         {
             if (!IsServerInitialized) return;
+            if(IsDead)
+            {
+                if(!CanBeRescued)return;
+                ReviveAt(transform.position);
+                return;
+            }
             _trappedTime=0; _helplessTime=0;
             var state=_state.Value; state.Oxygen=Mathf.Max(state.Oxygen,tuning.rescueOxygen); _state.Value=state;
         }
@@ -307,9 +340,10 @@ namespace Raid
             {
                 float blend = 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.02f, tuning.sendInterval));
                 transform.position = Vector3.Lerp(transform.position, _state.Value.Position, blend);
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.Euler(0f, _state.Value.Yaw, 0f), blend);
+                Quaternion rotation=IsDead?_state.Value.BodyRotation:Quaternion.Euler(0f,_state.Value.Yaw,0f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, rotation, blend);
             }
-            if (IsOwner && _camera != null) _camera.transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+            if (IsOwner && _camera != null) UpdateOwnerView();
         }
 
         private void OnGUI()

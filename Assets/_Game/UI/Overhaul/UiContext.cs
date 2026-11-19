@@ -46,7 +46,7 @@ namespace Raid.UI
             RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;AimedConsole=null;Interaction=UiInteraction.None;
             if(!Connected)return;
             float range=2.5f;
-            foreach(var other in Players)if(other!=Player && (other.IsHelpless||other.IsTrapped))
+            foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
             var playerCamera=Player.GetComponentInChildren<Camera>();RaycastHit consoleHit;
