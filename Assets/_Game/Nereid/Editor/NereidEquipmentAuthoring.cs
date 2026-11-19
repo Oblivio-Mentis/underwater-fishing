@@ -233,7 +233,7 @@ namespace Raid.Nereid.Editor
             Box("Asymmetric control housing shoulder",root,new Vector3(.48f,1.18f,.13f),new Vector3(.17f,.39f,.35f),steel,.045f);
             Box("Selector function plaque",root,new Vector3(.02f,.985f,-.345f),new Vector3(.99f,.36f,.045f),dark,.028f);
             RouteLabel(feeding?"КОРМЛЕНИЕ":"ПЕРЕРАБОТКА",root,new Vector3(.02f,1.055f,-.373f),.112f,new Vector2(.96f,.14f),new Color(.88f,.93f,.89f));
-            RouteLabel(feeding?"E · ВСЯ РЫБА В ПАСТЬ":"E · ВСЯ РЫБА В ЦЕХ",root,new Vector3(.02f,.92f,-.373f),.072f,new Vector2(.96f,.13f),feeding?new Color(.92f,.65f,.3f):new Color(.25f,.8f,.84f));
+            RouteLabel("E · ПУСК / СТОП",root,new Vector3(.02f,.92f,-.373f),.072f,new Vector2(.96f,.13f),feeding?new Color(.92f,.65f,.3f):new Color(.25f,.8f,.84f));
         }
 
         static void RouteLabel(string text,Transform parent,Vector3 position,float size,Vector2 bounds,Color color)
@@ -332,12 +332,19 @@ namespace Raid.Nereid.Editor
         static Mesh Trough(Vector3[] path,float radius)
         {
             var p=new List<Vector3>();var t=new List<int>();const int sides=8;
+            var previousTangent=(path[1]-path[0]).normalized;
+            var up=Vector3.ProjectOnPlane(Vector3.up,previousTangent).normalized;if(up.sqrMagnitude<.5f)up=Vector3.forward;
             for(int ring=0;ring<path.Length;ring++)
             {
                 var tangent=(path[Mathf.Min(ring+1,path.Length-1)]-path[Mathf.Max(0,ring-1)]).normalized;
-                var up=Vector3.ProjectOnPlane(Vector3.up,tangent).normalized;if(up.sqrMagnitude<.5f)up=Vector3.forward;
+                if(ring>0)up=Vector3.ProjectOnPlane(Quaternion.FromToRotation(previousTangent,tangent)*up,tangent).normalized;
+                // Settle gently towards the world underside after an elbow, without snapping at vertical.
+                var underside=Vector3.ProjectOnPlane(Vector3.up,tangent);
+                if(underside.sqrMagnitude>.04f)
+                    up=Quaternion.AngleAxis(Mathf.Clamp(Vector3.SignedAngle(up,underside.normalized,tangent),-3,3),tangent)*up;
                 var right=Vector3.Cross(tangent,up).normalized;
                 for(int side=0;side<=sides;side++){float a=Mathf.Lerp(-.57f,.57f,side/(float)sides);p.Add(path[ring]+(-up*Mathf.Cos(a)+right*Mathf.Sin(a))*radius);}
+                previousTangent=tangent;
             }
             for(int ring=0;ring<path.Length-1;ring++)for(int side=0;side<sides;side++)
             {int a=ring*(sides+1)+side,b=a+sides+1;t.AddRange(new[]{a,b,a+1,a+1,b,b+1});}

@@ -289,7 +289,7 @@ namespace Raid.Nereid.Editor
         static void RerouteFeed()
         {
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
-            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(2.02f,1.3f,-3),new Vector3(2.02f,3.02f,-3),new Vector3(3.15f,3.08f,-2.6f),new Vector3(3.15f,3.08f,4.6f),new Vector3(2.35f,3.0f,6.35f),new Vector3(1.1f,2.4f,7.75f)};
+            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(3.5f,1.3f,-3),new Vector3(3.5f,3.5f,-3),new Vector3(3.5f,3.5f,4.6f),new Vector3(2.35f,3.0f,6.35f),new Vector3(1.1f,2.4f,7.75f)};
             factory.feedTube=BuildTube(anchors,factory.feedGlass,"FeedingShoulderPipe");
             foreach(var r in factory.GetComponentsInChildren<Renderer>(true))
                 if(r.sharedMaterial!=null&&r.sharedMaterial.name=="Enamel_safety_ochre")r.sharedMaterial=mats["Nereid_Ochre"];
@@ -306,30 +306,78 @@ namespace Raid.Nereid.Editor
             foreach(Transform bin in workshop)if(bin.name.StartsWith("Material output bin",StringComparison.Ordinal))
                 foreach(var label in bin.GetComponentsInChildren<TMPro.TMP_Text>(true))
                 {var point=label.transform.localPosition;point.z=-.27f;label.transform.localPosition=point;label.transform.localRotation=Quaternion.identity;}
-            var anchors=new[]{new Vector3(-1.6f,1.3f,-3),new Vector3(-2.02f,1.3f,-3),new Vector3(-2.02f,3.03f,-3),new Vector3(-2.5f,3.08f,-4.5f),new Vector3(-2.5f,3.05f,-7),new Vector3(-2.5f,2.9f,-9.5f),new Vector3(-2.5f,2.35f,-10.95f)};
+            var anchors=new[]{new Vector3(-1.6f,1.3f,-3),new Vector3(-3.5f,1.3f,-3),new Vector3(-3.5f,3.5f,-3),new Vector3(-3.5f,3.5f,-9.1f),new Vector3(-2.5f,2.35f,-10.95f)};
             factory.processTube=BuildTube(anchors,factory.processGlass,"ProcessingHallPipe");EditorUtility.SetDirty(factory);
         }
 
         static Vector3[] BuildTube(Vector3[] anchors,Renderer[] renderers,string name)
         {
-            var path=new List<Vector3>();
-            for(int i=0;i<anchors.Length-1;i++)for(int step=0;step<8;step++)
+            // True circular elbows preserve their radius and exact line/arc tangents; no Catmull overshoot.
+            const float elbowRadius=1f,sampleSpacing=.055f;
+            if(anchors==null||anchors.Length<2)throw new InvalidOperationException(name+": at least two pipe anchors are required");
+            var directions=new Vector3[anchors.Length-1];var trims=new float[anchors.Length];var turns=new float[anchors.Length];
+            for(int i=0;i<directions.Length;i++)
             {
-                float t=step/8f;var a=anchors[Mathf.Max(0,i-1)];var b=anchors[i];var c=anchors[i+1];var d=anchors[Mathf.Min(anchors.Length-1,i+2)];
-                path.Add(.5f*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t));
+                var segment=anchors[i+1]-anchors[i];if(segment.sqrMagnitude<.000001f)throw new InvalidOperationException(name+": duplicate pipe anchors");directions[i]=segment.normalized;
             }
-            path.Add(anchors[anchors.Length-1]);
-            var vertices=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();const int sides=24;float distance=0;
+            for(int i=1;i<anchors.Length-1;i++)
+            {
+                float angle=Mathf.Acos(Mathf.Clamp(Vector3.Dot(directions[i-1],directions[i]),-1,1));
+                if(angle<.001f)continue;
+                if(angle>Mathf.PI-.001f)throw new InvalidOperationException(name+": a pipe elbow cannot make a U-turn");
+                turns[i]=angle;trims[i]=elbowRadius*Mathf.Tan(angle*.5f);
+            }
+            for(int i=0;i<directions.Length;i++)
+                if(trims[i]+trims[i+1]>Vector3.Distance(anchors[i],anchors[i+1])+.0001f)
+                    throw new InvalidOperationException(name+": anchors do not allow the specified one-metre elbow radius");
+            var path=new List<Vector3>();var tangents=new List<Vector3>();
+            Action<Vector3,Vector3> sample=(point,tangent)=>
+            {
+                if(path.Count>0&&(point-path[path.Count-1]).sqrMagnitude<.00000001f){tangents[tangents.Count-1]=tangent;return;}
+                path.Add(point);tangents.Add(tangent.normalized);
+            };
+            Action<Vector3,Vector3,Vector3> line=(start,end,tangent)=>
+            {
+                int count=Mathf.Max(1,Mathf.CeilToInt(Vector3.Distance(start,end)/sampleSpacing));
+                for(int step=1;step<=count;step++)sample(Vector3.Lerp(start,end,step/(float)count),tangent);
+            };
+            sample(anchors[0],directions[0]);
+            for(int i=1;i<anchors.Length-1;i++)
+            {
+                var incoming=directions[i-1];var outgoing=directions[i];
+                if(turns[i]<.001f){line(path[path.Count-1],anchors[i],incoming);continue;}
+                var entry=anchors[i]-incoming*trims[i];var exit=anchors[i]+outgoing*trims[i];
+                line(path[path.Count-1],entry,incoming);
+                var normal=Vector3.Cross(incoming,outgoing).normalized;
+                var centre=entry+Vector3.Cross(normal,incoming)*elbowRadius;var radial=entry-centre;
+                int count=Mathf.Max(2,Mathf.CeilToInt(turns[i]*elbowRadius/sampleSpacing));
+                for(int step=1;step<=count;step++)
+                {
+                    var rotation=Quaternion.AngleAxis(turns[i]*Mathf.Rad2Deg*step/count,normal);
+                    sample(step==count?exit:centre+rotation*radial,step==count?outgoing:rotation*incoming);
+                }
+            }
+            line(path[path.Count-1],anchors[anchors.Length-1],directions[directions.Length-1]);
+            var vertices=new List<Vector3>();var normals=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();const int sides=24;float distance=0;
+            var previousTangent=tangents[0];
+            var frameX=Vector3.Cross(previousTangent,Mathf.Abs(previousTangent.y)>.99f?Vector3.forward:Vector3.up).normalized;
             for(int ring=0;ring<path.Count;ring++)
             {
                 if(ring>0)distance+=Vector3.Distance(path[ring-1],path[ring]);
-                var tangent=(path[Mathf.Min(ring+1,path.Count-1)]-path[Mathf.Max(0,ring-1)]).normalized;
-                var x=Vector3.Cross(tangent,Mathf.Abs(tangent.y)>.9f?Vector3.forward:Vector3.up).normalized;var y=Vector3.Cross(tangent,x);
-                for(int side=0;side<sides;side++){float a=side*Mathf.PI*2/sides;vertices.Add(path[ring]+(x*Mathf.Cos(a)+y*Mathf.Sin(a))*.34f);uv.Add(new Vector2(side/(float)sides,distance));}
+                var tangent=tangents[ring];
+                // Parallel transport prevents a 90-degree cross-section flip at vertical bends.
+                if(ring>0)frameX=Vector3.ProjectOnPlane(Quaternion.FromToRotation(previousTangent,tangent)*frameX,tangent).normalized;
+                var frameY=Vector3.Cross(tangent,frameX).normalized;
+                for(int side=0;side<sides;side++)
+                {
+                    float a=side*Mathf.PI*2/sides;var radial=frameX*Mathf.Cos(a)+frameY*Mathf.Sin(a);
+                    vertices.Add(path[ring]+radial*.34f);normals.Add(radial);uv.Add(new Vector2(side/(float)sides,distance));
+                }
+                previousTangent=tangent;
             }
             for(int ring=0;ring<path.Count-1;ring++)for(int side=0;side<sides;side++)
             {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;triangles.AddRange(new[]{a,b,c,b,d,c});}
-            var mesh=new Mesh{name=name};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.RecalculateNormals();mesh.RecalculateBounds();
+            var mesh=new Mesh{name=name};mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.SetUVs(0,uv);mesh.SetNormals(normals);mesh.RecalculateBounds();
             var asset=SaveMesh(name,mesh);foreach(var renderer in renderers)renderer.GetComponent<MeshFilter>().sharedMesh=asset;return path.ToArray();
         }
 
