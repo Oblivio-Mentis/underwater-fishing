@@ -34,7 +34,7 @@ namespace Raid.UI
                 crewRows[i]=At(crew,"Crew Slot "+i,new Vector2(0,1),new Vector2(0,1),0,-49*i,206,45);
                 var row=crewRows[i];
                 Icon(row,"Diver Helmet",Mark.Helmet,0,0,47,47,Ivory);
-                crewGauge[i]=Meter(row,"Crew Air",48,-29,111,12,Green,4);
+                crewGauge[i]=Meter(row,"Crew Health",48,-29,111,12,Green,4);
                 crewName[i]=Caption(row,"Player Identity",51,-1,143,24,15,TextAlignmentOptions.MidlineLeft);
             }
 
@@ -99,11 +99,10 @@ namespace Raid.UI
             {
                 if(player==null||!player.IsClientInitialized||count==crewRows.Length)continue;
                 var row=crewRows[count];row.gameObject.SetActive(true);
-                float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*capacityBonus);
-                float oxygenRatio=player.IsDead?0:Mathf.Clamp01(player.Oxygen/capacity);
-                UiKit.Fraction(crewGauge[count],oxygenRatio);
-                crewGauge[count].color=player.IsTrapped||player.IsHelpless||oxygenRatio<.16f?UiTheme.Red:Green;
-                string state=player.IsDead?"  ×":player.IsTrapped?"  SOS":player.IsHelpless?"  SOS":"";
+                float health=player.IsDead?0:Mathf.Clamp01(player.Health/100f);
+                UiKit.Fraction(crewGauge[count],health);
+                crewGauge[count].color=player.IsTrapped||player.IsHelpless||health<.25f?UiTheme.Red:player.IsHypoxic?UiTheme.Amber:Green;
+                string state=player.IsDead?"  ×":player.IsTrapped||player.IsHelpless?"  SOS":player.IsHypoxic?"  O₂":"";
                 UiKit.Set(crewName[count],UiText.HudPlayerName(player)+state);count++;
             }
             for(int i=count;i<crewRows.Length;i++)crewRows[i].gameObject.SetActive(false);

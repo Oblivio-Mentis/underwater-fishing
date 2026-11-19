@@ -25,6 +25,7 @@ namespace Raid.UI
         ShipConsole dismissedConsole;
         Nereid.AirlockPad aimedPad;
         RectTransform boardPointer;
+        ReticleBoardInput boardInput;
         float desiredFov=80;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
@@ -62,6 +63,7 @@ namespace Raid.UI
             foreach(var module in events.GetComponents<BaseInputModule>())if(!(module is InputSystemUIInputModule))module.enabled=false;
             inputModule=events.GetComponent<InputSystemUIInputModule>();if(inputModule==null)inputModule=events.gameObject.AddComponent<InputSystemUIInputModule>();
             events.sendNavigationEvents=true;
+            boardInput=new ReticleBoardInput(GetComponent<GraphicRaycaster>(),events);
             hud=new HudView(transform,this);
             var dim=UiKit.Panel(transform,"Menu shade",new Color(.012f,.027f,.031f,.62f),true);shade=dim.rectTransform;UiKit.Fill(shade);
             menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);
@@ -102,9 +104,11 @@ namespace Raid.UI
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
             if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
+            bool previousBoard=computerSurface;
             Page=value;
             if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
             if(value!=UiPage.Terminal)Context.SelectedConsole=null;
+            boardInput.Clear();
             ConfigureSurface(value);
             float boardMargin=computerSurface?(canvasRect.rect.height-terminal.Root.rect.height)*.5f:0;
             if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4-boardMargin),new Vector2(value==UiPage.None?760:1080,38));
@@ -113,7 +117,8 @@ namespace Raid.UI
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
             shade.gameObject.SetActive(value!=UiPage.None&&!computerSurface);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
-            UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor();EventSystem.current?.SetSelectedGameObject(null);
+            if(!computerSurface && !(previousBoard && value==UiPage.None))UiInputGate.ResumeAt=Time.unscaledTime+.15f;
+            SetCursor();EventSystem.current?.SetSelectedGameObject(null);
             if(Context.Connected && value==UiPage.Terminal)terminal.Refresh();if(Context.Connected&&value==UiPage.Cargo)cargo.Refresh();
             Canvas.ForceUpdateCanvases();
         }
@@ -147,7 +152,7 @@ namespace Raid.UI
             if(inputModule!=null)
             {
                 inputModule.cursorLockBehavior=computerSurface?InputSystemUIInputModule.CursorLockBehavior.ScreenCenter:InputSystemUIInputModule.CursorLockBehavior.OutsideScreen;
-                inputModule.enabled=Application.isFocused&&!overlay;
+                inputModule.enabled=Application.isFocused&&!overlay&&!computerSurface;
             }
             if(EventSystem.current!=null)EventSystem.current.sendNavigationEvents=!computerSurface;
             UiInputGate.Modal=(!computerSurface && (Page!=UiPage.None||confirmation.gameObject.activeSelf))||overlay;
@@ -165,7 +170,8 @@ namespace Raid.UI
                 else if(Page==UiPage.None)ShowPage(UiPage.Pause);
                 else ClosePanel();
             }
-            UpdatePhysicalPointer();
+            var mouse=Application.isFocused?Mouse.current:null;
+            UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,mouse==null?0:Mathf.Sign(mouse.scroll.ReadValue().y)*Mathf.Clamp01(Mathf.Abs(mouse.scroll.ReadValue().y)),!UiInputGate.Blocked);
             if(!UiInputGate.Blocked && Context.Connected && Page==UiPage.None && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)Interact();
             if(Time.unscaledTime>=nextRefresh)
             {
@@ -206,13 +212,13 @@ namespace Raid.UI
         }
         public Nereid.AirlockPad AimedPad => aimedPad;
 
-        void UpdatePhysicalPointer()
+        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed)
         {
             UiInputGate.PointerReserved=false;
             aimedPad=null;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
-            if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return;
+            if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
             var station=ShipConsole.ResolveSight(player,cam);
             if(station!=dismissedConsole)dismissedConsole=null;
@@ -222,21 +228,20 @@ namespace Raid.UI
                 ShowPage(UiPage.None);
             }
             aimedPad=Nereid.AirlockPad.Aimed(player,cam);
-            bool clicked=Application.isFocused && Mouse.current!=null && Mouse.current.leftButton.wasPressedThisFrame;
             UiInputGate.PointerReserved=station!=null || aimedPad!=null;
             if(aimedPad!=null)
             {
-                if(clicked && !UiInputGate.Blocked && aimedPad.CanRequest)aimedPad.Press(player);
-                return;
+                if(clicked && allowed && !player.IsHelpless && aimedPad.CanRequest){aimedPad.Press(player);return true;}
+                return false;
             }
-            if(station==null || station==dismissedConsole || player.IsHelpless)return;
+            if(station==null || station==dismissedConsole || player.IsHelpless)return false;
             if(!station.IsMonitor)
             {
-                if(clicked && !UiInputGate.Blocked)UseConsole(station);
-                return;
+                if(clicked && allowed){UseConsole(station);return true;}
+                return false;
             }
-            if(!computerSurface && confirmAction==null && !UiInputGate.Blocked)UseConsole(station);
-            if(!computerSurface)return;
+            if(!computerSurface && confirmAction==null && allowed)UseConsole(station);
+            if(!computerSurface)return false;
             var screenCenter=cam.pixelRect.center;
             if(RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect,screenCenter,cam,out var point))
             {
@@ -244,8 +249,14 @@ namespace Raid.UI
                 boardPointer.SetAsLastSibling();
                 boardPointer.gameObject.SetActive(true);
             }
-            if(clicked)player.TouchTerminal(station.kind);
+            if(clicked && allowed)player.TouchTerminal(station.kind);
+            return boardInput.Update(screenCenter,clicked&&allowed,released,allowed?scroll:0);
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public bool QaClickReticle() => UpdatePhysicalPointer(true,true,0,!UiInputGate.Modal);
+        public bool QaScrollReticle(float steps) => UpdatePhysicalPointer(false,false,steps,!UiInputGate.Modal);
+        public string ReticleControl => computerSurface?boardInput.ControlName:"";
+#endif
         string lastSaveMessage="";
         void Interact()
         {

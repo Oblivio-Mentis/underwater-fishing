@@ -20,7 +20,9 @@ namespace Raid.UI
         [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
         [Serializable] public sealed class Snapshot
         {
-            public bool dead,consumed,canReturn;
+            public bool dead,consumed,canReturn,hypoxic,pointerReserved;
+            public float health,hypoxia,airlockWater,innerDoor,outerDoor;
+            public string airlockPhase,reticleControl;
             public int watchedOwner=-1;
             public string request,page,error,cursor,worldMessage,scene;
             public bool connected,pending,inputBlocked,atBase,lastSuccess,wave;
@@ -185,6 +187,12 @@ namespace Raid.UI
                 else diver.LookAtConsole(diver.transform.position+Vector3.up*.6f+Quaternion.Euler(r.number2,r.number,0)*Vector3.forward*10f);
                 return;
             }
+            if(r.action=="reticle_click")
+            {
+                if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("No available control under the physical reticle");
+                return;
+            }
+            if(r.action=="reticle_scroll"){UiRoot.Instance.QaScrollReticle(r.number);return;}
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
             if (r.action == "slot" || r.action == "fish_reel" || r.action == "fish_grip")
@@ -273,8 +281,10 @@ namespace Raid.UI
             if(world!=null)
             {
                 snapshot.fishRoute=world.FishRoute;
+                var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
                 if(player!=null)
                 {
+                    snapshot.health=player.Health;snapshot.hypoxia=player.HypoxiaSeverity;snapshot.hypoxic=player.IsHypoxic;
                     snapshot.dead=player.IsDead;snapshot.consumed=player.IsConsumed;snapshot.canReturn=player.CanRespawn;
                     snapshot.watchedOwner=player.Spectating==null?-1:player.Spectating.OwnerId;
                 }
@@ -293,6 +303,7 @@ namespace Raid.UI
             }
             if(player!=null){snapshot.owner=player.OwnerId;snapshot.x=player.transform.position.x;snapshot.y=player.transform.position.y;snapshot.z=player.transform.position.z;snapshot.oxygen=player.Oxygen;snapshot.stress=player.PressureStress;snapshot.depth=player.Depth;snapshot.lookMultiplier=player.LocalLookMultiplier;}
             var camera=player==null?null:player.GetComponentInChildren<Camera>();if(camera!=null){snapshot.actualFov=camera.fieldOfView;snapshot.aimYaw=camera.transform.eulerAngles.y;snapshot.aimPitch=Mathf.DeltaAngle(0,camera.transform.eulerAngles.x);}
+            snapshot.reticleControl=root.ReticleControl;snapshot.pointerReserved=UiInputGate.PointerReserved;
             snapshot.controls=UnityEngine.Object.FindObjectsByType<Button>().Where(b=>b.IsActive()).Select(b=>
             {
                 var rect=(RectTransform)b.transform;var corners=new Vector3[4];rect.GetWorldCorners(corners);var label=b.GetComponentInChildren<TMP_Text>();
