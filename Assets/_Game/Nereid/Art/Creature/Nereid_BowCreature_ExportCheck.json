@@ -1,0 +1,97 @@
+{
+  "method": "FBX exported and reimported in headless Blender; transformed back into Unity world coordinates",
+  "passed": true,
+  "triangles": 58964,
+  "mesh_count": 5,
+  "unity_bounds_min": [
+    -17.663854598999023,
+    -10.846863746643066,
+    -4.236414909362793
+  ],
+  "unity_bounds_max": [
+    17.672069549560547,
+    13.266120910644531,
+    39.5
+  ],
+  "mesh_names": [
+    "Nereid_CreatureDark",
+    "Nereid_CreatureEye",
+    "Nereid_CreatureGill",
+    "Nereid_CreatureIvory",
+    "Nereid_CreatureSkin"
+  ],
+  "feeding_corridor_9_ray_check": [
+    {
+      "unity_ray_start": [
+        0,
+        3.5,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        -4,
+        3.5,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        4,
+        3.5,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        0,
+        0.9,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        0,
+        6.1,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        -2.8,
+        1.8,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        2.8,
+        1.8,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        -2.8,
+        5.2,
+        15.6
+      ],
+      "first_surface_z": null
+    },
+    {
+      "unity_ray_start": [
+        2.8,
+        5.2,
+        15.6
+      ],
+      "first_surface_z": null
+    }
+  ]
+}

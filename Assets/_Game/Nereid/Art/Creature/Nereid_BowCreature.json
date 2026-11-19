@@ -1,0 +1,34 @@
+{
+  "coordinates": "New Unity WORLD metres; +Y up, +Z away from bow; root origin (0,0,0), unit scale",
+  "file": "Nereid_BowCreature.fbx",
+  "materials": [
+    "Nereid_CreatureSkin",
+    "Nereid_CreatureDark",
+    "Nereid_CreatureIvory",
+    "Nereid_CreatureEye",
+    "Nereid_CreatureGill"
+  ],
+  "mesh_count": 5,
+  "triangles": 58964,
+  "unity_bounds_min": [
+    -17.663854598999023,
+    -10.846863746643066,
+    -4.236414432525635
+  ],
+  "unity_bounds_max": [
+    17.672069549560547,
+    13.266119003295898,
+    39.5
+  ],
+  "feeding_opening": {
+    "centre": [
+      0,
+      3.5,
+      15.6
+    ],
+    "clear_width": 9,
+    "clear_height": 6,
+    "clear_depth_end": 19.0
+  },
+  "design": "Hollow-front mantle, deep throat, eight posed gripping arms with modelled cupped suckers, overlapping dorsal armour, two convex side eyes; no gameplay or collision data."
+}
