@@ -1,0 +1,809 @@
+{
+  "job_id": "build-f089416849",
+  "source_revision": "115dcfce7a54ad4c8d8c6128c92c845df111f978",
+  "unity": "6000.5.6f1",
+  "target": "Windows x64",
+  "development": false,
+  "scene": "Assets/_Game/Scenes/InterfaceVerticalSlice.unity",
+  "duration_seconds": 32.3293927,
+  "reported_size_mb": 101.55,
+  "errors": 0,
+  "warnings": 0,
+  "development_probe_in_release": false,
+  "file_count": 197,
+  "files": {
+    "D3D12/D3D12Core.dll": {
+      "bytes": 4725304,
+      "sha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052"
+    },
+    "dstorage.dll": {
+      "bytes": 206904,
+      "sha256": "cae65787f61514bec6f012f44546e68b19e39d8854a9ab52af813370d44b272a"
+    },
+    "dstoragecore.dll": {
+      "bytes": 1482784,
+      "sha256": "cf85b19a92a8276f8baca0db9bbcd60735bad50768deb303d310e84d5f4fdd11"
+    },
+    "FishNet.SDK.Id": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll": {
+      "bytes": 7831472,
+      "sha256": "8fd88297e6adab34cfb9ddff166d9f7feae69797f3474b1a98c4d5e7f99ac11a"
+    },
+    "MonoBleedingEdge/EmbedRuntime/MonoPosixHelper.dll": {
+      "bytes": 611240,
+      "sha256": "b90c655ed2c35109e6dfc64b2a7dc099541abf5b2632e2da5d3c3731466b7670"
+    },
+    "MonoBleedingEdge/etc/mono/2.0/Browsers/Compat.browser": {
+      "bytes": 1605,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    "MonoBleedingEdge/etc/mono/2.0/DefaultWsdlHelpGenerator.aspx": {
+      "bytes": 60575,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    "MonoBleedingEdge/etc/mono/2.0/machine.config": {
+      "bytes": 29066,
+      "sha256": "e91782a27fa39fc6c1d6ee8b08529f5d35052310d0006034b878eb04b8f2af30"
+    },
+    "MonoBleedingEdge/etc/mono/2.0/settings.map": {
+      "bytes": 2622,
+      "sha256": "49c6160f9d54af4270a3b4e997fc4a8301f79b9e2070118fa46ddbcbbc44f9a2"
+    },
+    "MonoBleedingEdge/etc/mono/2.0/web.config": {
+      "bytes": 11635,
+      "sha256": "cf2b54339e069b9e42f7d6795eecbf562c50c1011f4ca8f65f578fe52d97ff92"
+    },
+    "MonoBleedingEdge/etc/mono/4.0/Browsers/Compat.browser": {
+      "bytes": 1605,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    "MonoBleedingEdge/etc/mono/4.0/DefaultWsdlHelpGenerator.aspx": {
+      "bytes": 60575,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    "MonoBleedingEdge/etc/mono/4.0/machine.config": {
+      "bytes": 33598,
+      "sha256": "e60aec2c5115d65b3acb3c55ea21576dbd770f579166c017125571e46ae560ed"
+    },
+    "MonoBleedingEdge/etc/mono/4.0/settings.map": {
+      "bytes": 2622,
+      "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+    },
+    "MonoBleedingEdge/etc/mono/4.0/web.config": {
+      "bytes": 18802,
+      "sha256": "e38bb8cc68fe5b4edecdfd288d094b9e8ced7629039b2a347682aba0d8bd7492"
+    },
+    "MonoBleedingEdge/etc/mono/4.5/Browsers/Compat.browser": {
+      "bytes": 1605,
+      "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+    },
+    "MonoBleedingEdge/etc/mono/4.5/DefaultWsdlHelpGenerator.aspx": {
+      "bytes": 60575,
+      "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+    },
+    "MonoBleedingEdge/etc/mono/4.5/machine.config": {
+      "bytes": 34056,
+      "sha256": "ee950004b576fb28dc85f4b0435ed04bf96612de2e8b53be84d07afe85a0de6c"
+    },
+    "MonoBleedingEdge/etc/mono/4.5/settings.map": {
+      "bytes": 2622,
+      "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+    },
+    "MonoBleedingEdge/etc/mono/4.5/web.config": {
+      "bytes": 18811,
+      "sha256": "c4cbddd4fd9347b58cc5a72b36dc4ba1ad2bb699e65869d05cd3fb9865f0d824"
+    },
+    "MonoBleedingEdge/etc/mono/browscap.ini": {
+      "bytes": 311984,
+      "sha256": "4ddd50f31fb968f30bedefc253a46dc3f2890192d05cdaa9e0a64a056eee807e"
+    },
+    "MonoBleedingEdge/etc/mono/config": {
+      "bytes": 3815,
+      "sha256": "5776169973a26a387b8b3e5c0f2301a7ab9a6dd7c7d3efa22a96abc47fbf8662"
+    },
+    "MonoBleedingEdge/etc/mono/mconfig/config.xml": {
+      "bytes": 25817,
+      "sha256": "0c56e34c69124510fa8c19e7b4c2ca6c1c4ff460ae19f798dd0ca035809e396d"
+    },
+    "README-RAID011.md": {
+      "bytes": 6541,
+      "sha256": "1747f5b422fe9d019b6d6ae44d324ec58ac6371cd50a62927398ad98991e3517"
+    },
+    "Start-Menu.cmd": {
+      "bytes": 162,
+      "sha256": "c48ea2cb62a670e92455f80cfcc079f9258382c1d2af79b0ac6aedccd40357fd"
+    },
+    "Start-Solo.cmd": {
+      "bytes": 173,
+      "sha256": "af5b487ddcad67d20fd173c2c85eeb21cdfa7da5ea5076e3cc0495691bb17a4a"
+    },
+    "steam_appid.txt": {
+      "bytes": 5,
+      "sha256": "e949c123a0b46184369ad161d6cfed2433c734e3143268a23cd30cb82568f6f2"
+    },
+    "UnderwaterFishing.exe": {
+      "bytes": 667648,
+      "sha256": "e0f2357d8e9db65fc9f144e51124e3b366089de2d8496979070510e2282c8596"
+    },
+    "UnderwaterFishing_Data/app.info": {
+      "bytes": 33,
+      "sha256": "0d9e678403f9b6c5eaa84424286492320a90b24680778bae8ac060b75176d341"
+    },
+    "UnderwaterFishing_Data/boot.config": {
+      "bytes": 156,
+      "sha256": "37be3f8b1513c2b5d945c11beaaee5f36fbc6df5c630b5c24cfe34b19dab13ad"
+    },
+    "UnderwaterFishing_Data/data.unity3d": {
+      "bytes": 6067990,
+      "sha256": "7174ae640a6d9cedde1734b6a41f764c150341b61112086b5839a382a73c0387"
+    },
+    "UnderwaterFishing_Data/Managed/Assembly-CSharp.dll": {
+      "bytes": 270848,
+      "sha256": "29f0b0eca6b5f2bf5c2e780185b403bc9bf110e63545e8783dafd4a99929feae"
+    },
+    "UnderwaterFishing_Data/Managed/com.rlabrecque.steamworks.net.dll": {
+      "bytes": 445440,
+      "sha256": "1dec7311cfc9cd251cc7b17d3ed2fa248a4cac77a5a9c84dce0e30834f63abf7"
+    },
+    "UnderwaterFishing_Data/Managed/FishNet.CodeAnalysis.dll": {
+      "bytes": 5120,
+      "sha256": "e56a24a6fe023c324d65dfc4c79b19492f052d011e8bbd45051846be6e05092f"
+    },
+    "UnderwaterFishing_Data/Managed/FishNet.Demos.dll": {
+      "bytes": 75264,
+      "sha256": "0657759691029b9883bbd7291cdc56242e7ef736f09ec28e855ab75590bfc2a5"
+    },
+    "UnderwaterFishing_Data/Managed/FishNet.Runtime.dll": {
+      "bytes": 861184,
+      "sha256": "59e533e7826fa6e21ea8d997341a66423c44f50614063eefd2a0a7ff6475a315"
+    },
+    "UnderwaterFishing_Data/Managed/GameKit.Dependencies.dll": {
+      "bytes": 84480,
+      "sha256": "c2ce69960a322bab6c75e7682ac80b4456d424af865ab96082ae309e56be6083"
+    },
+    "UnderwaterFishing_Data/Managed/MCPForUnity.Runtime.dll": {
+      "bytes": 32768,
+      "sha256": "d0f73a5086edc9c9cb56b121f342d18cbf1df77bc548327ed6b2354d02422836"
+    },
+    "UnderwaterFishing_Data/Managed/Mono.Security.dll": {
+      "bytes": 241152,
+      "sha256": "1849437c1d2fe7698c0fde2a9a6aad9a864372a373b7c1d887da902a36965b36"
+    },
+    "UnderwaterFishing_Data/Managed/mscorlib.dll": {
+      "bytes": 4632064,
+      "sha256": "f7698bd46af58d3ee9dac59a286cfedfd28e51f71c0fe3940671a3ccc7af5711"
+    },
+    "UnderwaterFishing_Data/Managed/netstandard.dll": {
+      "bytes": 90112,
+      "sha256": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5"
+    },
+    "UnderwaterFishing_Data/Managed/Newtonsoft.Json.dll": {
+      "bytes": 691712,
+      "sha256": "a56146202232958f46bd6a28b5a7da166aea123ee0d646735a46e5c341dfbf1f"
+    },
+    "UnderwaterFishing_Data/Managed/OblivioMentis.Presentation.Runtime.dll": {
+      "bytes": 31744,
+      "sha256": "f82ce28efa4ee7547112bbd49cb357a1b9c8d2270e707a816a672b6242aad944"
+    },
+    "UnderwaterFishing_Data/Managed/OblivioMentis.UniversalFSM.Runtime.dll": {
+      "bytes": 207360,
+      "sha256": "4fe6b8418929d929b5c6e73f0c91d627c60c07d83341674ff245fb88c6700a54"
+    },
+    "UnderwaterFishing_Data/Managed/Raid.Progression.dll": {
+      "bytes": 16896,
+      "sha256": "d61f7733701dbc056e0c4bdaf185bd8da432e77092560dc7f18b32b49601dbab"
+    },
+    "UnderwaterFishing_Data/Managed/SynapseSocket.dll": {
+      "bytes": 137216,
+      "sha256": "a352034622eb227315ab7d7c3a868cf422c0b829f991252aca0e030b5f9b43fe"
+    },
+    "UnderwaterFishing_Data/Managed/System.Buffers.dll": {
+      "bytes": 4608,
+      "sha256": "762f8fdbe975e05b76be5fe996c53ce7c75e4a2830f2f50b02a5948ef6ba0aeb"
+    },
+    "UnderwaterFishing_Data/Managed/System.Collections.Immutable.dll": {
+      "bytes": 252680,
+      "sha256": "5b1b1c83ba3d135c2fdfe425842fbe9c7432878b7e468623acb554c69b4c130f"
+    },
+    "UnderwaterFishing_Data/Managed/System.ComponentModel.Composition.dll": {
+      "bytes": 257024,
+      "sha256": "335d76d10ae5b80d1faae4833937b9166551ccc9e79ee8262d2da4d58843f79d"
+    },
+    "UnderwaterFishing_Data/Managed/System.Configuration.dll": {
+      "bytes": 124928,
+      "sha256": "d7139dd6b622233d316aac733b392b9c1a545375804f62685f57f9d36f1c7ac2"
+    },
+    "UnderwaterFishing_Data/Managed/System.Core.dll": {
+      "bytes": 1113088,
+      "sha256": "a4637c44a11ea827d686313cfca3f5191225d2a96f7eaf0f10aa32de446380d2"
+    },
+    "UnderwaterFishing_Data/Managed/System.Data.DataSetExtensions.dll": {
+      "bytes": 29696,
+      "sha256": "80432a96154f8d2935b2f1c9e61b2ee6109fd6234e281327b3b297451c8931ba"
+    },
+    "UnderwaterFishing_Data/Managed/System.Data.dll": {
+      "bytes": 2125312,
+      "sha256": "ab47d362cff6f6e665cadbc8c6c81f9fa3612f23483a44d08b339347ac99f116"
+    },
+    "UnderwaterFishing_Data/Managed/System.dll": {
+      "bytes": 2641920,
+      "sha256": "d26cada0fc3dcae061f0fa421df15a082cb35ccf81ccaeebc8b0e2d2e6877099"
+    },
+    "UnderwaterFishing_Data/Managed/System.Drawing.dll": {
+      "bytes": 489984,
+      "sha256": "3c3586ba170c1788a8d3a4e419eb1f50f092070f4d81e90238b2fe6c5405cf2c"
+    },
+    "UnderwaterFishing_Data/Managed/System.EnterpriseServices.dll": {
+      "bytes": 44544,
+      "sha256": "00595c8eea345fe0e47da702100e460aaaf8f14d27a24950b71d926cbf1201c4"
+    },
+    "UnderwaterFishing_Data/Managed/System.IO.Compression.dll": {
+      "bytes": 114688,
+      "sha256": "a2803c059bd49c7fe520673f7e2b06657bb0419b253a5267e3f1da14b357dd5a"
+    },
+    "UnderwaterFishing_Data/Managed/System.IO.Compression.FileSystem.dll": {
+      "bytes": 18432,
+      "sha256": "f45ca89827639a880dcbeab1917af99a5bd18aec4433fbcb2d7774ccf9fe7121"
+    },
+    "UnderwaterFishing_Data/Managed/System.Memory.dll": {
+      "bytes": 4608,
+      "sha256": "c4f030a2cba7da7cdcf493257c24560e203d355904aee490d645a935842f834a"
+    },
+    "UnderwaterFishing_Data/Managed/System.Net.Http.dll": {
+      "bytes": 122880,
+      "sha256": "128b31fec424c70356952314abff2f6b1408f64b7613d2ae4bde5e84c2f8ac03"
+    },
+    "UnderwaterFishing_Data/Managed/System.Numerics.dll": {
+      "bytes": 119296,
+      "sha256": "b968dc8852985029fd5dd08a1a9c3a6b8750ea4470cd677a5051c33fc5a08639"
+    },
+    "UnderwaterFishing_Data/Managed/System.Reflection.Metadata.dll": {
+      "bytes": 487584,
+      "sha256": "afcfd6c166fe0d59f45cc6363082806f6a7ea8ceed9dc6c75eec9fd79ccb5717"
+    },
+    "UnderwaterFishing_Data/Managed/System.Runtime.CompilerServices.Unsafe.dll": {
+      "bytes": 19256,
+      "sha256": "fd67abc4c4af10affbcd42fd68a2a7bc361b26714afe6965d4d0d139459d8297"
+    },
+    "UnderwaterFishing_Data/Managed/System.Runtime.dll": {
+      "bytes": 12288,
+      "sha256": "e0a7334b7ba419aaab6bd3bb6992d693e689341a9178172c9bf99c2aa6a085bd"
+    },
+    "UnderwaterFishing_Data/Managed/System.Runtime.Serialization.dll": {
+      "bytes": 934400,
+      "sha256": "685123acdbb6ac313e503e89f4831fed096be838ccb000b85b33ee903562807f"
+    },
+    "UnderwaterFishing_Data/Managed/System.Security.dll": {
+      "bytes": 320000,
+      "sha256": "02d51b98dc8c877124fea386c9fbf7264790aae381ab15577eb0e2d082d1bcc4"
+    },
+    "UnderwaterFishing_Data/Managed/System.ServiceModel.Internals.dll": {
+      "bytes": 215040,
+      "sha256": "077333adc8bf20eb40e94d1909db2d07a16925a9192b69064f34eaf128804c8b"
+    },
+    "UnderwaterFishing_Data/Managed/System.Transactions.dll": {
+      "bytes": 35328,
+      "sha256": "6557e5029469211193ccec80dd4d3ad090f5eb87d80f5d5341d77a6d3506b64b"
+    },
+    "UnderwaterFishing_Data/Managed/System.Xml.dll": {
+      "bytes": 3160064,
+      "sha256": "32129a7d847a5efeacee6bd4b0d6bbffc8923551c5446a8c216d8ef1191b1de1"
+    },
+    "UnderwaterFishing_Data/Managed/System.Xml.Linq.dll": {
+      "bytes": 136704,
+      "sha256": "fd300e794b9ccd85d95bbab54e282da1333faa20a9209457944e831c27452b00"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.AI.Navigation.dll": {
+      "bytes": 24576,
+      "sha256": "dea55a08165794b41a90a05ca994e2cad9624bff72231dc3d922bd21516fd857"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Burst.dll": {
+      "bytes": 304640,
+      "sha256": "87c002f8ad47e7167eb2fb79f2eecb4e80c89b5befb5da7dd2221aa46475ae52"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Burst.Unsafe.dll": {
+      "bytes": 5632,
+      "sha256": "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Collections.dll": {
+      "bytes": 461824,
+      "sha256": "ad913ecb25f1c9102ee3c499d25c997cf1f72c42c189b1ed220d3bb88b775c33"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Collections.LowLevel.ILSupport.dll": {
+      "bytes": 5120,
+      "sha256": "ff50383f807f9692e4913b97e47d86fefcb8faa33d6d48cd3e3fd6fc7ffb448d"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.InputSystem.dll": {
+      "bytes": 1150976,
+      "sha256": "6c5d639d54f31dec7c9019ea244424203b2041410e2a1bbff25f7e86ce07d860"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.InputSystem.ForUI.dll": {
+      "bytes": 16896,
+      "sha256": "0d86dd39c3a30ca4604a1ff401692f9c000dfd52da6a1eb1a9f466d3709d53be"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.InternalAPIEngineBridge.004.dll": {
+      "bytes": 5120,
+      "sha256": "6391ac26505d6dd3e1a1dbc24e94a4d47b715760491d1da924841f7bf25f2b21"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.InternalAPIEngineBridge.RenderPipelines.Core.Runtime.Shared.dll": {
+      "bytes": 4096,
+      "sha256": "d95947e49247498dd92d83f5cb6aece071c56c7aeab80924b85d6f4b93daa56c"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Mathematics.dll": {
+      "bytes": 6144,
+      "sha256": "1b0d4555f68019a6b30e336def4bddacdd2c71dd15c10693fa2250dcec5a9f80"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Multiplayer.Center.Common.dll": {
+      "bytes": 10752,
+      "sha256": "200363242bb7d6ed0eb56afa60e43b679198f1598359b3c6c11405c09321145e"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.PathTracing.Runtime.dll": {
+      "bytes": 153600,
+      "sha256": "53131f126a51cade4aaa7bc9a8c11541afdb3960cd03459eb68723c6b4d74d21"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipeline.Universal.ShaderLibrary.dll": {
+      "bytes": 9216,
+      "sha256": "9cf5f0670afc81eaeb356bf198d7ef1c18a946b743074c9db510cbb4be9823a4"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Core.Runtime.dll": {
+      "bytes": 1149440,
+      "sha256": "719ac6ca590187efe0c70c23ddae3297205aa2208c0002951c014ff10bcebe07"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Core.Runtime.Shared.dll": {
+      "bytes": 12800,
+      "sha256": "3a58b8a9a3dcd7009f6e73ecf6d661928d52c4bc68bea94c55609cc55ce686d5"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Core.ShaderLibrary.dll": {
+      "bytes": 4608,
+      "sha256": "dc812f1fee80130d48edead0718653760e4379a7d24d28ad80777f187e16f99f"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.GPUDriven.Runtime.dll": {
+      "bytes": 281088,
+      "sha256": "4602043dcddd5f6046579d6419801f4ec6d9c3e65bc74a20282cd0c383aa65ed"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll": {
+      "bytes": 4608,
+      "sha256": "9bf9ca24da442f00485be09fc81bfdc234a043c67ff93cdd61886a6269479bf4"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Universal.2D.Runtime.dll": {
+      "bytes": 211968,
+      "sha256": "3b691fffd23ce6dbe37d28ae3f4e1880af4ced33716f96048bcbb4e75487ddfe"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Universal.Config.Runtime.dll": {
+      "bytes": 5632,
+      "sha256": "421f0f296fd3ddf7c62cd2b69f37855609084e3bf67e21f9119f9c85236dffd4"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Universal.Runtime.dll": {
+      "bytes": 773120,
+      "sha256": "c001aa85e60c2fcf1dd076d578482e92618ce46e7694bc6dd045fbfd67a451dd"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.RenderPipelines.Universal.Shaders.dll": {
+      "bytes": 4608,
+      "sha256": "97a1a898986d3eeba24c906e5a368fc282c8854f045a3337b3128ed940366595"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Scripting.dll": {
+      "bytes": 68528,
+      "sha256": "fc8e1de4455196f741a9fcbaef941ceb854002f45e807a9e6d7bff43b7bfbc04"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.SurfaceCache.Runtime.dll": {
+      "bytes": 4096,
+      "sha256": "d4bfc30e94bc7eaa01037410deccf2595d4cd449da0a1b9608ecc9655b6439c2"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.TextMeshPro.dll": {
+      "bytes": 449536,
+      "sha256": "b0a275d026799c5b73ab18397da5c23affd17cf27b5ab7456a5feaf4784c61ec"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.Timeline.dll": {
+      "bytes": 134656,
+      "sha256": "8e0077cabadb279a395cfc600743714c5d57cc6319fdceb22c1e6e016d8b11fe"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.UnifiedRayTracing.Runtime.dll": {
+      "bytes": 101888,
+      "sha256": "468e9b3541345ae4a3a2cb4dadcd0c08b04f7511624fafc33d90a8d824aaaffd"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.VisualScripting.Antlr3.Runtime.dll": {
+      "bytes": 86016,
+      "sha256": "ed7ce205f66eafe39bbb5d084d42e7fe11cb4b386ff208e5d5110891be0b7b37"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.VisualScripting.Core.dll": {
+      "bytes": 630272,
+      "sha256": "98aeac167eca88f15a6f6a912ad34ea87b563e9eb4cd4913a1242100e95ccd47"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.VisualScripting.DocCodeExamples.dll": {
+      "bytes": 7168,
+      "sha256": "4c7da62b4667853d32662cb8fd95c0df77eb48c6e9b18d8bbf3de84d8ba825c1"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.VisualScripting.Flow.dll": {
+      "bytes": 407552,
+      "sha256": "5daf7f99b08c5343259c3a92dab93413482a62d9025b1e08fdc28f100df23a1b"
+    },
+    "UnderwaterFishing_Data/Managed/Unity.VisualScripting.State.dll": {
+      "bytes": 32256,
+      "sha256": "46dd40c7affacd214002690659cac96d0e0dbecf07e8a3f1d0cd3b3318ce030d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AccessibilityModule.dll": {
+      "bytes": 49064,
+      "sha256": "e2a892979abccce477986cb9d6b10eb12184f824f2fedc724ab642619794ed83"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AdaptivePerformanceModule.dll": {
+      "bytes": 117672,
+      "sha256": "6128e7dc7e17d2493ecf71a18071771a910d12b54659f8d0f5479aaa798078e4"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AIModule.dll": {
+      "bytes": 86440,
+      "sha256": "ffc5351ec3a85222aee193961da22d47816d0abec4357156ef2813e56089043b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AMDModule.dll": {
+      "bytes": 21928,
+      "sha256": "9eb10da0a2f58efb4ef21dd8aac26b5f8cdb886ba184bc586d8e032fd488162d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AndroidJNIModule.dll": {
+      "bytes": 120752,
+      "sha256": "cde44d43190aca6022865508834c1b89147bc875c7a1fd4af9c012bfa9a99518"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AnimationModule.dll": {
+      "bytes": 218544,
+      "sha256": "2e25ec91d4acc49d104217993a1c0dbe4d504920a953ec6ea9c21bc69e777a63"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ARModule.dll": {
+      "bytes": 27056,
+      "sha256": "ca079f68635e009af3b17e9208076a941293faf51330709a146f8c907d56d78b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AssetBundleModule.dll": {
+      "bytes": 42408,
+      "sha256": "cde6034914b45efe9c43def0132578779a37cd48b5b1908022f7fb179b9887f0"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.AudioModule.dll": {
+      "bytes": 142760,
+      "sha256": "f45835bde65e91a913e24dfe46812dca872a202fe28b7670490e6ad7302fc205"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ClothModule.dll": {
+      "bytes": 37288,
+      "sha256": "2c44cd4b95c9eb51913b1478ae2f1dab0c778acdb2281bc5c9d1b2d458edcf08"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ClusterInputModule.dll": {
+      "bytes": 29104,
+      "sha256": "ceb6269c63fafe2beec4372c68a1b8c7ad017cace7075c059c27c0e09155e81c"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ClusterRendererModule.dll": {
+      "bytes": 28080,
+      "sha256": "2b5e17866cc1faa270252fca7fffb37d99f1cc333afda065b27c21af529c8c24"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ContentLoadModule.dll": {
+      "bytes": 46512,
+      "sha256": "ed2325758e8f539219deaf5a9fd9faad949e68409edf8e5cdf9aff953789282a"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.CoreModule.dll": {
+      "bytes": 1974704,
+      "sha256": "724976dabdeef28d7dedb43f59318d17528855881f0a8ad87831c6edf2c53495"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.CrashReportingModule.dll": {
+      "bytes": 28080,
+      "sha256": "ce41f9d982687916d58f42d4c1fdca93de2bf10bcf2666868d894bcde348876b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.DirectorModule.dll": {
+      "bytes": 41904,
+      "sha256": "93b765f95d8b83fd0a396206888e7d52f5abe3c2d2961f40b69d755aeb5596ce"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.dll": {
+      "bytes": 210344,
+      "sha256": "65d65ca4f0347a5bf0a92f63f8fc3ca7c319c3deccb28025ac096c84ec46bc2e"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.DSPGraphModule.dll": {
+      "bytes": 32680,
+      "sha256": "9d24418b547a5c5c2b433b6caf8873466dbc3a1b87d7589ce4097f5cb07a6f1f"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.GameCenterModule.dll": {
+      "bytes": 45488,
+      "sha256": "71ab2568d9614caabcde7d23dbb88d8e6ed07930e85741e2f60b35ce9d733222"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.GIModule.dll": {
+      "bytes": 25512,
+      "sha256": "771e145da86901467bcb4ae7645a46369a834e661afd5c59f5386b925b95d6d0"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.GraphicsStateCollectionSerializerModule.dll": {
+      "bytes": 14248,
+      "sha256": "f3fc057af03055fc494ce5020cb30626527e8c84a09480a50c1a3ed9fa9a34a7"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.GridModule.dll": {
+      "bytes": 32176,
+      "sha256": "17addab6ba8f461c6e24bc092052e4845c560564f1b471f8d0df9861a0da614d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.HierarchyCoreModule.dll": {
+      "bytes": 105384,
+      "sha256": "b26d6a68369ff854fb3cefa71c1efee311a5407c44029413b8ab52b3252c40d3"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.HierarchyModule.dll": {
+      "bytes": 100272,
+      "sha256": "81df62baf59c939ed60ed9a081af59ad6f93a4f44ecf83f32b0a238963e6ca8a"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.HotReloadModule.dll": {
+      "bytes": 25520,
+      "sha256": "021b0bc7952d70f63223402ffd184230b3cd5c9a1e94c60177bb343b1abca401"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.IdentifiersModule.dll": {
+      "bytes": 16808,
+      "sha256": "7552d2b3730b1d8759dc8230312171857a23b08122dc44d2a92a06c17dc025db"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ImageConversionModule.dll": {
+      "bytes": 33712,
+      "sha256": "9798d89dbcf283a69dda7411964a880bb44b42e8f63472db7a0fa9835573b8c4"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.IMGUIModule.dll": {
+      "bytes": 188840,
+      "sha256": "288a53a4d85c3785d1121b95d98bb49818fa51bd06e8b94a93cbf1d3329f13cb"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.InputForUIModule.dll": {
+      "bytes": 55728,
+      "sha256": "0d4c47accfef410d4517f37298517a1ff9f41f76fed2bbe4975b216bee74c88e"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.InputLegacyModule.dll": {
+      "bytes": 41896,
+      "sha256": "06b228ba269fb1837edef581fafb8d85f04c4ce204bf38f5a2987dee16f3f437"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.InputModule.dll": {
+      "bytes": 30632,
+      "sha256": "7b1125034b16252c1d2e6e45f5cece331db59142341bee20eb42d969904dcd4d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.InsightsModule.dll": {
+      "bytes": 15784,
+      "sha256": "c8e2a9d1e152d76e0edeb33c7176624b534cb864bee01adf85bf91ee9d8bcf1e"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.JSONSerializeModule.dll": {
+      "bytes": 28080,
+      "sha256": "8d92d79316b23aa072cd898c5f34f9a8a318e1f117de88441ebe798a4082a8f7"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.LocalizationModule.dll": {
+      "bytes": 28072,
+      "sha256": "28d04c0bb43ffbe5a5df9e23c0ad1311abf3daa647d832e39e04d9cc5696c3c6"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.MarshallingModule.dll": {
+      "bytes": 97192,
+      "sha256": "4aa47243d565b6852ff681c74d556b2fbbe80d4f31c943482fc0a7221b973040"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.MathematicsModule.dll": {
+      "bytes": 740776,
+      "sha256": "696fb395a0fcfe3928849a664a19feff340fa9fb0d285fc44a1f498868153fcc"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.MultiplayerModule.dll": {
+      "bytes": 17840,
+      "sha256": "795d291cfad9268c52983f39d6dee698e55c74b7d4ea5b92519017ecd72602b9"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.NVIDIAModule.dll": {
+      "bytes": 40368,
+      "sha256": "4e79a35ca1997d5be5172a68b27254f546c1404e3ad12debb3b555d2d15fa1ba"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ParticleSystemModule.dll": {
+      "bytes": 168880,
+      "sha256": "f83703c4200fbef42ee7449abad3722fadf7b329223582f15b7423965d820e25"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.PerformanceReportingModule.dll": {
+      "bytes": 26536,
+      "sha256": "ffcf6f9cd94ac481d1095b3e36bddd5a8f63503ddbe74bb9d89a4e5fcedd4af7"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.Physics2DModule.dll": {
+      "bytes": 222128,
+      "sha256": "49963f3460ab40a4dd9ecbb04615abbed236486e4682d0e7351d32c9fd771c16"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.PhysicsBackendPhysXModule.dll": {
+      "bytes": 14256,
+      "sha256": "1ac5423c910605b86be3dfafe5c6d04bb07ad239408ca1477ec39740eeee87f5"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.PhysicsCore2DModule.dll": {
+      "bytes": 450472,
+      "sha256": "4dfa9095823256f5fb01eacec611955c05d7e194addcc690223985de7066a39f"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.PhysicsModule.dll": {
+      "bytes": 180144,
+      "sha256": "a668bcd58aa8159465074599775ce4075287f199e5a43af12552b6779c69fc9b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.PropertiesModule.dll": {
+      "bytes": 124840,
+      "sha256": "5b15cf26e7d34be9020dd907eb1e389fe82eb6192ab56b2b3ba6948865049e4b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.RenderAs2DModule.dll": {
+      "bytes": 27056,
+      "sha256": "5421720b2eaeb8b30337d16c3158c4622117c5caa47dc5b77a24a136499ce9ad"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll": {
+      "bytes": 25520,
+      "sha256": "7a92819af0e495a8d9bc104fe68c15b5161e0f65f76f78f24ec43db423831677"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ScreenCaptureModule.dll": {
+      "bytes": 27560,
+      "sha256": "5957c0350b903f5210e3f0c4d85367bae4dd2fdcbc18c28aa5707c0875951386"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ScriptingModule.dll": {
+      "bytes": 27568,
+      "sha256": "e2be5323b3f9acb3b2a026d98342bb7f90c97cfa40f49c434b3ec4049792e862"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.ShaderVariantAnalyticsModule.dll": {
+      "bytes": 25512,
+      "sha256": "353edea64dd1071078c174e01fbf3f1d8bdac990de568fa7349cd7872292356d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.SharedInternalsModule.dll": {
+      "bytes": 36776,
+      "sha256": "ea0c52615cc025a2d7bcbd7ee26bfbeb2da1d6a4f1723ac31a3df05eef851232"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.SpriteMaskModule.dll": {
+      "bytes": 29608,
+      "sha256": "b7c7ce7eca8321a30dbe5973df2498bc426893dc48e5b6a90ceb67e5d4253e05"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.SpriteShapeModule.dll": {
+      "bytes": 33704,
+      "sha256": "537a354c0b264024016dff70ced495e3dbc9d6e847f60cb68ecd98d0ab98c229"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.StreamingModule.dll": {
+      "bytes": 27048,
+      "sha256": "90da09d00e15e3ba7f5b50d988682f8a249ff4b39edd2005fcad884d29605cf7"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.SubstanceModule.dll": {
+      "bytes": 30640,
+      "sha256": "2aa890d0cea068a84c354335943ee2c677182026328d3757ab38b76d43fdbc2d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.SubsystemsModule.dll": {
+      "bytes": 42408,
+      "sha256": "e2243fa2d9e0807bfe9cbeb8c319c8c5c8fa15cf886b3736daf16988e10882d2"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TerrainModule.dll": {
+      "bytes": 131504,
+      "sha256": "edca705cf6f6c113ca10375e2a22a2bf68b12bdc6628e4cde37cb7762e661388"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TerrainPhysicsModule.dll": {
+      "bytes": 27048,
+      "sha256": "77959f83b83958f7732c62fd5a91ddbbebba38e42430f93fb99a574878c6d2e3"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TextCoreFontEngineModule.dll": {
+      "bytes": 77736,
+      "sha256": "a1f860cbd2124f0bc9d015640fe2f7d92deb2d450d80533991323fea66fd44f6"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TextCoreTextEngineModule.dll": {
+      "bytes": 331184,
+      "sha256": "be152e19e64f480765f4678cefd1982f98ab72bdf34292d71130a8ebd0336f3b"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TextRenderingModule.dll": {
+      "bytes": 38824,
+      "sha256": "087006067a7f30b2905a0d91d9b0c00993cf3789d9861def1e40d89b0306565e"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TilemapModule.dll": {
+      "bytes": 75184,
+      "sha256": "31fc2affd868a8f92e531de7d2c07f8357711c899f4d07c1f2f8934d20ee24bf"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.TLSModule.dll": {
+      "bytes": 33192,
+      "sha256": "b88e8392c9cb1ec4f7fd4f20ddce38c60d1dc1bf2585b8438a35a90ba1c645cf"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.U2DRuntimeModule.dll": {
+      "bytes": 26544,
+      "sha256": "72ff1a3e533f40e9ec17611510e6b7447444a15fd34c2dad4632edbc2d9ce44d"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UI.dll": {
+      "bytes": 277504,
+      "sha256": "ac3adbdb8f5d88e9b54ca013287d10c31f82be9f9b4f2bb08224e525eb4900ca"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UIElementsModule.dll": {
+      "bytes": 2349488,
+      "sha256": "043792aa44d72da28cfcc6dfbc4132b05ff68b20015e73e420e0051cb1250692"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UIModule.dll": {
+      "bytes": 54184,
+      "sha256": "3880ed62025a6a2bf16cd94a9013d3d231c6e57c402e1205c76d799e32b07c6e"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UmbraModule.dll": {
+      "bytes": 25520,
+      "sha256": "9f83a3170e1cbe3b8f4c9e7228ff56e67c68149ee6e5607be39c056677af42e6"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityAnalyticsCommonModule.dll": {
+      "bytes": 35760,
+      "sha256": "a486308eb5433ab7cba5ad6b9d68557f1465db596eb1570bac1eef7d7f00c93c"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityAnalyticsModule.dll": {
+      "bytes": 60328,
+      "sha256": "5423c1dee89f3c85e0688442612c5a6d096c3fd5483bcfad938939e57545eb12"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityConnectModule.dll": {
+      "bytes": 29096,
+      "sha256": "73f4fbc543294f138f09d45d08aef00372ee914061f4ad55dd938c0810bd131a"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityConsentModule.dll": {
+      "bytes": 16304,
+      "sha256": "854999696c414bfa35da11a11cdd3815aeb5eb0154f28160973c30747df76bd0"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityCurlModule.dll": {
+      "bytes": 27560,
+      "sha256": "b518dc2e3386475e565d2ec04678cf089dcd85a243397feaa8d71efce37bbe83"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityWebRequestAssetBundleModule.dll": {
+      "bytes": 30128,
+      "sha256": "9d5928db13cce69a707ca37cc6f25b4084dc60e1f9fbf0538b90e509e31d73ab"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityWebRequestAudioModule.dll": {
+      "bytes": 29616,
+      "sha256": "efcfc996858dc92820e08cdab9b2ad514b4943b15b639b715dd62144b0953055"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityWebRequestModule.dll": {
+      "bytes": 79272,
+      "sha256": "75e4846e363caed336dc756029f194300ba239e3da6717f3e2ebd3173d4653ec"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityWebRequestTextureModule.dll": {
+      "bytes": 28592,
+      "sha256": "2bea200e47f3e62bbc07c973dfcaeaabab4bc65e529bf8ebca0240788969b7bc"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.UnityWebRequestWWWModule.dll": {
+      "bytes": 36776,
+      "sha256": "368d4f388ce0c730fa2581f2ff541d907ce06330fc336c71c8c970498fa9f724"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.VectorGraphicsModule.dll": {
+      "bytes": 227752,
+      "sha256": "d62f3e03673a08aad7d9b9bb158caf5fd664e991548d0c5e3ebcbb6e9e8d7624"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.VehiclesModule.dll": {
+      "bytes": 32688,
+      "sha256": "78d4f0785f820a521499a728d1b181d42c0eec1921225e685d82d78b639234fd"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.VFXModule.dll": {
+      "bytes": 81840,
+      "sha256": "d49b75748b870f27104b6a7275f6ebb635052c2ffdaca008a4580e492c347258"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.VideoModule.dll": {
+      "bytes": 48552,
+      "sha256": "cc3a39d5b3ad37f71cbfcfa265a0dbbe8241c99acc40f980c095415594bd30ce"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.VirtualTexturingModule.dll": {
+      "bytes": 43440,
+      "sha256": "567e16b87cd931bcd68a0abe242c6e3627228e467f3e5cb5e401bc5fd01e376a"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.WindModule.dll": {
+      "bytes": 28072,
+      "sha256": "a921c89fe17d94b0524635dcab72a0225ef21fc38462617634d6cd624281e4c5"
+    },
+    "UnderwaterFishing_Data/Managed/UnityEngine.XRModule.dll": {
+      "bytes": 95656,
+      "sha256": "cfd2b6cf1cd4cca90e103ea61f0ebbde945475ae2200edbd438cb47fc230af27"
+    },
+    "UnderwaterFishing_Data/Plugins/Steamworks.NET.txt": {
+      "bytes": 243,
+      "sha256": "7b3c7700d161a743cee6789fbb495030b2ad909a8a53cfa6e6cf23b30ff2421e"
+    },
+    "UnderwaterFishing_Data/Plugins/x86_64/lib_burst_generated.dll": {
+      "bytes": 448000,
+      "sha256": "7a01296978e2c90921930fd829cd641a0cd2f088c1f16b9043f95178eb23ecc3"
+    },
+    "UnderwaterFishing_Data/Plugins/x86_64/libonigwrap.dll": {
+      "bytes": 551336,
+      "sha256": "2cdfafa8f45fa697af469069467556ed751d3abcc2e46855643d8c7c1200ad46"
+    },
+    "UnderwaterFishing_Data/Plugins/x86_64/steam_api64.dll": {
+      "bytes": 319128,
+      "sha256": "e6d9bafb9a41e42fba7b21553db49f8719027af3f0deb23ff86cfc44d60e776d"
+    },
+    "UnderwaterFishing_Data/Resources/unity default resources": {
+      "bytes": 5881648,
+      "sha256": "1fbaff511bdec6cf276529de02215fee9fdcf7298ea9d7c49dc6b984ee73a7f5"
+    },
+    "UnderwaterFishing_Data/RuntimeInitializeOnLoads.json": {
+      "bytes": 6390,
+      "sha256": "97b569731eccd0a1c1810e788ee7824de6caa63f94366a0ed06d715926739677"
+    },
+    "UnderwaterFishing_Data/ScriptingAssemblies.json": {
+      "bytes": 4909,
+      "sha256": "78d0e6d959e228adc4517b95b9125b7b2b9504d913bb2c5bdc59f19b5ea0dc74"
+    },
+    "UnityCrashHandler64.exe": {
+      "bytes": 1736616,
+      "sha256": "fc6999f7fe41a00528120035fbd1245f0b4329f786fb54616c673df52603dfc0"
+    },
+    "UnityPlayer.dll": {
+      "bytes": 37283752,
+      "sha256": "16c9e4a22f35687d290caf92232135b7846becfee00b6a0433c119f96cddb72f"
+    }
+  },
+  "archive": {
+    "path": "Builds/RAID011-Playable.zip",
+    "bytes": 44306430,
+    "sha256": "4defa3f9ddc3530466376a15420b7de8204f6551efbb9f834d63eaa2b5a59258"
+  }
+}

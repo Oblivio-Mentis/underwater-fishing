@@ -20,3 +20,7 @@ Input: one local gate; menu/terminal blocks movement, firing, reel, rescue and w
 Read APIs only where missing: hooked fish; replicated rescue/loot carrier display; Steam initialization/overlay; local sensitivity; command response and travel presentation. No economy/save schema changes. Species names are not persisted, so stock labels honestly identify fish/technical cargo and depth.
 
 Implementation order: foundation → menu/connection → HUD/context → reservoir/cargo → upgrades/depths → feeding/threats → settings/focus/errors → live two-peer and resolution checks. Capture real Play Mode and Windows states at 1920×1080; verify 1280×720, 2560×1440, 3440×1440. Do not mark human or two-account Steam tests passed without execution.
+
+## User scope expansion, 19 November 2026
+
+The later direct user request supersedes the initial UI-only constraint above: implement the two all-fish routes, physical conveyors and bow mouth, rear exit, and cancellable friend tether in the new scene. Server reservation/quoted batches and matching network build protocol are necessary gameplay changes. The original scene assets and earlier build artifacts remain protected; shared core APIs preserve their old-scene path where applicable. Full results and untested native/Steam cases are in `../RAID-011-REPORT.md`.

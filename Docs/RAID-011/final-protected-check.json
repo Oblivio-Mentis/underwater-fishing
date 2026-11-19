@@ -1,0 +1,13 @@
+{
+  "count": 870,
+  "method": "SHA256 of actual local bytes, including protected earlier build artifacts",
+  "changed": [
+    {
+      "path": "Assets/_Game/VisualSlice/Runtime/SlicePresentation.cs",
+      "baseline": "55a6971226c2247f6c5161a6786bba7533546854573ae92ff075a7652eb6a009",
+      "current": "c4eb79eb1f5ea7ada11558ffc822e84be148f3e823639d0f5f21a23095e2edae"
+    }
+  ],
+  "missing": [],
+  "intentional_change": "SlicePresentation hides its legacy gun only when the new UI is active; original scenes retain old behavior."
+}
