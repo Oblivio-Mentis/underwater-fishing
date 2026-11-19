@@ -76,7 +76,7 @@ namespace Raid.UI
             {
                 UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
                 UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired,ctx.DefendingReservoir));
-                if(equipment)UiKit.Set(summary,ctx.AtBase?"Общее оборудование экипажа · установка на базе":"Установка оборудования доступна на базе");
+                if(equipment)UiKit.Set(summary,"Бортовая мастерская · оборудование экипажа");
                 if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
                 string reason=TerminalParts.BaseReason(app);
                 UiKit.Set(footer,ctx.World.TravelRemaining>0?UiText.TravelRemaining(ctx.World.TravelRemaining):!string.IsNullOrEmpty(reason)?reason:UiText.CargoSummary(view,ctx.Tuning));
@@ -90,7 +90,7 @@ namespace Raid.UI
         string BuildKey()
         {
             var view=app.Context.View;if(view==null)return "waiting";
-            var key=new StringBuilder(tab).Append('|').Append(app.Context.AtBase);
+            var key=new StringBuilder(tab);
             if(tab=="catch" || tab=="feeding")foreach(var item in view.tank)key.Append('|').Append(item.id);
             if(tab=="upgrades")foreach(Upgrade upgrade in Enum.GetValues(typeof(Upgrade)))key.Append('|').Append(view.Level(upgrade));
             if(tab=="depths")key.Append('|').Append(view.highestDepth).Append('|').Append(view.hullLevel);
@@ -151,7 +151,6 @@ namespace Raid.UI
             refreshRows.Add(()=>
             {
                 string unavailable=TerminalParts.BaseReason(app);
-                if(string.IsNullOrEmpty(unavailable) && !app.Context.AtBase && !feedOnly)unavailable=UiText.ProcessAtBase;
                 UiKit.Set(reason,string.IsNullOrEmpty(unavailable)?UiText.ItemUnits(item.cargoSize):unavailable);
                 reason.color=string.IsNullOrEmpty(unavailable)?UiTheme.Muted:UiTheme.Amber;
             });
@@ -161,7 +160,6 @@ namespace Raid.UI
             string reason=TerminalParts.BaseReason(app);if(!string.IsNullOrEmpty(reason))return reason;
             var item=app.Context.View.tank.Find(x=>x.id==id);if(item==null)return UiText.ItemGone;
             if(feed)return item.offering>0?"":UiText.CannotFeed;
-            if(!app.Context.AtBase)return UiText.ProcessAtBase;
             return item.biomass+item.chitin+item.scrap+item.electronics>0?"":UiText.NoYield;
         }
         void ConfirmItem(long id,bool feed)
@@ -197,7 +195,6 @@ namespace Raid.UI
             string reason=TerminalParts.BaseReason(app);if(!string.IsNullOrEmpty(reason))return reason;
             var ctx=app.Context;var view=ctx.View;var recipe=ctx.Tuning.Recipe(upgrade);
             if(recipe==null)return UiText.MissingRecipe;if(view.Level(upgrade)>=recipe.maximumLevel)return UiText.MaxUpgrade;
-            if(!ctx.AtBase)return UiText.PurchaseAtBase;
             string missing=UiText.NeedMaterials(view.Cost(upgrade,ctx.Tuning),view);
             if(upgrade==Upgrade.Hull && view.lifetimeCatch<ctx.Tuning.depthTwoLifetimeCatch)return UiText.LifetimeNeed(view.lifetimeCatch,ctx.Tuning.depthTwoLifetimeCatch)+(string.IsNullOrEmpty(missing)?"":"\n"+missing);
             return missing;
@@ -218,13 +215,6 @@ namespace Raid.UI
         {
             var zones=UiKit.Row(content,"DepthZones",16);UiKit.Size(zones,356);
             AddDepth(zones,1);AddDepth(zones,2);
-            var returnBody=TerminalParts.Card(content,"ReturnToBase",178);
-            TerminalParts.Text(returnBody,"Title",UiText.ReturnTitle,32,26);
-            TerminalParts.Text(returnBody,"Description",UiText.ReturnDescription,48,21,UiTheme.Muted);
-            var row=UiKit.Row(returnBody,"Action",16);UiKit.Size(row,50);
-            var reason=UiKit.Label(row,"Reason","",20,UiTheme.Amber);UiKit.Size(reason,50,flexibleWidth:1);
-            var button=UiKit.Button(row,"Return",UiText.ReturnAction,ConfirmReturn,true,50);UiKit.Size(button,50,270);button.GetComponent<LayoutElement>().flexibleWidth=0;
-            refreshRows.Add(()=>TerminalParts.ButtonReason(button,reason,TravelReason(0),""));
             var cargo=TerminalParts.Card(content,"CargoInformation",96);
             TerminalParts.Text(cargo,"Title",UiText.CargoFromTerminal,30,24);
             TerminalParts.Text(cargo,"Description",UiText.CargoFromTerminalHint,36,20,UiTheme.Muted);
@@ -250,9 +240,9 @@ namespace Raid.UI
         {
             string reason=TerminalParts.BaseReason(app);if(!string.IsNullOrEmpty(reason))return reason;
             var ctx=app.Context;var view=ctx.View;
-            if(destination==0 && ctx.AtBase)return UiText.AlreadyAtBase;
-            if(destination>0 && !ctx.AtBase)return UiText.AlreadyDiving;
-            if(destination>0 && !view.CanVisitDepth(destination))return UiText.DepthLocked;
+            if(destination==ctx.World.CurrentDepth)return UiText.AlreadyHere;
+            if(!view.CanVisitDepth(destination))return UiText.DepthLocked;
+            if(ctx.World.FishRoute.active)return UiText.RouteBusy;
             if(!ctx.AllInside)return UiText.NotAllInside;
             if(view.hoistPhase!=HoistPhase.Loading)return UiText.FinishCargoCycle;
             if(view.cargo.Count>0)return UiText.EmptyCargoBeforeTravel;
@@ -263,11 +253,6 @@ namespace Raid.UI
             string reason=TravelReason(depth);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
             app.Confirm(UiText.DiveConfirmTitle,(depth==1?UiText.DepthOneTitle:UiText.DepthTwoTitle)+"\n\n"+UiText.DiveConfirmHint,
                 ()=>TerminalParts.Execute(app,()=>TravelReason(depth),depth==1?WorldAction.DiveOne:WorldAction.DiveTwo));
-        }
-        void ConfirmReturn()
-        {
-            string reason=TravelReason(0);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
-            app.Confirm(UiText.ReturnConfirmTitle,UiText.DiveConfirmHint,()=>TerminalParts.Execute(app,()=>TravelReason(0),WorldAction.Return));
         }
         void BuildFeeding()
         {

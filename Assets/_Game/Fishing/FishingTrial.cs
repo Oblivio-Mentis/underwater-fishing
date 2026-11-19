@@ -96,7 +96,7 @@ namespace Raid
             Require(host.CatchCount == 0 && host.HookedFish == null && !host.TetherActive, "Host must start with free hands and empty catch pockets.");
             Check("Distinct connected owners " + host.OwnerId + " and " + helper.OwnerId);
 
-            if (world.AtBase)
+            if (world.CurrentDepth != 1)
             {
                 Phase("Choose shallow expedition at chart console");
                 var station = ShipConsole.Stations.First(s => s.kind == ShipConsoleKind.Depths);
@@ -110,7 +110,7 @@ namespace Raid
                 }
                 Require(aligned && helper.Motor.IsInside, "Could not reach the chart console from its dry interior.");
                 world.Command(WorldAction.DiveOne, 0);
-                yield return Wait(() => !world.AtBase, 12, "Dive command refused: " + world.Message);
+                yield return Wait(() => world.CurrentDepth == 1, 12, "Dive command refused: " + world.Message);
             }
             Require(world.CurrentDepth == 1 && world.Team.hoistPhase == HoistPhase.Loading, "Shallow depth and available winch required.");
             Require(world.Team.Capacity(world.progression) - world.Team.CargoUsed >= 6, "The verified catches occupy six cage units.");

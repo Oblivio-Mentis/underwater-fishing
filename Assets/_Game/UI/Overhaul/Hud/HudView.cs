@@ -154,15 +154,13 @@ namespace Raid.UI
                             prompt=route.active&&matching&&!route.stopping?"ЛКМ — остановить подачу":"ЛКМ — запустить подачу";
                             detail=route.active?(route.stopping?"Клапан закрыт · рыба в трубе завершает путь":matching?"Повторное нажатие сохранит оставшуюся рыбу":"Другая линия занята"):"Поток из резервуара · повторное нажатие — стоп";
                         }
-                        if(console.kind==ShipConsoleKind.Process&&!context.AtBase){detail=UiText.HudProcessAtBase;color=UiTheme.Amber;}
                     }
-                    else {prompt=UiText.HudTerminalPrompt;detail=context.AtBase?UiText.HudTerminalBaseHint:UiText.HudTerminalDiveHint;}
+                    else {prompt=UiText.HudTerminalPrompt;detail=UiText.HudTerminalHint;}
                     break;
                 case UiInteraction.Cargo:
                     prompt=UiText.HudCargoPrompt;
                     if(view==null || context.Tuning==null)break;
                     if(view.hoistPhase!=HoistPhase.Loading){detail=UiText.HudCargoBlocked(view.hoistPhase);color=UiTheme.Amber;}
-                    else if(context.AtBase && view.cargo.Count==0){detail=UiText.HudCargoBaseHint;color=UiTheme.Muted;}
                     else if(context.HasCargo)
                     {
                         int free=view.Capacity(context.Tuning)-view.CargoUsed;

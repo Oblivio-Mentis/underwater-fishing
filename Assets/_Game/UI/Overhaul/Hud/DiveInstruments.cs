@@ -109,7 +109,7 @@ namespace Raid.UI
             float metres=diver.Depth;
             if(diver!=c.Player)
             {
-                float seaLevel=c.AtBase?0:c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
+                float seaLevel=c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
                 metres=Mathf.Max(0,seaLevel-diver.transform.position.y);
             }
             int depthMetres=Mathf.RoundToInt(metres);

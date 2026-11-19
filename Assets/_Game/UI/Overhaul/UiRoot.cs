@@ -296,7 +296,6 @@ namespace Raid.UI
                 if(route.stopping){Toast("Подача закрыта. Рыба в трубе завершает путь");return;}
                 Send(feeding?WorldAction.StopFeeding:WorldAction.StopProcessing,route.sequence);return;
             }
-            if(!feeding&&!Context.AtBase){Toast(UiText.ProcessAtBase);return;}
             var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
             long quoted=FishRouteQuote.Compute(fish,Context.FoodRequired);
             Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
@@ -317,7 +316,7 @@ namespace Raid.UI
             if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
             if(pendingAction==WorldAction.ProcessAll||pendingAction==WorldAction.FeedAll)return Context.World.FishRoute.sequence.ToString();
             if(pendingAction==WorldAction.StopProcessing||pendingAction==WorldAction.StopFeeding)return Context.World.FishRoute.sequence+"/"+Context.World.FishRoute.stopping+"/"+Context.World.FishRoute.active;
-            return Context.World.CurrentDepth+"/"+Context.AtBase+"/"+(Context.World.TravelRemaining>0);
+            return Context.World.CurrentDepth+"/"+(Context.World.TravelRemaining>0);
         }
         void OnCommandReply(int requestId,bool success,string reason)
         {

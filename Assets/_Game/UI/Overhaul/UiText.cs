@@ -16,11 +16,8 @@ namespace Raid.UI
         public static string WorldMessage(string raw)
         {
             if(string.IsNullOrEmpty(raw))return "";
-            if(raw.StartsWith("Choose depth"))return "Выберите глубину у терминала резервуара";
-            if(raw.StartsWith("Base:"))return "База: переработка улова и улучшения доступны";
             if(raw.StartsWith("Depth "))return "Экспедиция: ловите рыбу и доставляйте улов";
-            if(raw.StartsWith("Submarine descending"))return "Погружение: переход выполняется";
-            if(raw.StartsWith("Returning to base"))return "Возвращение на базу: переход выполняется";
+            if(raw.StartsWith("Changing depth"))return "Подлодка меняет глубину";
             if(raw.StartsWith("Action unavailable"))return "Сервер отклонил действие: проверьте расстояние, груз и условия";
             if(raw.StartsWith("SAVE ERROR"))return "Ошибка сохранения. Исходный файл сохранён; прогресс может быть временным";
             if(raw.StartsWith("Feeding: "))
@@ -31,6 +28,6 @@ namespace Raid.UI
             return raw;
         }
         public const string QuoteChanged="Состав улова, уровень или цена изменились. Повторите действие";
-        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
+        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="onboard"?"Войдите в подлодку и подойдите к пульту":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
     }
 }

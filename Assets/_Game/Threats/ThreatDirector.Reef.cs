@@ -45,7 +45,7 @@ namespace Raid
         void TickReef(ref ThreatSnapshot main,float delta)
         {
             var w=RaidWorld.Instance;
-            if(w==null || w.Team==null || w.AtBase)
+            if(w==null || w.Team==null)
             {
                 if(reefState.Value.Active)ResetReef();
                 return;

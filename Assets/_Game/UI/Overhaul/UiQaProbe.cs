@@ -24,9 +24,9 @@ namespace Raid.UI
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
             public float health,hypoxia,airlockWater,innerDoor,outerDoor;
             public string airlockPhase,reticleControl;
-            public int watchedOwner=-1;
+            public int watchedOwner=-1,depth;
             public string request,page,error,cursor,worldMessage,scene;
-            public bool connected,pending,inputBlocked,atBase,lastSuccess,wave;
+            public bool connected,pending,inputBlocked,lastSuccess,wave;
             public int width,height,owner,players,events,canvases,audioListeners,audioSources,stockLoss;
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
@@ -342,7 +342,7 @@ namespace Raid.UI
         {
             var root=UiRoot.Instance;var context=root.Context;var player=context.Player;var world=context.World;var fish=context.Harpoon==null?null:context.Harpoon.HookedFish;
             var snapshot=new Snapshot{request=lastId,page=root.Page.ToString(),error=error,cursor=Cursor.lockState.ToString(),connected=context.Connected,pending=root.CommandPending,inputBlocked=UiInputGate.Blocked,
-                width=Screen.width,height=Screen.height,players=context.Players.Count,atBase=context.AtBase,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
+                width=Screen.width,height=Screen.height,players=context.Players.Count,depth=world==null?0:world.CurrentDepth,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
                 scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,events=UnityEngine.Object.FindObjectsByType<EventSystem>().Count(e=>e.isActiveAndEnabled),
                 canvases=UnityEngine.Object.FindObjectsByType<Canvas>().Count(c=>c.isActiveAndEnabled&&c.isRootCanvas),audioSources=UnityEngine.Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Include).Length,audioListeners=UnityEngine.Object.FindObjectsByType<AudioListener>().Count(a=>a.isActiveAndEnabled),
                 uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,lastSuccess=root.LastCommandSucceeded,

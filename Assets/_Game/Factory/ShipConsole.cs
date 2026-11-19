@@ -22,7 +22,7 @@ namespace Raid
         // Use the physical face collider and its actual world-space display plane. Hull props occlude the ray.
         public static ShipConsole ResolveSight(DiverMotor player,Camera camera)
         {
-            if(player==null || camera==null)return null;
+            if(player==null || !player.IsInside || camera==null)return null;
             var ray=camera.ViewportPointToRay(new Vector3(.5f,.5f,0));
             if(!Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore))return null;
             var station=hit.collider.GetComponentInParent<ShipConsole>();
@@ -40,7 +40,7 @@ namespace Raid
             if(action==WorldAction.ProcessAll||action==WorldAction.StopProcessing)return kind==ShipConsoleKind.Process;
             if(action==WorldAction.FeedAll||action==WorldAction.StopFeeding)return kind==ShipConsoleKind.Feed;
             if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades;
-            if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return)return kind==ShipConsoleKind.Depths;
+            if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo)return kind==ShipConsoleKind.Depths;
             return kind==ShipConsoleKind.Reservoir;
         }
         public static bool CanUse(DiverMotor diver,WorldAction action)

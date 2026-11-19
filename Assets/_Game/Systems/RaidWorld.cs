@@ -8,7 +8,8 @@ using UnityEngine.InputSystem;
 
 namespace Raid
 {
-    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding }
+    // Command IDs are used on the wire. Value 2 belonged to a retired navigation command.
+    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding }
 
     public sealed partial class RaidWorld : NetworkBehaviour
     {
@@ -18,9 +19,8 @@ namespace Raid
         public ThreatDirector threats;
         public Transform container;
         private readonly SyncVar<string> snapshot=new();
-        private readonly SyncVar<int> depth=new();
-        private readonly SyncVar<bool> atBase=new(true);
-        private readonly SyncVar<string> message=new("Choose depth at the reservoir terminal");
+        private readonly SyncVar<int> depth=new(1);
+        private readonly SyncVar<string> message=new("Depth 1: catch fish and deliver cargo");
         private readonly SyncVar<float> travelDisplay=new();
         private readonly SyncVar<int> stockLossDisplay=new();
         public int StockLossCount => stockLossDisplay.Value;
@@ -36,11 +36,10 @@ namespace Raid
         private string savePath;
         private bool saveFailed;
         public TeamProgress Team=>team;
-        public bool AtBase=>atBase.Value;
         public int CurrentDepth=>depth.Value;
         public TeamProgress View=>view;
         public string Message=>message.Value;
-        public bool CanUseTerminal=>localDiver!=null && Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange;
+        public bool CanUseTerminal=>localDiver!=null && localDiver.IsInside && Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange;
         public void ToggleTerminal()
         {
             if(UI.UiInputGate.Active) return;
@@ -54,24 +53,18 @@ namespace Raid
         {
             ResetFishRoute();
             ResetAirlock();
-            message.Value="Choose depth at the reservoir terminal";
+            message.Value="Depth 1: catch fish and deliver cargo";
             saveFailed=false;
             travelDisplay.Value=0; stockLossDisplay.Value=0;
-            atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
+            // Activate the fishing ground on the first tick after all network actors have started.
+            depth.Value=1; pendingDepth=1; transitionRemaining=Time.fixedDeltaTime;
+            waveLossBudget=0; commandTimes.Clear();
             savePath=Path.Combine(Application.persistentDataPath,UI.UiInputGate.Active?"raid011-team-progress.json":"team-progress.json");
             string[] args=Environment.GetCommandLineArgs();
             int saveArg=Array.IndexOf(args,"-raid-save");
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];
             try { team=File.Exists(savePath)?TeamSave.Load(savePath):new TeamProgress(progression); }
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="SAVE ERROR: original preserved; progress is temporary"; Debug.LogError("[RAID Save] "+e.Message); }
-            if (!saveFailed && Nereid.NereidVessel.Active != null && team.tank.Count == 0 &&
-                team.cargo.Count == 0 && team.hoistPhase == HoistPhase.Loading)
-            {
-                // Arrive on the first simulation tick, after the scene's network actors start.
-                // Use normal travel so the fishing grounds, salvage and crew all share one depth.
-                pendingDepth = 1;
-                transitionRemaining = Time.fixedDeltaTime;
-            }
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
             Publish();
         }
@@ -99,7 +92,7 @@ namespace Raid
             if(localDiver==null || view==null) return;
             localDiver.SpeedMultiplier=1+view.finsLevel*progression.finsSpeedPerLevel;
             localDiver.OxygenMultiplier=1+view.tankLevel*progression.oxygenPerTankLevel;
-            localDiver.DepthOffset=AtBase?0:depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
+            localDiver.DepthOffset=depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
         }
         private void Update()
         {
@@ -109,7 +102,7 @@ namespace Raid
             ApplyLocalTuning();
             if(!UI.UiInputGate.Active && localDiver!=null && interact!=null && interact.WasPressedThisFrame())
             {
-                if(Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange)
+                if(CanUseTerminal)
                 { ToggleTerminal(); }
                 else if(Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange)
                     Command(WorldAction.LoadCargo,0);
@@ -146,7 +139,7 @@ namespace Raid
                 diver.SpeedMultiplier=1+team.finsLevel*progression.finsSpeedPerLevel;
                 diver.OxygenMultiplier=1+team.tankLevel*progression.oxygenPerTankLevel;
                 diver.SafeDepthBonus=team.hullLevel*tuning.deepDepth;
-                diver.DepthOffset=AtBase?0:depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
+                diver.DepthOffset=depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
                 var tool=diver.GetComponent<HarpoonTool>();
                 if(tool!=null) { tool.ReelMultiplier=1+team.reelLevel*progression.reelPowerPerLevel; if(diver.IsHelpless) tool.DropCargo(); }
             }
@@ -173,7 +166,6 @@ namespace Raid
             commandTimes[sender.ClientId]=Time.unscaledTime;
             if(action==WorldAction.Collect)
             {
-                if(AtBase) { Respond(sender,requestId,false,"unavailable"); return; }
                 if(Physics.Raycast(diver.transform.position+Vector3.up*.6f,diver.AimDirection,out var hit,3f))
                 { bool picked=hit.collider.GetComponent<LootActor>()?.Pickup(diver)??false; Respond(sender,requestId,picked,picked?"ok":"unavailable"); }
                 else Respond(sender,requestId,false,"range");
@@ -184,10 +176,11 @@ namespace Raid
             {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
+            if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
             if(stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
             if(stationCommand && (action==WorldAction.Process || action==WorldAction.Feed) && team.tank.Exists(x=>x.id==id&&x.offering>0))
             {Respond(sender,requestId,false,"use_route");return;}
-            if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
+            if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
             {Respond(sender,requestId,false,"route_busy");return;}
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
             {Respond(sender,requestId,false,"changed");return;}
@@ -198,12 +191,9 @@ namespace Raid
             {
                 case WorldAction.DiveOne: case WorldAction.DiveTwo:
                     int chosen=action==WorldAction.DiveOne?1:2;
-                    if(!AtBase || !team.CanVisitDepth(chosen) || !AllInside() || team.hoistPhase!=HoistPhase.Loading || team.cargo.Count>0) break;
-                    pendingDepth=chosen; transitionRemaining=tuning.transitionSeconds; message.Value="Submarine descending…"; success=true; break;
-                case WorldAction.Return:
-                    if(AtBase || !AllInside() || team.hoistPhase!=HoistPhase.Loading || team.cargo.Count>0) break;
-                    pendingDepth=0; transitionRemaining=tuning.transitionSeconds; message.Value="Returning to base…"; success=true; break;
-                case WorldAction.Process: if(AtBase) success=team.Process(id); break;
+                    if(chosen==CurrentDepth || !team.CanVisitDepth(chosen) || !AllInside() || team.hoistPhase!=HoistPhase.Loading || team.cargo.Count>0) break;
+                    pendingDepth=chosen; transitionRemaining=tuning.transitionSeconds; message.Value="Changing depth…"; success=true; break;
+                case WorldAction.Process: success=team.Process(id); break;
                 case WorldAction.Feed: success=team.Feed(id); break;
                 case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
                 case WorldAction.FeedAll: success=BeginFishRoute(true); break;
@@ -211,7 +201,7 @@ namespace Raid
                 case WorldAction.StopFeeding: success=StopFishRoute(true,id); break;
                 case WorldAction.LoadCargo:
                     var tool=diver.GetComponent<HarpoonTool>(); var fish=tool!=null?tool.CarriedFish:null;
-                    if(AtBase || team.hoistPhase!=HoistPhase.Loading) break;
+                    if(team.hoistPhase!=HoistPhase.Loading) break;
                     if(fish==null)
                     {
                         foreach(var loot in FindObjectsByType<LootActor>())
@@ -224,7 +214,7 @@ namespace Raid
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
                 default:
                     var upgrade=(Upgrade)((int)action-(int)WorldAction.Reel);
-                    success=team.Buy(upgrade,AtBase,progression); break;
+                    success=team.Buy(upgrade,diver.IsInside,progression); break;
             }
             if(success) { diver.ConfirmInteraction(); Publish(); Save(); }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
@@ -234,12 +224,12 @@ namespace Raid
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
-            atBase.Value=pendingDepth==0; depth.Value=pendingDepth;
+            depth.Value=pendingDepth;
             for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(new Vector3((i-2)*1.5f,1.2f,1));
-            foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(!AtBase && fish.depthTier==pendingDepth);
+            foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(fish.depthTier==pendingDepth);
             foreach(var loot in FindObjectsByType<LootActor>()) loot.SetDepth(pendingDepth);
             if(threats!=null) threats.SetDepth(pendingDepth);
-            message.Value=AtBase?"Base: process catch and upgrade equipment":"Depth "+depth.Value+": catch fish and deliver cargo";
+            if(!saveFailed) message.Value="Depth "+depth.Value+": catch fish and deliver cargo";
         }
         private void OnStockAttacked(float severity)
         {
@@ -268,14 +258,14 @@ namespace Raid
             if(UI.UiInputGate.Active) return;
             if(!IsClientInitialized || view==null || localDiver==null) return;
             GUILayout.BeginArea(new Rect(Screen.width-420,16,400,Screen.height-160),GUI.skin.box);
-            GUILayout.Label("DEPTH "+depth.Value+" / "+(AtBase?"BASE":"DIVE"));
+            GUILayout.Label("DEPTH "+depth.Value);
             GUILayout.Label(message.Value);
             GUILayout.Label("B "+view.biomass+" · Chitin "+view.chitin+" · Scrap "+view.scrap+" · Electronics "+view.electronics);
             GUILayout.Label("Lifetime "+view.lifetimeCatch+" · Tank "+view.tank.Count+" · Food "+view.offering+" · Hunger "+view.hungerRemaining.ToString("F0")+"s");
             GUILayout.Label("Cargo "+view.CargoUsed+"/"+view.Capacity(progression)+" · "+view.hoistPhase+" "+view.hoistRemaining.ToString("F0"));
             if(threats!=null) GUILayout.Label(threats.Message);
             bool nearCargo=Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange;
-            bool nearTerminal=Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange;
+            bool nearTerminal=CanUseTerminal;
             if(nearCargo && Cursor.lockState!=CursorLockMode.Locked)
             {
                 if(GUILayout.Button("Load carried catch [E]")) Command(WorldAction.LoadCargo,0);
@@ -284,25 +274,21 @@ namespace Raid
             if(nearTerminal) GUILayout.Label("[E] Reservoir terminal · Esc opens cursor");
             if(nearTerminal && showTerminal)
             {
-                if(AtBase)
+                GUI.enabled=CurrentDepth!=1;
+                if(GUILayout.Button("Depth 1 · Biomass / Scrap · light threats")) Command(WorldAction.DiveOne,0);
+                GUI.enabled=CurrentDepth!=2 && view.CanVisitDepth(2);
+                if(GUILayout.Button("Depth 2 · Chitin / Electronics · dangerous predator")) Command(WorldAction.DiveTwo,0);
+                GUI.enabled=true;
+                if(!view.CanVisitDepth(2)) GUILayout.Label("Depth 2 requires Hull + Lifetime "+progression.depthTwoLifetimeCatch);
+                foreach(Upgrade upgrade in Enum.GetValues(typeof(Upgrade)))
                 {
-                    if(GUILayout.Button("Depth 1 · Biomass / Scrap · light threats")) Command(WorldAction.DiveOne,0);
-                    GUI.enabled=view.CanVisitDepth(2);
-                    if(GUILayout.Button("Depth 2 · Chitin / Electronics · dangerous predator")) Command(WorldAction.DiveTwo,0);
-                    GUI.enabled=true;
-                    if(!view.CanVisitDepth(2)) GUILayout.Label("Depth 2 requires Hull + Lifetime "+progression.depthTwoLifetimeCatch);
-                    foreach(Upgrade upgrade in Enum.GetValues(typeof(Upgrade)))
-                    {
-                        var cost=view.Cost(upgrade,progression);
-                        if(GUILayout.Button(upgrade+" L"+view.Level(upgrade)+" · "+cost.biomass+"B "+cost.chitin+"C "+cost.scrap+"S "+cost.electronics+"E"))
-                            Command((WorldAction)((int)WorldAction.Reel+(int)upgrade),0);
-                    }
+                    var cost=view.Cost(upgrade,progression);
+                    if(GUILayout.Button(upgrade+" L"+view.Level(upgrade)+" · "+cost.biomass+"B "+cost.chitin+"C "+cost.scrap+"S "+cost.electronics+"E"))
+                        Command((WorldAction)((int)WorldAction.Reel+(int)upgrade),0);
                 }
-                else if(GUILayout.Button("Return to base · all divers inside")) Command(WorldAction.Return,0);
                 for(int i=0;i<Mathf.Min(view.tank.Count,8);i++)
                 {
                     var fish=view.tank[i]; GUILayout.BeginHorizontal(); GUILayout.Label("Catch #"+fish.id+" ("+fish.biomass+"B / "+fish.offering+" food)");
-                    GUI.enabled=AtBase;
                     if(GUILayout.Button("Process")) Command(WorldAction.Process,fish.id);
                     GUI.enabled=true;
                     if(GUILayout.Button("Feed")) Command(WorldAction.Feed,fish.id);
