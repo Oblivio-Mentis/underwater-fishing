@@ -161,8 +161,8 @@ namespace Raid.UI
                 case UiInteraction.Cargo:
                     prompt=UiText.HudCargoPrompt;
                     if(view==null || context.Tuning==null)break;
-                    if(context.AtBase){detail=UiText.HudCargoBaseHint;color=UiTheme.Muted;}
-                    else if(view.hoistPhase!=HoistPhase.Loading){detail=UiText.HudCargoBlocked(view.hoistPhase);color=UiTheme.Amber;}
+                    if(view.hoistPhase!=HoistPhase.Loading){detail=UiText.HudCargoBlocked(view.hoistPhase);color=UiTheme.Amber;}
+                    else if(context.AtBase && view.cargo.Count==0){detail=UiText.HudCargoBaseHint;color=UiTheme.Muted;}
                     else if(context.HasCargo)
                     {
                         int free=view.Capacity(context.Tuning)-view.CargoUsed;

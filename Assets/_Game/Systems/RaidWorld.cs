@@ -64,6 +64,14 @@ namespace Raid
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];
             try { team=File.Exists(savePath)?TeamSave.Load(savePath):new TeamProgress(progression); }
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="SAVE ERROR: original preserved; progress is temporary"; Debug.LogError("[RAID Save] "+e.Message); }
+            if (!saveFailed && Nereid.NereidVessel.Active != null && team.tank.Count == 0 &&
+                team.cargo.Count == 0 && team.hoistPhase == HoistPhase.Loading)
+            {
+                // Arrive on the first simulation tick, after the scene's network actors start.
+                // Use normal travel so the fishing grounds, salvage and crew all share one depth.
+                pendingDepth = 1;
+                transitionRemaining = Time.fixedDeltaTime;
+            }
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
             Publish();
         }

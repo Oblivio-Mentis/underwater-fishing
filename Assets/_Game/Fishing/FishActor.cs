@@ -218,7 +218,8 @@ namespace Raid
                 ScheduleAt(Time.time+2.5f);
                 return;
             }
-            if(staggered && Mode==FishMode.Roam && DesiredState==FishMode.Roam && Time.time>departureAt && NearestSwimmer(transform.position,14)==null)
+            if(staggered && Mode==FishMode.Roam && DesiredState==FishMode.Roam && Time.time>departureAt &&
+                NearestSwimmer(transform.position,14)==null && HasRoamingReplacement())
             {
                 ScheduleAt(Time.time+18);
                 return;

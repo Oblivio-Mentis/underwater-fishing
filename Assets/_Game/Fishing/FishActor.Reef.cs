@@ -33,16 +33,19 @@ namespace Raid
             if(Time.time<arrivalAt)return;
             int occupying=0;
             foreach(var other in ServerSchool)
-                if(other!=this && other.depthTier==depthTier && other._depthActive && other.Mode!=FishMode.Transported)occupying++;
+                if(other!=this && other.depthTier==depthTier && other._depthActive &&
+                    other.Mode!=FishMode.Captured && other.Mode!=FishMode.Transported)occupying++;
             if(occupying>=3){arrivalAt=Time.time+1.3f;return;}
 
             // Swim in beyond the diver's immediate field of interaction.
             Vector3 entry=_origin;
             bool clear=false;
-            for(int i=0;i<8;i++)
+            for(int i=0;i<16;i++)
             {
                 float angle=i*Mathf.PI*.25f+_clock;
-                entry=_origin+new Vector3(Mathf.Cos(angle)*6.5f,.35f,Mathf.Sin(angle)*6.5f);
+                // A diver waiting at the shoal centre covers the entire inner entry ring.
+                float radius=i<8?6.5f:10.5f;
+                entry=_origin+new Vector3(Mathf.Cos(angle)*radius,.35f,Mathf.Sin(angle)*radius);
                 if(NearestSwimmer(entry,7)!=null || Physics.CheckSphere(entry,.65f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
                 clear=true;break;
             }
@@ -59,6 +62,15 @@ namespace Raid
             state.Position=entry;
             state.Rotation=transform.rotation;
             _snapshot.Value=state;
+        }
+
+        bool HasRoamingReplacement()
+        {
+            foreach(var other in ServerSchool)
+                if(other!=this && other.depthTier==depthTier && other._depthActive &&
+                    other.Mode==FishMode.Roam && other.DesiredState==FishMode.Roam &&
+                    (RequiresPartner || !other.RequiresPartner))return true;
+            return false;
         }
 
         static DiverMotor NearestSwimmer(Vector3 point,float radius)

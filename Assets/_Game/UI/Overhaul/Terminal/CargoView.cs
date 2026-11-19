@@ -85,7 +85,6 @@ namespace Raid.UI
         {
             string reason=TerminalParts.BaseReason(app,true);if(!string.IsNullOrEmpty(reason))return reason;
             var ctx=app.Context;var view=ctx.View;
-            if(ctx.AtBase)return UiText.CargoAtBase;
             if(view.hoistPhase!=HoistPhase.Loading)return UiText.CargoLocked;
             if(view.cargo.Count==0)return UiText.CargoEmpty;
             return "";
