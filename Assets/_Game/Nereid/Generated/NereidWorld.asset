@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 291326f41b25d1b42a1f3da9677be520, type: 3}
   m_Name: NereidWorld
   m_EditorClassIdentifier: Assembly-CSharp::Raid.WorldTuning
-  terminalPosition: {x: 0, y: 1, z: -3}
-  cargoPosition: {x: 8, y: 0.4, z: -14}
+  terminalPosition: {x: 0, y: 2, z: -6}
+  cargoPosition: {x: 16, y: 0.8, z: -28}
   interactionRange: 4
   transitionSeconds: 3
   shallowDepth: 20

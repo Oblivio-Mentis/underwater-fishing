@@ -16,9 +16,10 @@ namespace Raid.Nereid
             factory=Object.FindAnyObjectByType<Factory.FactoryVisuals>();
             var source=Resources.Load<Material>("NereidBubbles");if(source==null||factory==null){enabled=false;return;}
             particles=new Material(source);
-            outlet=MakeParticles("Processor water vapour",new Vector3(-3.45f,1.8f,-5.1f),new Color(.5f,.62f,.63f,.11f),.14f,.8f);
+            Vector3 discharge=factory.processTube!=null&&factory.processTube.Length>0?factory.processTube[factory.processTube.Length-1]:new Vector3(-3.45f,2.95f,-4.95f);
+            outlet=MakeParticles("Processor water vapour",discharge+new Vector3(0,-1.15f,-.15f),new Color(.5f,.62f,.63f,.11f),.14f,.8f);
             mouth=MakeParticles("Feeding pressure bubbles",new Vector3(1.35f,2.5f,7.55f),new Color(.35f,.67f,.72f,.2f),.055f,.7f);
-            machine=MakeAudio("Conveyor drive",new Vector3(-3.5f,1,-6.5f),.12f);
+            machine=MakeAudio("Conveyor drive",discharge+new Vector3(0,-1.95f,-1.55f),.12f);
             feeding=MakeAudio("Feed pipe circulation",new Vector3(1.9f,2,-2),.09f);
             motorClip=Sound("NEREID conveyor motor",false);flowClip=Sound("NEREID pressure feed",true);machine.clip=motorClip;feeding.clip=flowClip;
         }

@@ -44,8 +44,9 @@ namespace Raid.Nereid
             {
                 var point=world.container.position;
                 hoistCable.positionCount=3;
-                hoistCable.SetPosition(0,transform.TransformPoint(new Vector3(0,6.3f,-14)));
-                hoistCable.SetPosition(1,new Vector3(point.x,6.3f,point.z));
+                float railY=transform.TransformPoint(new Vector3(0,6.9f,-14)).y;
+                hoistCable.SetPosition(0,transform.TransformPoint(new Vector3(0,6.9f,-14)));
+                hoistCable.SetPosition(1,new Vector3(point.x,railY,point.z));
                 hoistCable.SetPosition(2,point+Vector3.up*.8f);
             }
         }
