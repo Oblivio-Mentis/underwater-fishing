@@ -10,11 +10,13 @@ namespace Raid
         FogMode initialMode;
         float initialDensity,wetBlend,threatBlend;
         Color initialColor;
+        const float BeamCandela=76f;
         Light diveLamp;
         AudioSource regulator,heartbeat;
         AudioClip regulatorLoop,pulseLoop;
         static readonly int WaterShader=Shader.PropertyToID("_NereidTurbidity");
         static readonly int LampShader=Shader.PropertyToID("_NereidLampForward");
+        static readonly int LampOriginShader=Shader.PropertyToID("_NereidLampOriginRange");
         public float WaterBlend=>wetBlend;
         public float ProximityFear=>threatBlend;
 
@@ -33,9 +35,11 @@ namespace Raid
             node.transform.SetParent(eye,false);
             node.transform.localPosition=new Vector3(.15f,.12f,.09f);
             diveLamp=node.AddComponent<Light>();
-            diveLamp.type=LightType.Spot;diveLamp.spotAngle=53;diveLamp.innerSpotAngle=22;
-            diveLamp.range=15;diveLamp.color=new Color(.71f,.84f,.83f);
-            diveLamp.intensity=3.2f;diveLamp.enabled=false;
+            diveLamp.type=LightType.Spot;diveLamp.spotAngle=68;diveLamp.innerSpotAngle=36;
+            diveLamp.range=11;diveLamp.color=new Color(.79f,.92f,.96f);
+            diveLamp.renderMode=LightRenderMode.ForcePixel;
+            diveLamp.lightUnit=UnityEngine.Rendering.LightUnit.Candela;
+            diveLamp.shadows=LightShadows.None;diveLamp.intensity=BeamCandela;diveLamp.enabled=false;
             if(regulator!=null)return;
             regulatorLoop=MakeDivingAudio(false);pulseLoop=MakeDivingAudio(true);
             regulator=MaskSound(regulatorLoop);heartbeat=MaskSound(pulseLoop);
@@ -100,11 +104,16 @@ namespace Raid
                 bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
                 RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.084f,wetBlend);
                 RenderSettings.fogColor=Color.Lerp(initialColor,new Color(.029f,.077f,.093f),wetBlend);
-                if(camera!=null)Shader.SetGlobalVector(LampShader,camera.transform.forward);
+                if(diveLamp!=null)
+                {
+                    var t=diveLamp.transform;var p=t.position;
+                    Shader.SetGlobalVector(LampShader,t.forward);
+                    Shader.SetGlobalVector(LampOriginShader,new Vector4(p.x,p.y,p.z,diveLamp.range));
+                }
             }
             else ResetFog();
             Shader.SetGlobalFloat(WaterShader,wetBlend);
-            if(diveLamp!=null){diveLamp.enabled=wetBlend>.04f;diveLamp.intensity=3.2f*wetBlend;}
+            if(diveLamp!=null){diveLamp.enabled=wetBlend>.04f;diveLamp.intensity=BeamCandela*wetBlend;}
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
                 color.postExposure.Override(Mathf.Lerp(.12f,-.42f,wetBlend));

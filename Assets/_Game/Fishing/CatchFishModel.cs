@@ -9,7 +9,7 @@ namespace Raid
         private sealed class Shape
         {
             public Mesh body, tail;
-            public Material[] colors;
+            public Material[] colors, wildColors;
         }
 
         private static readonly Dictionary<string, Shape> Shapes = new();
@@ -28,12 +28,14 @@ namespace Raid
             if (!Supports(species)) species = "Lanternfish";
             if (!Shapes.TryGetValue(species, out var shape) || shape.body == null)
                 Shapes[species] = shape = Build(species);
-            var body = MakePart(species, parent, shape.body, shape.colors);
+            var live=parent==null?null:parent.GetComponent<FishActor>();
+            var finish=live==null || shape.wildColors==null?shape.colors:shape.wildColors;
+            var body = MakePart(species, parent, shape.body, finish);
             var model = body.AddComponent<CatchFishModel>();
-            model.tail = MakePart("Caudal fin", body.transform, shape.tail, shape.colors).transform;
+            model.tail = MakePart("Caudal fin", body.transform, shape.tail, finish).transform;
             model.tail.localPosition = Vector3.back * .43f;
             model.phase = Random.value * 6.28f;
-            model.actor = parent == null ? null : parent.GetComponent<FishActor>();
+            model.actor = live;
             return body;
         }
 
@@ -99,6 +101,23 @@ namespace Raid
                 Color reflected = i == 4 ? color : Color.Lerp(color, new Color(.17f,.46f,.54f), i == 0 ? .45f : .14f);
                 material.SetColor("_EmissionColor", reflected * shadowFill[i]);
                 colors[i] = material;
+            }
+
+            var wetShader=Resources.Load<Shader>("NereidFishSkin");
+            Material[] wild=null;
+            if(wetShader!=null)
+            {
+                wild=new Material[colors.Length];
+                for(int i=0;i<wild.Length;i++)
+                {
+                    var lit=colors[i];
+                    var waterSkin=new Material(wetShader){name=species+" / wet scales "+i,hideFlags=HideFlags.DontSave};
+                    var albedo=lit.GetColor("_BaseColor");
+                    waterSkin.SetColor("_BaseColor",albedo);
+                    waterSkin.SetColor("_RimColor",Color.Lerp(albedo,new Color(.60f,.81f,.81f),.56f));
+                    waterSkin.SetColor("_EmissionColor",lit.GetColor("_EmissionColor"));
+                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));wild[i]=waterSkin;
+                }
             }
 
             var body = new Geometry();
@@ -194,7 +213,7 @@ namespace Raid
             else foreach (int sign in new[]{-1,1})
                 tail.Fin(new Vector3(0,sign*.045f,.015f),new Vector3(0,sign*(needle?.16f:.22f),-.30f),
                          new Vector3(0,sign*.035f,-.18f),3);
-            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors};
+            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors,wildColors=wild};
         }
 
         private static Vector3 Point(Vector3 ring, float angle) =>

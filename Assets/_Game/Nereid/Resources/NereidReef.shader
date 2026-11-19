@@ -1,6 +1,6 @@
 Shader "RAID/Nereid Reef"
 {
-    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 }
+    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry"}
@@ -16,10 +16,9 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow;
+            float _Glow, _Hide;
             CBUFFER_END
-            float _NereidTurbidity;
-            float3 _NereidLampForward;
+            #include "NereidDiveLamp.hlsl"
             struct Input {float3 pos:POSITION;float3 norm:NORMAL;half4 color:COLOR;};
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;half4 color:COLOR;half fog:TEXCOORD2;};
             Vary vert(Input v)
@@ -75,10 +74,13 @@ Shader "RAID/Nereid Reef"
                 half3 outside=rgb*transmit+water*(1-transmit);
                 float3 toSurface=i.pos-GetCameraPositionWS();
                 float d=max(.01,length(toSurface));
-                float cone=smoothstep(.88,.979,dot(toSurface/d,_NereidLampForward));
-                float pool=cone*(1-smoothstep(2,14,d))*saturate(dot(n,-toSurface/d));
+                float pool=NereidBeam(i.pos);
+                float face=abs(dot(n,-toSurface/d));
+                float rim=(1.-face)*(1.-face);
+                float wrapped=.32+.68*face;
                 float clarity=exp2(-d*d*.0072);
-                half3 closeColor=rgb*.66+base*pool*1.9;
+                half3 closeColor=rgb*.66+pool*(base*(wrapped*1.85)+half3(.024,.047,.045)*(.4+grain)*wrapped);
+                closeColor+=_Hide*pool*rim*half3(.025,.092,.103);
                 half3 murk=lerp(half3(.004,.010,.015),closeColor,clarity);
                 return half4(lerp(outside,murk,_NereidTurbidity),1);
             }

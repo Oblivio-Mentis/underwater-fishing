@@ -23,7 +23,7 @@ namespace Raid.Nereid
         public void Build(Transform angler)
         {
             skin=Material("NereidReef","Reef fauna");luminous=Material("NereidReef","Photophores");
-            luminous.SetFloat("_Glow",2);
+            skin.SetFloat("_Hide",1);luminous.SetFloat("_Glow",1.35f);
             mud=Material("NereidSilt","Silt bloom");
             MakeClicker();MakeClam();MakeEel();MakeKraken();MakeLure(angler);
             anglerVoice=Voice(angler,23);clickerVoice=Voice(clicker,26);
