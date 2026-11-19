@@ -189,6 +189,24 @@ namespace Raid.UI
                 else diver.LookAtConsole(diver.transform.position+Vector3.up*.6f+Quaternion.Euler(r.number2,r.number,0)*Vector3.forward*10f);
                 return;
             }
+            if(r.action=="reticle_aim")
+            {
+                var root=UiRoot.Instance;var diver=root.Context.Player;
+                if(diver==null || !diver.IsOwner || (root.Page!=UiPage.None && root.Page!=UiPage.Terminal))
+                    throw new InvalidOperationException("Local gameplay view required");
+                var station=ShipConsole.Stations.FirstOrDefault(target=>target!=null && target.name==r.name);
+                if(station!=null && station.screenAnchor!=null)diver.LookAtConsole(station.screenAnchor.position);
+                else
+                {
+                    var button=root.GetComponentsInChildren<Button>().FirstOrDefault(target=>target.name==r.name && target.IsActive());
+                    if(button==null || root.Page!=UiPage.Terminal)
+                        throw new InvalidOperationException("Active physical display control not found");
+                    var rect=(RectTransform)button.transform;
+                    diver.LookAtConsole(rect.TransformPoint(rect.rect.center));
+                }
+                return;
+            }
+            if(r.action=="reticle_hover"){UiRoot.Instance.QaScrollReticle(0);return;}
             if(r.action=="reticle_click")
             {
                 if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("No available control under the physical reticle");
