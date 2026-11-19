@@ -272,7 +272,9 @@ namespace Raid
             GUI.Label(new Rect(Screen.width * 0.5f - 5f, Screen.height * 0.5f - 10f, 20f, 20f), "+");
         }
 
-        private static bool IsSealedInterior(Vector3 p) => Mathf.Abs(p.x) < 6f && p.z > -8f && p.z < 8f && p.y > 0f && p.y < 4f;
+        private static bool IsSealedInterior(Vector3 p) => Nereid.NereidVessel.Active!=null
+            ? Nereid.NereidVessel.Active.ContainsSealed(p)
+            : Mathf.Abs(p.x) < 6f && p.z > -8f && p.z < 8f && p.y > 0f && p.y < 4f;
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         private static void SetCursor(bool captured)
