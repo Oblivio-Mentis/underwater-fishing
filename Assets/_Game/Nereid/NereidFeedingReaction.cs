@@ -16,7 +16,7 @@ namespace Raid.Nereid
         public long SwallowedFishObserved {get;private set;}
         public int BurpCount {get;private set;}
         public int LastBurpSequence {get;private set;}=int.MinValue;
-        public bool IsBurping => BurpAge>=0&&BurpAge<1.7f;
+        public bool IsBurping => BurpAge>=0&&BurpAge<burstDuration;
         public float LastBurpTime {get;private set;}=-1;
         public float BurpAge => LastBurpTime<0?-1:Time.time-LastBurpTime;
         public float PeakCaptureDelay => .25f;
@@ -24,6 +24,14 @@ namespace Raid.Nereid
         public float JawOpeningMetres {get;private set;}
         public float ThroatWaveAmount {get;private set;}
         public int PeakParticleCount {get;private set;}
+        public int LastBurpFood {get;private set;}
+        public int LastBurpRequired {get;private set;}
+        public float LastBurpHungerRemaining {get;private set;}
+        public float LastBurpSeverity {get;private set;}=1;
+        public bool LastBurpWasOverfed => LastBurpFood>LastBurpRequired&&LastBurpRequired>0;
+        public float AppliedCameraPeakMetres => cameraImpulse==null?0:cameraImpulse.AppliedPeakMetres;
+        public float AppliedCameraPeakDegrees => cameraImpulse==null?0:cameraImpulse.AppliedPeakDegrees;
+        public bool CameraImpulseAppliedThisFrame => cameraImpulse!=null&&cameraImpulse.AppliedThisFrame;
         public int BurstParticleCount => (mist==null?0:mist.particleCount)+(drops==null?0:drops.particleCount)+(bubbles==null?0:bubbles.particleCount);
 
         Transform mouth,throat;
@@ -39,14 +47,16 @@ namespace Raid.Nereid
         MaterialPropertyBlock foamBlock;
         Light pressureLight;
         NereidCreatureMotion creature;
+        NereidFeedingCameraImpulse cameraImpulse;
+        bool ownsCameraImpulse;
         AudioSource voice,pressureVoice;
         Material particleMaterial,mistMaterial;
         Texture2D mistTexture;
         AudioClip swallowClip,burpClip,jetClip,inhaleClip;
         RaidWorld observedWorld;
         bool ready,hasSnapshot,wasActive,wasFeeding;
-        int sequence,completed,lastScheduled=int.MinValue,pendingSequence=int.MinValue;
-        float swallowAt=-10,burpAt=-1,nextSwallowSound,nextBind,jetUntil;
+        int sequence,completed,lastScheduled=int.MinValue,pendingSequence=int.MinValue,foodPeak,foodRequired;
+        float swallowAt=-10,burpAt=-1,nextSwallowSound,nextBind,jetUntil,burstDuration=1.7f,maxLowerTravel=.3f;
 
         void Awake(){TryBind();}
         void OnEnable()
@@ -62,7 +72,14 @@ namespace Raid.Nereid
             mouth=factory.upperJaw.parent;throat=mouth.Find("Deep living throat");
             upperPosition=factory.upperJaw.localPosition;lowerPosition=factory.lowerJaw.localPosition;
             upperScale=factory.upperJaw.localScale;lowerScale=factory.lowerJaw.localScale;
+            var lowerMesh=factory.lowerJaw.GetComponent<MeshFilter>();
+            if(lowerMesh!=null&&lowerMesh.sharedMesh!=null)
+            {
+                float floor=mouth.TransformPoint(lowerPosition+Vector3.up*(lowerMesh.sharedMesh.bounds.min.y*lowerScale.y)).y;
+                maxLowerTravel=Mathf.Max(.035f,(floor-.06f)/Mathf.Max(.001f,Mathf.Abs(mouth.lossyScale.y)));
+            }
             creature=Object.FindAnyObjectByType<NereidCreatureMotion>();
+            cameraImpulse=GetComponent<NereidFeedingCameraImpulse>();if(cameraImpulse==null){cameraImpulse=gameObject.AddComponent<NereidFeedingCameraImpulse>();ownsCameraImpulse=true;}
             foreach(Transform child in mouth)
             {
                 bool fang=child.name.Contains("fang"),tongue=child.name=="Curved muscular tongue",palate=child.name.StartsWith("Palate muscular fold");
@@ -124,21 +141,36 @@ namespace Raid.Nereid
                 if(wasActive&&!route.active&&wasFeeding&&route.feeding&&route.completed>0&&lastScheduled!=route.sequence)
                 {
                     pendingSequence=route.sequence;lastScheduled=route.sequence;burpAt=Time.time+burpDelay;
+                    voice.pitch=1;
                     if(voice.isActiveAndEnabled)voice.PlayOneShot(inhaleClip,.48f);
                     if(creature!=null)creature.PrepareBurp(burpDelay);
+                    if(cameraImpulse!=null)cameraImpulse.Anticipate(mouth.position,burpDelay);
                 }
                 completed=route.completed;wasActive=route.active;wasFeeding=route.feeding;
             }
+            if(route.feeding&&(route.active||burpAt>=0))ObserveFood(world);
             if(burpAt>=0&&Time.time>=burpAt)Burp();
             AnimateMouth();UpdateBurst();
         }
         void Baseline(FishRouteState route)
-        {sequence=route.sequence;completed=route.completed;wasActive=route.active;wasFeeding=route.feeding;if(!route.active)lastScheduled=route.sequence;}
+        {sequence=route.sequence;completed=route.completed;wasActive=route.active;wasFeeding=route.feeding;foodPeak=0;foodRequired=0;if(route.feeding)ObserveFood(observedWorld);if(!route.active)lastScheduled=route.sequence;}
+        void ObserveFood(RaidWorld world)
+        {
+            if(world==null||world.View==null||world.progression==null)return;
+            foodPeak=Mathf.Max(foodPeak,world.View.offering);
+            long required=(long)world.progression.foodRequired+((long)world.View.highestDepth-1)*world.progression.foodPerDepth;
+            foodRequired=(int)System.Math.Max(1,System.Math.Min(int.MaxValue,required));
+        }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public void BeginBackgroundCameraQa(float seconds){if(cameraImpulse!=null)cameraImpulse.BeginBackgroundQa(seconds);}
+#endif
         void Swallow(int count)
         {
             SwallowedFishObserved+=count;swallowAt=Time.time;
+            voice.pitch=1;
             if(voice.isActiveAndEnabled&&Time.time>=nextSwallowSound){nextSwallowSound=Time.time+.26f;voice.PlayOneShot(swallowClip,.7f);}
             if(creature!=null)creature.ConfirmedSwallow();
+            if(cameraImpulse!=null)cameraImpulse.Swallow(mouth.position);
             if(bubbles!=null)
             {
                 Vector3 point=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));
@@ -152,12 +184,21 @@ namespace Raid.Nereid
         }
         void Burp()
         {
-            burpAt=-1;LastBurpSequence=pendingSequence;pendingSequence=int.MinValue;BurpCount++;LastBurpTime=Time.time;jetUntil=Time.time+.42f;PeakParticleCount=0;
+            ObserveFood(observedWorld);LastBurpFood=foodPeak;LastBurpRequired=Mathf.Max(1,foodRequired);
+            LastBurpHungerRemaining=observedWorld!=null&&observedWorld.View!=null?observedWorld.View.hungerRemaining:0;
+            float surplus=Mathf.Clamp01((LastBurpFood-LastBurpRequired)/(float)LastBurpRequired);
+            LastBurpSeverity=1+1.35f*Mathf.Sqrt(surplus);float visualGain=Mathf.Lerp(1,1.55f,(LastBurpSeverity-1)/1.35f);
+            burpAt=-1;LastBurpSequence=pendingSequence;pendingSequence=int.MinValue;BurpCount++;LastBurpTime=Time.time;jetUntil=Time.time+.42f;PeakParticleCount=0;burstDuration=1.7f+(LastBurpSeverity-1)*.35f;
+            voice.pitch=Mathf.Lerp(1,.84f,surplus);pressureVoice.pitch=Mathf.Lerp(1,.91f,surplus);
+            voice.volume=Mathf.Min(.88f,voiceVolume*Mathf.Lerp(1,1.2f,surplus));pressureVoice.volume=Mathf.Min(.48f,voiceVolume*.55f*Mathf.Lerp(1,1.12f,surplus));
             if(voice.isActiveAndEnabled){voice.Stop();voice.PlayOneShot(burpClip);}
             if(pressureVoice.isActiveAndEnabled)pressureVoice.PlayOneShot(jetClip);
-            if(creature!=null)creature.ConfirmedBurp();
+            if(creature!=null)creature.ConfirmedBurp(LastBurpSeverity);
+            if(cameraImpulse!=null)cameraImpulse.Release(mouth.position,LastBurpSeverity);
             PlaceEmitter(mist);PlaceEmitter(drops);PlaceEmitter(bubbles);
-            if(mist!=null)mist.Emit(66);if(drops!=null)drops.Emit(96);if(bubbles!=null)bubbles.Emit(56);
+            foreach(var ps in new[]{mist,drops,bubbles})if(ps!=null)
+            {var main=ps.main;float low=ps==mist?1.15f:ps==drops?.065f:.14f,high=ps==mist?2.4f:ps==drops?.15f:.36f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
+            if(mist!=null)mist.Emit(Mathf.RoundToInt(66*visualGain));if(drops!=null)drops.Emit(Mathf.RoundToInt(96*visualGain));if(bubbles!=null)bubbles.Emit(Mathf.RoundToInt(56*visualGain));
         }
 
         void AnimateMouth()
@@ -168,25 +209,26 @@ namespace Raid.Nereid
             float swallow=swallowAge>=0&&swallowAge<.52f?Mathf.Sin(swallowAge/.52f*Mathf.PI):0;
             float charge=burpAt>=0?Mathf.Clamp01(1-(burpAt-Time.time)/Mathf.Max(.2f,burpDelay)):0;
             float age=BurpAge;
-            float release=age>=0&&age<1.7f?Mathf.SmoothStep(0,1,age/.075f)*Mathf.Exp(-age*.9f)*(1-Mathf.SmoothStep(.8f,1.7f,age)):0;
-            float opening=swallow*.17f+release*.46f-charge*.11f;
-            JawOpeningMetres=Mathf.Max(0,opening*1.65f*Mathf.Abs(mouth.lossyScale.y));
-            factory.upperJaw.localPosition=upperPosition+Vector3.up*opening*.65f;
-            factory.lowerJaw.localPosition=lowerPosition+Vector3.down*opening;
+            float release=age>=0&&age<burstDuration?Mathf.SmoothStep(0,1,age/.075f)*Mathf.Exp(-age*.9f)*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.8f,burstDuration,age))):0;
+            float opening=swallow*.17f+release*.46f*Mathf.Sqrt(LastBurpSeverity)-charge*.11f;
+            float lowerOpening=Mathf.Min(opening,maxLowerTravel),upperOpening=opening*.65f+Mathf.Max(0,opening-lowerOpening)*.8f;
+            JawOpeningMetres=Mathf.Max(0,(lowerOpening+upperOpening)*Mathf.Abs(mouth.lossyScale.y));
+            factory.upperJaw.localPosition=upperPosition+Vector3.up*upperOpening;
+            factory.lowerJaw.localPosition=lowerPosition+Vector3.down*lowerOpening;
             float widen=swallow*.045f+release*.07f-charge*.022f;
             // FactoryVisuals has already written ordinary breathing. Only organic lip/teeth geometry moves.
             factory.upperJaw.localScale=Vector3.Scale(factory.upperJaw.localScale,new Vector3(1+widen,1,1));
             factory.lowerJaw.localScale=Vector3.Scale(factory.lowerJaw.localScale,new Vector3(1+widen*1.25f,1,1));
             foreach(var part in dentition)if(part.transform!=null)
             {
-                part.transform.localPosition=part.position+Vector3.up*(part.upper?opening*.65f:-opening)+(part.tongue?Vector3.forward*(swallow*.13f-release*.16f):Vector3.zero);
+                part.transform.localPosition=part.position+Vector3.up*(part.upper?upperOpening:-lowerOpening)+(part.tongue?Vector3.forward*(swallow*.13f-release*.16f):Vector3.zero);
                 part.transform.localScale=Vector3.Scale(part.scale,new Vector3(1+widen*(part.upper?1:1.25f),1,part.tongue?1-swallow*.12f:1));
             }
             ThroatWaveAmount=swallow*.14f+release*.19f+charge*.08f;
             if(throat!=null)throat.localScale=Vector3.Scale(throatScale,new Vector3(1+charge*.08f,1+charge*.09f,1-charge*.06f));
             DeformThroat(swallowAge,swallow,release,charge);
             if(pressureLight!=null)
-                pressureLight.intensity=swallow*18+charge*8+(age>=0&&age<.75f?Mathf.Sin(Mathf.Clamp01(age/.75f)*Mathf.PI)*85:0);
+                pressureLight.intensity=swallow*18+charge*8+(age>=0&&age<.75f?Mathf.Sin(Mathf.Clamp01(age/.75f)*Mathf.PI)*85*Mathf.Sqrt(LastBurpSeverity):0);
         }
         void DeformThroat(float swallowAge,float swallow,float release,float charge)
         {
@@ -205,12 +247,13 @@ namespace Raid.Nereid
         void UpdateBurst()
         {
             bool jet=Time.time<jetUntil&&IsBurping;
-            SetRate(mist,jet?72:0);SetRate(drops,jet?130:0);SetRate(bubbles,jet?58:0);
+            float gain=Mathf.Lerp(1,1.55f,(LastBurpSeverity-1)/1.35f);
+            SetRate(mist,jet?72*gain:0);SetRate(drops,jet?130*gain:0);SetRate(bubbles,jet?58*gain:0);
             float age=BurpAge;Vector3 origin=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));
             for(int ring=0;ring<foam.Length;ring++)if(foam[ring]!=null)
             {
                 float t=age-ring*.11f;bool visible=t>=0&&t<.78f;foam[ring].enabled=visible;if(!visible)continue;
-                float radius=1.1f+t*3.4f;Vector3 centre=origin-mouth.forward*(.4f+t*9);
+                float radius=(1.1f+t*3.4f)*Mathf.Sqrt(gain);Vector3 centre=origin-mouth.forward*(.4f+t*9);
                 for(int i=0;i<48;i++)
                 {float a=i*Mathf.PI*2/48;float r=radius*(1+.075f*Mathf.Sin(a*5+t*9+ring));foam[ring].SetPosition(i,centre+mouth.right*(Mathf.Cos(a)*r)+mouth.up*(Mathf.Sin(a)*r*.67f));}
                 foamBlock.SetColor("_BaseColor",new Color(.76f,.84f,.75f,(1-t/.78f)*.37f));foam[ring].SetPropertyBlock(foamBlock);foam[ring].widthMultiplier=.12f+t*.08f;
@@ -282,6 +325,7 @@ namespace Raid.Nereid
             if(mist!=null){SetRate(mist,0);mist.Clear();}if(drops!=null){SetRate(drops,0);drops.Clear();}if(bubbles!=null){SetRate(bubbles,0);bubbles.Clear();}
             foreach(var ring in foam)if(ring!=null)ring.enabled=false;if(pressureLight!=null)pressureLight.intensity=0;
             if(creature!=null)creature.ClearFeedingReaction();
+            if(cameraImpulse!=null)cameraImpulse.Cancel();
         }
         void RestoreMouth()
         {
@@ -297,6 +341,7 @@ namespace Raid.Nereid
             RestoreMouth();if(animatedThroat!=null)Destroy(animatedThroat);
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(swallowClip!=null)Destroy(swallowClip);if(burpClip!=null)Destroy(burpClip);if(jetClip!=null)Destroy(jetClip);if(inhaleClip!=null)Destroy(inhaleClip);
+            if(ownsCameraImpulse&&cameraImpulse!=null)Destroy(cameraImpulse);
         }
     }
 }
