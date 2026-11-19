@@ -269,7 +269,7 @@ namespace Raid.Nereid.Editor
             string path=Path+"/Materials/"+name+".mat";var material=AssetDatabase.LoadAssetAtPath<Material>(path);
             if(material==null){material=new Material(Shader.Find("Universal Render Pipeline/Lit")){name=name};AssetDatabase.CreateAsset(material,path);}
             material.SetColor("_BaseColor",color);material.SetFloat("_Metallic",metallic);material.SetFloat("_Smoothness",smoothness);
-            if(emission>0){material.EnableKeyword("_EMISSION");material.SetColor("_EmissionColor",color*emission);}
+            if(emission>0){material.globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive;material.EnableKeyword("_EMISSION");material.SetColor("_EmissionColor",color*emission);}
             EditorUtility.SetDirty(material);return material;
         }
         static Material Flow(string name,Color color,Color flow,CullMode cull=CullMode.Off)
