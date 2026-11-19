@@ -1,6 +1,6 @@
 # RAID-011 — UI/UX и физический цикл резервуара
 
-19 ноября 2026. Ветка `raid/011-ui-ux`, основание `raid/010-visual-slice` (`2c6274b`). Изменения предназначены для отдельного PR в эту ветку, без самостоятельного merge.
+19 ноября 2026. Ветка `raid/011-ui-ux`, основание `raid/010-visual-slice` (`2c6274b`). Открыт отдельный [PR #9](https://github.com/Oblivio-Mentis/underwater-fishing/pull/9) в эту ветку; merge не выполнялся.
 
 ## Что изменилось
 
@@ -49,7 +49,7 @@
 
 ## Запуск
 
-Готовая локальная сборка: `Builds/RAID011-Playable/Start-Solo.cmd` — сразу одиночный хост; `Start-Menu.cmd` — меню и кооператив. Архив `Builds/RAID011-Playable.zip`: **44 306 430 байт**, SHA256 `4defa3f9ddc3530466376a15420b7de8204f6551efbb9f834d63eaa2b5a59258`. CRC всех файлов ZIP проверен. Символы Burst `DoNotShip` и пользовательские сохранения в архив не включены. Бинарные сборки находятся локально и не добавлены в Git; их состав/хеши сохранены в отчёте сборки.
+Готовая локальная сборка: `Builds/RAID011-Playable/Start-Solo.cmd` — сразу одиночный хост; `Start-Menu.cmd` — меню и кооператив. Архив `Builds/RAID011-Playable.zip`: **44 306 515 байт**, SHA256 `5eac8dd7c9c0029d325805837cfbc3d1ce7f005306fbd892a4e035d3a20fedfd`. CRC всех файлов ZIP проверен. Символы Burst `DoNotShip` и пользовательские сохранения в архив не включены. Бинарные сборки находятся локально и не добавлены в Git; их состав/хеши сохранены в отчёте сборки.
 
 Полная инструкция и маршрут плейтеста: [HOW_TO_PLAY](RAID-011/HOW_TO_PLAY.md). Для сборки через Unity указать только `Assets/_Game/Scenes/InterfaceVerticalSlice.unity`, Windows x64, Development Build выключен; исходные EditorBuildSettings не изменены.
 
