@@ -35,6 +35,7 @@ namespace Raid.Nereid.Editor
             foreach(var station in factory.GetComponentsInChildren<ShipConsole>(true))station.transform.localScale=Vector3.one/VesselScale;
             var vessel=root.gameObject.AddComponent<NereidVessel>();
             root.gameObject.AddComponent<NereidVfx>();
+            root.gameObject.AddComponent<NereidFeedingReaction>();
             root.gameObject.AddComponent<NereidAim>();
             vessel.sealedRooms=new[]{new Bounds(new Vector3(0,2.05f,-1),new Vector3(11.8f,4.08f,14.2f)),new Bounds(new Vector3(0,2.3f,6.5f),new Vector3(11.8f,4.58f,3)),new Bounds(new Vector3(0,1.65f,-12),new Vector3(11.8f,3.28f,8.05f))};
             vessel.cargoRail=new[]{new Vector3(8,.4f,-14),new Vector3(8,6.1f,-14),new Vector3(0,6.1f,-14),new Vector3(0,6.1f,-3)};

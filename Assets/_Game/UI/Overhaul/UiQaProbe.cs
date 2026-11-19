@@ -26,6 +26,9 @@ namespace Raid.UI
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,volume,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
+            public FishRouteState fishRoute;
+            public int observedBurps;
+            public long observedSwallows;
             public float tension,stamina;
             public bool tetherActive,isPulled;
             public int tetherOwner=-1,tetherTarget=-1;
@@ -238,6 +241,9 @@ namespace Raid.UI
                 snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
                 snapshot.tetherRefusal=tool.TetherOptOutRemaining;
             }
+            if(world!=null) snapshot.fishRoute=world.FishRoute;
+            var mouth=UnityEngine.Object.FindAnyObjectByType<Nereid.NereidFeedingReaction>();
+            if(mouth!=null){snapshot.observedBurps=mouth.BurpCount;snapshot.observedSwallows=mouth.SwallowedFishObserved;}
             if(observedFx!=null)
             {
                 var fx=observedFx;var tip=fx.VisualTip;var end=fx.ServerShotEndpoint;
