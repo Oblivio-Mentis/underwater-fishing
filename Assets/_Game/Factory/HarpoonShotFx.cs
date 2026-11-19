@@ -25,6 +25,24 @@ namespace Raid
         public Vector3 ServerShotEndpoint {get;private set;}
         public float ShotAge => Time.unscaledTime-shotAt;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public int VerifiedFrames { get; private set; }
+        public float AnchorTravel { get; private set; }
+        public float MaxTipError { get; private set; }
+        public float MaxKnotError { get; private set; }
+        public int VerifiedShot { get; private set; }
+        public int VerifiedOwner { get; private set; }
+        Vector3 firstAnchor;
+        void VerifyAnchor(Vector3 contact,Vector3 normal)
+        {
+            if(VerifiedFrames==0)firstAnchor=contact;
+            VerifiedOwner=tool.OwnerId;VerifiedShot=tool.ShotSequence;VerifiedFrames++;
+            AnchorTravel=Mathf.Max(AnchorTravel,Vector3.Distance(contact,firstAnchor));
+            MaxTipError=Mathf.Max(MaxTipError,Vector3.Distance(BoltPoint,contact-normal*.008f));
+            MaxKnotError=Mathf.Max(MaxKnotError,Vector3.Distance(CableEnd,LineKnot));
+        }
+#endif
+
         const int Segments=25;
         static readonly Vector3 BoltTipLocal=new Vector3(0,.025f,.48f);
         static readonly Vector3 BoltNockLocal=new Vector3(0,.025f,.19f);
@@ -97,6 +115,9 @@ namespace Raid
         void OnShot(Vector3 origin,Vector3 endpoint)
         {
             if(!CanDraw())return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            VerifiedFrames=0;AnchorTravel=MaxTipError=MaxKnotError=0;
+#endif
             inFlightContact=tool.LastShotContact;
             AcceptedShotCount++;ServerShotEndpoint=endpoint;shotAt=phaseAt=Time.unscaledTime;
             flightStart=loadedBolt.gameObject.activeInHierarchy?loadedBolt.TransformPoint(BoltTipLocal):MuzzlePoint();
@@ -133,6 +154,9 @@ namespace Raid
                 attached=null;Retract(now);
             }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            bool settled=confirmed && Phase==CablePhase.Attached;
+#endif
             if(Phase==CablePhase.Flying)
             {
                 float t=Mathf.Clamp01((now-shotAt)/Mathf.Max(.01f,flightSeconds));
@@ -171,10 +195,14 @@ namespace Raid
             if(visible)
             {
                 float length=Vector3.Distance(MuzzlePoint(),tip);
-                bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
+                bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&!UI.UiInputGate.PointerReserved&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
                 bool reeling=confirmed&&(tool.Reeling||ownerInput||(!tool.IsOwner && lastLength>0 && length<lastLength-.008f));
                 float tension=tool.HookedFish==null?(reeling?1:0):tool.HookedFish.Tension;
                 DrawCable(MuzzlePoint(),LineKnot,now,tension,reeling);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if(settled)
+                    VerifyAnchor(targetPoint,targetNormal);
+#endif
                 float spin=0;
                 if(Phase==CablePhase.Flying)spin=-2400;
                 else if(Phase==CablePhase.Retracting)spin=1800;

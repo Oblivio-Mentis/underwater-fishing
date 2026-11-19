@@ -27,10 +27,15 @@ namespace Raid
             if(target==null)return false;
             surface=target.TryGetComponent<FishActor>(out var fish)?fish.ImpactSurface(tail):target.transform;
             if(surface==null)return false;
+            ResolveOn(surface,out point,out normal,out direction);
+            return true;
+        }
+
+        internal void ResolveOn(Transform surface,out Vector3 point,out Vector3 normal,out Vector3 direction)
+        {
             point=surface.TransformPoint(localPoint);
             normal=surface.worldToLocalMatrix.transpose.MultiplyVector(localNormal).normalized;
             direction=surface.TransformVector(localDirection).normalized;
-            return true;
         }
     }
 }

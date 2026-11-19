@@ -45,6 +45,8 @@ namespace Raid.UI
             public int harpoonShots;
             public bool harpoonAttached,harpoonSawFlight,harpoonSawAttach,harpoonSawRetract;
             public float harpoonShotAge,harpoonSpool,harpoonTipX,harpoonTipY,harpoonTipZ,harpoonEndX,harpoonEndY,harpoonEndZ;
+            public int anchorOwner=-1, anchorShot, anchorFrames;
+            public float anchorTravel, anchorTipError, anchorKnotError;
             public Control[] controls;
         }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
@@ -293,6 +295,17 @@ namespace Raid.UI
             }
             var mouth=UnityEngine.Object.FindAnyObjectByType<Nereid.NereidFeedingReaction>();
             if(mouth!=null){snapshot.observedBurps=mouth.BurpCount;snapshot.observedSwallows=mouth.SwallowedFishObserved;}
+            // Report the latest attached bolt visible to this observer, including crew weapons.
+            var measured=UnityEngine.Object.FindObjectsByType<HarpoonShotFx>()
+                .Where(fx=>fx.VerifiedFrames>0 && fx.ShotAge<90)
+                .OrderByDescending(fx=>fx.Phase==HarpoonShotFx.CablePhase.Attached)
+                .ThenBy(fx=>fx.ShotAge).FirstOrDefault();
+            if(measured!=null)
+            {
+                snapshot.anchorOwner=measured.VerifiedOwner;snapshot.anchorShot=measured.VerifiedShot;
+                snapshot.anchorFrames=measured.VerifiedFrames;snapshot.anchorTravel=measured.AnchorTravel;
+                snapshot.anchorTipError=measured.MaxTipError;snapshot.anchorKnotError=measured.MaxKnotError;
+            }
             if(observedFx!=null)
             {
                 var fx=observedFx;var tip=fx.VisualTip;var end=fx.ServerShotEndpoint;

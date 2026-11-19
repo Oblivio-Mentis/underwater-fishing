@@ -162,6 +162,7 @@ namespace Raid
             Check("Remote controls initiated grip; both peers observed the same shooter.");
             Phase("Cooperative pull and heavy carry");
             yield return Reel(heavy);
+            yield return VerifyBothBolts();
             refreshGrip = false;
             Send("fish_grip", 0);
             Require(host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4,
@@ -230,6 +231,21 @@ namespace Raid
                 yield return null;
             }
             host.QaHoldOwned(false, 0);
+        }
+
+        private IEnumerator VerifyBothBolts()
+        {
+            var local=FindObjectsByType<HarpoonShotFx>().FirstOrDefault(fx=>fx.VerifiedOwner==host.OwnerId
+                && fx.VerifiedShot==host.ShotSequence && fx.VerifiedFrames>=6 && fx.AnchorTravel>.2f);
+            Require(local!=null,"No moving host bolt was measured during the cooperative pull.");
+            Require(local.MaxTipError<.001f && local.MaxKnotError<.001f,"Host bolt separated from the fish or its cable.");
+            var request=Send("snapshot",0);
+            yield return Wait(()=>ReadClient()?.request==request,8,"No independent bolt snapshot.");
+            var peer=ReadClient();
+            Require(peer!=null && peer.anchorOwner==host.OwnerId && peer.anchorShot==host.ShotSequence
+                && peer.anchorFrames>=6 && peer.anchorTravel>.2f, "Peer did not observe the same moving hook.");
+            Require(peer.anchorTipError<.001f && peer.anchorKnotError<.001f,"Remote bolt separated from the fish or its cable.");
+            Check($"Hook #{host.ShotSequence}, host/peer frames {local.VerifiedFrames}/{peer.anchorFrames}, attached travel {local.AnchorTravel:F3}/{peer.anchorTravel:F3} m, worst tip drift {local.MaxTipError:F6}/{peer.anchorTipError:F6} m, worst nock drift {local.MaxKnotError:F6}/{peer.anchorKnotError:F6} m.");
         }
 
         private string Send(string action, float value)

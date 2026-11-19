@@ -190,6 +190,8 @@ namespace Raid
             if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
+            // Sample the same pose for PhysX and the network contact even between fixed ticks.
+            Physics.SyncTransforms();
             bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
             var endpoint=didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange;
             var friend=didHit?hit.collider.GetComponentInParent<DiverMotor>():null;
@@ -254,7 +256,7 @@ namespace Raid
 
         internal bool QaHoldOwned(bool grip, float duration)
         {
-            if (!IsClientInitialized || !IsOwner || Motor.IsHelpless || UI.UiInputGate.Blocked) return false;
+            if (!IsClientInitialized || !IsOwner || Motor.IsHelpless || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved) return false;
             float until = Time.unscaledTime + Mathf.Clamp(duration, 0, 15);
             if (grip) _qaGripUntil = until;
             else _qaReelUntil = until;
