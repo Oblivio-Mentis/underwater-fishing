@@ -11,6 +11,9 @@ namespace Raid
         FogMode initialMode;
         float initialDensity,wetBlend;
         Color initialColor;
+        UnityEngine.Rendering.AmbientMode deckAmbientMode;
+        Color deckSky,deckHorizon,deckGround;
+        float shallowFill;
         const float BeamCandela=245f;
         bool lampOn;
         Light diveLamp;
@@ -28,6 +31,20 @@ namespace Raid
             initialMode=RenderSettings.fogMode;
             initialDensity=RenderSettings.fogDensity;
             initialColor=RenderSettings.fogColor;
+            deckAmbientMode=RenderSettings.ambientMode;
+            deckSky=RenderSettings.ambientSkyColor;
+            deckHorizon=RenderSettings.ambientEquatorColor;
+            deckGround=RenderSettings.ambientGroundColor;
+        }
+
+        void ApplyShallowFill(float blend)
+        {
+            if(Mathf.Approximately(shallowFill,blend))return;
+            shallowFill=blend;
+            RenderSettings.ambientMode=blend>0?UnityEngine.Rendering.AmbientMode.Trilight:deckAmbientMode;
+            RenderSettings.ambientSkyColor=Color.Lerp(deckSky,new Color(.49f,.65f,.72f),blend);
+            RenderSettings.ambientEquatorColor=Color.Lerp(deckHorizon,new Color(.34f,.44f,.46f),blend);
+            RenderSettings.ambientGroundColor=Color.Lerp(deckGround,new Color(.27f,.35f,.33f),blend);
         }
 
         void BindDiveLamp(Transform eye)
@@ -83,18 +100,21 @@ namespace Raid
             if(wetBlend<=0 && !appliedFog)return;
             UpdateDiveLamp(wet);
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
+            ApplyShallowFill(abyss?0f:wetBlend);
             if(wetBlend>0)
             {
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
                 RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.049f,wetBlend);
-                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.075f,.164f,.195f);
+                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.038f,.124f,.17f);
                 // Match the reef's custom transmission to the visible range of fish and hull materials.
                 Shader.SetGlobalVector(ReefClarityShader,abyss
                     ?new Vector4(.0072f,.82f,1f,0f)
                     :new Vector4(.0023f,1.14f,.68f,0f));
-                RenderSettings.fogColor=Color.Lerp(initialColor,waterTint,wetBlend);
-                Shader.SetGlobalColor(WaterTintShader,waterTint);
+                // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
+                var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
+                RenderSettings.fogColor=Color.Lerp(initialColor,fogTint,wetBlend);
+                Shader.SetGlobalVector(WaterTintShader,(Vector4)waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
             }
             else ResetFog();
@@ -119,6 +139,7 @@ namespace Raid
 
         void RestoreOceanSettings()
         {
+            ApplyShallowFill(0);
             if(appliedFog)ResetFog();
             Shader.SetGlobalVector(LampShader,Vector4.zero);
             if(diveLamp!=null)Destroy(diveLamp.gameObject);
