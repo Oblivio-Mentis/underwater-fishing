@@ -46,7 +46,7 @@ Shader "RAID/Nereid Hull Coating"
                 return o;
             }
 
-            half3 WaterIrradiance(float3 point,half3 normal)
+            half3 WaterIrradiance(float3 positionWS,half3 normal)
             {
                 // A broad patch of downwelling light gives rounded ballast skins a readable terminator.
                 half sky=saturate(.5+.5*dot(normal,half3(-.47,.84,-.27)));
@@ -58,7 +58,7 @@ Shader "RAID/Nereid Hull Coating"
                     float3 axis=_NereidWorkLightDirections[i].xyz;
                     float travel=max(0.,origin.y-_NereidWorkLightSeabed)/max(.02,-axis.y);
                     float reach=saturate(1.-travel*travel*origin.w)*saturate(-axis.y*4.);
-                    float3 toPatch=origin.xyz+axis*travel-point;
+                    float3 toPatch=origin.xyz+axis*travel-positionWS;
                     float distance2=max(dot(toPatch,toPatch),.01);
                     half facing=saturate(.20+.8*dot(normal,toPatch*rsqrt(distance2)));
                     light+=_NereidWorkLightRadiance[i].rgb*(reach*facing/(2400.+distance2*13.));
