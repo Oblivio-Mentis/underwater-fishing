@@ -39,7 +39,7 @@ namespace Raid.UI.Editor
             runtime.bubbleMaterial=glass;
             AddLight("Tank water fill",root,new Vector3(0,2.8f,-3),new Color(.2f,.8f,.9f),28,6);
             AddLight("Workshop warm fill",root,new Vector3(-3.5f,3.2f,-5.5f),new Color(1,.66f,.31f),38,7);
-            AddLight("Mouth inspection fill",root,new Vector3(0,3.1f,5.3f),new Color(.83f,.44f,.32f),30,7);
+            AddLight("Mouth inspection fill",root,new Vector3(-1.4f,3.1f,5.8f),new Color(.36f,.48f,.58f),9,5);
             EditorSceneManager.SaveScene(scene,ScenePath);AssetDatabase.SaveAssets();
             Debug.Log("[RAID011 Factory] Installed in InterfaceVerticalSlice only. New aft hatch and service ramp; original RAID010 assets and NetworkObject IDs retained.");
         }
@@ -54,18 +54,18 @@ namespace Raid.UI.Editor
         {
             steel=Mat("Brushed pressure steel",new Color(.18f,.29f,.32f),.7f,.32f);
             dark=Mat("Machine dark steel",new Color(.035f,.075f,.09f),.58f,.23f);
-            trim=Mat("Machined stainless trim",new Color(.47f,.57f,.57f),.85f,.43f);
+            trim=Mat("Machined stainless trim",new Color(.31f,.4f,.41f),.76f,.28f);
             amber=Mat("Enamel safety ochre",new Color(.83f,.36f,.055f),.35f,.34f);
             rubber=Mat("Conveyor rubber",new Color(.07f,.1f,.1f),.05f,.18f);
-            skin=Mat("Living mouth skin",new Color(.24f,.085f,.16f),.04f,.32f);
-            flesh=Mat("Mouth inner folds",new Color(.43f,.16f,.21f),.03f,.43f);
-            tooth=Mat("Mouth ivory teeth",new Color(.76f,.69f,.49f),.04f,.3f);
+            skin=TissueMat("Living mouth skin",new Color(.18f,.12f,.2f),.4f,.11f);
+            flesh=TissueMat("Mouth inner folds",new Color(.11f,.055f,.09f),.46f,.14f);
+            tooth=Mat("Mouth ivory teeth",new Color(.51f,.53f,.44f),.02f,.42f);
             cyan=Mat("Inspection cyan emission",new Color(.14f,.66f,.72f),.2f,.35f,1.8f);
             orange=Mat("Batch amber emission",new Color(.95f,.37f,.06f),.2f,.3f,2);
-            glass=FlowMat("Process flow glass",new Color(.12f,.48f,.57f,.12f),new Color(.22f,.71f,.78f));
-            feedGlass=FlowMat("Feeding flow glass",new Color(.44f,.27f,.16f,.13f),new Color(.83f,.49f,.15f));
+            glass=FlowMat("Process flow glass",new Color(.13f,.3f,.35f,.24f),new Color(.2f,.46f,.5f));
+            feedGlass=FlowMat("Feeding flow glass",new Color(.28f,.24f,.18f,.24f),new Color(.52f,.42f,.26f));
             steel.SetTexture("_BaseMap",Texture("Steel grain",false));rubber.SetTexture("_BaseMap",Texture("Rubber tread",true));
-            steel.SetTextureScale("_BaseMap",new Vector2(3,3));EditorUtility.SetDirty(steel);EditorUtility.SetDirty(rubber);
+            steel.SetTextureScale("_BaseMap",new Vector2(1.3f,1.3f));EditorUtility.SetDirty(steel);EditorUtility.SetDirty(rubber);
         }
 
         static void BuildTank(Transform root,Raid.Factory.FactoryVisuals runtime)
@@ -152,29 +152,43 @@ namespace Raid.UI.Editor
             runtime.feedGlass=new[]{Tube("Feeding main transparent pipe",route,runtime.feedTube,.34f,feedGlass).GetComponent<Renderer>()};Cuffs(route,runtime.feedTube,.355f);
             Label("02 / КОРМЛЕНИЕ",route,new Vector3(3.13f,3.48f,-1.2f),.16f,Quaternion.identity,new Vector2(3.2f,.3f));
             var mouth=Group("Living bow feeding mouth",root,new Vector3(0,1.75f,7.8f));
-            var rim=MeshPart("Living mouth rim",mouth,RingMesh(1.55f,.3f),skin);rim.transform.localScale=new Vector3(1.2f,1,1);
-            Box("Mouth dark inner throat",mouth,new Vector3(0,0,.55f),new Vector3(3.4f,2.9f,.25f),Mat("Throat darkness",new Color(.018f,.012f,.021f),0,.3f),true);
-            runtime.upperJaw=Part("Breathing upper jaw",mouth,PrimitiveType.Sphere,new Vector3(0,1.45f,.05f),new Vector3(4.4f,.9f,1.6f),skin).transform;
-            runtime.lowerJaw=Part("Breathing lower jaw",mouth,PrimitiveType.Sphere,new Vector3(0,-1.35f,-.02f),new Vector3(4.1f,.8f,1.5f),flesh).transform;
-            for(int i=0;i<18;i++)
+            var collar=MeshPart("Pressure collar around living graft",mouth,RingMesh(1,.065f),steel);
+            collar.transform.localPosition=new Vector3(0,0,.23f);collar.transform.localScale=new Vector3(2.27f,1.5f,1.5f);
+            var flange=MeshPart("Inner machined graft flange",mouth,RingMesh(1,.045f),trim);
+            flange.transform.localPosition=new Vector3(0,0,.05f);flange.transform.localScale=new Vector3(2.12f,1.42f,2);
+            for(int i=0;i<14;i++)
             {
-                float a=(i+.5f)*Mathf.PI*2/18;Vector3 p=new Vector3(Mathf.Cos(a)*1.65f,Mathf.Sin(a)*1.36f,-.2f);
-                var fang=MeshPart("Mouth tooth "+i,mouth,ConeMesh(),tooth);fang.transform.localPosition=p;fang.transform.localScale=new Vector3(.2f,.2f,.57f);
-                fang.transform.localRotation=Quaternion.LookRotation(new Vector3(-p.x,-p.y,.25f).normalized);
+                float a=(i+.17f)*Mathf.PI*2/14;
+                var bolt=MeshPart("Graft collar hex bolt "+i,mouth,HexBoltMesh(.085f,.12f),trim);
+                bolt.transform.localPosition=new Vector3(Mathf.Cos(a)*2.27f,Mathf.Sin(a)*1.5f,.10f);
             }
-            for(int side=-1;side<=1;side+=2)
+            runtime.upperJaw=MeshPart("Asymmetric breathing upper lip",mouth,LipMesh(true),skin).transform;
+            runtime.lowerJaw=MeshPart("Asymmetric breathing lower lip",mouth,LipMesh(false),skin).transform;
+            MeshPart("Deep living throat",mouth,ThroatMesh(),flesh);
+            Box("Mouth concealed throat barrier",mouth,new Vector3(0,0,1.7f),new Vector3(3.4f,2.9f,.18f),Mat("Throat darkness",new Color(.004f,.005f,.008f),0,.15f),true);
+            MeshPart("Curved muscular tongue",mouth,TongueMesh(),TissueMat("Tongue muted tissue",new Color(.19f,.075f,.12f),.48f,.1f));
+            AddTeeth(mouth,26,false);AddTeeth(mouth,21,true);
+            for(int i=0;i<3;i++)
             {
-                var points=SmoothPath(new[]{new Vector3(side*1.8f,2.7f,7.85f),new Vector3(side*2.5f,3.15f,7.15f),new Vector3(side*2.7f,3.25f,5.5f),new Vector3(side*2.1f,3.4f,4.3f)});
-                Tube("Organic attachment fold "+side,route,points,.23f,skin);
+                float z=.35f+i*.35f,w=1.35f-i*.26f,y=1.05f-i*.17f;
+                Tube("Palate muscular fold "+i,mouth,SmoothPath(new[]{new Vector3(-w,y-.28f,z),new Vector3(-w*.5f,y+.03f,z+.06f),new Vector3(.1f,y+.1f,z+.1f),new Vector3(w*.6f,y-.03f,z+.04f),new Vector3(w,y-.3f,z)}),.065f,skin);
             }
-            runtime.mouthLamp=Part("Living throat pulse",mouth,PrimitiveType.Sphere,new Vector3(0,.05f,.38f),new Vector3(.35f,.8f,.12f),orange).GetComponent<Renderer>();
+            for(int side=-1;side<=1;side+=2)for(int i=0;i<3;i++)
+            {
+                var points=SmoothPath(new[]{new Vector3(side*1.85f,2.45f+i*.18f,7.75f),new Vector3(side*(2.22f+i*.1f),2.8f+i*.12f,7.63f),new Vector3(side*(2.7f+i*.15f),3.17f+i*.1f,7.59f),new Vector3(side*(3.15f+i*.12f),3.34f+i*.12f,7.67f)});
+                Tube("Rooted organic attachment "+side+" "+i,route,points,.08f+i*.014f,skin);
+            }
+            // No glowing target in the throat: feeding is visible as actual fish entering a shaded cavity.
+            runtime.mouthLamp=null;
             Label("ПАСТЬ / ПИЩЕВОЙ ТРАКТ",root,new Vector3(0,3.55f,7.03f),.18f,Quaternion.identity,new Vector2(4.2f,.4f));
         }
 
         static void BuildPults(Transform root)
         {
-            Pult(root,"FishRoute_Process",new Vector3(-2.4f,0,-3),90,"ПЕРЕРАБОТАТЬ\nВЕСЬ УЛОВ",false,cyan);
-            Pult(root,"FishRoute_Feed",new Vector3(2.4f,0,-3),-90,"ПОКОРМИТЬ\nВСЕЙ РЫБОЙ",false,orange);
+            var processSignal=Mat("Process station cyan",new Color(.12f,.61f,.67f),.12f,.32f,.8f);
+            var feedSignal=Mat("Feed station amber",new Color(.75f,.4f,.1f),.1f,.32f,.8f);
+            Pult(root,"FishRoute_Process",new Vector3(-2.4f,0,-3),90,"01 / ПЕРЕРАБОТКА\nМАТЕРИАЛЫ",false,processSignal);
+            Pult(root,"FishRoute_Feed",new Vector3(2.4f,0,-3),-90,"02 / КОРМЛЕНИЕ\nКОРМ",false,feedSignal);
             Pult(root,"UpgradeConsole",new Vector3(4.6f,0,-5.8f),90,"УЛУЧШЕНИЯ",true,cyan);
             Pult(root,"DepthConsole",new Vector3(4.6f,0,2.4f),90,"ГЛУБИНЫ",true,cyan);
         }
@@ -185,18 +199,19 @@ namespace Raid.UI.Editor
             Box("Interaction plinth",pult,new Vector3(0,.45f,0),new Vector3(computer?1.1f:.65f,.9f,.55f),steel,true);
             if(computer)
             {
-                Box("Instrument computer casing",pult,new Vector3(0,1.75f,0),new Vector3(2.65f,2.05f,.4f),steel);
+                var casing=MeshPart("Bevelled instrument computer casing",pult,BevelBoxMesh(new Vector3(2.65f,2.05f,.4f),.07f),steel);casing.transform.localPosition=new Vector3(0,1.75f,0);
                 Box("World interface black backing",pult,new Vector3(0,1.75f,-.215f),new Vector3(2.42f,1.77f,.025f),dark);
                 Group("ScreenAnchor",pult,new Vector3(0,1.75f,-.24f));
                 Label(title,pult,new Vector3(0,2.91f,-.23f),.18f,Quaternion.identity,new Vector2(2.65f,.34f));
             }
             else
             {
-                Box("Route selector casing",pult,new Vector3(0,1.19f,0),new Vector3(1.03f,.64f,.48f),dark);
-                Box("Route selector lamp",pult,new Vector3(0,1.33f,-.25f),new Vector3(.76f,.08f,.025f),signal);
-                Label(title,pult,new Vector3(0,1.05f,-.26f),.13f,Quaternion.identity,new Vector2(.96f,.43f));
+                var casing=MeshPart("Bevelled route selector casing",pult,BevelBoxMesh(new Vector3(1.12f,.88f,.55f),.09f),steel);casing.transform.localPosition=new Vector3(0,1.22f,0);
+                Box("Route button steel bezel",pult,new Vector3(-.15f,1.32f,-.294f),new Vector3(.54f,.42f,.075f),dark);
+                var cap=MeshPart("Large illuminated physical route button",pult,BevelBoxMesh(new Vector3(.4f,.3f,.09f),.045f),signal);cap.transform.localPosition=new Vector3(-.15f,1.32f,-.365f);
+                Label(title,pult,new Vector3(0,.98f,-.285f),.105f,Quaternion.identity,new Vector2(1.05f,.34f));
                 Group("ScreenAnchor",pult,new Vector3(0,1.19f,-.28f));
-                Part("Physical route lever",pult,PrimitiveType.Cylinder,new Vector3(.38f,1.13f,-.38f),new Vector3(.055f,.14f,.055f),amber,Quaternion.Euler(35,0,0));
+                Part("Physical route lever",pult,PrimitiveType.Cylinder,new Vector3(.38f,1.29f,-.38f),new Vector3(.055f,.14f,.055f),amber,Quaternion.Euler(35,0,0));
             }
         }
 
@@ -297,12 +312,164 @@ namespace Raid.UI.Editor
         }
         static void Cuffs(Transform parent,Vector3[] points,float radius)
         {
-            for(int i=0;i<points.Length;i+=4)
+            var vertices=new List<Vector3>();var triangles=new List<int>();float total=0;
+            for(int i=1;i<points.Length;i++)total+=Vector3.Distance(points[i-1],points[i]);
+            var sleeve=RingMesh(radius,.032f);var fastener=HexBoltMesh(.035f,.11f);
+            for(float d=0;d<=total;d+=.85f)
             {
-                var cuff=MeshPart("Pipe support cuff",parent,RingMesh(radius,.055f),trim);cuff.transform.localPosition=points[i];
-                cuff.transform.localRotation=Quaternion.LookRotation(points[Mathf.Min(i+1,points.Length-1)]-points[Mathf.Max(0,i-1)]);
+                Vector3 tangent;Vector3 p=PointAtDistance(points,d,out tangent);var matrix=Matrix4x4.TRS(p,Quaternion.LookRotation(tangent),Vector3.one);
+                CombineMesh(sleeve,matrix*Matrix4x4.Scale(new Vector3(1,1,2.5f)),vertices,triangles);
+                for(int b=0;b<4;b++)
+                {
+                    float a=(b+.5f)*Mathf.PI*.5f;Vector3 offset=new Vector3(Mathf.Cos(a)*radius*.95f,Mathf.Sin(a)*radius*.95f,0);
+                    CombineMesh(fastener,matrix*Matrix4x4.Translate(offset),vertices,triangles);
+                }
+            }
+            Object.DestroyImmediate(sleeve);Object.DestroyImmediate(fastener);
+            MeshPart(parent.name+" bolted pipe sleeves",parent,MakeMesh(vertices,triangles),trim);
+        }
+        static Vector3 PointAtDistance(Vector3[] points,float distance,out Vector3 tangent)
+        {
+            for(int i=1;i<points.Length;i++)
+            {
+                float segment=Vector3.Distance(points[i-1],points[i]);tangent=(points[i]-points[i-1]).normalized;
+                if(distance<=segment)return Vector3.Lerp(points[i-1],points[i],segment<.0001f?0:distance/segment);distance-=segment;
+            }
+            tangent=(points[points.Length-1]-points[points.Length-2]).normalized;return points[points.Length-1];
+        }
+        static void CombineMesh(Mesh source,Matrix4x4 matrix,List<Vector3> vertices,List<int> triangles)
+        {
+            int offset=vertices.Count;foreach(var vertex in source.vertices)vertices.Add(matrix.MultiplyPoint3x4(vertex));foreach(int index in source.triangles)triangles.Add(offset+index);
+        }
+
+        static Mesh LipMesh(bool upper)
+        {
+            const int segments=40,sides=12;var vertices=new List<Vector3>();var triangles=new List<int>();
+            for(int step=0;step<=segments;step++)
+            {
+                float a=(upper?0:Mathf.PI)+step*Mathf.PI/segments;
+                float irregular=1+.025f*Mathf.Sin(a*7+.8f)+.018f*Mathf.Sin(a*13);
+                Vector3 center=new Vector3(Mathf.Cos(a)*1.99f*irregular,Mathf.Sin(a)*(upper?1.29f:1.25f)+.04f*Mathf.Cos(a*3),-.18f+.065f*Mathf.Sin(a*5));
+                Vector3 outward=new Vector3(Mathf.Cos(a),Mathf.Sin(a),0).normalized;
+                float bulge=.18f+.055f*Mathf.Sin(a*3+1)+.018f*Mathf.Sin(a*11);
+                for(int side=0;side<sides;side++)
+                {
+                    float b=side*Mathf.PI*2/sides;
+                    float crease=1+.065f*Mathf.Sin(a*25+b*3);
+                    vertices.Add(center+outward*Mathf.Cos(b)*bulge*crease+Vector3.forward*Mathf.Sin(b)*(.24f+.04f*Mathf.Sin(a*4)));
+                }
+            }
+            for(int ring=0;ring<segments;ring++)for(int side=0;side<sides;side++)
+            {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;triangles.AddRange(new[]{a,c,b,b,c,d});}
+            return MakeMesh(vertices,triangles);
+        }
+
+        static Mesh ThroatMesh()
+        {
+            const int rings=12,sides=40;var v=new List<Vector3>();var t=new List<int>();
+            for(int ring=0;ring<=rings;ring++)for(int side=0;side<sides;side++)
+            {
+                float f=ring/(float)rings,a=side*Mathf.PI*2/sides;
+                float fold=1+.065f*Mathf.Sin(a*9+f*5)+.025f*Mathf.Cos(a*17-f*3);
+                float rx=Mathf.Lerp(1.83f,.38f,f),ry=Mathf.Lerp(1.24f,.38f,f);
+                v.Add(new Vector3(Mathf.Cos(a)*rx*fold+.1f*Mathf.Sin(f*3),Mathf.Sin(a)*ry*fold+.07f*Mathf.Sin(f*4),-.04f+f*1.68f));
+            }
+            for(int ring=0;ring<rings;ring++)for(int side=0;side<sides;side++)
+            {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;t.AddRange(new[]{a,c,b,b,c,d});}
+            return MakeMesh(v,t);
+        }
+
+        static Mesh TongueMesh()
+        {
+            const int rings=14,sides=12;var v=new List<Vector3>();var t=new List<int>();
+            for(int ring=0;ring<=rings;ring++)for(int side=0;side<sides;side++)
+            {
+                float f=ring/(float)rings,a=side*Mathf.PI*2/sides;
+                float width=.05f+.61f*Mathf.Sin((.12f+.86f*f)*Mathf.PI),height=.12f+.1f*Mathf.Sin(f*Mathf.PI);
+                float crease=1+.08f*Mathf.Sin(f*29+a*2);
+                v.Add(new Vector3(Mathf.Cos(a)*width+.08f*Mathf.Sin(f*3),-.92f+f*.58f+Mathf.Sin(a)*height*crease,-.12f+f*1.55f));
+            }
+            for(int ring=0;ring<rings;ring++)for(int side=0;side<sides;side++)
+            {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;t.AddRange(new[]{a,b,c,b,d,c});}
+            return MakeMesh(v,t);
+        }
+
+        static void AddTeeth(Transform mouth,int count,bool inner)
+        {
+            for(int i=0;i<count;i++)
+            {
+                float a=(i+.23f)*Mathf.PI*2/count+Mathf.Sin(i*4.37f)*.035f;
+                float seed=.5f+.5f*Mathf.Sin(i*2.71f+(inner?2:0));
+                float rx=inner?1.44f:1.82f,ry=inner?1.03f:1.21f;
+                Vector3 p=new Vector3(Mathf.Cos(a)*rx,Mathf.Sin(a)*ry,inner?.22f:-.22f);
+                float length=inner?.24f+seed*.24f:.36f+seed*.37f;
+                float radius=inner?.052f+seed*.025f:.075f+seed*.052f;
+                Transform anchor=inner?mouth:mouth.Find(p.y>=0?"Asymmetric breathing upper lip":"Asymmetric breathing lower lip");
+                if(anchor==null)anchor=mouth;
+                var toothRoot=MeshPart((inner?"Inner curved fang ":"Outer hooked fang ")+i,anchor,CurvedFangMesh(length,radius,Mathf.Sin(i*1.73f)*.14f),tooth);
+                toothRoot.transform.localPosition=p;
+                toothRoot.transform.localRotation=Quaternion.LookRotation(new Vector3(-p.x*.9f,-p.y,inner?.43f:.29f).normalized);
             }
         }
+
+        static Mesh CurvedFangMesh(float length,float radius,float curve)
+        {
+            const int rings=7,sides=9;var v=new List<Vector3>();var t=new List<int>();
+            for(int ring=0;ring<=rings;ring++)for(int side=0;side<sides;side++)
+            {
+                float f=ring/(float)rings,a=side*Mathf.PI*2/sides,r=radius*Mathf.Pow(1-f,1.35f)+.001f;
+                Vector3 center=new Vector3(curve*f*f,-.12f*f*f,length*f);
+                v.Add(center+new Vector3(Mathf.Cos(a)*r,Mathf.Sin(a)*r,0));
+            }
+            for(int ring=0;ring<rings;ring++)for(int side=0;side<sides;side++)
+            {int a=ring*sides+side,b=ring*sides+(side+1)%sides,c=a+sides,d=b+sides;t.AddRange(new[]{a,b,c,b,d,c});}
+            return MakeMesh(v,t);
+        }
+
+        static Mesh HexBoltMesh(float radius,float depth)
+        {
+            var v=new List<Vector3>();var t=new List<int>();
+            for(int ring=0;ring<2;ring++)for(int side=0;side<6;side++)
+            {float a=side*Mathf.PI/3;v.Add(new Vector3(Mathf.Cos(a)*radius,Mathf.Sin(a)*radius,(ring-.5f)*depth));}
+            v.Add(new Vector3(0,0,-depth*.5f));v.Add(new Vector3(0,0,depth*.5f));
+            for(int i=0;i<6;i++){int next=(i+1)%6;t.AddRange(new[]{i,next,i+6,next,next+6,i+6,12,next,i,13,i+6,next+6});}
+            return MakeMesh(v,t);
+        }
+
+        static Mesh BevelBoxMesh(Vector3 size,float bevel)
+        {
+            var v=new List<Vector3>();var t=new List<int>();Vector3 half=size*.5f;
+            bevel=Mathf.Min(bevel,Mathf.Min(half.x,Mathf.Min(half.y,half.z))*.8f);
+            for(int axis=0;axis<3;axis++)foreach(int sign in new[]{-1,1})
+            {
+                int a=(axis+1)%3,b=(axis+2)%3;var corners=new Vector3[4];int[,] signs={{-1,-1},{1,-1},{1,1},{-1,1}};
+                for(int i=0;i<4;i++){var p=Vector3.zero;p[axis]=half[axis]*sign;p[a]=(half[a]-bevel)*signs[i,0];p[b]=(half[b]-bevel)*signs[i,1];corners[i]=p;}
+                Vector3 normal=Vector3.zero;normal[axis]=sign;AddFace(corners,normal,v,t);
+            }
+            for(int axis=0;axis<3;axis++)foreach(int sa in new[]{-1,1})foreach(int sb in new[]{-1,1})
+            {
+                int a=(axis+1)%3,b=(axis+2)%3;var p=new Vector3[4];
+                for(int i=0;i<4;i++)
+                {
+                    p[i][axis]=(i==0||i==3?-1:1)*(half[axis]-bevel);
+                    p[i][a]=sa*(half[a]-(i>=2?bevel:0));p[i][b]=sb*(half[b]-(i<2?bevel:0));
+                }
+                Vector3 normal=Vector3.zero;normal[a]=sa;normal[b]=sb;AddFace(p,normal,v,t);
+            }
+            foreach(int sx in new[]{-1,1})foreach(int sy in new[]{-1,1})foreach(int sz in new[]{-1,1})
+            {
+                var p=new[]{new Vector3(sx*half.x,sy*(half.y-bevel),sz*(half.z-bevel)),new Vector3(sx*(half.x-bevel),sy*half.y,sz*(half.z-bevel)),new Vector3(sx*(half.x-bevel),sy*(half.y-bevel),sz*half.z)};
+                AddFace(p,new Vector3(sx,sy,sz),v,t);
+            }
+            return MakeMesh(v,t);
+        }
+        static void AddFace(Vector3[] face,Vector3 outward,List<Vector3> v,List<int> t)
+        {
+            bool reverse=Vector3.Dot(Vector3.Cross(face[1]-face[0],face[2]-face[0]),outward)<0;int start=v.Count;v.AddRange(face);
+            for(int i=1;i<face.Length-1;i++)if(reverse)t.AddRange(new[]{start,start+i+1,start+i});else t.AddRange(new[]{start,start+i,start+i+1});
+        }
+        static Mesh MakeMesh(List<Vector3> vertices,List<int> triangles)
+        {var mesh=new Mesh();mesh.SetVertices(vertices);mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;}
         static Vector3[] SmoothPath(Vector3[] anchors)
         {
             var points=new List<Vector3>();
@@ -369,11 +536,27 @@ namespace Raid.UI.Editor
             if(mat==null){mat=new Material(Shader.Find("RAID011/Factory Flow Glass")){name=name};AssetDatabase.CreateAsset(mat,path);}
             mat.SetColor("_BaseColor",tint);mat.SetColor("_FlowColor",flow);EditorUtility.SetDirty(mat);return mat;
         }
+        static Material TissueMat(string name,Color tint,float smoothness,float detail)
+        {
+            string path=AssetsPath+"/Materials/"+name.Replace(' ','_')+".mat";var mat=AssetDatabase.LoadAssetAtPath<Material>(path);
+            var shader=Shader.Find("RAID011/Living Tissue");if(shader==null)throw new InvalidOperationException("Import FactoryLivingTissue.shader before installing");
+            if(mat==null){mat=new Material(shader){name=name};AssetDatabase.CreateAsset(mat,path);}else mat.shader=shader;
+            mat.SetColor("_BaseColor",tint);mat.SetColor("_VeinColor",new Color(tint.r*.6f,tint.g*.5f,tint.b*.7f));
+            mat.SetFloat("_Smoothness",smoothness);mat.SetFloat("_DetailStrength",detail);mat.SetFloat("_CavityDepth",name=="Living mouth skin"?0:1);
+            EditorUtility.SetDirty(mat);return mat;
+        }
         static Texture2D Texture(string name,bool tread)
         {
-            string path=AssetsPath+"/"+name.Replace(' ','_')+".asset";var existing=AssetDatabase.LoadAssetAtPath<Texture2D>(path);if(existing!=null)return existing;
-            var texture=new Texture2D(64,64,TextureFormat.RGBA32,false){name=name,wrapMode=TextureWrapMode.Repeat,filterMode=FilterMode.Bilinear};var pixels=new Color[64*64];var random=new System.Random(117);
-            for(int y=0;y<64;y++)for(int x=0;x<64;x++){float v=tread?(y%16<3?.35f:.8f):.76f+(float)random.NextDouble()*.2f;pixels[y*64+x]=new Color(v,v,v,1);}texture.SetPixels(pixels);texture.Apply();AssetDatabase.CreateAsset(texture,path);return texture;
+            string path=AssetsPath+"/"+name.Replace(' ','_')+".asset";var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);bool create=texture==null;
+            if(create)texture=new Texture2D(64,64,TextureFormat.RGBA32,true){name=name};else texture.Reinitialize(64,64,TextureFormat.RGBA32,true);
+            texture.wrapMode=TextureWrapMode.Repeat;texture.filterMode=FilterMode.Trilinear;texture.anisoLevel=4;
+            var pixels=new Color[64*64];var random=new System.Random(117);
+            for(int y=0;y<64;y++)for(int x=0;x<64;x++)
+            {
+                float v=tread?(y%16<3?.35f:.8f):.94f+Mathf.Sin(y*.7f)*.008f+((float)random.NextDouble()-.5f)*.009f;
+                pixels[y*64+x]=new Color(v,v,v,1);
+            }
+            texture.SetPixels(pixels);texture.Apply();if(create)AssetDatabase.CreateAsset(texture,path);else EditorUtility.SetDirty(texture);return texture;
         }
         static void EnsureFolder(string path)
         {if(AssetDatabase.IsValidFolder(path))return;string parent=System.IO.Path.GetDirectoryName(path).Replace('\\','/');EnsureFolder(parent);AssetDatabase.CreateFolder(parent,System.IO.Path.GetFileName(path));}
