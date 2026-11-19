@@ -52,7 +52,6 @@ namespace Raid.Nereid
         AudioSource voice,pressureVoice;
         Material particleMaterial,mistMaterial,dropMaterial,bubbleMaterial;
         Texture2D mistTexture,dropTexture,bubbleTexture;
-        Mesh dropletMesh;
         AudioClip swallowClip,burpClip,jetClip,inhaleClip;
         RaidWorld observedWorld;
         bool ready,hasSnapshot,wasActive,wasFeeding;
@@ -107,9 +106,8 @@ namespace Raid.Nereid
                 mistMaterial=ParticleMaterial("Soft turbulent condensation",mistTexture);
                 dropMaterial=ParticleMaterial("Clear rounded water drops",dropTexture);
                 bubbleMaterial=ParticleMaterial("Hollow wet foam highlights",bubbleTexture);
-                dropletMesh=MakeDroplet();
                 mist=Emitter("Burp condensation pressure cloud",new Color(.87f,.9f,.92f,.23f),.58f,1.25f,6.0f,9.5f,1.0f,1.9f,0,true);
-                drops=Emitter("Burp short dimensional wet spray",new Color(.82f,.91f,.97f,.78f),.09f,.20f,9,15,.65f,1.15f,.7f);
+                drops=Emitter("Burp compact wet spray",new Color(.82f,.91f,.97f,.78f),.13f,.24f,9,15,.65f,1.15f,.7f);
                 bubbles=Emitter("Burp hollow aerated foam",new Color(.88f,.95f,1,.8f),.12f,.32f,5,9,.9f,1.5f,-.05f);
                 foamBlock=new MaterialPropertyBlock();
                 for(int i=0;i<foam.Length;i++)
@@ -202,7 +200,7 @@ namespace Raid.Nereid
             if(cameraImpulse!=null)cameraImpulse.Release(mouth.position,LastBurpSeverity);
             PlaceEmitter(mist);PlaceEmitter(drops);PlaceEmitter(bubbles);
             foreach(var ps in new[]{mist,drops,bubbles})if(ps!=null)
-            {var main=ps.main;float low=ps==mist?.58f:ps==drops?.09f:.12f,high=ps==mist?1.25f:ps==drops?.20f:.32f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
+            {var main=ps.main;float low=ps==mist?.58f:ps==drops?.13f:.12f,high=ps==mist?1.25f:ps==drops?.24f:.32f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
             if(mist!=null)mist.Emit(Mathf.RoundToInt(38*visualGain));if(drops!=null)drops.Emit(Mathf.RoundToInt(96*visualGain));if(bubbles!=null)bubbles.Emit(Mathf.RoundToInt(42*visualGain));
         }
 
@@ -292,7 +290,7 @@ namespace Raid.Nereid
                 var limit=ps.limitVelocityOverLifetime;limit.enabled=true;limit.limit=4.5f;limit.dampen=.15f;
             }
             else if(gravity>.5f)
-            {renderer.sharedMaterial=dropMaterial;renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=dropletMesh;renderer.alignment=ParticleSystemRenderSpace.Velocity;}
+            {renderer.sharedMaterial=dropMaterial;renderer.renderMode=ParticleSystemRenderMode.Billboard;renderer.alignment=ParticleSystemRenderSpace.View;main.startRotation=new ParticleSystem.MinMaxCurve(-.65f,.65f);}
             else
             {var noise=ps.noise;noise.enabled=true;noise.strength=.25f;noise.frequency=1.15f;noise.scrollSpeed=.8f;}
             renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;renderer.receiveShadows=false;PlaceEmitter(ps);ps.Play();return ps;
@@ -321,10 +319,13 @@ namespace Raid.Nereid
                 }
                 else if(kind==1)
                 {
-                    // Latitude/longitude UVs on a small real 3D teardrop, without speed-based stretching.
-                    float glint=Mathf.Exp(-Mathf.Pow((u-.3f)/.075f,2)-Mathf.Pow((v-.7f)/.18f,2));
-                    float rim=Mathf.Pow(Mathf.Abs(Mathf.Cos(u*Mathf.PI*2)),5);
-                    a=.12f+rim*.28f+glint*.58f;luminance=.48f+rim*.34f+glint*.35f;
+                    // Compact rounded teardrop sprite. Every texel outside its outline is transparent.
+                    float qy=(py+.05f)/.82f,width=.62f*(1-.22f*qy);
+                    float radius=Mathf.Sqrt(Mathf.Pow(px/Mathf.Max(.15f,width),2)+qy*qy);
+                    float edge=Mathf.Clamp01((1-radius)*8);
+                    float glint=Mathf.Exp(-Mathf.Pow((px+.22f)/.12f,2)-Mathf.Pow((py-.27f)/.18f,2));
+                    float rim=Mathf.Exp(-Mathf.Pow((radius-.82f)/.075f,2));
+                    a=edge*(.08f+rim*.28f+glint*.85f);luminance=.73f+rim*.12f+glint*.3f;
                 }
                 else
                 {
@@ -337,18 +338,6 @@ namespace Raid.Nereid
                 pixels[y*n+x]=new Color(luminance,luminance,luminance,Mathf.Clamp01(a));
             }
             texture.SetPixels(pixels);texture.wrapMode=TextureWrapMode.Clamp;texture.filterMode=FilterMode.Bilinear;texture.Apply(false,true);return texture;
-        }
-        static Mesh MakeDroplet()
-        {
-            const int sides=10,rings=7;var vertices=new Vector3[(sides+1)*(rings+1)];var uv=new Vector2[vertices.Length];var triangles=new int[sides*rings*6];int t=0;
-            for(int ring=0;ring<=rings;ring++)for(int side=0;side<=sides;side++)
-            {
-                float v=ring/(float)rings,u=side/(float)sides,theta=v*Mathf.PI,angle=u*Mathf.PI*2;
-                float radius=Mathf.Sin(theta)*.33f*(.86f+.14f*v);int i=ring*(sides+1)+side;
-                vertices[i]=new Vector3(Mathf.Cos(angle)*radius,Mathf.Sin(angle)*radius,Mathf.Cos(theta)*.75f);uv[i]=new Vector2(u,v);
-                if(ring<rings&&side<sides){int j=i+sides+1;triangles[t++]=i;triangles[t++]=j;triangles[t++]=i+1;triangles[t++]=i+1;triangles[t++]=j;triangles[t++]=j+1;}
-            }
-            var mesh=new Mesh{name="Short rounded velocity-aligned water droplets"};mesh.vertices=vertices;mesh.uv=uv;mesh.triangles=triangles;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
         }
         void PlaceEmitter(ParticleSystem ps)
         {if(ps==null||mouth==null)return;ps.transform.position=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));ps.transform.rotation=Quaternion.LookRotation(-mouth.forward,mouth.up);}
@@ -403,7 +392,7 @@ namespace Raid.Nereid
             RestoreMouth();if(animatedThroat!=null)Destroy(animatedThroat);
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
-            if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);if(dropletMesh!=null)Destroy(dropletMesh);
+            if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);
             if(swallowClip!=null)Destroy(swallowClip);if(burpClip!=null)Destroy(burpClip);if(jetClip!=null)Destroy(jetClip);if(inhaleClip!=null)Destroy(inhaleClip);
             if(ownsCameraImpulse&&cameraImpulse!=null)Destroy(cameraImpulse);
         }
