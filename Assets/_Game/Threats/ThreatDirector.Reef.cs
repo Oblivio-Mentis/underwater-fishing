@@ -7,10 +7,12 @@ namespace Raid
 {
     public sealed partial class ThreatDirector
     {
+        public enum HuntStage : byte { Watching, Display, Pursuit, Recovery }
         public struct ReefSnapshot
         {
             public bool Active,Deep,ClamClosed;
-            public Vector3 Clicker,Eel,EelHeading,Sweep;
+            public Vector3 Clicker,ClickerHeading,Eel,EelHeading,Sweep;
+            public HuntStage ClickerStage;
             public byte EelPhase,KrakenPhase;
         }
         static readonly Vector3 ClickerHome=new(36,-11,-37),EelHome=new(41,-9,-29);
@@ -20,7 +22,8 @@ namespace Raid
         const float ThinkPeriod=.12f;
         float nextThink,clickerCooldown,eelCooldown,eelDelay,krakenCharge,krakenClock,anglerClock;
         Vector3 clickerGoal,eelDecoy;
-        DiverMotor clampedDiver,eelTarget;
+        DiverMotor clampedDiver,eelTarget,anglerTarget;
+        float clickerWarn;
         float clamCooldown;
         NereidFauna reefView;
         sealed class Hearing
@@ -35,7 +38,7 @@ namespace Raid
         void ResetReef()
         {
             reefState.Value=new ReefSnapshot{Clicker=ClickerHome,Eel=EelHome,EelHeading=Vector3.forward};
-            sounds.Clear();clampedDiver=null;eelTarget=null;
+            sounds.Clear();clampedDiver=null;eelTarget=null;anglerTarget=null;clickerWarn=0;
             clickerGoal=ClickerHome;nextThink=clickerCooldown=eelCooldown=eelDelay=anglerClock=clamCooldown=krakenClock=krakenCharge=0;
         }
 
@@ -73,7 +76,7 @@ namespace Raid
                 bool drop=sound.hadCargo&&!cargo;
                 if(struggle || drop || speed>4.7f || (speed>2.8f && speed-sound.lastSpeed>2.2f))
                 {
-                    sound.noiseLeft=drop?5f:1.45f;
+                    sound.noiseLeft=drop?5f:2.6f;
                     sound.noiseAt=pos;
                 }
                 sound.lastSpeed=speed;sound.lastPosition=pos;sound.hadCargo=cargo;
@@ -88,9 +91,16 @@ namespace Raid
             clickerGoal=best>0?noise:ClickerHome+new Vector3(Mathf.Sin(Time.time*.14f)*2.4f,0,Mathf.Cos(Time.time*.14f)*2.4f);
             if(clickerCooldown<=0)
             {
-                reef.Clicker=Swim(reef.Clicker,clickerGoal,(best>0?3.9f:1.2f)*dt,noisy);
-                if(noisy!=null && Vector3.Distance(noisy.transform.position,reef.Clicker)<1.8f && ClearTo(reef.Clicker,noisy))
-                {noisy.DamageOxygen(14);clickerCooldown=4;main.Message="Щелкун ударил по источнику шума.";}
+                if(best<=0)reef.ClickerStage=HuntStage.Watching;
+                else if(reef.ClickerStage is HuntStage.Watching or HuntStage.Recovery)
+                {reef.ClickerStage=HuntStage.Display;clickerWarn=.66f;}
+                else if(reef.ClickerStage==HuntStage.Display && (clickerWarn-=dt)<=0)reef.ClickerStage=HuntStage.Pursuit;
+                var aim=clickerGoal-reef.Clicker;
+                if(aim.sqrMagnitude>.05f)reef.ClickerHeading=aim.normalized;
+                float pace=reef.ClickerStage==HuntStage.Display?.16f:best>0?4.25f:1.15f;
+                reef.Clicker=Swim(reef.Clicker,clickerGoal,pace*dt,noisy);
+                if(reef.ClickerStage==HuntStage.Pursuit && noisy!=null && Vector3.Distance(noisy.transform.position,reef.Clicker)<1.8f && ClearTo(reef.Clicker,noisy))
+                {noisy.DamageOxygen(14);clickerCooldown=4;reef.ClickerStage=HuntStage.Recovery;main.Message="Щелкун ударил по источнику шума.";}
             }
 
             clamCooldown-=dt;
@@ -124,25 +134,56 @@ namespace Raid
         {
             if(main.PredatorHealth<=0)
             {
+                main.AnglerStage=HuntStage.Watching;anglerTarget=null;
                 respawn-=dt;
                 if(respawn<=0){main.PredatorHealth=tuning.predatorHealth*Strength;main.PredatorPosition=tuning.predatorSpawn;}
                 return;
             }
-            predatorCooldown-=dt;anglerClock-=dt;
-            var diver=Nearest(main.PredatorPosition,anglerClock>0?6.2f:3.5f);
-            if(diver!=null && predatorCooldown<=0 && ClearTo(main.PredatorPosition,diver))
+            predatorCooldown-=dt;
+            if(predatorCooldown>0)
             {
-                if(anglerClock<=0)anglerClock=.65f;
-                main.PredatorPosition=Swim(main.PredatorPosition,diver.transform.position,7*dt,diver);
-                if(Vector3.Distance(main.PredatorPosition,diver.transform.position)<1.3f)
-                {
-                    diver.DamageOxygen(tuning.attackDamage*Strength);
-                    diver.GetComponent<HarpoonTool>()?.DropOneCatch();
-                    predatorCooldown=tuning.attackInterval;anglerClock=0;
-                    main.Message="Фонарник атаковал из засады.";
-                }
+                main.AnglerStage=HuntStage.Recovery;
+                main.PredatorPosition=Swim(main.PredatorPosition,tuning.predatorSpawn,2.2f*dt,null);
+                return;
             }
-            else main.PredatorPosition=Swim(main.PredatorPosition,tuning.predatorSpawn,1.9f*dt,null);
+            if(anglerTarget!=null && (!CanHunt(anglerTarget) || Vector3.Distance(main.PredatorPosition,anglerTarget.transform.position)>14 ||
+                !ClearTo(main.PredatorPosition,anglerTarget) || (anglerClock-=dt)<=0 && main.AnglerStage==HuntStage.Pursuit))
+            {
+                anglerTarget=null;main.AnglerStage=HuntStage.Recovery;predatorCooldown=1.6f;return;
+            }
+            if(anglerTarget==null)
+            {
+                main.AnglerStage=HuntStage.Watching;
+                var bait=Nearest(main.PredatorPosition,4.8f);
+                if(bait==null || !ClearTo(main.PredatorPosition,bait))
+                {
+                    main.PredatorPosition=Swim(main.PredatorPosition,tuning.predatorSpawn,1.2f*dt,null);return;
+                }
+                anglerTarget=bait;anglerClock=.88f;main.AnglerStage=HuntStage.Display;
+            }
+            var offset=anglerTarget.transform.position-main.PredatorPosition;
+            if(offset.sqrMagnitude>.01f)main.AnglerHeading=offset.normalized;
+            if(main.AnglerStage==HuntStage.Display)
+            {
+                if(anglerClock>0)return;
+                main.AnglerStage=HuntStage.Pursuit;anglerClock=5.5f;
+            }
+            main.PredatorPosition=Swim(main.PredatorPosition,anglerTarget.transform.position,5.9f*dt,anglerTarget);
+            if(Vector3.Distance(main.PredatorPosition,anglerTarget.transform.position)>1.35f)return;
+            anglerTarget.DamageOxygen(tuning.attackDamage*Strength);
+            anglerTarget.GetComponent<HarpoonTool>()?.DropOneCatch();
+            predatorCooldown=Mathf.Max(3,tuning.attackInterval);anglerTarget=null;
+            main.AnglerStage=HuntStage.Recovery;main.Message="Фонарник атаковал из засады.";
+        }
+
+        public float NearbyDanger(Vector3 eye)
+        {
+            var r=reefState.Value;
+            if(!r.Active)return 0;
+            float nearest=Vector3.Distance(eye,r.Clicker);
+            if(state.Value.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,state.Value.PredatorPosition));
+            if(r.Deep)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel),Vector3.Distance(eye,Rift)*.8f);
+            return 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2,13,nearest));
         }
 
         void TickEel(ref ReefSnapshot reef,float dt,ref ThreatSnapshot main)
@@ -220,7 +261,7 @@ namespace Raid
             return false;
         }
 
-        static bool CanHunt(DiverMotor diver) => diver!=null && diver.IsServerInitialized && !diver.IsInside && !diver.IsHelpless;
+        static bool CanHunt(DiverMotor diver) => diver!=null && diver.IsServerInitialized && !diver.IsInside && !diver.IsDead;
         static DiverMotor Nearest(Vector3 point,float radius)
         {
             DiverMotor best=null;

@@ -5,7 +5,7 @@ using UnityEngine.Rendering.Universal;
 namespace Raid
 {
     // Local presentation only. All generated audio/VFX belongs to this prototype.
-    public sealed class UnderwaterLook : MonoBehaviour
+    public sealed partial class UnderwaterLook : MonoBehaviour
     {
         public static UnderwaterLook Instance {get;private set;}
         Volume volume;
@@ -19,6 +19,7 @@ namespace Raid
         void Awake()
         {
             Instance=this;
+            SaveOceanSettings();
             volume=Object.FindAnyObjectByType<Volume>();
             if(volume!=null && volume.sharedProfile!=null)
             {
@@ -48,9 +49,11 @@ namespace Raid
                 {
                     var data=camera.GetUniversalAdditionalCameraData();data.renderPostProcessing=true;data.antialiasing=AntialiasingMode.FastApproximateAntialiasing;
                     CreateBubbles(camera.transform);
+                    BindDiveLamp(camera.transform);
                 }
             }
-            bool wet=player!=null&&!player.IsInside;
+            viewed=player!=null && player.Spectating!=null?player.Spectating:player;
+            bool wet=viewed!=null && !viewed.IsInside;
             ambient.volume=Mathf.Lerp(ambient.volume,wet?.035f:.075f,.3f);
             if(bubbles!=null){var emission=bubbles.emission;emission.rateOverTime=wet&&root.Page==UI.UiPage.None?4:0;}
         }
@@ -95,6 +98,7 @@ namespace Raid
         }
         void OnDestroy()
         {
+            RestoreOceanSettings();
             if(Instance==this)Instance=null;if(volume!=null&&original!=null)volume.sharedProfile=original;
             if(profile!=null)Destroy(profile);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
             if(hum!=null)Destroy(hum);if(click!=null)Destroy(click);if(route!=null)Destroy(route);

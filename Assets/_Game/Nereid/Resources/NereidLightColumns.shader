@@ -12,6 +12,7 @@ Shader "RAID/Nereid Light Columns"
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            float _NereidTurbidity;
             struct Input {float3 pos:POSITION;float3 norm:NORMAL;half4 col:COLOR;};
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;};
             Vary vert(Input i){Vary o;o.pos=TransformObjectToWorld(i.pos);o.clip=TransformWorldToHClip(o.pos);o.norm=TransformObjectToWorldNormal(i.norm);return o;}
@@ -21,7 +22,8 @@ Shader "RAID/Nereid Light Columns"
                 float distanceToEye=distance(GetCameraPositionWS(),i.pos);
                 float current=sin(dot(i.pos.xz,float2(.91,.37))+i.pos.y*.25+_Time.y*.36);
                 float fade=smoothstep(-16.5,-8,i.pos.y)*(1-smoothstep(14,23,i.pos.y))*smoothstep(1.4,7,distanceToEye)*(1-smoothstep(30,85,distanceToEye));
-                return half4(.27,.72,.79,thickness*thickness*fade*(.077+.018*current));
+                float murk=lerp(1,.46*(1-smoothstep(9,25,distanceToEye)),_NereidTurbidity);
+                return half4(.27,.72,.79,thickness*thickness*fade*murk*(.077+.018*current));
             }
             ENDHLSL
         }

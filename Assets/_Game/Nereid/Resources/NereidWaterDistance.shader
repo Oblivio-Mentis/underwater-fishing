@@ -10,6 +10,7 @@ Shader "RAID/Nereid Water Distance"
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            float _NereidTurbidity;
             struct Input {float3 pos:POSITION;};
             struct Vary {float4 clip:SV_POSITION;float3 dir:TEXCOORD0;};
             Vary vert(Input i)
@@ -33,7 +34,7 @@ Shader "RAID/Nereid Water Distance"
                 half3 horizon=lerp(half3(.003,.021,.034),half3(.012,.083,.117),lower);
                 half3 sky=lerp(horizon,half3(.026,.179,.228),upper);
                 sky+=half3(.034,.135,.126)*pow(toward,8)*(.68+.32*shimmer);
-                return half4(sky,1);
+                return half4(lerp(sky,half3(.0035,.009,.014)+sky*.069,_NereidTurbidity),1);
             }
             ENDHLSL
         }

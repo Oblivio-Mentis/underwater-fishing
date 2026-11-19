@@ -18,6 +18,8 @@ Shader "RAID/Nereid Reef"
             float4 _Tint;
             float _Glow;
             CBUFFER_END
+            float _NereidTurbidity;
+            float3 _NereidLampForward;
             struct Input {float3 pos:POSITION;float3 norm:NORMAL;half4 color:COLOR;};
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;half4 color:COLOR;half fog:TEXCOORD2;};
             Vary vert(Input v)
@@ -70,7 +72,15 @@ Shader "RAID/Nereid Reef"
                 float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
                 half3 transmit=exp(-range*float3(.031,.019,.014));
                 half3 water=half3(.010,.071,.098);
-                return half4(rgb*transmit+water*(1-transmit),1);
+                half3 outside=rgb*transmit+water*(1-transmit);
+                float3 toSurface=i.pos-GetCameraPositionWS();
+                float d=max(.01,length(toSurface));
+                float cone=smoothstep(.88,.979,dot(toSurface/d,_NereidLampForward));
+                float pool=cone*(1-smoothstep(2,14,d))*saturate(dot(n,-toSurface/d));
+                float clarity=exp2(-d*d*.0072);
+                half3 closeColor=rgb*.66+base*pool*1.9;
+                half3 murk=lerp(half3(.004,.010,.015),closeColor,clarity);
+                return half4(lerp(outside,murk,_NereidTurbidity),1);
             }
             ENDHLSL
         }

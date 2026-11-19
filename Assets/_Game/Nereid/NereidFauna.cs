@@ -12,7 +12,9 @@ namespace Raid.Nereid
         Transform clicker,clamShell,eel,kraken,warning,lure,shadow;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
-        AudioSource rasp;
+        AudioSource rasp,anglerVoice,clickerVoice;
+        AudioClip anglerCall,clickerCall,biteSound;
+        ThreatDirector.HuntStage lastAngler,lastClickerStage;
         ParticleSystem silt;
         Vector3 lastClicker;
         byte previousEel,previousKraken;
@@ -24,7 +26,49 @@ namespace Raid.Nereid
             luminous.SetFloat("_Glow",2);
             mud=Material("NereidSilt","Silt bloom");
             MakeClicker();MakeClam();MakeEel();MakeKraken();MakeLure(angler);
+            anglerVoice=Voice(angler,23);clickerVoice=Voice(clicker,26);
+            anglerCall=Call(0);clickerCall=Call(1);biteSound=Call(2);
             first=true;
+        }
+
+        AudioSource Voice(Transform parent,float range)
+        {
+            var throat=Node(parent,"Hunting call",Vector3.zero);
+            var source=throat.gameObject.AddComponent<AudioSource>();
+            source.playOnAwake=false;source.spatialBlend=1;source.dopplerLevel=.2f;source.minDistance=2;source.maxDistance=range;
+            source.rolloffMode=AudioRolloffMode.Linear;source.volume=.74f;return source;
+        }
+
+        AudioClip Call(int kind)
+        {
+            const int rate=22050;
+            float seconds=kind==0?1.15f:kind==1?.79f:.31f;
+            var samples=new float[(int)(rate*seconds)];
+            uint rng=100317;float smooth=0,phase=0;
+            for(int i=0;i<samples.Length;i++)
+            {
+                float t=i/(float)rate,u=t/seconds;
+                rng=rng*1664525u+1013904223u;
+                float white=((rng>>9)/8388608f-.5f)*2;
+                smooth=Mathf.Lerp(smooth,white,.18f);
+                float hz=kind==0?70+46*Mathf.Sin(u*Mathf.PI):kind==1?196-49*u:125-79*u;
+                phase+=2*Mathf.PI*hz/rate;
+                float rumble=Mathf.Sin(phase+.74f*Mathf.Sin(phase*.48f))+.33f*Mathf.Sin(2.92f*phase);
+                float flutter=kind==1?Mathf.Pow(1-Mathf.Repeat(t*(13+u*9),1),5):.62f+.38f*Mathf.Sin(2*Mathf.PI*26*t);
+                float env=Mathf.Min(1,t*46)*Mathf.Pow(1-u,kind==2?2.6f:.65f);
+                samples[i]=env*flutter*(rumble*.43f+smooth*(kind==2?.85f:.36f));
+            }
+            var clip=AudioClip.Create(kind==0?"Angler / gular growl":kind==1?"Clicker / rattling carapace":"Predator / jaw impact",samples.Length,1,rate,false);
+            clip.SetData(samples,0);owned.Add(clip);return clip;
+        }
+
+        void HuntSound(AudioSource source,AudioClip call,ThreatDirector.HuntStage stage,ThreatDirector.HuntStage previous)
+        {
+            source.mute=!Application.isFocused;
+            if(stage==previous)return;
+            if(stage==ThreatDirector.HuntStage.Display){source.pitch=.89f;source.PlayOneShot(call,.9f);}
+            if(stage==ThreatDirector.HuntStage.Pursuit){source.pitch=1.19f;source.PlayOneShot(call,.73f);}
+            if(stage==ThreatDirector.HuntStage.Recovery && previous==ThreatDirector.HuntStage.Pursuit){source.pitch=.87f;source.PlayOneShot(biteSound,.55f);}
         }
 
         Material Material(string shader,string name)
@@ -192,7 +236,11 @@ namespace Raid.Nereid
         public void Present(ThreatDirector.ReefSnapshot state)
         {
             float t=Time.time,blend=first?1:1-Mathf.Exp(-Time.deltaTime*9);
-            var motion=state.Clicker-lastClicker;
+            var motion=state.ClickerHeading.sqrMagnitude>.1f?state.ClickerHeading:state.Clicker-lastClicker;
+            var angler=ThreatDirector.Instance.AnglerStage;
+            HuntSound(anglerVoice,anglerCall,angler,lastAngler);
+            HuntSound(clickerVoice,clickerCall,state.ClickerStage,lastClickerStage);
+            lastAngler=angler;lastClickerStage=state.ClickerStage;rasp.mute=!Application.isFocused;
             clicker.position=Vector3.Lerp(clicker.position,state.Clicker,blend);
             if(motion.sqrMagnitude>.001f)clicker.rotation=Quaternion.Slerp(clicker.rotation,Quaternion.LookRotation(motion),blend);
             lastClicker=state.Clicker;
@@ -304,6 +352,7 @@ namespace Raid.Nereid
         void OnDestroy()
         {
             if(lure!=null)Destroy(lure.gameObject);
+            if(anglerVoice!=null)Destroy(anglerVoice.gameObject);
             foreach(var asset in owned)if(asset!=null)Destroy(asset);
         }
     }

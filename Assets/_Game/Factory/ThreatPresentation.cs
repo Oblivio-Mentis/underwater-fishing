@@ -19,6 +19,7 @@ namespace Raid
             public Renderer original;
             public bool originalEnabled;
             public float phase;
+            public bool ambusher;
         }
 
         void LateUpdate()
@@ -43,11 +44,16 @@ namespace Raid
                 if(visual.source==null||visual.root==null)continue;
                 if(visual.original!=null&&visual.original.enabled)visual.original.enabled=false;
                 if(!visual.root.gameObject.activeSelf)visual.root.gameObject.SetActive(true);
-                float clock=Time.time*3.4f+visual.phase;
-                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*6,0);
+                var hunt=visual.ambusher?director.AnglerStage:ThreatDirector.HuntStage.Watching;
+                bool display=hunt==ThreatDirector.HuntStage.Display;
+                bool rushing=hunt==ThreatDirector.HuntStage.Pursuit;
+                float clock=Time.time*(rushing?11:3.4f)+visual.phase;
+                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*(rushing?21:6),0);
                 visual.leftFin.localRotation=Quaternion.Euler(0,0,Mathf.Sin(clock*.72f)*3);
                 visual.rightFin.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(clock*.72f+.7f)*3);
-                visual.jaw.localRotation=Quaternion.Euler(6+Mathf.Sin(clock*.43f)*1.8f,0,0);
+                var gape=display?33:rushing?25:6;
+                visual.jaw.localRotation=Quaternion.Slerp(visual.jaw.localRotation,Quaternion.Euler(gape+Mathf.Sin(clock*.43f)*1.8f,0,0),
+                    1-Mathf.Exp(-Time.deltaTime*10));
             }
         }
 
@@ -55,7 +61,7 @@ namespace Raid
         {
             var root=new GameObject(raider?"Prototype raider silhouette":"Prototype predator silhouette").transform;
             root.gameObject.hideFlags=HideFlags.DontSave;root.SetParent(source,false);
-            var visual=new Visual{source=source,root=root,original=source.GetComponent<Renderer>(),phase=raider?1.7f:0};
+            var visual=new Visual{ambusher=!raider,source=source,root=root,original=source.GetComponent<Renderer>(),phase=raider?1.7f:0};
             visual.originalEnabled=visual.original!=null&&visual.original.enabled;
             float width=raider?1.08f:1;
             Part(root,"Tapered asymmetric body",Loft(new[]{new Vector4(-.27f,.038f,.055f,.025f),new Vector4(-.18f,.105f,.13f,.035f),new Vector4(-.065f,.215f*width,.19f,.055f),new Vector4(.095f,.267f*width,.19f,.068f),new Vector4(.245f,.205f*width,.135f,.085f),new Vector4(.31f,.11f*width,.07f,.105f)},false),skin);

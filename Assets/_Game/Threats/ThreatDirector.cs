@@ -13,7 +13,8 @@ namespace Raid
         public event Action<float> StockAttacked;
         public struct ThreatSnapshot
         {
-            public Vector3 PredatorPosition, WavePosition;
+            public Vector3 PredatorPosition, WavePosition,AnglerHeading;
+            public HuntStage AnglerStage;
             public float PredatorHealth, WaveHealth;
             public bool WaveActive;
             public string Message;
@@ -26,6 +27,7 @@ namespace Raid
         private float predatorCooldown, respawn, waveRemaining, stockCooldown, waveDeficit, patrolTime;
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
+        public HuntStage AnglerStage=>state.Value.AnglerStage;
 
         private void Awake()
         {
@@ -70,6 +72,7 @@ namespace Raid
             ThreatSnapshot next = state.Value;
             next.PredatorPosition = tuning.predatorSpawn;
             next.PredatorHealth = tuning.predatorHealth * Strength;
+            next.AnglerStage=HuntStage.Watching;next.AnglerHeading=Vector3.forward;
             respawn = 0f; predatorCooldown = 0f;
             state.Value = next;
         }
@@ -191,6 +194,8 @@ namespace Raid
             bool nereid=Nereid.NereidVessel.Active!=null;
             if(nereid)ShowReef();
             Show(predatorView, snapshot.PredatorPosition, snapshot.PredatorHealth > 0f && (!nereid || reefState.Value.Active));
+            if(nereid && snapshot.AnglerStage!=HuntStage.Watching && snapshot.AnglerHeading.sqrMagnitude>.01f)
+                predatorView.rotation=Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),Time.deltaTime*360);
             Show(waveView, snapshot.WavePosition, snapshot.WaveActive);
         }
 
