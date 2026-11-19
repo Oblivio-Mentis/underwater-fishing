@@ -25,8 +25,8 @@ namespace Raid
         float nextSuitCheck;
         int observedShot;
         Renderer statusLamp;
-        Vector3 previousPosition,sway;
-        float searchAt,bobClock,recoil,recoilVelocity;
+        Vector3 sway;
+        float searchAt,recoil,recoilVelocity;
 
         void OnEnable()
         {
@@ -61,7 +61,7 @@ namespace Raid
                     var camera=diver.GetComponentInChildren<Camera>();
                     if(camera==null)continue;
                     owner=diver;view=camera;tool=diver.GetComponent<HarpoonTool>();
-                    previousPosition=owner.transform.position;break;
+                    break;
                 }
                 if(view==null)return;
             }
@@ -84,11 +84,10 @@ namespace Raid
                 viewed=actor;viewedTool=actor==null?null:actor.GetComponent<HarpoonTool>();
                 shotFx.BindSource(viewedTool);
                 if(viewedTool!=null)observedShot=viewedTool.ShotSequence;
-                if(actor!=null)previousPosition=actor.transform.position;
             }
             visible&=viewedTool!=null;
             hands.SetVisible(visible);
-            if(!visible){model.gameObject.SetActive(false);previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
+            if(!visible){model.gameObject.SetActive(false);sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
             bool controlling=actor==owner&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
@@ -96,12 +95,6 @@ namespace Raid
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
             Vector3 desiredSway=new Vector3(Mathf.Clamp(-look.x*.00005f,-.0035f,.0035f),Mathf.Clamp(-look.y*.00004f,-.0025f,.0025f),0);
             sway=Vector3.Lerp(sway,desiredSway,1-Mathf.Exp(-12*dt));
-            float movement=Vector3.Distance(actor.transform.position,previousPosition);
-            previousPosition=actor.transform.position;
-            float speed=movement<.5f&&dt>.0001f?Mathf.Min(3,movement/dt):0;
-            bobClock+=dt*speed*2.1f;
-            float bobAmount=Mathf.Clamp01(speed*.4f);
-            Vector3 bob=new Vector3(Mathf.Sin(bobClock)*.0012f,Mathf.Sin(bobClock*2)*.0015f,0)*bobAmount;
             bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether;
             if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
             observedShot=viewedTool.ShotSequence;
@@ -116,9 +109,9 @@ namespace Raid
             float aim=actor==owner?Nereid.NereidAim.Blend:0;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
-            model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
+            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
-            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,speed,aim,dt,panelPress));
+            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 
@@ -187,8 +180,7 @@ namespace Raid
             for(int i=0;i<3;i++)
                 Box("Foregrip rib "+i,new Vector3(0,-.018f,.117f+i*.025f),new Vector3(.066f,.045f,.014f),.005f,dark);
             buildParent=model;
-            // Forearm enters from below the camera; compact finger pieces wrap the safety grip.
-            Tube("Diving sleeve",new[]{new Vector3(.12f,-.244f,-.16f),new Vector3(.053f,-.13f,-.095f)},.045f,amber,10,null,.040f);
+            // The articulated sleeve meets this cuff; the trigger fingers stay on the grip.
             Tube("Sealed glove cuff",new[]{new Vector3(.057f,-.14f,-.101f),new Vector3(.04f,-.103f,-.083f)},.043f,dark,10,null,.037f);
             Box("Glove palm",new Vector3(.030f,-.091f,-.063f),new Vector3(.053f,.065f,.067f),.012f,dark,Quaternion.Euler(-13,0,-12));
             for(int i=0;i<4;i++)
@@ -331,7 +323,7 @@ namespace Raid
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
             meshes.Clear();model=null;reel=null;loadedBolt=null;slide=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
-            sway=Vector3.zero;recoil=0;recoilVelocity=0;bobClock=0;
+            sway=Vector3.zero;recoil=0;recoilVelocity=0;
         }
         void OnDisable() { ReleaseModel();if(active==this)active=null; }
         void OnDestroy() { ReleaseModel();if(active==this)active=null; }
