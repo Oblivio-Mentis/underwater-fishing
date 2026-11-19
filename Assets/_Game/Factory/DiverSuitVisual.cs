@@ -96,10 +96,23 @@ namespace Raid
             outfit.Block(Metal,V(0,.025f,0),V(.087f,.083f,.22f));
             outfit.Block(Enamel,V(0,-.042f,-.037f),V(.056f,.111f,.046f),V(-13,0,0));
             outfit.Pipe(Rubber,V(0,.042f,.077f),V(0,.042f,.32f),.033f);
-            outfit.Pipe(Metal,V(0,.042f,.27f),V(0,.042f,.395f),.016f);
-            outfit.Blade(Metal,V(0,.042f,.4f),V(.038f,.008f,.075f),V(0,180,0));
-            outfit.Pipe(Enamel,V(-.059f,.014f,-.051f),V(-.116f,.014f,-.051f),.107f);
+            var bolt=DiveOutfit.Pivot(gun,"Loaded service spear",Vector3.zero);
+            outfit.Bind(bolt);
+            outfit.Pipe(Metal,V(0,.025f,.23f),V(0,.025f,.449f),.010f);
+            outfit.Blade(Metal,V(0,.025f,.445f),V(.041f,.009f,.073f),V(0,180,0));
+            var reel=DiveOutfit.Pivot(gun,"Line drum",V(-.08f,.018f,-.051f));
+            outfit.Bind(reel);
+            outfit.Pipe(Enamel,V(-.029f,0,0),V(.029f,0,0),.104f);
+            outfit.Pipe(Metal,V(-.036f,0,0),V(-.029f,0,0),.108f);
+            outfit.Pipe(Rubber,V(-.038f,0,0),V(-.039f,.039f,0),.009f);
+            outfit.Pipe(Enamel,V(-.039f,.039f,0),V(-.055f,.039f,0),.012f);
             outfit.Flush();
+            if(!diver.IsOwner)
+            {
+                var muzzle=DiveOutfit.Pivot(gun,"Service muzzle",V(0,.025f,.315f));
+                var fx=DiveOutfit.Pivot(body,"Observed harpoon cable",Vector3.zero).gameObject.AddComponent<HarpoonShotFx>();
+                fx.Initialize(tool,muzzle,bolt,reel,source.steel,true);
+            }
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
             fishAnchor.localScale=Vector3.one*.27f;

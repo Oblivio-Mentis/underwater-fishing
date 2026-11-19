@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 
 namespace Raid
 {
-    /// <summary>Owner-only presentation of accepted shots and confirmed hook state. Owns no hit, rope physics or gameplay commands.</summary>
+    /// <summary>Presents accepted shots and confirmed hooks on the local camera or an observed diver. Owns no hit, rope physics or gameplay commands.</summary>
     [DisallowMultipleComponent,DefaultExecutionOrder(300)]
     public sealed class HarpoonShotFx : MonoBehaviour
     {
@@ -26,6 +26,7 @@ namespace Raid
         static readonly Vector3 BoltTipLocal=new Vector3(0,.025f,.48f);
         readonly Vector3[] points=new Vector3[Segments];
         HarpoonTool tool;
+        bool worldView;
         Transform muzzle,loadedBolt,reel,flightBolt,attached;
         Vector3 flightStart,tip,retractStart,attachedPoint;
         Quaternion attachedRotation,flightRotation;
@@ -36,11 +37,10 @@ namespace Raid
         AudioClip shotClip,reelClip;
         float shotAt=float.NegativeInfinity,flightSeconds,phaseAt,lastLength;
 
-        public void Initialize(HarpoonTool source,Transform muzzleAnchor,Transform template,Transform spool,Material fallback)
+        public void Initialize(HarpoonTool source,Transform muzzleAnchor,Transform template,Transform spool,Material fallback,bool worldView=false)
         {
-            tool=source;muzzle=muzzleAnchor;loadedBolt=template;reel=spool;
+            this.worldView=worldView;muzzle=muzzleAnchor;loadedBolt=template;reel=spool;
             flightRotation=muzzle.rotation;
-            foreach(var line in source.GetComponentsInChildren<LineRenderer>())if(line.name=="Harpoon line"){legacy=line;break;}
             flightBolt=Instantiate(template,transform,false);flightBolt.name="Accepted-shot flying bolt";flightBolt.gameObject.SetActive(false);
             var go=new GameObject("Braided harpoon cable");go.transform.SetParent(transform,false);cable=go.AddComponent<LineRenderer>();
             cable.useWorldSpace=true;cable.positionCount=Segments;cable.startWidth=cable.endWidth=cableWidth;cable.numCornerVertices=2;cable.numCapVertices=2;
@@ -58,12 +58,40 @@ namespace Raid
             shotAudio=gameObject.AddComponent<AudioSource>();shotAudio.playOnAwake=false;shotAudio.volume=.17f;shotAudio.mute=!Application.isFocused;
             reelAudio=gameObject.AddComponent<AudioSource>();reelAudio.playOnAwake=false;reelAudio.volume=.065f;reelAudio.loop=true;reelAudio.mute=!Application.isFocused;
             shotClip=Sound(false);reelClip=Sound(true);reelAudio.clip=reelClip;
+            if(worldView)
+            {
+                shotAudio.spatialBlend=reelAudio.spatialBlend=1;
+                shotAudio.minDistance=reelAudio.minDistance=1.5f;
+                shotAudio.maxDistance=reelAudio.maxDistance=24;
+            }
+            BindSource(source);
+        }
+
+        // A spectator uses their local camera rig with the observed diver's networked tool.
+        public void BindSource(HarpoonTool source)
+        {
+            if(tool==source)return;
+            if(tool!=null)tool.ShotVisual-=OnShot;
+            Clear();tool=source;legacy=null;
+            shotAt=float.NegativeInfinity;SpoolDegrees=0;AcceptedShotCount=0;
+            if(reel!=null)reel.localRotation=Quaternion.identity;
+            if(tool==null)return;
+            foreach(var line in tool.GetComponentsInChildren<LineRenderer>(true))
+                if(line.name=="Harpoon line"){legacy=line;break;}
             tool.ShotVisual+=OnShot;
+        }
+
+        bool CanDraw()
+        {
+            if(tool==null||tool.NetworkObject==null||!tool.IsClientInitialized||tool.Motor==null||tool.Motor.IsDead)return false;
+            var local=UI.UiRoot.Instance==null?null:UI.UiRoot.Instance.Context.Player;
+            if(worldView)return !tool.IsOwner && local!=null && local.Spectating!=tool.Motor;
+            return tool.IsOwner||local!=null&&local.Spectating==tool.Motor;
         }
 
         void OnShot(Vector3 origin,Vector3 endpoint)
         {
-            if(tool==null||!tool.IsOwner||!tool.IsClientInitialized)return;
+            if(!CanDraw())return;
             AcceptedShotCount++;ServerShotEndpoint=endpoint;shotAt=phaseAt=Time.unscaledTime;
             flightStart=loadedBolt.gameObject.activeInHierarchy?loadedBolt.TransformPoint(BoltTipLocal):MuzzlePoint();
             if(Vector3.Distance(flightStart,origin)>2)flightStart=origin;
@@ -79,7 +107,7 @@ namespace Raid
 
         void LateUpdate()
         {
-            if(tool==null||tool.NetworkObject==null||!tool.IsClientInitialized||!tool.IsOwner){Clear();return;}
+            if(!CanDraw()){if(Phase!=CablePhase.Idle)Clear();return;}
             if(legacy!=null)legacy.enabled=false;
             float now=Time.unscaledTime,dt=Mathf.Min(Time.unscaledDeltaTime,.05f);
             Transform target;Vector3 targetPoint;
@@ -118,8 +146,9 @@ namespace Raid
             cable.enabled=visible;
             if(visible)
             {
-                bool reeling=confirmed&&((tool.IsServerInitialized&&tool.Reeling)||Application.isFocused&&!UI.UiInputGate.Blocked&&Mouse.current!=null&&Mouse.current.leftButton.isPressed);
                 float length=Vector3.Distance(MuzzlePoint(),tip);
+                bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
+                bool reeling=confirmed&&(tool.Reeling||ownerInput||(!tool.IsOwner && lastLength>0 && length<lastLength-.008f));
                 float tension=tool.HookedFish==null?(reeling?1:0):tool.HookedFish.Tension;
                 DrawCable(MuzzlePoint(),tip,now,tension,reeling);
                 float spin=0;
@@ -217,8 +246,9 @@ namespace Raid
             if(material!=null){Destroy(material);material=null;}if(braid!=null){Destroy(braid);braid=null;}
             if(shotAudio!=null)shotAudio.Stop();if(reelAudio!=null)reelAudio.Stop();
             if(shotClip!=null){Destroy(shotClip);shotClip=null;}if(reelClip!=null){Destroy(reelClip);reelClip=null;}
-            tool=null;
+            tool=null;legacy=null;
         }
+        void OnDisable(){if(Phase!=CablePhase.Idle)Clear();}
         void OnDestroy(){Release();}
     }
 }

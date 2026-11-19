@@ -82,6 +82,7 @@ namespace Raid
             if(actor!=viewed)
             {
                 viewed=actor;viewedTool=actor==null?null:actor.GetComponent<HarpoonTool>();
+                shotFx.BindSource(viewedTool);
                 if(viewedTool!=null)observedShot=viewedTool.ShotSequence;
                 if(actor!=null)previousPosition=actor.transform.position;
             }
