@@ -183,7 +183,7 @@ namespace Raid.UI
                     bool carryingLoot=false;foreach(var loot in context.Loot)if(loot!=null && loot.CarrierOwnerId==player.OwnerId){carryingLoot=true;break;}
                     prompt=carryingLoot?UiText.HudLootOccupied:UiText.HudLootPrompt;color=carryingLoot?UiTheme.Amber:UiTheme.Text;break;
                 case UiInteraction.Assist:
-                    prompt=UiText.HudAssistPrompt;break;
+                    prompt=context.Harpoon.ActiveSlot==1?"ЛКМ — держать напарника":UiText.HudAssistPrompt;break;
                 case UiInteraction.Fish:
                     if(context.AimedFish!=null)
                     {
@@ -192,6 +192,10 @@ namespace Raid.UI
                         else {prompt=UiText.HudFishOccupied;color=UiTheme.Muted;}
                     }
                     break;
+            }
+            if(context.Harpoon!=null && context.Harpoon.AssistTarget!=null)
+            {
+                prompt="Держите напарника";detail=context.Harpoon.ActiveSlot==1?"Отпустите ЛКМ или E, чтобы разжать захват":"Отпустите E, чтобы разжать захват";color=UiTheme.Green;
             }
             float rescue=context.Rescue==null?0:context.Rescue.DisplayProgress;
             int target=context.Rescue==null?-1:context.Rescue.DisplayTargetOwnerId;

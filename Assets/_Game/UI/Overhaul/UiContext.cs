@@ -65,7 +65,10 @@ namespace Raid.UI
             foreach(var other in Players)
             {
                 if(other==Player)continue;var tool=other.GetComponent<HarpoonTool>();
-                if(tool!=null && tool.HookedFish!=null && tool.HookedFish.Mode!=FishMode.Captured && Vector3.Distance(Player.transform.position,other.transform.position)<=Harpoon.tuning.assistRange)
+                if(Harpoon!=null && Harpoon.ActiveSlot<=1 && !Harpoon.HandsFull && !Player.IsHelpless && !other.IsHelpless &&
+                    tool!=null && tool.HookedFish!=null && tool.HookedFish.Mode!=FishMode.Captured &&
+                    (tool.AssistingDiver==null||tool.AssistingDiver==Player) &&
+                    Vector3.Distance(Player.transform.position,other.transform.position)<=Mathf.Min(2.4f,Harpoon.tuning.assistRange))
                 {
                     Vector3 from=Player.transform.position+Vector3.up*.6f,to=other.transform.position+Vector3.up*.6f;
                     RaycastHit block;if(Physics.Raycast(from,(to-from).normalized,out block,Vector3.Distance(from,to),Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore)&&block.collider.GetComponentInParent<HarpoonTool>()!=tool)continue;

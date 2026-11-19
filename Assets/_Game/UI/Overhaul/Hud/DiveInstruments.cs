@@ -84,7 +84,8 @@ namespace Raid.UI
 
         public void Refresh(UiContext c,float air,bool unobstructed)
         {
-            DiverMotor diver=c.Player;
+            var diver=c.Player.Spectating!=null?c.Player.Spectating:c.Player;
+            if(diver!=c.Player)air=Mathf.Clamp01(diver.Oxygen/Mathf.Max(1,diver.tuning.oxygenCapacity*diver.OxygenMultiplier));
             int count=0;
             foreach(var player in c.Players)
             {
@@ -127,7 +128,7 @@ namespace Raid.UI
             // The shield expresses remaining suit pressure tolerance.
             UiKit.Fraction(pressureBar,1-strain);pressureBar.color=strain>.8f?UiTheme.Red:strain>.55f?Gold:Green;
             UiKit.Set(pressure,Mathf.RoundToInt((1-strain)*100)+"%");
-            var tool=c.Harpoon;
+            var tool=diver==c.Player?c.Harpoon:diver.GetComponent<HarpoonTool>();
             hotbar.gameObject.SetActive(tool!=null&&!diver.IsDead);
             if(tool!=null)
             {
