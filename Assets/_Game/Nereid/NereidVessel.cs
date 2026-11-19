@@ -17,7 +17,13 @@ namespace Raid.Nereid
         RaidWorld world;
         float railFraction=-1;
 
-        void Awake() { Active=this; }
+        void Awake()
+        {
+            Active=this;
+            var reef=new GameObject("NEREID fishing grounds");
+            reef.transform.SetParent(transform,true);
+            reef.AddComponent<NereidReef>();
+        }
         void OnDestroy() { if(Active==this)Active=null; }
 
         public bool ContainsSealed(Vector3 point)
