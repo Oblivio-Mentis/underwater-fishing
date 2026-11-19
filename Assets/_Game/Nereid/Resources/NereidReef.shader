@@ -19,6 +19,26 @@ Shader "RAID/Nereid Reef"
             float _Glow, _Hide;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
+            // This large generated terrain is shared by both Forward renderers. Read the three
+            // actual spot lights so distant per-object light selection cannot move their footprints.
+            float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
+            half3 HullIrradiance(float3 position,half3 n)
+            {
+                float3 total=0;
+                [unroll] for(int j=0;j<3;j++)
+                {
+                    float4 source=_NereidWorkLightPositions[j], axis=_NereidWorkLightDirections[j], lamp=_NereidWorkLightRadiance[j];
+                    float3 ray=position-source.xyz;
+                    float squared=max(dot(ray,ray),.01);
+                    float3 dir=ray*rsqrt(squared);
+                    float spot=saturate((dot(axis.xyz,dir)-axis.w)*lamp.w);
+                    float fraction=squared*source.w;
+                    float falloff=saturate(1-fraction*fraction);
+                    float incidence=saturate(dot(n,-dir));
+                    total+=lamp.rgb*(spot*spot*falloff*falloff*incidence/max(4.,squared));
+                }
+                return total;
+            }
             struct Input {float3 pos:POSITION;float3 norm:NORMAL;half4 color:COLOR;};
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;half4 color:COLOR;half fog:TEXCOORD2;};
             Vary vert(Input v)
@@ -82,7 +102,9 @@ Shader "RAID/Nereid Reef"
                 half3 closeColor=rgb*.66+pool*(base*(wrapped*1.85)+half3(.024,.047,.045)*(.4+grain)*wrapped);
                 closeColor+=_Hide*pool*rim*half3(.025,.092,.103);
                 half3 murk=lerp(half3(.004,.010,.015),closeColor,clarity);
-                return half4(lerp(outside,murk,_NereidTurbidity),1);
+                half3 workLight=base*HullIrradiance(i.pos,n)*(.86+.18*grain);
+                half3 workTransmission=lerp(transmit,exp2(-d*half3(.14,.114,.10)),_NereidTurbidity);
+                return half4(lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission,1);
             }
             ENDHLSL
         }

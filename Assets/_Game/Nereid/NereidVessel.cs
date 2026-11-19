@@ -22,6 +22,7 @@ namespace Raid.Nereid
         {
             Active=this;
             airlock=NereidAirlock.Install(transform);
+            gameObject.AddComponent<NereidHullLighting>();
             var reef=new GameObject("NEREID fishing grounds");
             reef.transform.SetParent(transform,true);
             reef.AddComponent<NereidReef>();
