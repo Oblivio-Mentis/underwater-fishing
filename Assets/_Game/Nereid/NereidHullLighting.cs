@@ -12,9 +12,9 @@ namespace Raid.Nereid
         static readonly int Directions=Shader.PropertyToID("_NereidWorkLightDirections");
         static readonly int Radiance=Shader.PropertyToID("_NereidWorkLightRadiance");
         readonly Vector4[] positions=new Vector4[3], directions=new Vector4[3], radiance=new Vector4[3];
-        readonly Light[] beams=new Light[3];
+        readonly Light[] beams=new Light[5];
         readonly List<Object> owned=new();
-        readonly bool[] nearby=new bool[3];
+        readonly bool[] nearby=new bool[5];
         Transform fixtures, cradle;
         NereidVessel vessel;
         Material iron, brass, blueLens, amberLens;
@@ -42,6 +42,11 @@ namespace Raid.Nereid
             var cargo=beams[0];
             cargo.shadows=LightShadows.Hard;cargo.shadowNearPlane=.23f;cargo.shadowNormalBias=.18f;
             cargo.GetUniversalAdditionalLightData().additionalLightsShadowResolutionTier=UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow;
+            BuildHullGuides();
+            beams[3]=Fixture("Outer hatch wall wash",new Vector3(11.54f,2.02f,-15.49f),transform.TransformPoint(new Vector3(10.30f,1.0f,-13.7f)),
+                new Color(1.0f,.71f,.45f),amberLens,480,11.5f,48,82);
+            beams[4]=Fixture("Saddle-tank grazing light",new Vector3(9.53f,-.24f,-15.84f),transform.TransformPoint(new Vector3(7.50f,-.68f,-20.18f)),
+                new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
             for(int side=-1;side<=1;side+=2)
                 foreach(float z in new[]{-20f,2.8f})Marker(side,z);
             initialized=true;
@@ -81,6 +86,59 @@ namespace Raid.Nereid
             light.lightUnit=LightUnit.Candela;light.range=range;light.intensity=intensity;
             light.shadows=LightShadows.None;light.renderMode=LightRenderMode.ForcePixel;light.enabled=false;
             return light;
+        }
+
+        void BuildHullGuides()
+        {
+            var carrier=new ReefGeometry();
+            var deck=new ReefGeometry();
+            var hatch=new ReefGeometry();
+            var cold=Finish("Ceramic approach guide",new Color(.39f,.74f,.76f),.16f,1.25f);
+            var warm=Finish("Ceramic hatch guide",new Color(.95f,.63f,.35f),.16f,1.30f);
+            // This bracket cantilevers from the solid header; the lamp grazes the sea-facing armour and leaves.
+            carrier.Tube(new[]{new Vector3(10.28f,2.0f,-15.49f),new Vector3(10.48f,2.18f,-15.49f),new Vector3(11.54f,2.18f,-15.49f),new Vector3(11.54f,2.02f,-15.49f)},
+                new[]{.093f,.065f,.065f,.078f},Color.white,8);
+            Pipe(carrier,new Vector3(10.35f,1.59f,-15.49f),new Vector3(11.15f,2.17f,-15.49f),.037f);
+
+            // The FBX vertically compresses the saddle tanks. Carry the floor projectors at their
+            // established optical height on paired stays fixed to the underside of the real tanks.
+            foreach(float z in new[]{-7.8f,-19.7f})
+            {
+                Pipe(carrier,new Vector3(6.8f,-1.14f,z-.31f),new Vector3(6.8f,-2.34f,z),.06f);
+                Pipe(carrier,new Vector3(6.8f,-1.14f,z+.31f),new Vector3(6.8f,-2.34f,z),.06f);
+            }
+
+            // Three capped armoured strips on each boarding approach. Leave gaps at the hatch and handrail.
+            foreach(float start in new[]{-22.2f,-11.6f})
+                for(int i=0;i<3;i++)
+                {
+                    float z=start+i*1.85f;
+                    Channel(carrier,deck,new Vector3(7.965f,-.09f,z),new Vector3(7.965f,-.09f,z+1.46f),Vector3.right,.032f);
+                }
+            // The outboard lip is visible from below the platform, where the door face itself is foreshortened.
+            for(int i=0;i<3;i++)
+            {
+                float z=-16.13f+i*1.48f;
+                Channel(carrier,hatch,new Vector3(10.78f,-.145f,z),new Vector3(10.78f,-.145f,z+1.11f),Vector3.right,.040f);
+            }
+            for(int side=-1;side<=1;side+=2)
+            {
+                float z=-14f+side*.829f;
+                // Static jambs clear the moving door leaves and the illuminated sea-side push plate.
+                Channel(carrier,hatch,new Vector3(10.405f,.13f,z),new Vector3(10.405f,.60f,z),Vector3.right,.032f);
+                Channel(carrier,hatch,new Vector3(10.405f,.83f,z),new Vector3(10.405f,1.57f,z),Vector3.right,.032f);
+                Channel(carrier,hatch,new Vector3(10.405f,1.65f,z),new Vector3(10.405f,1.65f,z-side*.49f),Vector3.right,.032f);
+            }
+            Shape(fixtures,"Guide lamp armour and bracket",carrier,iron);
+            Shape(fixtures,"Catwalk approach strips",deck,cold);
+            Shape(fixtures,"Dock lip and pressure door outline",hatch,warm);
+        }
+
+        static void Channel(ReefGeometry channel,ReefGeometry lens,Vector3 from,Vector3 to,Vector3 outward,float width)
+        {
+            var along=(to-from).normalized;
+            Pipe(channel,from-along*.047f,to+along*.047f,width*1.5f);
+            Pipe(lens,from+outward*width,to+outward*width,width);
         }
 
         void Marker(int side,float z)
@@ -134,9 +192,10 @@ namespace Raid.Nereid
 
         void LateUpdate()
         {
+            if(!initialized || cradle==null)return;
             var world=RaidWorld.Instance;
             var target=landing+transform.up*.65f;
-            if(world!=null && world.container!=null && (world.IsClientInitialized || world.IsServerInitialized))
+            if(world!=null && world.NetworkObject!=null && world.container!=null && (world.IsClientInitialized || world.IsServerInitialized))
             {
                 // Follow the outdoor lift. After it crosses above the hull, hold the receiving pad for the next descent.
                 var point=world.container.position;
@@ -149,8 +208,11 @@ namespace Raid.Nereid
             for(int i=0;i<beams.Length;i++)
             {
                 var light=beams[i];var tr=light.transform;
-                bool active=camera!=null && (camera.transform.position-tr.position).sqrMagnitude<Mathf.Pow(nearby[i]?62:56,2);
+                // The two grazing lights only cover the ship skin around the exterior airlock.
+                float distance=i<positions.Length?(nearby[i]?62:56):(nearby[i]?40:34);
+                bool active=camera!=null && (camera.transform.position-tr.position).sqrMagnitude<distance*distance;
                 if(active!=nearby[i]){light.enabled=active;nearby[i]=active;}
+                if(i>=positions.Length)continue;
                 float outer=Mathf.Cos(light.spotAngle*Mathf.Deg2Rad*.5f);
                 float inner=Mathf.Cos(light.innerSpotAngle*Mathf.Deg2Rad*.5f);
                 var pos=tr.position;var axis=tr.forward;var tint=light.color.linear;
@@ -164,12 +226,17 @@ namespace Raid.Nereid
             Shader.SetGlobalVectorArray(Radiance,radiance);
         }
 
-        void OnEnable(){if(initialized)fixtures.gameObject.SetActive(true);}
+        void OnEnable(){if(initialized && fixtures!=null)fixtures.gameObject.SetActive(true);}
         void OnDisable()
         {
             if(!initialized)return;
-            fixtures.gameObject.SetActive(false);
-            for(int i=0;i<beams.Length;i++){nearby[i]=false;beams[i].enabled=false;radiance[i]=Vector4.zero;}
+            if(fixtures!=null)fixtures.gameObject.SetActive(false);
+            for(int i=0;i<beams.Length;i++)
+            {
+                nearby[i]=false;
+                if(beams[i]!=null)beams[i].enabled=false;
+            }
+            System.Array.Clear(radiance,0,radiance.Length);
             Shader.SetGlobalVectorArray(Radiance,radiance);
         }
 
