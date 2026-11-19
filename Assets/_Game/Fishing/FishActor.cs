@@ -23,7 +23,8 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public float Tension, Stamina;
-            public bool Active;
+            public bool Active, Stowed;
+            public int Holder;
         }
 
         private readonly SyncVar<FishSnapshot> _snapshot = new();
@@ -36,7 +37,7 @@ namespace Raid
         private MaterialPropertyBlock _tint;
         private FsmPresentationDriver _presentation;
         private bool _depthActive;
-        private string _speciesName;
+        private long _cargoId;
 
         public event Action<UniversalFsmLayerStateChange> LayerStateChanged;
         public FishMode Mode => _snapshot.Value.Mode;
@@ -44,8 +45,14 @@ namespace Raid
         public float Stamina => _snapshot.Value.Stamina;
         public FishMode DesiredState { get; private set; } = FishMode.Roam;
         public HarpoonTool Hooker => _hooker;
-        public string SpeciesId => _speciesName ?? fishId;
-        public long CargoId => BitConverter.ToInt64(Guid.Parse(fishId).ToByteArray(),0)&long.MaxValue;
+        public string SpeciesId => fishId;
+        public bool RequiresPartner => cargoSize > 1;
+        public long CargoId => _cargoId;
+        public bool IsStowed => _snapshot.Value.Stowed;
+        public bool IsHeldByLocalPlayer => Mode == FishMode.Captured && IsClientInitialized
+            && _snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId;
+
+        private void RenewCargoId() => _cargoId = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
 
         private void Awake()
         {
@@ -63,8 +70,7 @@ namespace Raid
             _origin = transform.position;
             _depthActive=false;
             _clock = _origin.x + _origin.z;
-            _speciesName = fishId;
-            fishId = Guid.NewGuid().ToString("N");
+            RenewCargoId();
             _snapshot.Value = new FishSnapshot { Position = _origin, Rotation = transform.rotation, Mode = FishMode.Roam, Active = _depthActive };
             DesiredState = FishMode.Roam;
             _runtime = fsmProfile.Build(gameObject, fsmDefinition);
@@ -132,9 +138,11 @@ namespace Raid
             var state = _snapshot.Value;
             state.Position = _origin;
             state.Active = active;
+            state.Stowed = false;
+            state.Holder = -1;
             state.Mode = FishMode.Roam;
             state.Tension = state.Stamina = 0f;
-            if (active) fishId = Guid.NewGuid().ToString("N");
+            if (active) RenewCargoId();
             _snapshot.Value = state;
             foreach (var fishCollider in _colliders) fishCollider.enabled = active;
         }
@@ -146,6 +154,8 @@ namespace Raid
             DesiredState = mode;
             var state = _snapshot.Value;
             state.Mode = mode;
+            state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
+            state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
@@ -156,7 +166,7 @@ namespace Raid
                 _hooker.NotifyFishLost(this);
                 _hooker = null;
             }
-            if (mode == FishMode.Transported) foreach (var fishCollider in _colliders) fishCollider.enabled = false;
+            if (mode == FishMode.Transported || mode == FishMode.Captured) foreach (var fishCollider in _colliders) fishCollider.enabled = false;
             if (mode == FishMode.Roam) foreach (var fishCollider in _colliders) fishCollider.enabled = _depthActive;
             _snapshot.Value = state;
         }
@@ -189,7 +199,11 @@ namespace Raid
                     break;
                 case FishMode.Captured:
                     if (_hooker == null) DesiredState = FishMode.Roam;
-                    else transform.position = _hooker.transform.position + _hooker.transform.forward * 1.2f + Vector3.up * 0.25f;
+                    else
+                    {
+                        transform.position = _hooker.transform.TransformPoint(new Vector3(0, .05f, .7f));
+                        transform.rotation = _hooker.transform.rotation * Quaternion.Euler(0, 90, 0);
+                    }
                     break;
                 case FishMode.Escaped:
                     MoveTowards(_origin, tuning.escapeSpeed * dt);
@@ -199,7 +213,7 @@ namespace Raid
                     if (_elapsed >= tuning.respawnSeconds)
                     {
                         transform.position = _origin;
-                        fishId = Guid.NewGuid().ToString("N");
+                        RenewCargoId();
                         DesiredState = FishMode.Roam;
                     }
                     break;
@@ -222,10 +236,12 @@ namespace Raid
             else _obstructed = 0f;
             if (_obstructed > tuning.obstructionGrace) { DesiredState = FishMode.Escaped; return; }
 
-            float cooperation = _hooker.IsAssisted ? 1f + tuning.assistBonus : 1f;
+            bool assisted = _hooker.IsAssisted;
+            bool hasPull = !RequiresPartner || assisted;
+            float cooperation = assisted ? 1f + tuning.assistBonus : 1f;
             float reel = Mathf.Clamp(_hooker.ReelMultiplier, 0.1f, 10f);
             bool burst = !tired && Mathf.Repeat(_elapsed, Mathf.Max(0.1f, tuning.burstPeriod)) < tuning.burstDuration;
-            if (_hooker.Reeling)
+            if (_hooker.Reeling && hasPull)
             {
                 state.Tension += tuning.tensionRise * power * (burst ? tuning.burstTensionMultiplier : 1f) / (cooperation * reel) * dt;
                 state.Stamina = Mathf.Max(0f, state.Stamina - tuning.exhaustionRate * reel * cooperation * (burst ? 0.25f : 1f) * dt);
@@ -248,7 +264,7 @@ namespace Raid
                 _hooker.Motor.ApplyExternalMotion(offset.normalized * tuning.tugSpeed * power * (burst ? 1f : 0.1f) / cooperation * dt);
                 if (state.Stamina <= 0f) DesiredState = FishMode.Tired;
             }
-            else if (distance <= tuning.captureRange) DesiredState = FishMode.Captured;
+            else if (hasPull && _hooker.Reeling && distance <= tuning.captureRange) DesiredState = FishMode.Captured;
         }
 
         private void MoveTowards(Vector3 target, float distance)
@@ -267,9 +283,10 @@ namespace Raid
                 transform.position = Vector3.Lerp(transform.position, _snapshot.Value.Position, blend);
                 transform.rotation = Quaternion.Slerp(transform.rotation, _snapshot.Value.Rotation, blend);
             }
-            bool visible = _snapshot.Value.Active && Mode != FishMode.Transported;
+            bool collidable = _snapshot.Value.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
+            bool visible = _snapshot.Value.Active && Mode != FishMode.Transported && !_snapshot.Value.Stowed && !IsHeldByLocalPlayer;
             foreach (var body in _renderers) body.enabled = visible;
-            if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = visible;
+            if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = collidable;
         }
 
         private void OnSnapshotChanged(FishSnapshot previous, FishSnapshot next, bool asServer)

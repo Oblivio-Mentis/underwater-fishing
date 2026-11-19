@@ -204,8 +204,16 @@ namespace Raid
                             { loot.Consume(); success=true; break; }
                         break;
                     }
-                    var item=new CatchItem(fish.CargoId,fish.biomass,fish.chitin,fish.offering,fish.cargoSize,fish.depthTier);
-                    if(team.LoadCargo(item,progression)) { success=tool.TakeCargo(); if(!success) team.cargo.RemoveAll(x=>x.id==item.id); }
+                    // Unload each catch atomically. A full cage leaves the remaining fish with their owner.
+                    for (int pocket = 0; pocket <= 3; pocket++)
+                    {
+                        fish = pocket == 0 ? tool.CarriedFish : tool.FishInSlot(pocket + 1);
+                        if (fish == null) continue;
+                        var item = new CatchItem(fish.CargoId, fish.biomass, fish.chitin, fish.offering, fish.cargoSize, fish.depthTier, species: fish.SpeciesId);
+                        if (!team.LoadCargo(item, progression)) continue;
+                        if (fish.MarkTransported(tool)) success = true;
+                        else team.cargo.RemoveAll(entry => entry.id == item.id);
+                    }
                     break;
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
                 default:
