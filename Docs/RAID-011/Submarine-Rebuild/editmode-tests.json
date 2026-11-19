@@ -1,0 +1,341 @@
+{
+  "job_id": "ba08b1e5951f485fa721a2ef89d92dee",
+  "status": "succeeded",
+  "result": {
+    "mode": "EditMode",
+    "summary": {
+      "total": 36,
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 0.2064379,
+      "resultState": "Passed"
+    },
+    "results": [
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)",
+        "state": "Passed",
+        "durationSeconds": 0.029152,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)",
+        "state": "Passed",
+        "durationSeconds": 0.0000651,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)",
+        "state": "Passed",
+        "durationSeconds": 0.0000211,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(1.079f,16,1)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.079f,16,1)",
+        "state": "Passed",
+        "durationSeconds": 0.00002,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)",
+        "state": "Passed",
+        "durationSeconds": 0.0000153,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)",
+        "state": "Passed",
+        "durationSeconds": 0.0000159,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)",
+        "state": "Passed",
+        "durationSeconds": 0.0000168,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)",
+        "state": "Passed",
+        "durationSeconds": 0.0000155,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)",
+        "fullName": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)",
+        "state": "Passed",
+        "durationSeconds": 0.0000158,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "InvalidAgeCannotReserveStock",
+        "fullName": "Raid.Tests.FishFlowStopTests.InvalidAgeCannotReserveStock",
+        "state": "Passed",
+        "durationSeconds": 0.000087,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation",
+        "fullName": "Raid.Tests.FishRouteQuoteTests.DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation",
+        "state": "Passed",
+        "durationSeconds": 0.0033928,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "EqualCountReplacementInvalidatesFishConfirmation",
+        "fullName": "Raid.Tests.FishRouteQuoteTests.EqualCountReplacementInvalidatesFishConfirmation",
+        "state": "Passed",
+        "durationSeconds": 0.0010861,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "YieldChangeAndNewFoodRequirementInvalidateConfirmation",
+        "fullName": "Raid.Tests.FishRouteQuoteTests.YieldChangeAndNewFoodRequirementInvalidateConfirmation",
+        "state": "Passed",
+        "durationSeconds": 0.000111,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "CargoCapacityAndDuplicateIdentityAreEnforced",
+        "fullName": "Raid.Tests.TeamProgressTests.CargoCapacityAndDuplicateIdentityAreEnforced",
+        "state": "Passed",
+        "durationSeconds": 0.0031449,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved",
+        "fullName": "Raid.Tests.TeamProgressTests.CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved",
+        "state": "Passed",
+        "durationSeconds": 0.0317976,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding",
+        "fullName": "Raid.Tests.TeamProgressTests.DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding",
+        "state": "Passed",
+        "durationSeconds": 0.0005598,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce",
+        "fullName": "Raid.Tests.TeamProgressTests.DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce",
+        "state": "Passed",
+        "durationSeconds": 0.0178069,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "DeliverySnapshotsItemAndCountsLifetimeOnlyOnce",
+        "fullName": "Raid.Tests.TeamProgressTests.DeliverySnapshotsItemAndCountsLifetimeOnlyOnce",
+        "state": "Passed",
+        "durationSeconds": 0.0004233,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials",
+        "fullName": "Raid.Tests.TeamProgressTests.DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials",
+        "state": "Passed",
+        "durationSeconds": 0.000655,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FailedDefenseLimitsStockLossAndPreservesPermanentProgress",
+        "fullName": "Raid.Tests.TeamProgressTests.FailedDefenseLimitsStockLossAndPreservesPermanentProgress",
+        "state": "Passed",
+        "durationSeconds": 0.0005333,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)",
+        "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)",
+        "state": "Passed",
+        "durationSeconds": 0.0023805,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)",
+        "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)",
+        "state": "Passed",
+        "durationSeconds": 0.0001722,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)",
+        "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)",
+        "state": "Passed",
+        "durationSeconds": 0.0001571,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)",
+        "fullName": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)",
+        "state": "Passed",
+        "durationSeconds": 0.0001504,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FishCanBeConsumedOnlyOnce(True)",
+        "fullName": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(True)",
+        "state": "Passed",
+        "durationSeconds": 0.0004974,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "FishCanBeConsumedOnlyOnce(False)",
+        "fullName": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(False)",
+        "state": "Passed",
+        "durationSeconds": 0.0001679,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn",
+        "fullName": "Raid.Tests.TeamProgressTests.HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn",
+        "state": "Passed",
+        "durationSeconds": 0.0008305,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging",
+        "fullName": "Raid.Tests.TeamProgressTests.LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging",
+        "state": "Passed",
+        "durationSeconds": 0.0002775,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "MaximumUpgradeLevelCannotSpendResourcesAgain",
+        "fullName": "Raid.Tests.TeamProgressTests.MaximumUpgradeLevelCannotSpendResourcesAgain",
+        "state": "Passed",
+        "durationSeconds": 0.0002333,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything",
+        "fullName": "Raid.Tests.TeamProgressTests.MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything",
+        "state": "Passed",
+        "durationSeconds": 0.0003398,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce",
+        "fullName": "Raid.Tests.TeamProgressTests.MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce",
+        "state": "Passed",
+        "durationSeconds": 0.0005321,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "SaveRoundTripPreservesProgressFeedingAndMidHoistCargo",
+        "fullName": "Raid.Tests.TeamProgressTests.SaveRoundTripPreservesProgressFeedingAndMidHoistCargo",
+        "state": "Passed",
+        "durationSeconds": 0.0146322,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "StockLossAlsoObeysFractionalCapForSmallStock",
+        "fullName": "Raid.Tests.TeamProgressTests.StockLossAlsoObeysFractionalCapForSmallStock",
+        "state": "Passed",
+        "durationSeconds": 0.0004595,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "UpgradePriceScalesAndChargesExactMaterials",
+        "fullName": "Raid.Tests.TeamProgressTests.UpgradePriceScalesAndChargesExactMaterials",
+        "state": "Passed",
+        "durationSeconds": 0.0005336,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "WinchUpgradeActuallyIncreasesCapacityAndShortensCycle",
+        "fullName": "Raid.Tests.TeamProgressTests.WinchUpgradeActuallyIncreasesCapacityAndShortensCycle",
+        "state": "Passed",
+        "durationSeconds": 0.002095,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      },
+      {
+        "name": "ZeroOfferingLootCannotBeFedOrDiscardedByFeeding",
+        "fullName": "Raid.Tests.TeamProgressTests.ZeroOfferingLootCannotBeFedOrDiscardedByFeeding",
+        "state": "Passed",
+        "durationSeconds": 0.000326,
+        "message": null,
+        "stackTrace": null,
+        "output": ""
+      }
+    ]
+  }
+}
