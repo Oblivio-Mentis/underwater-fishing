@@ -11,7 +11,7 @@ namespace Raid
         public float inputTimeout = 0.35f;
         public float hookSettleSeconds = 0.3f;
         public float swimRadius = 3f;
-        public float roamSpeed = 0.6f;
+        public float roamSpeed = 1.45f;
         public float burstPeriod = 3f;
         public float burstDuration = 0.8f;
         public float initialStamina = 7f;

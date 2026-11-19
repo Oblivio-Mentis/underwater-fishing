@@ -131,7 +131,7 @@ namespace Raid
 
         public bool TryHook(HarpoonTool tool)
         {
-            if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || _hooker != null || Mode != FishMode.Roam || DesiredState != FishMode.Roam) return false;
+            if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || _hooker != null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt) return false;
             _hooker = tool;
             DesiredState = FishMode.Hooked;
             var state = _snapshot.Value;
@@ -144,9 +144,11 @@ namespace Raid
         public void ReleaseHook(HarpoonTool tool)
         {
             if (!IsServerInitialized || tool != _hooker || DesiredState == FishMode.Transported) return;
+            FleeFromLine(tool);
             _hooker = null;
             tool.NotifyFishLost(this);
-            DesiredState = Mode == FishMode.Captured ? FishMode.Roam : FishMode.Escaped;
+            // A quick release can arrive before the FSM consumes the hook request.
+            DesiredState = Mode == FishMode.Captured || Mode == FishMode.Roam ? FishMode.Roam : FishMode.Escaped;
         }
 
         public bool MarkTransported(HarpoonTool tool)
@@ -164,6 +166,7 @@ namespace Raid
             if (_hooker != null) ReleaseHook(_hooker);
             arrivalPending=false;
             fleeRemaining=0;
+            hookAvailableAt=avoidUntil=0;
             _depthActive = active;
             transform.position = _origin;
             DesiredState = FishMode.Roam;
@@ -192,7 +195,7 @@ namespace Raid
             state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
             state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
             if (state.Stowed) _hooker = null;
-            if (mode != FishMode.Roam) {state.Startled=false;fleeRemaining=0;}
+            if (mode != FishMode.Roam && mode != FishMode.Escaped) {state.Startled=false;fleeRemaining=0;}
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
@@ -200,6 +203,7 @@ namespace Raid
             }
             if (mode == FishMode.Escaped && _hooker != null)
             {
+                FleeFromLine(_hooker);
                 _hooker.NotifyFishLost(this);
                 _hooker = null;
             }
@@ -236,7 +240,8 @@ namespace Raid
             switch (mode)
             {
                 case FishMode.Roam:
-                    if(Nereid.NereidVessel.Active!=null){SwimReef(dt,ref state);break;}
+                    if(Nereid.NereidVessel.Active!=null || fleeRemaining>0){SwimReef(dt,ref state);break;}
+                    state.Startled=false;
                     Vector3 patrol = _origin + new Vector3(Mathf.Sin(_clock * tuning.roamSpeed), Mathf.Sin(_clock * tuning.roamSpeed * 0.5f) * 0.25f, Mathf.Cos(_clock * tuning.roamSpeed)) * tuning.swimRadius;
                     MoveTowards(patrol, tuning.roamSpeed * dt);
                     break;
@@ -258,7 +263,7 @@ namespace Raid
                     }
                     break;
                 case FishMode.Escaped:
-                    MoveTowards(_origin, tuning.escapeSpeed * dt);
+                    SwimReef(dt,ref state);
                     if (_elapsed >= tuning.escapeRecoverySeconds) DesiredState = FishMode.Roam;
                     break;
                 case FishMode.Transported:

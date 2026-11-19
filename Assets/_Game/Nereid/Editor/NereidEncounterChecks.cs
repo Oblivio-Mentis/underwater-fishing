@@ -74,7 +74,7 @@ namespace Raid.Nereid.Editor
             yield return Wait("A single scout swims into the habitat",()=>school.Count(f=>f.InHabitat)==1,4);
             var scout=school.First(f=>f.InHabitat);
             var start=scout.transform.position;
-            yield return Wait("Scout advances along its patrol",()=>Vector3.Distance(scout.transform.position,start)>.2f,3);
+            yield return Wait("Scout swims several body lengths on patrol",()=>Vector3.Distance(scout.transform.position,start)>2f,4);
             var aim=diver.AimDirection;
             var side=Vector3.Cross(Vector3.up,aim).normalized;
             var eye=scout.transform.position-aim*6.7f+side*1.65f;
@@ -92,6 +92,26 @@ namespace Raid.Nereid.Editor
             yield return Wait("Three fish arrive over separate release windows",()=>school.Count(f=>f.InHabitat)==3,18);
             yield return Pause(6.6f);
             if(school.Count(f=>f.InHabitat)>3)throw new InvalidOperationException("A fourth wild fish exceeded the cap.");
+            foreach(bool breakLine in new[]{false,true})
+            {
+                // Stage only the shooter's position. Both the impact and line loss run through
+                // the real harpoon, collider, network command and server fish FSM.
+                Vector3 direction=diver.AimDirection;
+                var body=scout.ImpactSurface(false);
+                Place(body.TransformPoint(Vector3.forward*.09f)-direction*3.7f-Vector3.up*.6f);
+                if(!(bool)typeof(HarpoonTool).GetMethod("QaFireOwned",Private).Invoke(tool,null))
+                    throw new InvalidOperationException("Owned shot unavailable in escape check.");
+                yield return Wait("Harpoon attached before "+(breakLine?"range break":"release"),()=>tool.HookedFish==scout && scout.Mode==FishMode.Struggling);
+                if(breakLine) Place(diver.transform.position-direction*(tool.tuning.maxRange+1));
+                else if(!(bool)typeof(HarpoonTool).GetMethod("QaReleaseOwned",Private).Invoke(tool,null))
+                    throw new InvalidOperationException("Owned release unavailable.");
+                Vector3 releasePoint=diver.transform.position+Vector3.up*.6f;
+                float releaseRange=Vector3.Distance(scout.transform.position,releasePoint);
+                yield return Wait("Fish clears the angler after "+(breakLine?"a broken line":"manual release"),
+                    ()=>tool.HookedFish==null && scout.Startled && Vector3.Distance(scout.transform.position,releasePoint)>releaseRange+3f,3);
+                Place(new Vector3(1,1.1f,1));
+                yield return Wait("Escaped fish resumes its patrol",()=>scout.Mode==FishMode.Roam && !scout.Startled,6);
+            }
             yield return Wait("Dry deck restores authored visibility",()=>UnderwaterLook.Instance.WaterBlend<.015f && RenderSettings.fogDensity<.03f);
             yield return Wait("Depth one active",()=>threats.Reef.Active&&!threats.Reef.Deep);
             var angler=threats.tuning.predatorSpawn;

@@ -15,7 +15,8 @@ namespace Raid
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
         public Transform Tail => tail;
-        private float phase;
+        private float phase, strokeWeight;
+        private bool ray;
         private FishActor actor;
         private float escapeAt = -1;
         private Vector3 escapeDirection;
@@ -36,6 +37,7 @@ namespace Raid
             model.tail.localPosition = Vector3.back * .43f;
             model.phase = Random.value * 6.28f;
             model.actor = live;
+            model.ray = species == "Sailray";
             return body;
         }
 
@@ -65,7 +67,7 @@ namespace Raid
                 transform.position += escapeDirection * ((2.2f + Mathf.Sin(age*6)*.15f)*Time.deltaTime);
                 transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
             }
-            bool struggling = actor != null && (actor.Mode == FishMode.Struggling || actor.Startled);
+            bool burst = escapeAt >= 0 || actor != null && (actor.Mode == FishMode.Struggling || actor.Mode == FishMode.Escaped || actor.Startled);
             float clock=Time.time, offset=phase;
             if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
             {
@@ -74,8 +76,20 @@ namespace Raid
                 clock=(float)(timer.TicksToTime(timer.Tick)+timer.GetTickElapsedAsDouble());
                 offset=actor.ObjectId*2.39996f;
             }
-            float wave = Mathf.Sin(clock * (struggling ? 12 : 5.5f) + offset);
-            tail.localRotation = Quaternion.Euler(0, wave * (struggling ? 30 : 16), 0);
+            // The head leads each stroke; the hinged caudal fin follows out of phase.
+            // Animate the meshes that own the hit colliders so an attached bolt rides
+            // the same moving surface for the angler and observers.
+            strokeWeight=Mathf.MoveTowards(strokeWeight,burst?1f:0f,Time.deltaTime*6f);
+            float cruise=clock*(ray?3.7f:7.1f)+offset, sprint=clock*14f+offset;
+            float lead=Mathf.Lerp(Mathf.Sin(cruise),Mathf.Sin(sprint),strokeWeight);
+            float whip=Mathf.Lerp(Mathf.Sin(cruise-.9f)*25f,Mathf.Sin(sprint-.9f)*39f,strokeWeight);
+            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,ray?whip*.42f:whip,0);
+            if(actor!=null)
+            {
+                float bank=ray?8f:3.5f;
+                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.8f,
+                    lead*Mathf.Lerp(3.5f,8f,strokeWeight),Mathf.Sin(cruise-.6f)*bank);
+            }
         }
 
         private static Shape Build(string species)
