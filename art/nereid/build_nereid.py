@@ -13,6 +13,7 @@ PREVIEW=ROOT/'art/nereid'
 INTERIOR_ONLY='--interior-only' in sys.argv
 SCALE_COMPAT='industrial-v2'
 ROOT_SCALE=2.0
+FBX_X_EXPORT_SIGN=-1.0
 
 def compensated_height(y,z):
     # The scene doubles the vessel in every axis. Keep lower work-height details
@@ -23,7 +24,10 @@ def compensated_height(y,z):
     return y*(1.0-k)+adjusted*k
 
 def to_blender(u):
-    return Vector((u[0],-u[2],compensated_height(u[1],u[2])))
+    # Unity's default FBX importer (bakeAxisConversion=False) changes handedness
+    # by negating model X. Precompensate in the exported geometry so asymmetric
+    # starboard/port features arrive on the intended Unity side.
+    return Vector((FBX_X_EXPORT_SIGN*u[0],-u[2],compensated_height(u[1],u[2])))
 
 assert compensated_height(.87,0)*ROOT_SCALE==.87
 assert abs(compensated_height(4.6,0)*ROOT_SCALE-8.2)<1e-6
@@ -129,9 +133,14 @@ for side in (-1,1):
     # Exterior maintenance catwalk extends through the stern exit elevation.
     box(S,'side catwalk',(side*7.04,-.07,-8.5),(1.78,.14,29),'Nereid_Grate')
     for z in range(-22,7,3):
+        if side>0 and -15.85<z<-12.15:continue
         beam(S,(side*7.87,0,z),(side*7.87,1.1,z),.055,.06,'Nereid_Trim')
-    tube(S,[(side*7.87,1.12,-22.7),(side*7.87,1.12,6)],.045,'Nereid_Trim',8)
-    tube(S,[(side*7.87,.57,-22.7),(side*7.87,.57,6)],.025,'Nereid_Dark',8)
+    rail_spans=[(-22.7,-15.85),(-12.15,6)]if side>0 else[(-22.7,6)]
+    for start,end in rail_spans:
+        tube(S,[(side*7.87,1.12,start),(side*7.87,1.12,end)],.045,'Nereid_Trim',8)
+        tube(S,[(side*7.87,.57,start),(side*7.87,.57,end)],.025,'Nereid_Dark',8)
+    if side>0:
+        for z in(-15.85,-12.15):beam(S,(side*7.87,0,z),(side*7.87,1.1,z),.055,.06,'Nereid_Trim')
     # Engine access louvers and external clamps near aft machinery.
     for z in (-22,-19):
         box(S,'engine access panel',(side*6.55,2.2,z),(.12,1.45,2.1),'Nereid_Dark')
@@ -323,7 +332,12 @@ for obs in objects.values():
             bm=bmesh.new();bm.from_mesh(obj.data)
             for co,normal in [((0,-5.5,0),(0,1,0)),((0,-7.5,0),(0,1,0)),((0,0,1),(0,0,1))]:
                 bmesh.ops.bisect_plane(bm,geom=list(bm.verts)+list(bm.edges)+list(bm.faces),dist=1e-6,plane_co=co,plane_no=normal,use_snap_center=False,clear_outer=False,clear_inner=False)
+            if FBX_X_EXPORT_SIGN<0:bmesh.ops.reverse_faces(bm,faces=list(bm.faces))
             bm.to_mesh(obj.data);bm.free()
+        elif FBX_X_EXPORT_SIGN<0:
+            # The font stencils have nonzero origins and also require outward
+            # winding after the global reflection.
+            bm=bmesh.new();bm.from_mesh(obj.data);bmesh.ops.reverse_faces(bm,faces=list(bm.faces));bm.to_mesh(obj.data);bm.free()
         inverse=obj.matrix_world.inverted()
         for vertex in obj.data.vertices:
             p=obj.matrix_world@vertex.co
@@ -331,8 +345,9 @@ for obs in objects.values():
         obj.data.update()
 
 bpy.context.scene.unit_settings.system='METRIC';bpy.context.scene.unit_settings.scale_length=1
-meta={'coordinates':'Unity model-local metres before scene rootScale; x right, y up, z bow; Blender(x,-z,y), FBX -Z forward/Y up',
+meta={'coordinates':'Expected Unity model-local metres before scene rootScale; x right, y up, z bow; Blender(-x,-z,y), FBX -Z forward/Y up, Unity default X handedness conversion',
       'scale_compat':SCALE_COMPAT,'scene_root_scale':ROOT_SCALE,
+      'handedness':{'export_x_sign':FBX_X_EXPORT_SIGN,'unity_importer_bakeAxisConversion':False,'unity_x_from_blender_world_x':-1,'winding':'Reversed before the export reflection to preserve outward normals','asymmetric_feature':'STARBOARD hatch must be Unity+X; PORT Unity-X stays closed'},
       'vertical_compensation':{'k':'clamp((7.5-z)/2,0,1)','F':'(1-k)*y+k*(y*0.5 if y<=1 else y-0.5)','bow':'No deformation at z>=7.5; full compensation at z<=5.5','world_reference_heights':{'main_ledge':.87,'main_crown':8.2,'aft_crown':6.6,'bow_mouth_centre':3.7}},
       'materials':list(PALETTE),'models':{},
       'openings':{'main_windows':'local x=+-5.87 reveals to+-6.89; z=-7.8..6.55; full-compensated local y .435..2.74, rising smoothly near bow','main_to_aft':'local z=-8,width3.04,height2.65; world z=-16,width6.08,height5.3','aft_starboard_exit':'local x5.8..7,z-15.6..-12.4; world x11.6..14,z-31.2..-24.8,clearHeight~5','bow_mouth':'local z7.6,centre(0,1.85),width5.1,height3.58; world z15.2,centreY3.7,width10.2,height7.16'}}
@@ -348,7 +363,7 @@ for scope,obs in objects.items():
     dg=bpy.context.evaluated_depsgraph_get();tris=0;verts=[]
     for o in obs:
         ev=o.evaluated_get(dg);m=ev.to_mesh();m.calc_loop_triangles();tris+=len(m.loop_triangles)
-        verts.extend([(p.x,p.z,-p.y)for p in (ev.matrix_world@v.co for v in m.vertices)]);ev.to_mesh_clear()
+        verts.extend([(-p.x,p.z,-p.y)for p in (ev.matrix_world@v.co for v in m.vertices)]);ev.to_mesh_clear()
     lo=[min(v[k]for v in verts)for k in range(3)];hi=[max(v[k]for v in verts)for k in range(3)]
     meta['models'][scope]={'file':path.name,'objects':len(obs),'triangles':tris,'unity_bounds_min':lo,'unity_bounds_max':hi,'root_scale2_world_bounds_min':[v*ROOT_SCALE for v in lo],'root_scale2_world_bounds_max':[v*ROOT_SCALE for v in hi]}
 assert sum(m['triangles']for m in meta['models'].values())<250000,meta['models']

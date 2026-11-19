@@ -1,7 +1,14 @@
 {
-  "coordinates": "Unity model-local metres before scene rootScale; x right, y up, z bow; Blender(x,-z,y), FBX -Z forward/Y up",
+  "coordinates": "Expected Unity model-local metres before scene rootScale; x right, y up, z bow; Blender(-x,-z,y), FBX -Z forward/Y up, Unity default X handedness conversion",
   "scale_compat": "industrial-v2",
   "scene_root_scale": 2.0,
+  "handedness": {
+    "export_x_sign": -1.0,
+    "unity_importer_bakeAxisConversion": false,
+    "unity_x_from_blender_world_x": -1,
+    "winding": "Reversed before the export reflection to preserve outward normals",
+    "asymmetric_feature": "STARBOARD hatch must be Unity+X; PORT Unity-X stays closed"
+  },
   "vertical_compensation": {
     "k": "clamp((7.5-z)/2,0,1)",
     "F": "(1-k)*y+k*(y*0.5 if y<=1 else y-0.5)",
@@ -53,7 +60,7 @@
     "Exterior": {
       "file": "Nereid_Exterior.fbx",
       "objects": 9,
-      "triangles": 67976,
+      "triangles": 68212,
       "unity_bounds_min": [
         -10.695561408996582,
         -4.05531120300293,
