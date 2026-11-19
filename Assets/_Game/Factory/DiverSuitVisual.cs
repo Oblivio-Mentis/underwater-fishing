@@ -10,6 +10,10 @@ namespace Raid
         sealed class Limb { public Transform Upper,Lower,End; }
         readonly Limb[] arms=new Limb[2],legs=new Limb[2];
         DiveOutfit outfit;
+        HarpoonPresentation equipment;
+        readonly System.Collections.Generic.List<Mesh> weaponMeshes=new();
+        Transform shuttle;
+        bool weaponBuilt;
         DiverMotor diver;
         HarpoonTool tool;
         Transform body,head,gun,fishAnchor;
@@ -24,6 +28,7 @@ namespace Raid
 
         public void Initialize(HarpoonPresentation source)
         {
+            equipment=source;
             diver=GetComponent<DiverMotor>();tool=GetComponent<HarpoonTool>();
             legacyVisor=transform.Find("Visor")?.GetComponent<Renderer>();
             legacyCapsule=transform.Find("Diver body")?.GetComponent<Renderer>();
@@ -92,27 +97,8 @@ namespace Raid
                 outfit.Oval(Rubber,V(0,.018f,.035f),V(.143f,.118f,.234f));
                 outfit.Blade(Fabric,V(0,-.012f,.168f),V(.15f,.037f,.20f),V(-4,0,0));
             }
-            gun=DiveOutfit.Pivot(arms[1].End,"Service harpoon",V(0,.05f,.08f));outfit.Bind(gun);
-            outfit.Block(Metal,V(0,.025f,0),V(.087f,.083f,.22f));
-            outfit.Block(Enamel,V(0,-.042f,-.037f),V(.056f,.111f,.046f),V(-13,0,0));
-            outfit.Pipe(Rubber,V(0,.042f,.077f),V(0,.042f,.32f),.033f);
-            var bolt=DiveOutfit.Pivot(gun,"Loaded service spear",Vector3.zero);
-            outfit.Bind(bolt);
-            outfit.Pipe(Metal,V(0,.025f,.23f),V(0,.025f,.449f),.010f);
-            outfit.Blade(Metal,V(0,.025f,.445f),V(.041f,.009f,.073f),V(0,180,0));
-            var reel=DiveOutfit.Pivot(gun,"Line drum",V(-.08f,.018f,-.051f));
-            outfit.Bind(reel);
-            outfit.Pipe(Enamel,V(-.029f,0,0),V(.029f,0,0),.104f);
-            outfit.Pipe(Metal,V(-.036f,0,0),V(-.029f,0,0),.108f);
-            outfit.Pipe(Rubber,V(-.038f,0,0),V(-.039f,.039f,0),.009f);
-            outfit.Pipe(Enamel,V(-.039f,.039f,0),V(-.055f,.039f,0),.012f);
             outfit.Flush();
-            if(!diver.IsOwner)
-            {
-                var muzzle=DiveOutfit.Pivot(gun,"Service muzzle",V(0,.025f,.315f));
-                var fx=DiveOutfit.Pivot(body,"Observed harpoon cable",Vector3.zero).gameObject.AddComponent<HarpoonShotFx>();
-                fx.Initialize(tool,muzzle,bolt,reel,source.steel,true);
-            }
+            gun=DiveOutfit.Pivot(body,"Service harpoon",Vector3.zero);
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
             fishAnchor.localScale=Vector3.one*.27f;
@@ -144,6 +130,15 @@ namespace Raid
             if(diver.InteractionSequence!=useSequence){reach=1;useSequence=diver.InteractionSequence;}
             if(tool.ActiveSlot!=previousSlot){draw=1;previousSlot=tool.ActiveSlot;}
             if(!visible)return;
+            if(!weaponBuilt && equipment!=null && equipment.MakeWorldModel(gun,weaponMeshes,out var bolt,out var drum,out var muzzle,out shuttle))
+            {
+                weaponBuilt=true;
+                if(!diver.IsOwner)
+                {
+                    var cable=DiveOutfit.Pivot(body,"Observed harpoon cable",Vector3.zero).gameObject.AddComponent<HarpoonShotFx>();
+                    cable.Initialize(tool,muzzle,bolt,drum,equipment.steel,true);
+                }
+            }
             float blend=1-Mathf.Exp(-10*dt);
             speed=Mathf.Lerp(speed,Mathf.Min(rawSpeed,8),blend);stride=Mathf.Lerp(stride,Mathf.Clamp01(speed*.44f),blend);
             swimming=Mathf.Lerp(swimming,diver.IsWalking?0:1,blend);
@@ -153,7 +148,7 @@ namespace Raid
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
             var pocket=tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
-            gun.gameObject.SetActive(!diver.IsDead&&!held&&tool.ActiveSlot==0);
+            gun.gameObject.SetActive(!diver.IsDead && tool.HarpoonInHands);
             UpdateFish(pocket!=null&&!held&&!diver.IsDead?pocket.SpeciesId:null);
             if(diver.IsDead)
             {
@@ -195,6 +190,39 @@ namespace Raid
                 if(swimming>.01f&&(held||helper||gun.gameObject.activeSelf||pocket!=null))shoulder-=lean*.73f;
                 Pose(arms[i],shoulder,yaw,roll,elbow,0,wrist);
             }
+            if(gun.gameObject.activeSelf && weaponBuilt)
+                HoldHarpoon(beat,idle);
+        }
+
+        void HoldHarpoon(float beat,float idle)
+        {
+            var yaw=Quaternion.Euler(0,diver.transform.eulerAngles.y,0);
+            float lowered=Mathf.Sin(draw*Mathf.PI)*32;
+            var aim=yaw*Quaternion.Euler(Mathf.Clamp(diver.ViewPitch,-80,80)+lowered-kick*5,0,0);
+            var shoulders=(arms[0].Upper.position+arms[1].Upper.position)*.5f;
+            gun.SetPositionAndRotation(shoulders+yaw*(Vector3.right*.095f-Vector3.up*.115f)
+                +aim*new Vector3(0,beat*stride*.008f+idle*.002f,.143f-kick*.035f),aim);
+            shuttle.localPosition=Vector3.back*kick*.028f;
+            ReachGrip(arms[1],gun.TransformPoint(V(.022f,-.103f,-.087f)),aim*Quaternion.Euler(0,-12,-66),
+                yaw*V(.78f,-.75f,-.42f));
+            if(reach<.015f)
+                ReachGrip(arms[0],gun.TransformPoint(V(-.034f,-.047f,.117f)),aim*Quaternion.Euler(-9,9,64),
+                    yaw*V(-.63f,-.93f,-.4f));
+        }
+
+        static void ReachGrip(Limb arm,Vector3 grip,Quaternion handRotation,Vector3 elbowPole)
+        {
+            var shoulder=arm.Upper.position;
+            float upper=arm.Lower.localPosition.magnitude,lower=arm.End.localPosition.magnitude;
+            var target=grip-handRotation*V(0,0,.042f);
+            var axis=(target-shoulder).normalized;
+            float reach=Mathf.Clamp(Vector3.Distance(shoulder,target),Mathf.Abs(upper-lower)+.001f,upper+lower-.001f);
+            float along=(upper*upper-lower*lower+reach*reach)/(2*reach);
+            float away=Mathf.Sqrt(Mathf.Max(0,upper*upper-along*along));
+            var elbow=shoulder+axis*along+Vector3.ProjectOnPlane(elbowPole,axis).normalized*away;
+            arm.Upper.rotation=Quaternion.FromToRotation(arm.Lower.position-shoulder,elbow-shoulder)*arm.Upper.rotation;
+            arm.Lower.rotation=Quaternion.FromToRotation(arm.End.position-arm.Lower.position,shoulder+axis*reach-arm.Lower.position)*arm.Lower.rotation;
+            arm.End.rotation=handRotation;
         }
 
         void UpdateFish(string species)
@@ -215,6 +243,7 @@ namespace Raid
         {
             if(body!=null)Destroy(body.gameObject);
             outfit?.Release();
+            foreach(var mesh in weaponMeshes)if(mesh!=null)Destroy(mesh);
         }
     }
 }

@@ -8,6 +8,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Layouts;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 namespace Raid.UI
 {
@@ -20,12 +21,14 @@ namespace Raid.UI
         [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
         [Serializable] public sealed class Snapshot
         {
-            public bool dead,consumed,canReturn;
-            public int watchedOwner=-1;
+            public bool dead,consumed,canReturn,hypoxic,pointerReserved;
+            public float health,hypoxia,airlockWater,innerDoor,outerDoor;
+            public string airlockPhase,reticleControl;
+            public int watchedOwner=-1,depthTier;
             public string request,page,error,cursor,worldMessage,scene;
-            public bool connected,pending,inputBlocked,atBase,lastSuccess,wave;
-            public int width,height,owner,players,events,canvases,audioListeners,stockLoss;
-            public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,volume,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
+            public bool connected,pending,inputBlocked,lastSuccess,wave;
+            public int width,height,owner,players,events,canvases,audioListeners,audioSources,stockLoss;
+            public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
             public string[] pockets;
@@ -43,6 +46,8 @@ namespace Raid.UI
             public int harpoonShots;
             public bool harpoonAttached,harpoonSawFlight,harpoonSawAttach,harpoonSawRetract;
             public float harpoonShotAge,harpoonSpool,harpoonTipX,harpoonTipY,harpoonTipZ,harpoonEndX,harpoonEndY,harpoonEndZ;
+            public int anchorOwner=-1, anchorShot, anchorFrames;
+            public float anchorTravel, anchorTipError, anchorKnotError;
             public Control[] controls;
         }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
@@ -185,6 +190,30 @@ namespace Raid.UI
                 else diver.LookAtConsole(diver.transform.position+Vector3.up*.6f+Quaternion.Euler(r.number2,r.number,0)*Vector3.forward*10f);
                 return;
             }
+            if(r.action=="reticle_aim")
+            {
+                var root=UiRoot.Instance;var diver=root.Context.Player;
+                if(diver==null || !diver.IsOwner || (root.Page!=UiPage.None && root.Page!=UiPage.Terminal))
+                    throw new InvalidOperationException("Local gameplay view required");
+                var station=ShipConsole.Stations.FirstOrDefault(target=>target!=null && target.name==r.name);
+                if(station!=null && station.screenAnchor!=null)diver.LookAtConsole(station.screenAnchor.position);
+                else
+                {
+                    var button=root.GetComponentsInChildren<Button>().FirstOrDefault(target=>target.name==r.name && target.IsActive());
+                    if(button==null || root.Page!=UiPage.Terminal)
+                        throw new InvalidOperationException("Active physical display control not found");
+                    var rect=(RectTransform)button.transform;
+                    diver.LookAtConsole(rect.TransformPoint(rect.rect.center));
+                }
+                return;
+            }
+            if(r.action=="reticle_hover"){UiRoot.Instance.QaScrollReticle(0);return;}
+            if(r.action=="reticle_click")
+            {
+                if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("No available control under the physical reticle");
+                return;
+            }
+            if(r.action=="reticle_scroll"){UiRoot.Instance.QaScrollReticle(r.number);return;}
             if(r.action=="aim_scope"){if(r.value=="end")EndAimTest();else BeginAimTest(r.number>0?r.number:5);return;}
             if(r.action=="aim_button"){QueueAimButton(r.value!="release",r.number>0?r.number:.35f);return;}
             if (r.action == "slot" || r.action == "fish_reel" || r.action == "fish_grip")
@@ -218,7 +247,10 @@ namespace Raid.UI
             {
                 string leaf=Path.GetFileName(string.IsNullOrEmpty(r.value)?r.name:r.value);
                 if(string.IsNullOrEmpty(leaf)||!leaf.EndsWith(".png",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Capture requires a PNG filename");
-                ScreenCapture.CaptureScreenshot(Path.Combine(directory,leaf));return;
+                string path=Path.Combine(directory,leaf);
+                if(Application.isBatchMode)CapturePeerCamera(path);
+                else ScreenCapture.CaptureScreenshot(path);
+                return;
             }
             if(r.action=="key")
             {
@@ -247,14 +279,73 @@ namespace Raid.UI
             }
             if(r.action!="snapshot")throw new InvalidOperationException("Unsupported UI-only QA action");
         }
+        // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
+        static void CapturePeerCamera(string path)
+        {
+            if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)
+                throw new InvalidOperationException("A graphics device is required for a peer camera capture");
+            var diver=UiRoot.Instance.Context.Player;
+            var camera=diver!=null && diver.IsOwner?diver.GetComponentInChildren<Camera>():null;
+            if(camera==null || !camera.isActiveAndEnabled)
+                throw new InvalidOperationException("An active camera on the local owned diver is required");
+
+            var overlays=UnityEngine.Object.FindObjectsByType<Canvas>()
+                .Where(c=>c.isActiveAndEnabled && c.isRootCanvas && c.renderMode==RenderMode.ScreenSpaceOverlay)
+                .Select(c=>(canvas:c,previousCamera:c.worldCamera,distance:c.planeDistance,rotation:c.transform.localRotation,
+                    scale:c.transform.localScale,position:c.transform.localPosition)).ToArray();
+            int width=Screen.width>1?Screen.width:1280, height=Screen.height>1?Screen.height:720;
+            var target=RenderTexture.GetTemporary(width,height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            var previousTarget=camera.targetTexture;
+            var previousActive=RenderTexture.active;
+            Texture2D pixels=null;
+            try
+            {
+                camera.targetTexture=target;
+                foreach(var overlay in overlays)
+                {
+                    overlay.canvas.renderMode=RenderMode.ScreenSpaceCamera;
+                    overlay.canvas.worldCamera=camera;
+                    overlay.canvas.planeDistance=camera.nearClipPlane+.02f;
+                }
+                Canvas.ForceUpdateCanvases();
+                var frame=new RenderPipeline.StandardRequest{destination=target};
+                if(!RenderPipeline.SupportsRenderRequest(camera,frame))
+                    throw new InvalidOperationException("The active render pipeline does not support camera-stack capture");
+                RenderPipeline.SubmitRenderRequest(camera,frame);
+                RenderTexture.active=target;
+                pixels=new Texture2D(width,height,TextureFormat.RGB24,false);
+                pixels.ReadPixels(new Rect(0,0,width,height),0,0,false);
+                pixels.Apply(false,false);
+                File.WriteAllBytes(path,pixels.EncodeToPNG());
+            }
+            finally
+            {
+                camera.targetTexture=previousTarget;
+                RenderTexture.active=previousActive;
+                foreach(var overlay in overlays)
+                {
+                    var canvas=overlay.canvas;
+                    if(canvas==null)continue;
+                    canvas.planeDistance=overlay.distance;
+                    canvas.worldCamera=overlay.previousCamera;
+                    canvas.renderMode=RenderMode.ScreenSpaceOverlay;
+                    canvas.transform.SetLocalPositionAndRotation(overlay.position,overlay.rotation);
+                    canvas.transform.localScale=overlay.scale;
+                }
+                Canvas.ForceUpdateCanvases();
+                if(pixels!=null)Destroy(pixels);
+                RenderTexture.ReleaseTemporary(target);
+            }
+        }
+
         void WriteSnapshot()
         {
             var root=UiRoot.Instance;var context=root.Context;var player=context.Player;var world=context.World;var fish=context.Harpoon==null?null:context.Harpoon.HookedFish;
             var snapshot=new Snapshot{request=lastId,page=root.Page.ToString(),error=error,cursor=Cursor.lockState.ToString(),connected=context.Connected,pending=root.CommandPending,inputBlocked=UiInputGate.Blocked,
-                width=Screen.width,height=Screen.height,players=context.Players.Count,atBase=context.AtBase,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
+                width=Screen.width,height=Screen.height,players=context.Players.Count,depthTier=world==null?0:world.CurrentDepth,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
                 scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,events=UnityEngine.Object.FindObjectsByType<EventSystem>().Count(e=>e.isActiveAndEnabled),
-                canvases=UnityEngine.Object.FindObjectsByType<Canvas>().Count(c=>c.isActiveAndEnabled&&c.isRootCanvas),audioListeners=UnityEngine.Object.FindObjectsByType<AudioListener>().Count(a=>a.isActiveAndEnabled),
-                uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,volume=root.Settings.volume,lastSuccess=root.LastCommandSucceeded,
+                canvases=UnityEngine.Object.FindObjectsByType<Canvas>().Count(c=>c.isActiveAndEnabled&&c.isRootCanvas),audioSources=UnityEngine.Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Include).Length,audioListeners=UnityEngine.Object.FindObjectsByType<AudioListener>().Count(a=>a.isActiveAndEnabled),
+                uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,lastSuccess=root.LastCommandSucceeded,
                 aimBlend=Nereid.NereidAim.Blend,aiming=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.IsAiming,aimQaActive=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.BackgroundQaActive,applicationFocused=Application.isFocused,
                 team=context.View==null?"":JsonUtility.ToJson(context.View),hookedFish=fish==null?"":fish.SpeciesId,hookMode=fish==null?"":fish.Mode.ToString(),tension=fish==null?0:fish.Tension,stamina=fish==null?0:fish.Stamina,
                 rescueProgress=context.Rescue==null?0:context.Rescue.DisplayProgress,stockLoss=world==null?0:world.StockLossCount,wave=context.Threats!=null&&context.Threats.WaveActive};
@@ -273,8 +364,10 @@ namespace Raid.UI
             if(world!=null)
             {
                 snapshot.fishRoute=world.FishRoute;
+                var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
                 if(player!=null)
                 {
+                    snapshot.health=player.Health;snapshot.hypoxia=player.HypoxiaSeverity;snapshot.hypoxic=player.IsHypoxic;
                     snapshot.dead=player.IsDead;snapshot.consumed=player.IsConsumed;snapshot.canReturn=player.CanRespawn;
                     snapshot.watchedOwner=player.Spectating==null?-1:player.Spectating.OwnerId;
                 }
@@ -283,6 +376,17 @@ namespace Raid.UI
             }
             var mouth=UnityEngine.Object.FindAnyObjectByType<Nereid.NereidFeedingReaction>();
             if(mouth!=null){snapshot.observedBurps=mouth.BurpCount;snapshot.observedSwallows=mouth.SwallowedFishObserved;}
+            // Report the latest attached bolt visible to this observer, including crew weapons.
+            var measured=UnityEngine.Object.FindObjectsByType<HarpoonShotFx>()
+                .Where(fx=>fx.VerifiedFrames>0 && fx.ShotAge<90)
+                .OrderByDescending(fx=>fx.Phase==HarpoonShotFx.CablePhase.Attached)
+                .ThenBy(fx=>fx.ShotAge).FirstOrDefault();
+            if(measured!=null)
+            {
+                snapshot.anchorOwner=measured.VerifiedOwner;snapshot.anchorShot=measured.VerifiedShot;
+                snapshot.anchorFrames=measured.VerifiedFrames;snapshot.anchorTravel=measured.AnchorTravel;
+                snapshot.anchorTipError=measured.MaxTipError;snapshot.anchorKnotError=measured.MaxKnotError;
+            }
             if(observedFx!=null)
             {
                 var fx=observedFx;var tip=fx.VisualTip;var end=fx.ServerShotEndpoint;
@@ -293,6 +397,7 @@ namespace Raid.UI
             }
             if(player!=null){snapshot.owner=player.OwnerId;snapshot.x=player.transform.position.x;snapshot.y=player.transform.position.y;snapshot.z=player.transform.position.z;snapshot.oxygen=player.Oxygen;snapshot.stress=player.PressureStress;snapshot.depth=player.Depth;snapshot.lookMultiplier=player.LocalLookMultiplier;}
             var camera=player==null?null:player.GetComponentInChildren<Camera>();if(camera!=null){snapshot.actualFov=camera.fieldOfView;snapshot.aimYaw=camera.transform.eulerAngles.y;snapshot.aimPitch=Mathf.DeltaAngle(0,camera.transform.eulerAngles.x);}
+            snapshot.reticleControl=root.ReticleControl;snapshot.pointerReserved=UiInputGate.PointerReserved;
             snapshot.controls=UnityEngine.Object.FindObjectsByType<Button>().Where(b=>b.IsActive()).Select(b=>
             {
                 var rect=(RectTransform)b.transform;var corners=new Vector3[4];rect.GetWorldCorners(corners);var label=b.GetComponentInChildren<TMP_Text>();

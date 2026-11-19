@@ -7,7 +7,7 @@ namespace Raid.UI
     // The whole display reads the same confirmed diver, world and tool snapshots as the terminals.
     sealed class DiveInstruments
     {
-        enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass, SlotOutline }
+        internal enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass, SlotOutline }
         static readonly Color Ink=new Color(.022f,.05f,.061f,.83f);
         static readonly Color Rim=new Color(.60f,.77f,.78f,.49f);
         static readonly Color Ivory=new Color(.95f,.97f,.94f);
@@ -20,7 +20,8 @@ namespace Raid.UI
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[5];
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
-        readonly Image oxygenBar,pressureBar,submarine;
+        readonly Image oxygenBar,pressureBar,healthBar,submarine;
+        readonly TMP_Text healthText;
         readonly RectTransform navigation,depthTicks,hotbar,expedition;
         readonly Image[] depthMarks=new Image[13];
 
@@ -33,7 +34,7 @@ namespace Raid.UI
                 crewRows[i]=At(crew,"Crew Slot "+i,new Vector2(0,1),new Vector2(0,1),0,-49*i,206,45);
                 var row=crewRows[i];
                 Icon(row,"Diver Helmet",Mark.Helmet,0,0,47,47,Ivory);
-                crewGauge[i]=Meter(row,"Crew Air",48,-29,111,12,Green,4);
+                crewGauge[i]=Meter(row,"Crew Health",48,-29,111,12,Green,4);
                 crewName[i]=Caption(row,"Player Identity",51,-1,143,24,15,TextAlignmentOptions.MidlineLeft);
             }
 
@@ -57,13 +58,18 @@ namespace Raid.UI
             timer=Caption(stockStrip,"Hunger Timer",208,0,88,32,19,TextAlignmentOptions.Center);
             route=Caption(expedition,"Stock Detail",0,-105,394,24,16,TextAlignmentOptions.Center);
 
-            var vitals=At(root,"HUD Vitals",Vector2.zero,Vector2.zero,33,29,264,76);
+            var vitals=At(root,"HUD Vitals",Vector2.zero,Vector2.zero,33,29,264,111);
             Icon(vitals,"Air Bottle",Mark.Bottle,0,-2,35,35,Ivory);
             oxygenBar=Meter(vitals,"Oxygen Gauge",39,-15,149,15,Blue,5);
             oxygen=Caption(vitals,"Oxygen Value",194,-2,74,40,17,TextAlignmentOptions.Left);
             Icon(vitals,"Pressure Suit",Mark.Shield,0,-41,35,35,Ivory);
             pressureBar=Meter(vitals,"Pressure Gauge",39,-54,149,15,Green,5);
             pressure=Caption(vitals,"Pressure Value",194,-41,74,40,17,TextAlignmentOptions.Left);
+
+            var cross=At(vitals,"Health cross",Vector2.up,Vector2.up,9,-78,21,20);
+            Box(cross,"Horizontal",0,-7,21,6,Ivory);Box(cross,"Vertical",7,0,6,21,Ivory);
+            healthBar=Meter(vitals,"Health gauge",39,-86,149,15,Green,5);
+            healthText=Caption(vitals,"Health",194,-73,74,40,17,TextAlignmentOptions.Left);
 
             hotbar=At(root,"HUD Equipment",new Vector2(.5f,0),new Vector2(.5f,0),0,15,362,104);
             for(int i=0;i<5;i++)
@@ -93,18 +99,17 @@ namespace Raid.UI
             {
                 if(player==null||!player.IsClientInitialized||count==crewRows.Length)continue;
                 var row=crewRows[count];row.gameObject.SetActive(true);
-                float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*capacityBonus);
-                float oxygenRatio=player.IsDead?0:Mathf.Clamp01(player.Oxygen/capacity);
-                UiKit.Fraction(crewGauge[count],oxygenRatio);
-                crewGauge[count].color=player.IsTrapped||player.IsHelpless||oxygenRatio<.16f?UiTheme.Red:Green;
-                string state=player.IsDead?"  ×":player.IsTrapped?"  SOS":player.IsHelpless?"  SOS":"";
+                float health=player.IsDead?0:Mathf.Clamp01(player.Health/100f);
+                UiKit.Fraction(crewGauge[count],health);
+                crewGauge[count].color=player.IsTrapped||player.IsHelpless||health<.25f?UiTheme.Red:player.IsHypoxic?UiTheme.Amber:Green;
+                string state=player.IsDead?"  ×":player.IsTrapped||player.IsHelpless?"  SOS":player.IsHypoxic?"  O₂":"";
                 UiKit.Set(crewName[count],UiText.HudPlayerName(player)+state);count++;
             }
             for(int i=count;i<crewRows.Length;i++)crewRows[i].gameObject.SetActive(false);
             float metres=diver.Depth;
             if(diver!=c.Player)
             {
-                float seaLevel=c.AtBase?0:c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
+                float seaLevel=c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
                 metres=Mathf.Max(0,seaLevel-diver.transform.position.y);
             }
             int depthMetres=Mathf.RoundToInt(metres);
@@ -125,9 +130,9 @@ namespace Raid.UI
                 int n=0;foreach(var item in v.tank)if(item!=null&&(item.offering>0||item.biomass>0||item.chitin>0))n++;
                 UiKit.Set(stock,n.ToString());
                 UiKit.Set(food,v.offering+" / "+c.FoodRequired);
-                UiKit.Set(timer,UiText.HudHungerTime(v.hungerRemaining));
-                timer.color=c.Threats!=null&&c.Threats.WaveActive?UiTheme.Red:v.hungerRemaining<=30?Gold:Ivory;
-                food.color=v.offering>=c.FoodRequired?Green:Ivory;
+                UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
+                timer.color=c.DefendingReservoir?UiTheme.Red:v.offering==0&&v.hungerRemaining<=30?Gold:Ivory;
+                food.color=v.offering>0?Green:Ivory;
                 var flow=c.World.FishRoute;
                 UiKit.Set(route,flow.active?(flow.stopping?"Клапан закрыт":flow.feeding?"Кормление":"Переработка")+"   "+flow.completed+" / "+flow.total:"");
             }
@@ -137,6 +142,9 @@ namespace Raid.UI
             // The shield expresses remaining suit pressure tolerance.
             UiKit.Fraction(pressureBar,1-strain);pressureBar.color=strain>.8f?UiTheme.Red:strain>.55f?Gold:Green;
             UiKit.Set(pressure,Mathf.RoundToInt((1-strain)*100)+"%");
+            UiKit.Fraction(healthBar,diver.Health/100f);
+            healthBar.color=diver.IsHypoxic?UiTheme.Red:diver.Health<45?Gold:Green;
+            UiKit.Set(healthText,Mathf.CeilToInt(diver.Health)+"%");
             var tool=diver==c.Player?c.Harpoon:diver.GetComponent<HarpoonTool>();
             hotbar.gameObject.SetActive(tool!=null&&!diver.IsDead);
             if(tool!=null)
@@ -184,6 +192,12 @@ namespace Raid.UI
                 case "Sailray":return Mark.Ray;
                 default:return Mark.Lantern;
             }
+        }
+
+        internal static Sprite Art(Mark mark)
+        {
+            if(art==null || art[0]==null)LoadArt();
+            return art[(int)mark];
         }
 
         static void LoadArt()

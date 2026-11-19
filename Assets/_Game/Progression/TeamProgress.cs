@@ -21,7 +21,7 @@ namespace Raid
         public FeedingOutcome outcome;
         public int required, paid;
         public float deficit;
-        public bool Attack => deficit > 0f;
+        public bool Attack => outcome == FeedingOutcome.None;
     }
 
     /// <summary>Host-owned rules. Call from the server thread; serialized fields are save/snapshot data.</summary>
@@ -75,10 +75,10 @@ namespace Raid
         public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + winchLevel * tuning.cargoCapacityPerWinch);
         public bool CanVisitDepth(int depth) => depth >= 1 && depth <= highestDepth;
 
-        public bool Buy(Upgrade upgrade, bool atBase, ProgressionTuning tuning)
+        public bool Buy(Upgrade upgrade, bool onBoard, ProgressionTuning tuning)
         {
             UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (!atBase || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
+            if (!onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
             if (upgrade == Upgrade.Hull && lifetimeCatch < tuning.depthTwoLifetimeCatch) return false;
             MaterialCost cost = Cost(upgrade, tuning);
             if (biomass < cost.biomass || chitin < cost.chitin || scrap < cost.scrap || electronics < cost.electronics) return false;

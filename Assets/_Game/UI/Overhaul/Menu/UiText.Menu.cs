@@ -7,10 +7,7 @@ namespace Raid.UI
         public const string MenuBrand = "UNDERWATER FISHING";
         public const string MenuService = "NEREID / СЛУЖБА ЭКСПЕДИЦИЙ";
         public const string MenuMainTitle = "Подготовка к погружению";
-        public const string MenuMainSubtitle = "Кооперативная подводная рыбалка · экипаж 2–5 человек";
-        public const string MenuMainHeading = "ВЫХОД\nНА ГЛУБИНУ";
-        public const string MenuMainDescription = "Ловите рыбу, доставляйте улов на NEREID и улучшайте снаряжение. Запас в резервуаре — ваша добыча и пища для чудовища.";
-        public const string MenuMainLoop = "ПОГРУЖЕНИЕ / УЛОВ / МАТЕРИАЛЫ / УЛУЧШЕНИЯ";
+        public const string MenuMainSubtitle = "Один водолаз или экипаж до пяти человек";
         public const string MenuCreate = "Создать сессию";
         public const string MenuJoin = "Присоединиться";
         public const string MenuSettings = "Настройки";
@@ -20,6 +17,7 @@ namespace Raid.UI
         public const string MenuCrew = "Экипаж и связь";
         public const string MenuDisconnect = "Покинуть сессию";
         public const string MenuPauseTitle = "Пост управления";
+        public const string MenuDiveControls = "L — фонарь под водой     ·     Shift — ускорение     ·     ПКМ — прицел";
         public const string MenuPauseSubtitle = "Локальное меню. Экспедиция и время на сервере продолжаются.";
         public const string MenuPauseDescription = "Во время работы с меню движение, стрельба и взаимодействия вашего водолаза отключены. Возвращайтесь на пост, когда будете готовы.";
         public const string MenuConnectionTitle = "Связь с экипажем";
@@ -62,7 +60,6 @@ namespace Raid.UI
         public const string MenuLobbyCopied = "Номер лобби скопирован";
         public const string MenuSettingsTitle = "Настройки приборов";
         public const string MenuSettingsSubtitle = "Применяются сразу и сохраняются локально, отдельно от прогресса экипажа.";
-        public const string MenuVolume = "ОБЩАЯ ГРОМКОСТЬ";
         public const string MenuScale = "МАСШТАБ ИНТЕРФЕЙСА";
         public const string MenuFov = "ПОЛЕ ЗРЕНИЯ";
         public const string MenuSensitivity = "ЧУВСТВИТЕЛЬНОСТЬ МЫШИ";
@@ -74,10 +71,9 @@ namespace Raid.UI
         public const string MenuDisconnectClient = "Вы вернётесь в главное меню. Прогресс экипажа остаётся у хоста.";
         public const string MenuQuitTitle = "Выйти из игры?";
         public const string MenuQuitDescription = "Приложение будет закрыто. Если вы хост, подключённые участники потеряют соединение.";
-        public const string MenuFooterOffline = "Создайте сессию или присоединитесь к экипажу";
         public const string MenuFooterOnline = "Esc — назад к предыдущему экрану";
 
-        public static string MenuBuild => "Прототип " + Application.version + " · RAID-011";
+        public static string MenuBuild => "Версия " + Application.version;
         public static string MenuCount(int count) => "ПОДКЛЮЧЕНО: " + count + " / 5";
         public static string MenuOwner(int owner) => "Сетевой ID " + owner;
         public static string MenuLobby(string id) => "НОМЕР ЛОББИ  " + id;

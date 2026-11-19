@@ -18,7 +18,7 @@ MonoBehaviour:
   inputTimeout: 0.35
   hookSettleSeconds: 0.3
   swimRadius: 3
-  roamSpeed: 0.6
+  roamSpeed: 1.45
   burstPeriod: 3
   burstDuration: 0.8
   initialStamina: 7

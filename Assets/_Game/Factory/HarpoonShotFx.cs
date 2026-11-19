@@ -19,22 +19,43 @@ namespace Raid
         public float SpoolDegrees {get;private set;}
         public bool HasConfirmedAttachment => attached!=null;
         public Vector3 VisualTip => tip;
+        public Vector3 BoltPoint => flightBolt.TransformPoint(BoltTipLocal);
+        public Vector3 LineKnot => flightBolt.TransformPoint(BoltNockLocal);
+        public Vector3 CableEnd => cable.GetPosition(Segments-1);
         public Vector3 ServerShotEndpoint {get;private set;}
         public float ShotAge => Time.unscaledTime-shotAt;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public int VerifiedFrames { get; private set; }
+        public float AnchorTravel { get; private set; }
+        public float MaxTipError { get; private set; }
+        public float MaxKnotError { get; private set; }
+        public int VerifiedShot { get; private set; }
+        public int VerifiedOwner { get; private set; }
+        Vector3 firstAnchor;
+        void VerifyAnchor(Vector3 contact,Vector3 normal)
+        {
+            if(VerifiedFrames==0)firstAnchor=contact;
+            VerifiedOwner=tool.OwnerId;VerifiedShot=tool.ShotSequence;VerifiedFrames++;
+            AnchorTravel=Mathf.Max(AnchorTravel,Vector3.Distance(contact,firstAnchor));
+            MaxTipError=Mathf.Max(MaxTipError,Vector3.Distance(BoltPoint,contact-normal*.008f));
+            MaxKnotError=Mathf.Max(MaxKnotError,Vector3.Distance(CableEnd,LineKnot));
+        }
+#endif
+
         const int Segments=25;
         static readonly Vector3 BoltTipLocal=new Vector3(0,.025f,.48f);
+        static readonly Vector3 BoltNockLocal=new Vector3(0,.025f,.19f);
         readonly Vector3[] points=new Vector3[Segments];
         HarpoonTool tool;
         bool worldView;
         Transform muzzle,loadedBolt,reel,flightBolt,attached;
-        Vector3 flightStart,tip,retractStart,attachedPoint;
-        Quaternion attachedRotation,flightRotation;
+        Vector3 flightStart,tip,retractStart;
+        HarpoonContact inFlightContact;
+        Quaternion flightRotation;
         LineRenderer cable,legacy;
         Material material;
         Texture2D braid;
-        AudioSource shotAudio,reelAudio;
-        AudioClip shotClip,reelClip;
         float shotAt=float.NegativeInfinity,flightSeconds,phaseAt,lastLength;
 
         public void Initialize(HarpoonTool source,Transform muzzleAnchor,Transform template,Transform spool,Material fallback,bool worldView=false)
@@ -55,15 +76,6 @@ namespace Raid
             else if(material.HasProperty("_MainTex"))material.mainTexture=braid;
             if(material.HasProperty("_BaseColor"))material.SetColor("_BaseColor",new Color(.72f,.66f,.45f));
             cable.sharedMaterial=material;cable.enabled=false;
-            shotAudio=gameObject.AddComponent<AudioSource>();shotAudio.playOnAwake=false;shotAudio.volume=.17f;shotAudio.mute=!Application.isFocused;
-            reelAudio=gameObject.AddComponent<AudioSource>();reelAudio.playOnAwake=false;reelAudio.volume=.065f;reelAudio.loop=true;reelAudio.mute=!Application.isFocused;
-            shotClip=Sound(false);reelClip=Sound(true);reelAudio.clip=reelClip;
-            if(worldView)
-            {
-                shotAudio.spatialBlend=reelAudio.spatialBlend=1;
-                shotAudio.minDistance=reelAudio.minDistance=1.5f;
-                shotAudio.maxDistance=reelAudio.maxDistance=24;
-            }
             BindSource(source);
         }
 
@@ -92,6 +104,10 @@ namespace Raid
         void OnShot(Vector3 origin,Vector3 endpoint)
         {
             if(!CanDraw())return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            VerifiedFrames=0;AnchorTravel=MaxTipError=MaxKnotError=0;
+#endif
+            inFlightContact=tool.LastShotContact;
             AcceptedShotCount++;ServerShotEndpoint=endpoint;shotAt=phaseAt=Time.unscaledTime;
             flightStart=loadedBolt.gameObject.activeInHierarchy?loadedBolt.TransformPoint(BoltTipLocal):MuzzlePoint();
             if(Vector3.Distance(flightStart,origin)>2)flightStart=origin;
@@ -102,7 +118,6 @@ namespace Raid
             var direction=endpoint-flightStart;flightRotation=direction.sqrMagnitude>.001f?Quaternion.LookRotation(direction):muzzle.rotation;
             flightSeconds=Mathf.Lerp(minimumFlightSeconds,maximumFlightSeconds,Mathf.Clamp01(direction.magnitude/Mathf.Max(1,tool.tuning.maxRange)));
             attached=null;Phase=CablePhase.Flying;loadedBolt.gameObject.SetActive(false);flightBolt.gameObject.SetActive(true);
-            shotAudio.mute=!Application.isFocused;if(!shotAudio.mute){shotAudio.pitch=tool.Motor!=null&&!tool.Motor.IsInside?.78f:1;shotAudio.PlayOneShot(shotClip);}
         }
 
         void LateUpdate()
@@ -110,17 +125,35 @@ namespace Raid
             if(!CanDraw()){if(Phase!=CablePhase.Idle)Clear();return;}
             if(legacy!=null)legacy.enabled=false;
             float now=Time.unscaledTime,dt=Mathf.Min(Time.unscaledDeltaTime,.05f);
-            Transform target;Vector3 targetPoint;
-            bool confirmed=TryTarget(out target,out targetPoint);
-            if(confirmed&&attached!=target)BindTarget(target,targetPoint);
-            else if(!confirmed&&(attached!=null||Phase==CablePhase.Attached)){attached=null;Retract(now);}
-            if(confirmed&&Phase!=CablePhase.Flying&&Phase!=CablePhase.Attached)Phase=CablePhase.Attached;
+            var hit=tool.AttachedContact;
+            bool confirmed=hit.Resolve(out var target,out var targetPoint,out var targetNormal,out var targetDirection)
+                && (tool.OwnsFriendTether || tool.HookedFish!=null && tool.HookedFish.Mode>=FishMode.Hooked && tool.HookedFish.Mode<=FishMode.Tired);
+            if(confirmed)
+            {
+                attached=target;
+                if(Phase!=CablePhase.Flying)
+                {
+                    Phase=CablePhase.Attached;
+                    loadedBolt.gameObject.SetActive(false);
+                }
+            }
+            else if(attached!=null || Phase==CablePhase.Attached)
+            {
+                attached=null;Retract(now);
+            }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            bool settled=confirmed && Phase==CablePhase.Attached;
+#endif
             if(Phase==CablePhase.Flying)
             {
                 float t=Mathf.Clamp01((now-shotAt)/Mathf.Max(.01f,flightSeconds));
-                var end=attached!=null?attached.TransformPoint(attachedPoint):ServerShotEndpoint;
+                var end=ServerShotEndpoint;
+                if(confirmed)end=targetPoint;
+                else if(inFlightContact.Resolve(out _,out var movingPoint,out _,out _))end=movingPoint;
                 tip=Vector3.Lerp(flightStart,end,1-(1-t)*(1-t));
+                var path=end-flightStart;
+                if(path.sqrMagnitude>.0001f)flightRotation=Quaternion.LookRotation(path);
                 SetBolt(tip,flightRotation);
                 if(t>=1){Phase=attached!=null?CablePhase.Attached:CablePhase.AwaitingAttachment;phaseAt=now;}
             }
@@ -131,7 +164,10 @@ namespace Raid
             }
             else if(Phase==CablePhase.Attached&&attached!=null)
             {
-                tip=attached.TransformPoint(attachedPoint);SetBolt(tip,attached.rotation*attachedRotation);
+                tip=targetPoint;
+                flightRotation=Quaternion.LookRotation(targetDirection);
+                // Sink only the barb into the skin. The eye and cable stay on the exposed shaft.
+                SetBolt(tip-targetNormal*.008f,flightRotation);
             }
             else if(Phase==CablePhase.Retracting)
             {
@@ -147,59 +183,38 @@ namespace Raid
             if(visible)
             {
                 float length=Vector3.Distance(MuzzlePoint(),tip);
-                bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
-                bool reeling=confirmed&&(tool.Reeling||ownerInput||(!tool.IsOwner && lastLength>0 && length<lastLength-.008f));
+                bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&!UI.UiInputGate.PointerReserved&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
+                bool reeling=confirmed && (tool.Reeling || ownerInput);
                 float tension=tool.HookedFish==null?(reeling?1:0):tool.HookedFish.Tension;
-                DrawCable(MuzzlePoint(),tip,now,tension,reeling);
+                DrawCable(MuzzlePoint(),LineKnot,now,tension,reeling);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if(settled)
+                    VerifyAnchor(targetPoint,targetNormal);
+#endif
                 float spin=0;
                 if(Phase==CablePhase.Flying)spin=-2400;
                 else if(Phase==CablePhase.Retracting)spin=1800;
                 else if(Phase==CablePhase.Attached)
                 {
-                    float change=length-lastLength;
-                    if(change>.01f)spin=-Mathf.Min(1800,change/Mathf.Max(.001f,dt)*220);
+                    float cableSpeed=lastLength>0?(length-lastLength)/Mathf.Max(.001f,dt):0;
+                    if(cableSpeed>.25f)spin=-Mathf.Min(1800,cableSpeed*220);
                     else if(reeling)spin=620;
-                    else if(change<-.005f)spin=280;
+                    else if(cableSpeed<-.15f)spin=Mathf.Min(900,-cableSpeed*220);
                 }
                 SpoolDegrees+=spin*dt;if(reel!=null)reel.localRotation=Quaternion.AngleAxis(SpoolDegrees,Vector3.right);
-                reelAudio.mute=!Application.isFocused||UI.UiInputGate.Modal;reelAudio.pitch=.85f+Mathf.Clamp01(Mathf.Abs(spin)/1800)*.6f;
-                if(Mathf.Abs(spin)>20&&!reelAudio.isPlaying)reelAudio.Play();else if(Mathf.Abs(spin)<=20&&reelAudio.isPlaying)reelAudio.Stop();
                 if(material!=null&&material.HasProperty("_BaseMap"))material.SetTextureOffset("_BaseMap",new Vector2(SpoolDegrees/1800,0));
                 lastLength=length;
             }
         }
 
-        bool TryTarget(out Transform target,out Vector3 point)
-        {
-            var friend=tool.TetherTarget;
-            if(tool.OwnsFriendTether&&friend!=null){target=friend.transform;point=friend.transform.position+Vector3.up*.6f;return true;}
-            var fish=tool.HookedFish;
-            if(fish!=null&&fish.Mode>=FishMode.Hooked&&fish.Mode<=FishMode.Tired){target=fish.transform;point=fish.transform.position;return true;}
-            target=null;point=Vector3.zero;return false;
-        }
-
-        void BindTarget(Transform target,Vector3 fallback)
-        {
-            attached=target;
-            Vector3 contact=fallback;
-            if(ShotAge<.5f)
-            {
-                var collider=target.GetComponent<Collider>();
-                if(collider!=null&&collider.enabled)contact=collider.ClosestPoint(ServerShotEndpoint);
-            }
-            attachedPoint=target.InverseTransformPoint(contact);
-            if(ShotAge>=.5f)
-            {
-                var direction=contact-MuzzlePoint();if(direction.sqrMagnitude>.001f)flightRotation=Quaternion.LookRotation(direction);
-            }
-            attachedRotation=Quaternion.Inverse(target.rotation)*flightRotation;
-            if(Phase==CablePhase.Idle){loadedBolt.gameObject.SetActive(false);Phase=CablePhase.Attached;flightBolt.gameObject.SetActive(true);}
-        }
-
         Vector3 MuzzlePoint() => muzzle!=null&&muzzle.gameObject.activeInHierarchy?muzzle.position:tool.transform.position+Vector3.up*.6f+tool.transform.right*.2f;
 
         void SetBolt(Vector3 point,Quaternion rotation)
-        {flightBolt.gameObject.SetActive(true);flightBolt.SetPositionAndRotation(point-rotation*BoltTipLocal,rotation);}
+        {
+            flightBolt.gameObject.SetActive(true);
+            flightBolt.rotation=rotation;
+            flightBolt.position=point-flightBolt.TransformVector(BoltTipLocal);
+        }
 
         void Retract(float now)
         {retractStart=tip;phaseAt=now;Phase=CablePhase.Retracting;}
@@ -222,21 +237,8 @@ namespace Raid
 
         void Clear()
         {
-            Phase=CablePhase.Idle;attached=null;lastLength=0;
+            Phase=CablePhase.Idle;attached=null;inFlightContact=default;lastLength=0;
             if(cable!=null)cable.enabled=false;if(flightBolt!=null)flightBolt.gameObject.SetActive(false);if(loadedBolt!=null)loadedBolt.gameObject.SetActive(true);
-            if(reelAudio!=null)reelAudio.Stop();if(shotAudio!=null)shotAudio.mute=!Application.isFocused;
-        }
-
-        static AudioClip Sound(bool reel)
-        {
-            const int rate=22050;var samples=new float[reel?rate:rate/5];var random=new System.Random(reel?12202:12201);float filtered=0;
-            for(int i=0;i<samples.Length;i++)
-            {
-                float t=i/(float)rate;filtered=filtered*.7f+(float)(random.NextDouble()*2-1)*.3f;
-                float envelope=reel?.7f+.3f*Mathf.Sin(t*Mathf.PI*2*12):Mathf.Exp(-t*32);
-                samples[i]=(filtered*(reel?.14f:.45f)+Mathf.Sin(t*Mathf.PI*2*(reel?96:170))*(reel?.06f:.22f))*envelope;
-            }
-            var clip=AudioClip.Create(reel?"NEREID cable drive":"NEREID pneumatic harpoon",samples.Length,1,rate,false);clip.SetData(samples,0);return clip;
         }
 
         public void Release()
@@ -244,8 +246,6 @@ namespace Raid
             if(tool!=null)tool.ShotVisual-=OnShot;
             Clear();if(legacy!=null)legacy.enabled=tool!=null&&tool.NetworkObject!=null&&tool.IsClientInitialized&&(tool.OwnsFriendTether||tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired);
             if(material!=null){Destroy(material);material=null;}if(braid!=null){Destroy(braid);braid=null;}
-            if(shotAudio!=null)shotAudio.Stop();if(reelAudio!=null)reelAudio.Stop();
-            if(shotClip!=null){Destroy(shotClip);shotClip=null;}if(reelClip!=null){Destroy(reelClip);reelClip=null;}
             tool=null;legacy=null;
         }
         void OnDisable(){if(Phase!=CablePhase.Idle)Clear();}

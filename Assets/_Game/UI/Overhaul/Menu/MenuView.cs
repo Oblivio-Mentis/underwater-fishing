@@ -14,11 +14,12 @@ namespace Raid.UI
         readonly RectTransform surface, body;
         readonly Dictionary<UiPage, RectTransform> pages = new Dictionary<UiPage, RectTransform>();
         readonly TMP_Text title, subtitle, footer;
+        readonly Image headerSymbol;
         readonly Button back;
         UiPage page;
         bool createIntent = true, localTest;
 
-        Button createIntentButton, joinIntentButton, steamTab, localTab;
+        Button solo,createIntentButton, joinIntentButton, steamTab, localTab;
         RectTransform steamSection, localSection, steamCreateSection, steamJoinSection;
         TMP_Text mainStatus, steamState, connectionStatus, connectionBusy, crewCount, crewRole, crewLobby;
         TMP_InputField lobbyInput, addressInput;
@@ -29,7 +30,7 @@ namespace Raid.UI
         sealed class CrewRow
         {
             public Image Panel, Mark;
-            public TMP_Text Number, Name, Identity, State;
+            public TMP_Text Name, Identity, State;
         }
         sealed class SettingRow
         {
@@ -45,12 +46,14 @@ namespace Raid.UI
             surface = UiKit.Frame(parent, "MenuView", 1180, 810);
             Root = (RectTransform)surface.parent;
 
+            headerSymbol=UiKit.Symbol(surface,"Page symbol",DiveInstruments.Mark.Submarine,UiTheme.Cyan);
+            SetArea(headerSymbol.rectTransform,new Vector2(30,-33),new Vector2(110,90));
             var micro = UiKit.Label(surface, "Service", UiText.MenuService, 18, UiTheme.Cyan);
-            SetArea(micro.rectTransform, new Vector2(32, -18), new Vector2(1100, 26));
+            SetArea(micro.rectTransform, new Vector2(168, -19), new Vector2(950, 26));
             title = UiKit.Label(surface, "Title", UiText.MenuMainTitle, 40);
-            SetArea(title.rectTransform, new Vector2(30, -52), new Vector2(1108, 56));
+            SetArea(title.rectTransform, new Vector2(166, -52), new Vector2(970, 56));
             subtitle = UiKit.Label(surface, "Subtitle", "", 21, UiTheme.Muted);
-            SetArea(subtitle.rectTransform, new Vector2(32, -112), new Vector2(1100, 32));
+            SetArea(subtitle.rectTransform, new Vector2(168, -112), new Vector2(950, 32));
             var rule = UiKit.Panel(surface, "HeaderRule", UiTheme.Edge);
             rule.rectTransform.anchorMin = new Vector2(0, 1); rule.rectTransform.anchorMax = Vector2.one;
             rule.rectTransform.pivot = new Vector2(.5f, 1); rule.rectTransform.anchoredPosition = new Vector2(0, -155); rule.rectTransform.sizeDelta = new Vector2(-64, 2);
@@ -70,6 +73,15 @@ namespace Raid.UI
         public void Open(UiPage value)
         {
             page = value;
+            bool landing = page == UiPage.Main;
+            Root.sizeDelta = landing ? new Vector2(840, 642) : new Vector2(1180, 810);
+            float headingWidth = Root.sizeDelta.x - 200;
+            title.rectTransform.sizeDelta = new Vector2(headingWidth, 56);
+            subtitle.rectTransform.sizeDelta = new Vector2(headingWidth, 32);
+            headerSymbol.sprite=DiveInstruments.Art(value switch {
+                UiPage.Crew=>DiveInstruments.Mark.Helmet,UiPage.Connection=>DiveInstruments.Mark.Compass,
+                UiPage.Settings=>DiveInstruments.Mark.Spear,UiPage.Pause=>DiveInstruments.Mark.Helmet,
+                _=>DiveInstruments.Mark.Submarine });
             foreach (var entry in pages) entry.Value.gameObject.SetActive(entry.Key == value);
             back.gameObject.SetActive(value != UiPage.Main);
             if (value == UiPage.Main) { UiKit.Set(title, UiText.MenuBrand); UiKit.Set(subtitle, UiText.MenuMainSubtitle); }
@@ -91,7 +103,10 @@ namespace Raid.UI
             bool busy = session != null && session.Busy;
             bool connected = session != null && session.Connected;
             bool offlineAvailable = session != null && !busy && !connected;
-            UiKit.Set(mainStatus, session == null ? UiText.MenuConnectionMissing : session.Status);
+            solo.interactable=offlineAvailable;
+            var status=session == null ? UiText.MenuConnectionMissing : session.Status;
+            mainStatus.gameObject.SetActive(!string.IsNullOrWhiteSpace(status));
+            UiKit.Set(mainStatus, status);
             if (page == UiPage.Connection)
             {
                 var lobby = session == null ? null : session.lobby;
@@ -116,11 +131,10 @@ namespace Raid.UI
                 for (int i = 0; i < crewRows.Count; i++)
                 {
                     var row = crewRows[i]; var player = i < ctx.Players.Count ? ctx.Players[i] : null;
-                    UiKit.Set(row.Number, (i + 1).ToString("00"));
                     UiKit.Set(row.Name, player == null ? UiText.MenuCrewEmpty : UiText.PlayerName(player));
-                    UiKit.Set(row.Identity, player == null ? "" : UiText.MenuOwner(player.OwnerId));
+                    UiKit.Set(row.Identity, player == null ? "" : "ЗДР  " + Mathf.CeilToInt(player.Health) + "     O₂  " + Mathf.CeilToInt(player.Oxygen));
                     UiKit.Set(row.State, player == null ? UiText.MenuCrewWaiting : UiText.PlayerState(player));
-                    Color signal = player == null ? UiTheme.Edge : player.IsHelpless ? UiTheme.Red : player.IsTrapped ? UiTheme.Amber : player.IsInside ? UiTheme.Green : UiTheme.Cyan;
+                    Color signal = player == null ? UiTheme.Edge : player.IsDead||player.IsHelpless||player.IsTrapped ? UiTheme.Red : player.IsHypoxic ? UiTheme.Amber : player.IsInside ? UiTheme.Green : UiTheme.Cyan;
                     row.Mark.color = signal; row.State.color = player == null ? UiTheme.Muted : signal;
                     row.Name.color = player == null ? UiTheme.Muted : UiTheme.Text;
                 }
@@ -150,24 +164,15 @@ namespace Raid.UI
 
         void BuildMain()
         {
-            RectTransform ignored; var root = Page(UiPage.Main, false, out ignored);
-            ignored.gameObject.SetActive(false);
-            var row = UiKit.Row(root, "MainColumns", 44); UiKit.Fill(row);
-            var intro = UiKit.Column(row, "ExpeditionBrief", 18); UiKit.Size(intro, width: 515, flexibleWidth: 1);
-            Line(intro, "Heading", UiText.MenuMainHeading, 144, 56, UiTheme.Cyan);
-            Line(intro, "Description", UiText.MenuMainDescription, 160, 25);
-            Line(intro, "Loop", UiText.MenuMainLoop, 58, 18, UiTheme.Muted);
-            var rule = UiKit.Panel(intro, "Rule", UiTheme.Edge); UiKit.Size(rule, 2);
-            var statusScroll = UiKit.Scroll(intro, "SessionMessage", out var statusContent); UiKit.Size(statusScroll, 104);
-            mainStatus = UiKit.Label(statusContent, "Status", UiText.MenuConnectionMissing, 21, UiTheme.Muted);
-
-            var actions = UiKit.Column(row, "MainActions", 16); UiKit.Size(actions, width: 480, flexibleWidth: 1);
-            Line(actions, "Heading", UiText.MenuMainTitle, 56, 28);
-            UiKit.Button(actions, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); }, true, 68);
-            UiKit.Button(actions, "JoinSession", UiText.MenuJoin, () => { createIntent = false; localTest = false; app.ShowPage(UiPage.Connection); }, height: 68);
-            UiKit.Button(actions, "MainSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
-            UiKit.Button(actions, "MainQuit", UiText.MenuQuit, RequestQuit, height: 60);
-            Line(actions, "NavigationHelp", UiText.MenuFooterOffline, 88, 21, UiTheme.Muted);
+            Page(UiPage.Main, false, out var actions);
+            solo=UiKit.Button(actions,"SoloDive","Играть одному",()=>StartConnection(s=>s.HostLocal()),true,82);
+            var multiplayer = UiKit.Row(actions, "Multiplayer", 16);UiKit.Size(multiplayer, 70);
+            UiKit.Button(multiplayer, "CreateSession", UiText.MenuCreate, () => { createIntent = true; localTest = false; app.ShowPage(UiPage.Connection); });
+            UiKit.Button(multiplayer, "JoinSession", UiText.MenuJoin, () => { createIntent = false; localTest = false; app.ShowPage(UiPage.Connection); });
+            var utility = UiKit.Row(actions, "Options", 16);UiKit.Size(utility, 60);
+            UiKit.Button(utility, "MainSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings));
+            UiKit.Button(utility, "MainQuit", UiText.MenuQuit, RequestQuit);
+            mainStatus = Line(actions, "Session status", "", 88, 23, UiTheme.Amber);
         }
 
         void BuildConnection()
@@ -245,14 +250,14 @@ namespace Raid.UI
             crewRole = UiKit.Label(summary, "Role", "", 22, UiTheme.Muted); UiKit.Size(crewRole, width: 350);
             for (int i = 0; i < 5; i++)
             {
-                var panel = UiKit.Panel(content, "CrewSlot" + (i + 1), UiTheme.Panel); UiKit.Size(panel, 62);
+                var panel = UiKit.Panel(content, "CrewSlot" + (i + 1), UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 62);
                 var layout = UiKit.Row(panel.transform, "Row", 14, 9); UiKit.Fill(layout);
                 var mark = UiKit.Panel(layout, "Signal", UiTheme.Edge); UiKit.Size(mark, width: 5);
-                var number = UiKit.Label(layout, "Slot", (i + 1).ToString("00"), 25, UiTheme.Muted); UiKit.Size(number, width: 48);
+                var helmet=UiKit.Symbol(layout,"Suit",DiveInstruments.Mark.Helmet,UiTheme.Cyan); UiKit.Size(helmet,40,40);
                 var name = UiKit.Label(layout, "Name", UiText.MenuCrewEmpty, 25); UiKit.Size(name, flexibleWidth: 1);
                 var identity = UiKit.Label(layout, "Identity", "", 19, UiTheme.Muted); UiKit.Size(identity, width: 170);
                 var state = UiKit.Label(layout, "State", UiText.MenuCrewWaiting, 20, UiTheme.Muted); UiKit.Size(state, width: 245);
-                crewRows.Add(new CrewRow { Panel = panel, Mark = mark, Number = number, Name = name, Identity = identity, State = state });
+                crewRows.Add(new CrewRow { Panel = panel, Mark = mark, Name = name, Identity = identity, State = state });
             }
             crewLobby = Line(content, "LobbyNumber", UiText.MenuSteamLobbyInactive, 38, 22, UiTheme.Muted);
             var actions = UiKit.Row(content, "LobbyActions", 12); UiKit.Size(actions, 52);
@@ -268,7 +273,8 @@ namespace Raid.UI
         void BuildPause()
         {
             Page(UiPage.Pause, false, out var content);
-            Line(content, "Help", UiText.MenuPauseDescription, 94, 25, UiTheme.Muted);
+
+            Line(content, "DiveControls", UiText.MenuDiveControls, 40, 21, UiTheme.Muted);
             UiKit.Button(content, "PauseResume", UiText.MenuResume, () => app.ShowPage(UiPage.None), true, 64);
             UiKit.Button(content, "PauseSettings", UiText.MenuSettings, () => app.ShowPage(UiPage.Settings), height: 60);
             UiKit.Button(content, "PauseCrew", UiText.MenuCrew, () => app.ShowPage(UiPage.Crew), height: 60);
@@ -279,14 +285,13 @@ namespace Raid.UI
         void BuildSettings()
         {
             Page(UiPage.Settings, true, out var content);
-            AddSetting(content, "Volume", UiText.MenuVolume, 0, 1, () => app.Settings.volume, value => app.Settings.volume = value, UiText.MenuPercent);
             AddSetting(content, "Scale", UiText.MenuScale, .9f, 1.2f, () => app.Settings.scale, value => app.Settings.scale = value, UiText.MenuPercent);
             AddSetting(content, "Fov", UiText.MenuFov, 65, 100, () => app.Settings.fov, value => app.Settings.fov = value, UiText.MenuDegrees);
             AddSetting(content, "Sensitivity", UiText.MenuSensitivity, .4f, 2, () => app.Settings.sensitivity, value => app.Settings.sensitivity = value, UiText.MenuPercent);
             Line(content, "LocalOnly", UiText.MenuSettingsLocalOnly, 62, 21, UiTheme.Muted);
             UiKit.Button(content, "RestoreDefaults", UiText.MenuRestore, () =>
             {
-                app.Settings.volume = .8f; app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1;
+                app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1;
                 foreach (var row in settingRows) row.Slider.SetValueWithoutNotify(row.Read());
                 app.ApplySettings(); Refresh(); app.Toast(UiText.MenuRestoreDone);
             });
@@ -294,7 +299,7 @@ namespace Raid.UI
 
         void AddSetting(Transform parent, string name, string caption, float min, float max, Func<float> read, Action<float> write, Func<float, string> format)
         {
-            var panel = UiKit.Panel(parent, name + "Setting", UiTheme.Panel); UiKit.Size(panel, 92);
+            var panel = UiKit.Panel(parent, name + "Setting", UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 92);
             var column = UiKit.Column(panel.transform, "Content", 8, 12); UiKit.Fill(column);
             var heading = UiKit.Row(column, "Heading", 16); UiKit.Size(heading, 28);
             var label = UiKit.Label(heading, "Label", caption, 21, UiTheme.Muted); UiKit.Size(label, flexibleWidth: 1);

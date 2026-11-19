@@ -17,11 +17,11 @@ namespace Raid.UI
         public TeamProgress View => Connected && World!=null ? World.View:null;
         public ProgressionTuning Tuning => World==null?null:World.progression;
         public ThreatDirector Threats => World==null?null:World.threats;
+        public bool DefendingReservoir => Connected && Threats!=null && Threats.WaveActive;
         public bool Connected => Session!=null && Session.Connected && Player!=null;
-        public bool AtBase => World!=null && World.AtBase;
         public ShipConsole SelectedConsole {get;set;}
         public ShipConsole AimedConsole {get;private set;}
-        public bool NearTerminal => SelectedConsole!=null?SelectedConsole.InRange(Player):ShipConsole.Stations.Count==0&&Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange;
+        public bool NearTerminal => Player!=null && Player.IsInside && (SelectedConsole!=null?SelectedConsole.InRange(Player):ShipConsole.Stations.Count==0 && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange);
         public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.cargoPosition)<World.tuning.interactionRange;
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
@@ -49,18 +49,14 @@ namespace Raid.UI
             foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
-            var playerCamera=Player.GetComponentInChildren<Camera>();RaycastHit consoleHit;
-            if(playerCamera!=null && Physics.Raycast(playerCamera.transform.position,playerCamera.transform.forward,out consoleHit,4f,~0,QueryTriggerInteraction.Ignore))
-            {
-                var station=consoleHit.collider.GetComponentInParent<ShipConsole>();
-                if(station!=null && station.InRange(Player)){AimedConsole=station;Interaction=UiInteraction.Terminal;return;}
-            }
-            if(NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
+            AimedConsole=ShipConsole.ResolveSight(Player,Player.GetComponentInChildren<Camera>());
+            if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}
+            if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
             var camera=Camera.main;RaycastHit hit;
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
             {
                 AimedLoot=hit.collider.GetComponentInParent<LootActor>();AimedFish=hit.collider.GetComponentInParent<FishActor>();
-                if(AimedLoot!=null && hit.distance<=3 && !AtBase && AimedLoot.CarrierOwnerId<0 && !Loot.Any(l=>l!=null&&l.CarrierOwnerId==Player.OwnerId)){Interaction=UiInteraction.Loot;return;}
+                if(AimedLoot!=null && hit.distance<=3 && AimedLoot.CarrierOwnerId<0 && !Loot.Any(l=>l!=null&&l.CarrierOwnerId==Player.OwnerId)){Interaction=UiInteraction.Loot;return;}
             }
             foreach(var other in Players)
             {

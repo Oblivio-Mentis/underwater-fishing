@@ -1,6 +1,6 @@
 Shader "RAID/Nereid Reef"
 {
-    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 }
+    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 _BasaltLayers("Basalt layers",Range(0,1))=0 }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry"}
@@ -16,8 +16,32 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow;
+            float _Glow, _Hide, _BasaltLayers;
             CBUFFER_END
+            #include "NereidDiveLamp.hlsl"
+            #include "NereidWaterColumn.hlsl"
+            // Squared-distance extinction, diffuse skylight and work-light attenuation at this depth.
+            float3 _NereidReefClarity;
+            // This large generated terrain is shared by both Forward renderers. Read the three
+            // actual spot lights so distant per-object light selection cannot move their footprints.
+            float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
+            half3 HullIrradiance(float3 position,half3 n)
+            {
+                float3 total=0;
+                [unroll] for(int j=0;j<3;j++)
+                {
+                    float4 source=_NereidWorkLightPositions[j], axis=_NereidWorkLightDirections[j], lamp=_NereidWorkLightRadiance[j];
+                    float3 ray=position-source.xyz;
+                    float squared=max(dot(ray,ray),.01);
+                    float3 dir=ray*rsqrt(squared);
+                    float spot=saturate((dot(axis.xyz,dir)-axis.w)*lamp.w);
+                    float fraction=squared*source.w;
+                    float falloff=saturate(1-fraction*fraction);
+                    float incidence=saturate(dot(n,-dir));
+                    total+=lamp.rgb*(spot*spot*falloff*falloff*incidence/max(4.,squared));
+                }
+                return total;
+            }
             struct Input {float3 pos:POSITION;float3 norm:NORMAL;half4 color:COLOR;};
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;half4 color:COLOR;half fog:TEXCOORD2;};
             Vary vert(Input v)
@@ -63,6 +87,17 @@ Shader "RAID/Nereid Reef"
                 half sun=saturate(dot(n,normalize(half3(-.49,.84,-.21))));
                 half light=.43+.54*sun+.14*saturate(dot(n,key.direction))*key.shadowAttenuation;
                 half3 base=i.color.rgb*_Tint.rgb;
+                if (_BasaltLayers > .5)
+                {
+                    // World-space bedding follows the formation across its differently scaled facets.
+                    float2 fracture=i.pos.xz*.27+i.pos.y*float2(.11,-.13);
+                    float uplift=ReefNoise(fracture);
+                    float bed=i.pos.y*.38+dot(i.pos.xz,float2(.105,-.073))+uplift*.95;
+                    float seam=(1-smoothstep(.014,.088,abs(frac(bed)-.5)))*smoothstep(.28,.72,uplift);
+                    float mineral=.72*uplift+.28*ReefNoise(fracture*2.7+bed*.13);
+                    base=lerp(half3(.062,.099,.114),half3(.16,.21,.19),mineral)
+                        *(.80+.20*saturate(n.y+.4))*(1-.13*seam);
+                }
                 half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
                 half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
                 rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool+half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
@@ -70,7 +105,20 @@ Shader "RAID/Nereid Reef"
                 float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
                 half3 transmit=exp(-range*float3(.031,.019,.014));
                 half3 water=half3(.010,.071,.098);
-                return half4(rgb*transmit+water*(1-transmit),1);
+                half3 outside=rgb*transmit+water*(1-transmit);
+                float3 toSurface=i.pos-GetCameraPositionWS();
+                float d=max(.01,length(toSurface));
+                float pool=NereidBeam(i.pos);
+                float face=abs(dot(n,-toSurface/d));
+                float rim=(1.-face)*(1.-face);
+                float wrapped=.32+.68*face;
+                float clarity=exp2(-d*d*_NereidReefClarity.x);
+                half3 closeColor=rgb*_NereidReefClarity.y+pool*(base*(wrapped*1.45)+half3(.016,.027,.028)*(.4+grain)*wrapped);
+                closeColor+=_Hide*pool*rim*half3(.025,.092,.103);
+                half3 murk=lerp(WaterColumnColor(toSurface/d),closeColor,clarity);
+                half3 workLight=base*HullIrradiance(i.pos,n)*(.86+.18*grain);
+                half3 workTransmission=lerp(transmit,exp2(-d*_NereidReefClarity.z*half3(.14,.114,.10)),_NereidTurbidity);
+                return half4(lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission,1);
             }
             ENDHLSL
         }

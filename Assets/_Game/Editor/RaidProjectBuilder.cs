@@ -59,7 +59,7 @@ namespace Raid.Editor
             RenderSettings.fog=true; RenderSettings.fogColor=new Color(.025f,.13f,.17f);
             RenderSettings.fogMode=FogMode.ExponentialSquared; RenderSettings.fogDensity=.025f;
             RenderSettings.skybox=null;
-            var camera=new GameObject("Menu Camera",typeof(Camera),typeof(AudioListener)).GetComponent<Camera>();
+            var camera=new GameObject("Menu Camera",typeof(Camera)).GetComponent<Camera>();
             camera.transform.position=new Vector3(4,3,-6); camera.transform.LookAt(new Vector3(0,1,4));
             camera.clearFlags=CameraClearFlags.SolidColor; camera.backgroundColor=RenderSettings.fogColor;
 

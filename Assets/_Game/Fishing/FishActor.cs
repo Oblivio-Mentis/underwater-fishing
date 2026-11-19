@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public sealed class FishActor : NetworkBehaviour, IUniversalFsmStateChangeSource
+    public sealed partial class FishActor : NetworkBehaviour, IUniversalFsmStateChangeSource
     {
         public FishingTuning tuning;
         public UniversalFsmDefinitionAsset fsmDefinition;
@@ -23,7 +23,7 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public float Tension, Stamina;
-            public bool Active, Stowed;
+            public bool Active, Stowed, Startled;
             public int Holder;
         }
 
@@ -57,17 +57,39 @@ namespace Raid
 
         private void RenewCargoId() => _cargoId = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
 
+        Transform tailSurface;
+        public Transform ImpactSurface(bool tail) => _model == null ? transform : tail ? tailSurface : _model.transform;
+
         private void Awake()
         {
             _renderers = GetComponentsInChildren<Renderer>();
             _colliders = GetComponentsInChildren<Collider>();
+            if (CatchFishModel.Supports(SpeciesId))
+            {
+                foreach (var original in _renderers) original.enabled=false;
+                foreach (var hull in _colliders) hull.enabled=false;
+                _model=CatchFishModel.Create(transform,SpeciesId);
+                tailSurface=_model.GetComponent<CatchFishModel>().Tail;
+                _renderers=_model.GetComponentsInChildren<Renderer>();
+                _colliders=new Collider[] { SurfaceCollider(_model.transform),SurfaceCollider(tailSurface) };
+            }
             _tint = new MaterialPropertyBlock();
             _snapshot.OnChange += OnSnapshotChanged;
             if (tuning != null) _snapshot.UpdateSettings(new SyncTypeSettings(Mathf.Max(0.02f, tuning.snapshotInterval)));
         }
 
+        private MeshCollider SurfaceCollider(Transform part)
+        {
+            part.gameObject.layer=gameObject.layer;
+            var surface=part.gameObject.AddComponent<MeshCollider>();
+            surface.sharedMesh=part.GetComponent<MeshFilter>().sharedMesh;
+            surface.enabled=false;
+            return surface;
+        }
+
         public override void OnStartServer()
         {
+            ServerSchool.Add(this);
             if (tuning == null || fsmDefinition == null || fsmProfile == null)
                 throw new InvalidOperationException("Assign fishing tuning, native FSM definition and profile to FishActor.");
             _origin = transform.position;
@@ -83,12 +105,6 @@ namespace Raid
 
         public override void OnStartClient()
         {
-            if (_model == null && CatchFishModel.Supports(SpeciesId))
-            {
-                foreach (var previous in _renderers) previous.enabled = false;
-                _model = CatchFishModel.Create(transform, SpeciesId);
-                _renderers = _model.GetComponentsInChildren<Renderer>();
-            }
             if (presentationProfile == null) return;
             _presentation = GetComponent<FsmPresentationDriver>();
             if (_presentation == null) _presentation = gameObject.AddComponent<FsmPresentationDriver>();
@@ -99,6 +115,8 @@ namespace Raid
 
         public override void OnStopServer()
         {
+            ServerSchool.Remove(this);
+            arrivalPending=false;
             if (_hooker != null) _hooker.NotifyFishLost(this);
             _hooker = null;
             _runtime?.Dispose();
@@ -113,7 +131,7 @@ namespace Raid
 
         public bool TryHook(HarpoonTool tool)
         {
-            if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || _hooker != null || Mode != FishMode.Roam || DesiredState != FishMode.Roam) return false;
+            if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || _hooker != null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt) return false;
             _hooker = tool;
             DesiredState = FishMode.Hooked;
             var state = _snapshot.Value;
@@ -126,9 +144,11 @@ namespace Raid
         public void ReleaseHook(HarpoonTool tool)
         {
             if (!IsServerInitialized || tool != _hooker || DesiredState == FishMode.Transported) return;
+            FleeFromLine(tool);
             _hooker = null;
             tool.NotifyFishLost(this);
-            DesiredState = Mode == FishMode.Captured ? FishMode.Roam : FishMode.Escaped;
+            // A quick release can arrive before the FSM consumes the hook request.
+            DesiredState = Mode == FishMode.Captured || Mode == FishMode.Roam ? FishMode.Roam : FishMode.Escaped;
         }
 
         public bool MarkTransported(HarpoonTool tool)
@@ -144,12 +164,17 @@ namespace Raid
         {
             if (!IsServerInitialized) return;
             if (_hooker != null) ReleaseHook(_hooker);
+            arrivalPending=false;
+            fleeRemaining=0;
+            hookAvailableAt=avoidUntil=0;
             _depthActive = active;
             transform.position = _origin;
             DesiredState = FishMode.Roam;
             _runtime?.Reset();
             var state = _snapshot.Value;
             state.Position = _origin;
+            state.Rotation = transform.rotation;
+            state.Startled = false;
             state.Active = active;
             state.Stowed = false;
             state.Holder = -1;
@@ -170,6 +195,7 @@ namespace Raid
             state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
             state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
             if (state.Stowed) _hooker = null;
+            if (mode != FishMode.Roam && mode != FishMode.Escaped) {state.Startled=false;fleeRemaining=0;}
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
@@ -177,6 +203,7 @@ namespace Raid
             }
             if (mode == FishMode.Escaped && _hooker != null)
             {
+                FleeFromLine(_hooker);
                 _hooker.NotifyFishLost(this);
                 _hooker = null;
             }
@@ -187,7 +214,20 @@ namespace Raid
 
         private void FixedUpdate()
         {
-            if (!IsServerInitialized || !_depthActive || _runtime == null) return;
+            if (!IsServerInitialized || _runtime == null) return;
+            if(arrivalPending)TryArrive();
+            if(!_depthActive)return;
+            if(staggered && Mode==FishMode.Transported && _elapsed>=tuning.respawnSeconds)
+            {
+                ScheduleAt(Time.time+2.5f);
+                return;
+            }
+            if(staggered && Mode==FishMode.Roam && DesiredState==FishMode.Roam && Time.time>departureAt &&
+                NearestSwimmer(transform.position,14)==null && HasRoamingReplacement())
+            {
+                ScheduleAt(Time.time+18);
+                return;
+            }
             _runtime.Tick(Time.fixedDeltaTime);
             _runtime.FixedTick(Time.fixedDeltaTime);
         }
@@ -200,6 +240,8 @@ namespace Raid
             switch (mode)
             {
                 case FishMode.Roam:
+                    if(Nereid.NereidVessel.Active!=null || fleeRemaining>0){SwimReef(dt,ref state);break;}
+                    state.Startled=false;
                     Vector3 patrol = _origin + new Vector3(Mathf.Sin(_clock * tuning.roamSpeed), Mathf.Sin(_clock * tuning.roamSpeed * 0.5f) * 0.25f, Mathf.Cos(_clock * tuning.roamSpeed)) * tuning.swimRadius;
                     MoveTowards(patrol, tuning.roamSpeed * dt);
                     break;
@@ -221,11 +263,11 @@ namespace Raid
                     }
                     break;
                 case FishMode.Escaped:
-                    MoveTowards(_origin, tuning.escapeSpeed * dt);
+                    SwimReef(dt,ref state);
                     if (_elapsed >= tuning.escapeRecoverySeconds) DesiredState = FishMode.Roam;
                     break;
                 case FishMode.Transported:
-                    if (_elapsed >= tuning.respawnSeconds)
+                    if (!staggered && _elapsed >= tuning.respawnSeconds)
                     {
                         transform.position = _origin;
                         RenewCargoId();

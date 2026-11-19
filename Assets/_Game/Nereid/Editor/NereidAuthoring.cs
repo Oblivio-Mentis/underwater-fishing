@@ -430,7 +430,12 @@ namespace Raid.Nereid.Editor
         {
             // Nearby reef geometry is visible from the real pressure windows, not a painted window backdrop.
             var rock=AssetDatabase.LoadAssetAtPath<Mesh>("Assets/_Game/VisualSlice/Generated/Meshes/RockMesh201.asset");
-            var rockMaterial=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/VisualSlice/Generated/Materials/Rock.mat");
+            var legacyRock=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/VisualSlice/Generated/Materials/Rock.mat");
+            var rockMaterial=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Nereid_LayeredBasalt.mat");
+            var firstLocation=GameObject.Find("RAID010 Visuals");
+            if(legacyRock!=null && rockMaterial!=null && firstLocation!=null)
+                foreach(var renderer in firstLocation.GetComponentsInChildren<MeshRenderer>(true))
+                    if(renderer.sharedMaterial==legacyRock)renderer.sharedMaterial=rockMaterial;
             if(rock==null)return;
             Solid("Industrial fishing seabed",new Vector3(0,-8.8f,0),new Vector3(100,.05f,100),"Nereid_Dark");
             if(rockMaterial!=null)root.Find("Industrial fishing seabed").GetComponent<Renderer>().sharedMaterial=rockMaterial;

@@ -26,6 +26,7 @@ namespace Raid
         private HarpoonTool host, helper;
         private float nextGrip;
         private bool refreshGrip;
+        private ThreatDirector pausedThreats;
 
         public static void Begin(string remoteProbeDirectory, string resultPath)
         {
@@ -69,6 +70,7 @@ namespace Raid
             {
                 try { Send("fish_grip", 0); } catch (IOException) { }
             }
+            RestoreThreats();
             Write();
             Debug.Log($"[FishingTrial] {result.status} / {result.phase}: {result.error} ({reportPath})");
             Destroy(gameObject);
@@ -94,7 +96,7 @@ namespace Raid
             Require(host.CatchCount == 0 && host.HookedFish == null && !host.TetherActive, "Host must start with free hands and empty catch pockets.");
             Check("Distinct connected owners " + host.OwnerId + " and " + helper.OwnerId);
 
-            if (world.AtBase)
+            if (world.CurrentDepth != 1)
             {
                 Phase("Choose shallow expedition at chart console");
                 var station = ShipConsole.Stations.First(s => s.kind == ShipConsoleKind.Depths);
@@ -108,18 +110,26 @@ namespace Raid
                 }
                 Require(aligned && helper.Motor.IsInside, "Could not reach the chart console from its dry interior.");
                 world.Command(WorldAction.DiveOne, 0);
-                yield return Wait(() => !world.AtBase, 12, "Dive command refused: " + world.Message);
+                yield return Wait(() => world.CurrentDepth == 1, 12, "Dive command refused: " + world.Message);
             }
             Require(world.CurrentDepth == 1 && world.Team.hoistPhase == HoistPhase.Loading, "Shallow depth and available winch required.");
             Require(world.Team.Capacity(world.progression) - world.Team.CargoUsed >= 6, "The verified catches occupy six cage units.");
+            // Predator encounters have their own trial. A bite can legitimately remove the exact fish being audited.
+            if(world.threats!=null && world.threats.enabled)
+            {
+                pausedThreats=world.threats;
+                pausedThreats.enabled=false;
+                Check("Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.");
+            }
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Host harpoon could not be equipped.");
 
             foreach (var species in new[] { "Needlefish", "Lanternfish", "Needlefish" })
             {
                 Phase("Solo capture / " + species);
+                yield return RefillOnDeck();
                 var fish = Fish(species);
-                yield return Wait(() => fish.Mode == FishMode.Roam, 16, "School did not repopulate " + species + " while the first catch was stowed.");
+                yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "School did not repopulate " + species + " while the first catch was stowed.");
                 yield return Hook(fish);
                 yield return Reel(fish);
                 Require(!host.HandsFull && host.HookedFish == null && host.CarriedFish != null,
@@ -139,7 +149,9 @@ namespace Raid
             Check("Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.");
 
             Phase("Heavy solo attempt");
+            yield return RefillOnDeck();
             var heavy = Fish("Bristlefish");
+            yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,65,"Heavy school did not arrive.");
             yield return Hook(heavy);
             yield return Wait(() => heavy.Mode == FishMode.Struggling, 4, "Heavy fish did not enter its struggle.");
             float initial = heavy.Stamina;
@@ -162,9 +174,12 @@ namespace Raid
             Phase("Cooperative pull and heavy carry");
             yield return Reel(heavy);
             refreshGrip = false;
-            Send("fish_grip", 0);
-            Require(host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4,
-                "Paired capture lost a pocket or failed to occupy both hands.");
+            Require(!host.Motor.IsDead && host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4,
+                $"Heavy carry mismatch: health {host.Motor.Health:F1}, O2 {host.Motor.Oxygen:F1}, mode {heavy.Mode}, hands {host.HandsFull}, catches {host.CatchCount}.");
+            string releaseGrip=Send("fish_grip",0);
+            yield return Wait(() => {var peer=ReadClient();return peer?.request==releaseGrip && peer.assistedOwner<0 && !host.IsAssisted;},
+                12,"The independent helper did not return to its free-hand state after capture.");
+            yield return VerifyBothBolts();
             Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
             yield return Pause(.5f);
             yield return Shot("catch-heavy.png");
@@ -188,10 +203,45 @@ namespace Raid
             yield return Pause(.3f);
             world.Command(WorldAction.Hoist, 0);
             yield return Wait(() => world.Team.hoistPhase != HoistPhase.Loading, 4, "Winch command refused.");
+            yield return RefillOnDeck();
             yield return Wait(() => world.Team.hoistPhase == HoistPhase.Loading && caughtIds.All(id => world.Team.tank.Exists(item => item.id == id))
-                && cage.Count == 0 && ReadClient()?.cageSwimmers == 0, 40, "Hoist did not deliver and clear both visible cages.");
+                && cage.Count == 0 && ClientReceivedDelivery(caughtIds), 45, "Host and client did not return to Loading with the same four delivered identities.");
             Check("Winch delivered each original ID to the reservoir and both cages emptied.");
         }
+
+        private IEnumerator RefillOnDeck()
+        {
+            // Same dry crew arrival deck as RaidWorld.CompleteTravel; leave O2 replenishment to the motor.
+            host.Motor.Teleport(new Vector3(-3,1.2f,1));
+            helper.Motor.Teleport(new Vector3(-1.5f,1.2f,1));
+            Physics.SyncTransforms();
+            float capacity(DiverMotor diver) => Mathf.Max(1,diver.tuning.oxygenCapacity*diver.OxygenMultiplier);
+            float timeout(DiverMotor diver) => (capacity(diver)-diver.Oxygen)/Mathf.Max(.01f,diver.tuning.oxygenRecovery);
+            bool ready(DiverMotor diver) => diver.IsInside && diver.Oxygen>=capacity(diver)-.05f;
+            Require(!host.Motor.IsDead && !helper.Motor.IsDead && host.Motor.IsInside && helper.Motor.IsInside,
+                "Both live crew must start the rest break on the dry arrival deck.");
+            yield return Wait(()=>ready(host.Motor) && ready(helper.Motor),
+                8+3*Mathf.Max(timeout(host.Motor),timeout(helper.Motor)), "Dry-deck oxygen recovery failed.");
+            Check($"Both divers ready on the dry deck: host O2 {host.Motor.Oxygen:F1}, peer O2 {helper.Motor.Oxygen:F1}.");
+        }
+
+        private bool ClientReceivedDelivery(long[] ids)
+        {
+            var peer=ReadClient();
+            if(peer==null || peer.cageSwimmers!=0 || string.IsNullOrEmpty(peer.team))return false;
+            var manifest=JsonUtility.FromJson<TeamProgress>(peer.team);
+            return manifest!=null && manifest.hoistPhase==HoistPhase.Loading
+                && manifest.tank!=null && ids.All(id=>manifest.tank.Exists(item=>item.id==id));
+        }
+
+        private void RestoreThreats()
+        {
+            if(pausedThreats==null)return;
+            pausedThreats.enabled=true;
+            pausedThreats=null;
+        }
+
+        private void OnDestroy() => RestoreThreats();
 
         private FishActor Fish(string species) => FindObjectsByType<FishActor>().Single(f => f.depthTier == 1 && f.SpeciesId == species);
 
@@ -229,6 +279,21 @@ namespace Raid
                 yield return null;
             }
             host.QaHoldOwned(false, 0);
+        }
+
+        private IEnumerator VerifyBothBolts()
+        {
+            var local=FindObjectsByType<HarpoonShotFx>().FirstOrDefault(fx=>fx.VerifiedOwner==host.OwnerId
+                && fx.VerifiedShot==host.ShotSequence && fx.VerifiedFrames>=6 && fx.AnchorTravel>.2f);
+            Require(local!=null,"No moving host bolt was measured during the cooperative pull.");
+            Require(local.MaxTipError<.001f && local.MaxKnotError<.001f,"Host bolt separated from the fish or its cable.");
+            var request=Send("snapshot",0);
+            yield return Wait(()=>ReadClient()?.request==request,8,"No independent bolt snapshot.");
+            var peer=ReadClient();
+            Require(peer!=null && peer.anchorOwner==host.OwnerId && peer.anchorShot==host.ShotSequence
+                && peer.anchorFrames>=6 && peer.anchorTravel>.2f, "Peer did not observe the same moving hook.");
+            Require(peer.anchorTipError<.001f && peer.anchorKnotError<.001f,"Remote bolt separated from the fish or its cable.");
+            Check($"Hook #{host.ShotSequence}, host/peer frames {local.VerifiedFrames}/{peer.anchorFrames}, attached travel {local.AnchorTravel:F3}/{peer.anchorTravel:F3} m, worst tip drift {local.MaxTipError:F6}/{peer.anchorTipError:F6} m, worst nock drift {local.MaxKnotError:F6}/{peer.anchorKnotError:F6} m.");
         }
 
         private string Send(string action, float value)

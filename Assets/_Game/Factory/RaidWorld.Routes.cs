@@ -14,7 +14,7 @@ namespace Raid
         void ResetFishRoute() { routeIds.Clear();fishRoute.Value=default;nextRoutePublish=0;routeElapsed=0; }
         bool BeginFishRoute(bool feeding)
         {
-            if(fishRoute.Value.active || (!feeding&&!AtBase))return false;
+            if(fishRoute.Value.active)return false;
             routeIds.Clear();routeIds.AddRange(team.tank.Where(x=>x.offering>0).Select(x=>x.id));
             if(routeIds.Count==0)return false;
             routeElapsed=0;

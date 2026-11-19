@@ -1,0 +1,82 @@
+{
+  "source": "dc70e2c28cdebcee2d42a1bab6990cacdd46c198",
+  "unit": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 1.0597807,
+    "resultState": "Passed"
+  },
+  "windowsRelease": {
+    "job_id": "build-5e0f931365",
+    "result": "succeeded",
+    "platform": "StandaloneWindows64",
+    "output_path": "Builds/RAID013-Expedition/UnderwaterFishing.exe",
+    "started_at": "2026-11-19T12:39:46.3260597Z",
+    "duration_seconds": 27.0470039,
+    "completed_at": "2026-11-19T12:40:13.3730636Z",
+    "total_size_mb": 110.92,
+    "errors": 0,
+    "warnings": 0
+  },
+  "windowsDevelopment": {
+    "job_id": "build-09d49b6a31",
+    "result": "succeeded",
+    "platform": "StandaloneWindows64",
+    "output_path": "Builds/RAID013-Expedition-QA/UnderwaterFishing.exe",
+    "started_at": "2026-11-19T12:40:26.4920654Z",
+    "duration_seconds": 24.892028399999997,
+    "completed_at": "2026-11-19T12:40:51.3840938Z",
+    "total_size_mb": 176.77,
+    "errors": 0,
+    "warnings": 0
+  },
+  "archive": {
+    "file": "RAID013-Expedition.zip",
+    "bytes": 51284136,
+    "sha256": "b82168d74319a9a724437952e78f844cdded75a714d9679acb5f7a1e2ea6bfdc"
+  },
+  "checks": [
+    "Travel begins with a quiet fishing ground",
+    "A single scout swims into the habitat",
+    "Scout advances along its patrol",
+    "An accepted near miss startles a free fish",
+    "Fish settles after the shot",
+    "A close living swimmer makes the scout flee",
+    "Startled fish actually moves away",
+    "Three fish arrive over separate release windows",
+    "Dry deck restores authored visibility",
+    "Depth one active",
+    "Nearby passive angler watches the diver in murky water",
+    "Angler gives a display before contact",
+    "Angler pursues after its warning",
+    "Angler ambush removes oxygen",
+    "Clicker strikes a sudden acceleration",
+    "Bottom trap closes and holds",
+    "Clam releases after server rescue",
+    "Depth two active",
+    "Eel warns with three occupied pockets",
+    "Dropped fish diverts eel",
+    "Deep encounter restarted",
+    "Eel bites and steals exactly one fish",
+    "Rift reset",
+    "Sustained winch telegraphs locked Kraken sweep",
+    "Exposed target takes Kraken sweep",
+    "Rift reset for escape",
+    "Second sweep telegraphs",
+    "Swimming out of the locked area avoids hit"
+  ],
+  "client": {
+    "transport": "FishNet local",
+    "device": "Windows x64 D3D11",
+    "players": 2,
+    "capture": [
+      1280,
+      720
+    ],
+    "audioSources": 0,
+    "audioListeners": 0
+  },
+  "editorErrors": 0
+}

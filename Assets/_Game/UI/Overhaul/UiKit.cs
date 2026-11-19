@@ -24,10 +24,19 @@ namespace Raid.UI
         {
             var r=Node(parent,name);var image=r.gameObject.AddComponent<Image>();image.color=color;image.raycastTarget=raycast;return image;
         }
+        internal static void Tile(Image image)
+        {
+            image.sprite=DiveInstruments.Art(DiveInstruments.Mark.Tile);image.type=Image.Type.Sliced;
+        }
+        internal static Image Symbol(Transform parent,string name,DiveInstruments.Mark mark,Color color)
+        {
+            var image=Panel(parent,name,color);image.sprite=DiveInstruments.Art(mark);image.preserveAspect=true;return image;
+        }
         public static RectTransform Frame(Transform parent,string name,float width=1180,float height=810)
         {
             var edge=Panel(parent,name,UiTheme.Edge,true);Place(edge.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(width,height));
-            var inside=Panel(edge.transform,"Surface",UiTheme.Steel,true);Fill(inside.rectTransform,2);return inside.rectTransform;
+            Tile(edge);
+            var inside=Panel(edge.transform,"Surface",UiTheme.Steel,true);Tile(inside);Fill(inside.rectTransform,2);return inside.rectTransform;
         }
         public static TMP_Text Label(Transform parent,string name,string value,float size=22,Color? color=null)
         {
@@ -53,13 +62,13 @@ namespace Raid.UI
         }
         public static Button Button(Transform parent,string name,string caption,UnityAction clicked,bool primary=false,float height=52)
         {
-            var image=Panel(parent,name,primary?UiTheme.Cyan:UiTheme.Panel,true);var button=image.gameObject.AddComponent<Button>();button.targetGraphic=image;
+            var image=Panel(parent,name,primary?UiTheme.Cyan:UiTheme.Panel,true);Tile(image);var button=image.gameObject.AddComponent<Button>();button.targetGraphic=image;
             var colors=button.colors;colors.normalColor=Color.white;colors.highlightedColor=new Color(1.22f,1.25f,1.25f);colors.pressedColor=new Color(.72f,.78f,.8f);
             colors.selectedColor=new Color(1.18f,1.2f,1.1f);colors.disabledColor=new Color(.46f,.52f,.55f,.75f);colors.fadeDuration=.08f;button.colors=colors;
             var edge=image.gameObject.AddComponent<Outline>();edge.effectColor=UiTheme.Edge;edge.effectDistance=new Vector2(1,-1);
             var text=Label(image.transform,"Caption",caption,22,primary?UiTheme.Steel:UiTheme.Text);Fill(text.rectTransform,10);text.alignment=TextAlignmentOptions.Center;
             image.gameObject.AddComponent<UiButtonFeedback>().primary=primary;
-            Size(image,height,flexibleWidth:1);if(clicked!=null)button.onClick.AddListener(()=>{UnderwaterLook.Instance?.Click();clicked();});return button;
+            Size(image,height,flexibleWidth:1);if(clicked!=null)button.onClick.AddListener(clicked);return button;
         }
         public static void Caption(Button button,string value) { var label=button.GetComponentInChildren<TMP_Text>();if(label.text!=value)label.text=value; }
         public static ScrollRect Scroll(Transform parent,string name,out RectTransform content)

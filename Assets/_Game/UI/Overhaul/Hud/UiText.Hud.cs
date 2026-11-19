@@ -7,7 +7,6 @@ namespace Raid.UI
         public const string HudDiverSystems="СИСТЕМЫ ВОДОЛАЗА";
         public const string HudInside="Кислород восполняется";
         public const string HudOutside="Под водой";
-        public const string HudBase="БАЗА";
         public const string HudStock="РЫБА";
         public const string HudReservoir="В резервуаре";
         public const string HudHunger="ГОЛОД ЧУДОВИЩА ЧЕРЕЗ";
@@ -23,12 +22,9 @@ namespace Raid.UI
         public const string HudCargoReady="Готов к загрузке";
         public const string HudCargoFull="КОНТЕЙНЕР ПОЛОН";
         public const string HudTerminalPrompt="E — терминал резервуара";
-        public const string HudTerminalBaseHint="Улов, улучшения и выбор глубины";
-        public const string HudTerminalDiveHint="Улов, кормление и возвращение на базу";
-        public const string HudProcessAtBase="Переработка доступна на базе";
+        public const string HudTerminalHint="Улов, улучшения и выбор глубины";
         public const string HudCargoPrompt="E — управление контейнером";
         public const string HudLoadPrompt="E — загрузить улов";
-        public const string HudCargoBaseHint="Загрузка улова доступна во время экспедиции";
         public const string HudHoistReady="Улов загружен — можно начать подъём";
         public const string HudCargoEmpty="Доставьте улов, чтобы начать подъём";
         public const string HudLootPrompt="E — подобрать технический груз";
@@ -49,18 +45,16 @@ namespace Raid.UI
         public const string HudPressureWarningHint="Двигайтесь к безопасной глубине";
         public const string HudWave="НАПАДЕНИЕ НА РЕЗЕРВУАР";
         public const string HudWaveHint="Защитите необработанный улов гарпунами";
-        public const string HudWaveEnded="Нападение завершено. Технологии и улучшения сохранены";
+        public const string HudWaveEnded="Оборона завершена. Начался новый срок кормления";
         public static string HudCrewCount(int value) => HudCrew+"  "+value+" / 5";
         public static string HudPlayerName(DiverMotor player) => (player.OwnerId+1).ToString("00")+(player.IsOwner?" · ВЫ":"");
         public static string HudStockDetail(int technicalCount) => technicalCount>0?"Техгруз: "+technicalCount:HudReservoir;
         public static string HudOxygen(float current,float capacity) => "Кислород  "+current.ToString("0")+" / "+capacity.ToString("0");
         public static string HudStress(float stress,bool inside) => "Нагрузка  "+stress.ToString("0")+"%"+(inside && stress>1?" · снижается":"");
-        public static string HudDepthZone(int tier,bool atBase) => atBase?HudBase:"ГЛУБИНА "+tier;
-        public static string HudDepth(float depth,int tier,bool atBase) => atBase?"NEREID":depth.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" м";
         public static string HudDepthState(bool inside) => inside?"НА БОРТУ":"ПОД ВОДОЙ";
         public static string HudFood(int amount,int required) => "Пища  "+amount+" / "+required;
         public static string HudHungerTime(float seconds) => Time(seconds);
-        public static string HudConsolePrompt(ShipConsole console) => "E — "+console.Caption;
+        public static string HudConsolePrompt(ShipConsole console) => "ЛКМ — "+console.Caption;
         public static string HudConsoleAction(ShipConsoleKind kind) => kind==ShipConsoleKind.Process?"Переработать всю рыбу":kind==ShipConsoleKind.Feed?"Отдать всю рыбу":kind==ShipConsoleKind.Upgrades?"Улучшения снаряжения":kind==ShipConsoleKind.Reservoir?"Улов и состояние кормления":"Глубина и возвращение";
         public static string HudTetherActor(DiverMotor other,bool pulled) => (pulled?"ТРОС ОТ ":"ТРОС К ")+(other==null?(pulled?"НАПАРНИКА":"НАПАРНИКУ"):"ВОДОЛАЗ"+(pulled?"А ":"У ")+(other.OwnerId+1).ToString("00"));
         public static string HudTetherDistance(float distance,float maximum) => "Дистанция "+distance.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" / "+maximum.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" м";
@@ -74,6 +68,6 @@ namespace Raid.UI
         public static string HudRescuePrompt(DiverMotor target) => "Удерживать F — спасти "+PlayerName(target);
         public static string HudRescueProgress(int owner,float fraction) => "Спасение водолаза "+(owner+1).ToString("00")+"  "+(fraction*100).ToString("0")+"%";
         public static string HudRescueDuration(float seconds) => "Непрерывное удержание: "+seconds.ToString("0.0",CultureInfo.GetCultureInfo("ru-RU"))+" с";
-        public static string HudStockLost(int count) => "Нападение: потеряно единиц улова — "+count+". Улучшения сохранены";
+        public static string HudStockLost(int count) => "Потеряно единиц улова — "+count;
     }
 }

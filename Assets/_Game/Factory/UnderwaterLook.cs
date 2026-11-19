@@ -4,14 +4,13 @@ using UnityEngine.Rendering.Universal;
 
 namespace Raid
 {
-    // Local presentation only. All generated audio/VFX belongs to this prototype.
-    public sealed class UnderwaterLook : MonoBehaviour
+    // Camera-local visual treatment for the diver and spectator.
+    [DefaultExecutionOrder(275)] // Publish the lamp direction after DiverMotor positions the first-person camera.
+    public sealed partial class UnderwaterLook : MonoBehaviour
     {
         public static UnderwaterLook Instance {get;private set;}
         Volume volume;
         VolumeProfile original,profile;
-        AudioSource ambient,oneShot;
-        AudioClip hum,click,route;
         Camera camera;
         Material bubbleMaterial;
         ParticleSystem bubbles;
@@ -19,6 +18,7 @@ namespace Raid
         void Awake()
         {
             Instance=this;
+            SaveOceanSettings();
             volume=Object.FindAnyObjectByType<Volume>();
             if(volume!=null && volume.sharedProfile!=null)
             {
@@ -30,15 +30,10 @@ namespace Raid
                 Vignette vignette;if(!profile.TryGet(out vignette))vignette=profile.Add<Vignette>();
                 vignette.intensity.Override(.16f);vignette.smoothness.Override(.65f);
             }
-            ambient=gameObject.AddComponent<AudioSource>();ambient.loop=true;ambient.spatialBlend=0;ambient.volume=.08f;
-            oneShot=gameObject.AddComponent<AudioSource>();oneShot.spatialBlend=0;oneShot.volume=.12f;
-            hum=MakeHum();click=MakePulse("Console relay",.075f,740);route=MakePulse("Valve relay",.32f,115);
-            ambient.clip=hum;ambient.Play();
         }
         void Update()
         {
             if(Time.unscaledTime<nextCamera)return;nextCamera=Time.unscaledTime+.2f;
-            ambient.mute=oneShot.mute=!Application.isFocused;
             var root=UI.UiRoot.Instance;var player=root==null?null:root.Context.Player;
             var owned=player==null?null:player.GetComponentInChildren<Camera>();
             if(owned!=camera)
@@ -48,10 +43,11 @@ namespace Raid
                 {
                     var data=camera.GetUniversalAdditionalCameraData();data.renderPostProcessing=true;data.antialiasing=AntialiasingMode.FastApproximateAntialiasing;
                     CreateBubbles(camera.transform);
+                    BindDiveLamp(camera.transform);
                 }
             }
-            bool wet=player!=null&&!player.IsInside;
-            ambient.volume=Mathf.Lerp(ambient.volume,wet?.035f:.075f,.3f);
+            viewed=player!=null && player.Spectating!=null?player.Spectating:player;
+            bool wet=IsEyeUnderwater();
             if(bubbles!=null){var emission=bubbles.emission;emission.rateOverTime=wet&&root.Page==UI.UiPage.None?4:0;}
         }
         void CreateBubbles(Transform parent)
@@ -75,29 +71,11 @@ namespace Raid
             if(factory!=null&&factory.bubbleMesh!=null){renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=factory.bubbleMesh;}
             bubbles.Play();
         }
-        public void Click() { if(oneShot!=null&&Application.isFocused)oneShot.PlayOneShot(click,.6f); }
-        public void Valve() { if(oneShot!=null&&Application.isFocused)oneShot.PlayOneShot(route,.7f); }
-        AudioClip MakeHum()
-        {
-            const int rate=22050;int count=rate*8;var samples=new float[count];var random=new System.Random(11011);float noise=0;
-            for(int i=0;i<count;i++)
-            {
-                float t=(float)i/rate;noise=(noise+(float)(random.NextDouble()*2-1)*.018f)*.985f;
-                samples[i]=noise*.28f+Mathf.Sin(2*Mathf.PI*48*t)*.13f+Mathf.Sin(2*Mathf.PI*96*t)*.035f;
-            }
-            var clip=AudioClip.Create("NEREID machinery / generated",count,1,rate,false);clip.SetData(samples,0);return clip;
-        }
-        AudioClip MakePulse(string name,float duration,float frequency)
-        {
-            const int rate=22050;var samples=new float[(int)(rate*duration)];
-            for(int i=0;i<samples.Length;i++){float t=(float)i/rate;float envelope=Mathf.Sin(Mathf.PI*i/samples.Length)*Mathf.Exp(-t*16);samples[i]=Mathf.Sin(2*Mathf.PI*frequency*t)*envelope*.45f;}
-            var clip=AudioClip.Create(name,samples.Length,1,rate,false);clip.SetData(samples,0);return clip;
-        }
         void OnDestroy()
         {
+            RestoreOceanSettings();
             if(Instance==this)Instance=null;if(volume!=null&&original!=null)volume.sharedProfile=original;
             if(profile!=null)Destroy(profile);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
-            if(hum!=null)Destroy(hum);if(click!=null)Destroy(click);if(route!=null)Destroy(route);
         }
     }
 }

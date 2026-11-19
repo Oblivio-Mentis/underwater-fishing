@@ -9,12 +9,14 @@ namespace Raid
         private sealed class Shape
         {
             public Mesh body, tail;
-            public Material[] colors;
+            public Material[] colors, wildColors;
         }
 
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
-        private float phase;
+        public Transform Tail => tail;
+        private float phase, strokeWeight;
+        private bool ray;
         private FishActor actor;
         private float escapeAt = -1;
         private Vector3 escapeDirection;
@@ -27,12 +29,15 @@ namespace Raid
             if (!Supports(species)) species = "Lanternfish";
             if (!Shapes.TryGetValue(species, out var shape) || shape.body == null)
                 Shapes[species] = shape = Build(species);
-            var body = MakePart(species, parent, shape.body, shape.colors);
+            var live=parent==null?null:parent.GetComponent<FishActor>();
+            var finish=live==null || shape.wildColors==null?shape.colors:shape.wildColors;
+            var body = MakePart(species, parent, shape.body, finish);
             var model = body.AddComponent<CatchFishModel>();
-            model.tail = MakePart("Caudal fin", body.transform, shape.tail, shape.colors).transform;
+            model.tail = MakePart("Caudal fin", body.transform, shape.tail, finish).transform;
             model.tail.localPosition = Vector3.back * .43f;
             model.phase = Random.value * 6.28f;
-            model.actor = parent == null ? null : parent.GetComponent<FishActor>();
+            model.actor = live;
+            model.ray = species == "Sailray";
             return body;
         }
 
@@ -62,9 +67,29 @@ namespace Raid
                 transform.position += escapeDirection * ((2.2f + Mathf.Sin(age*6)*.15f)*Time.deltaTime);
                 transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
             }
-            bool struggling = actor != null && actor.Mode == FishMode.Struggling;
-            float wave = Mathf.Sin(Time.time * (struggling ? 12 : 5.5f) + phase);
-            tail.localRotation = Quaternion.Euler(0, wave * (struggling ? 30 : 16), 0);
+            bool burst = escapeAt >= 0 || actor != null && (actor.Mode == FishMode.Struggling || actor.Mode == FishMode.Escaped || actor.Startled);
+            float clock=Time.time, offset=phase;
+            if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
+            {
+                // All peers articulate the collider and the fin holding the bolt at the same network phase.
+                var timer=actor.TimeManager;
+                clock=(float)(timer.TicksToTime(timer.Tick)+timer.GetTickElapsedAsDouble());
+                offset=actor.ObjectId*2.39996f;
+            }
+            // The head leads each stroke; the hinged caudal fin follows out of phase.
+            // Animate the meshes that own the hit colliders so an attached bolt rides
+            // the same moving surface for the angler and observers.
+            strokeWeight=Mathf.MoveTowards(strokeWeight,burst?1f:0f,Time.deltaTime*6f);
+            float cruise=clock*(ray?3.7f:7.1f)+offset, sprint=clock*14f+offset;
+            float lead=Mathf.Lerp(Mathf.Sin(cruise),Mathf.Sin(sprint),strokeWeight);
+            float whip=Mathf.Lerp(Mathf.Sin(cruise-.9f)*25f,Mathf.Sin(sprint-.9f)*39f,strokeWeight);
+            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,ray?whip*.42f:whip,0);
+            if(actor!=null)
+            {
+                float bank=ray?8f:3.5f;
+                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.8f,
+                    lead*Mathf.Lerp(3.5f,8f,strokeWeight),Mathf.Sin(cruise-.6f)*bank);
+            }
         }
 
         private static Shape Build(string species)
@@ -92,6 +117,23 @@ namespace Raid
                 colors[i] = material;
             }
 
+            var wetShader=Resources.Load<Shader>("NereidFishSkin");
+            Material[] wild=null;
+            if(wetShader!=null)
+            {
+                wild=new Material[colors.Length];
+                for(int i=0;i<wild.Length;i++)
+                {
+                    var lit=colors[i];
+                    var waterSkin=new Material(wetShader){name=species+" / wet scales "+i,hideFlags=HideFlags.DontSave};
+                    var albedo=lit.GetColor("_BaseColor");
+                    waterSkin.SetColor("_BaseColor",albedo);
+                    waterSkin.SetColor("_RimColor",Color.Lerp(albedo,new Color(.60f,.81f,.81f),.56f));
+                    waterSkin.SetColor("_EmissionColor",lit.GetColor("_EmissionColor"));
+                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));wild[i]=waterSkin;
+                }
+            }
+
             var body = new Geometry();
             Vector3[] rings = {
                 new(-.47f,.035f,.04f), new(-.35f,.11f,.12f), new(-.15f,.21f,.22f),
@@ -114,6 +156,15 @@ namespace Raid
                     int color = level < -.48f ? 2 : level < .12f ? 1 : 0;
                     body.Quad(Point(rings[ring], a), Point(rings[ring], b), Point(rings[ring+1], b), Point(rings[ring+1], a), color);
                 }
+
+            // Close the nose and tail rings so an axial harpoon shot hits the visible silhouette.
+            for(int side=0;side<segments;side++)
+            {
+                float a=side*Mathf.PI*2/segments, b=(side+1)*Mathf.PI*2/segments;
+                body.Fin(Vector3.forward*rings[0].x,Point(rings[0],b),Point(rings[0],a),0);
+                var nose=rings[rings.Length-1];
+                body.Fin(Vector3.forward*nose.x,Point(nose,a),Point(nose,b),0);
+            }
 
             foreach (int sign in new[] {-1,1})
             {
@@ -176,7 +227,7 @@ namespace Raid
             else foreach (int sign in new[]{-1,1})
                 tail.Fin(new Vector3(0,sign*.045f,.015f),new Vector3(0,sign*(needle?.16f:.22f),-.30f),
                          new Vector3(0,sign*.035f,-.18f),3);
-            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors};
+            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors,wildColors=wild};
         }
 
         private static Vector3 Point(Vector3 ring, float angle) =>

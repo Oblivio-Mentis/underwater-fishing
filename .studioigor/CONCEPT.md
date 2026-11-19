@@ -1,8 +1,8 @@
 # Concept - Underwater Fishing
 ## Pitch
-[user] First-person cooperative incremental fishing with underwater horror, 2-5 players.
+[user] First-person cooperative incremental fishing on a dark deep-sea expedition, 2–5 players.
 ## Slots
-- Genre: [user] active incremental fishing, 3D underwater horror.
+- Genre: [user] cooperative fishing and exploration with incremental progression and encounters with marine predators.
 - References: [user] The Long Dark silhouettes, ABZU light, DREDGE mood, SOMA interiors.
 - Fantasy: [user] submarine crew sharing catches and progression.
 - 30-sec loop: [user] harpoon, tension struggle, capture, carry.

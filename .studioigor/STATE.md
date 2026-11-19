@@ -1,9 +1,9 @@
 # studioigor - Underwater Fishing
 PROJECT: Underwater Fishing
 PHASE: 6 — Mechanics
-UPDATED: 2026-11-19 14:11
+UPDATED: 2026-11-19 15:43
 ## Now
-Ревью RAID-012, ручная оценка анимаций и внешний Steam-плейтест с двумя аккаунтами.
+Ручная оценка тональности сборки и ревью PR #11. Отдельно предстоит Steam-плейтест на двух аккаунтах.
 
 ## Open questions
 Second Steam account/computer available later per user's answer. Cross-account Steam and human co-op/feel acceptance NOT RUN.
@@ -17,3 +17,4 @@ Second Steam account/computer available later per user's answer. Cross-account S
 | 2026-11-19 04:36 | 6 — Mechanics | RAID-011 complete for review: PR#9 https://github.com/Oblivio-Mentis/underwater-fishing/pull/9; non-development Windows x64 build0errors0warnings, Solo launcher+ZIP+46 real screenshots,26tests,Editor+4Windows peers, release two-process LAN smoke. No merge; parent branches/builds protected. | User playtest/review PR#9. Native Windows mouse/keyboard and Steam Overlay deferred by user; two Steam accounts/devices later. Human visual/feel acceptance and long co-op balance remain pending; phase6 retained. |
 | 2026-11-19 13:03 | 6 — Mechanics | RAID-011: 36 EditMode-тестов, пуск/стоп, пять LAN-участников и отмена гарпуна с обеих сторон. В Play Mode подтверждены 4/16 доставленных рыб, голод, усиление перекорма и возврат камеры. Финальное видео снято с камеры владельца, исправлена отрисовка капель. Windows release без предупреждений. | Ручной плейтест NEREID и ревью PR #9. Steam между двумя устройствами и аккаунтами, Overlay, физический ввод, звук и баланс остаются на ручную проверку. |
 | 2026-11-19 14:11 | 6 — Mechanics | RAID-012. Из камеры водолаза проверены HUD, резервуар, гибель и наблюдение. Два процесса FishNet поймали и доставили четыре улова, 38 EditMode-тестов и 16 проверок угроз прошли. | Ревью RAID-012, ручная оценка анимаций и внешний Steam-плейтест с двумя аккаунтами. |
+| 2026-11-19 15:43 | 6 — Mechanics | Настроены цвет воды, рассеянный свет и сигналы Фонарника. Сборка RAID013-Expedition проверена из камер хоста и клиента. | Ручная оценка тональности сборки и ревью PR #11. Отдельно предстоит Steam-плейтест на двух аккаунтах. |

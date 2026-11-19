@@ -9,8 +9,6 @@ namespace Raid.Nereid
     {
         [Header("Presentation")]
         [Min(.2f)] public float burpDelay=.44f;
-        [Range(0,1)] public float voiceVolume=.48f;
-        [Min(.1f)] public float audibleRange=46f;
         public Factory.FactoryVisuals factory;
 
         public long SwallowedFishObserved {get;private set;}
@@ -49,14 +47,12 @@ namespace Raid.Nereid
         NereidCreatureMotion creature;
         NereidFeedingCameraImpulse cameraImpulse;
         bool ownsCameraImpulse;
-        AudioSource voice,pressureVoice;
         Material particleMaterial,mistMaterial,dropMaterial,bubbleMaterial;
         Texture2D mistTexture,dropTexture,bubbleTexture;
-        AudioClip swallowClip,burpClip,jetClip,inhaleClip;
         RaidWorld observedWorld;
         bool ready,hasSnapshot,wasActive,wasFeeding;
         int sequence,completed,lastScheduled=int.MinValue,pendingSequence=int.MinValue,foodPeak,foodRequired;
-        float swallowAt=-10,burpAt=-1,nextSwallowSound,nextBind,jetUntil,burstDuration=1.7f,maxLowerTravel=.3f;
+        float swallowAt=-10,burpAt=-1,nextBind,jetUntil,burstDuration=1.7f,maxLowerTravel=.3f;
 
         void Awake(){TryBind();}
         void OnEnable()
@@ -119,8 +115,6 @@ namespace Raid.Nereid
                     line.colorGradient=gradient;line.enabled=false;foam[i]=line;
                 }
             }
-            voice=Audio("Mouth low resonant burp",1);pressureVoice=Audio("Mouth wet pressure release",.55f);
-            swallowClip=MakeVoice(0);inhaleClip=MakeVoice(1);burpClip=MakeVoice(2);jetClip=MakeVoice(3);
             var flash=new GameObject("Actual burp warm reflected light");flash.transform.SetParent(mouth,false);flash.transform.localPosition=new Vector3(0,0,-.6f);
             pressureLight=flash.AddComponent<Light>();pressureLight.type=LightType.Point;pressureLight.color=new Color(1,.79f,.51f);pressureLight.range=12;pressureLight.intensity=0;pressureLight.shadows=LightShadows.None;
             ready=true;return true;
@@ -129,7 +123,6 @@ namespace Raid.Nereid
         void LateUpdate()
         {
             if(!ready){if(Time.unscaledTime>=nextBind){nextBind=Time.unscaledTime+.4f;TryBind();}return;}
-            voice.mute=pressureVoice.mute=!Application.isFocused;
             var world=RaidWorld.Instance;
             if(world==null||world.NetworkObject==null||!world.IsClientInitialized||world.View==null)
             {if(hasSnapshot)ResetObservation();AnimateMouth();return;}
@@ -144,8 +137,6 @@ namespace Raid.Nereid
                 if(wasActive&&!route.active&&wasFeeding&&route.feeding&&route.completed>0&&lastScheduled!=route.sequence)
                 {
                     pendingSequence=route.sequence;lastScheduled=route.sequence;burpAt=Time.time+burpDelay;
-                    voice.pitch=1;
-                    if(voice.isActiveAndEnabled)voice.PlayOneShot(inhaleClip,.48f);
                     if(creature!=null)creature.PrepareBurp(burpDelay);
                     if(cameraImpulse!=null)cameraImpulse.Anticipate(mouth.position,burpDelay);
                 }
@@ -179,8 +170,6 @@ namespace Raid.Nereid
         void PlaySwallow()
         {
             swallowAt=Time.time;
-            voice.pitch=1;
-            if(voice.isActiveAndEnabled&&Time.time>=nextSwallowSound){nextSwallowSound=Time.time+.26f;voice.PlayOneShot(swallowClip,.7f);}
             if(creature!=null)creature.ConfirmedSwallow();
             if(cameraImpulse!=null)cameraImpulse.Swallow(mouth.position);
             if(bubbles!=null)
@@ -201,10 +190,6 @@ namespace Raid.Nereid
             float surplus=Mathf.Clamp01((LastBurpFood-LastBurpRequired)/(float)LastBurpRequired);
             LastBurpSeverity=1+1.35f*Mathf.Sqrt(surplus);float visualGain=Mathf.Lerp(1,1.55f,(LastBurpSeverity-1)/1.35f);
             burpAt=-1;LastBurpSequence=pendingSequence;pendingSequence=int.MinValue;BurpCount++;LastBurpTime=Time.time;jetUntil=Time.time+.42f;PeakParticleCount=0;burstDuration=1.7f+(LastBurpSeverity-1)*.35f;
-            voice.pitch=Mathf.Lerp(1,.84f,surplus);pressureVoice.pitch=Mathf.Lerp(1,.91f,surplus);
-            voice.volume=Mathf.Min(.88f,voiceVolume*Mathf.Lerp(1,1.2f,surplus));pressureVoice.volume=Mathf.Min(.48f,voiceVolume*.55f*Mathf.Lerp(1,1.12f,surplus));
-            if(voice.isActiveAndEnabled){voice.Stop();voice.PlayOneShot(burpClip);}
-            if(pressureVoice.isActiveAndEnabled)pressureVoice.PlayOneShot(jetClip);
             if(creature!=null)creature.ConfirmedBurp(LastBurpSeverity);
             if(cameraImpulse!=null)cameraImpulse.Release(mouth.position,LastBurpSeverity);
             PlaceEmitter(mist);PlaceEmitter(drops);PlaceEmitter(bubbles);
@@ -350,38 +335,9 @@ namespace Raid.Nereid
         }
         void PlaceEmitter(ParticleSystem ps)
         {if(ps==null||mouth==null)return;ps.transform.position=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));ps.transform.rotation=Quaternion.LookRotation(-mouth.forward,mouth.up);}
-        AudioSource Audio(string name,float multiplier)
-        {
-            var go=new GameObject(name);go.transform.SetParent(mouth,false);go.transform.localPosition=new Vector3(0,-.12f,-.3f);
-            var source=go.AddComponent<AudioSource>();source.playOnAwake=false;source.spatialBlend=1;source.dopplerLevel=0;source.volume=voiceVolume*multiplier;
-            source.minDistance=4;source.maxDistance=audibleRange;source.rolloffMode=AudioRolloffMode.Linear;
-            var low=go.AddComponent<AudioLowPassFilter>();low.cutoffFrequency=multiplier<1?3300:1550;low.lowpassResonanceQ=1;return source;
-        }
-        static AudioClip MakeVoice(int kind)
-        {
-            const int rate=22050;float duration=kind==0?.30f:kind==1?.42f:kind==2?1.35f:1.55f;
-            var samples=new float[Mathf.CeilToInt(rate*duration)];var random=new System.Random(12108+kind);float phase=0,noise=0,slower=0,peak=0;
-            for(int i=0;i<samples.Length;i++)
-            {
-                float t=i/(float)rate,u=t/duration;float raw=(float)(random.NextDouble()*2-1);noise=noise*.81f+raw*.19f;slower=slower*.965f+raw*.035f;
-                float f=kind==2?Mathf.Lerp(94,35,u)+Mathf.Sin(t*22)*5:Mathf.Lerp(120,55,u);phase+=2*Mathf.PI*f/rate;
-                float harmonic=Mathf.Sin(phase)*.48f+Mathf.Sin(phase*2+.12f)*.18f+Mathf.Sin(phase*3+.3f)*.09f;
-                float attack=Mathf.SmoothStep(0,1,t/(kind==2?.04f:.025f));
-                float envelope=attack*Mathf.Pow(1-u,kind==2?1.2f:1.1f);
-                float flutter=.78f+.22f*Mathf.Sin(t*(kind==2?51:87)+Mathf.Sin(t*11));
-                float value=kind==3?(noise*.75f+slower*.35f)*envelope*(.75f+.25f*Mathf.Sin(t*37)):
-                    kind==1?(noise*.2f+Mathf.Sin(phase)*.06f)*Mathf.Sin(Mathf.PI*u)*(.25f+.6f*u):(harmonic+slower*.5f)*envelope*flutter;
-                samples[i]=value;peak=Mathf.Max(peak,Mathf.Abs(value));
-            }
-            float ceiling=kind==2?.62f:kind==3?.45f:.50f;float normalise=peak>.0001f?ceiling/peak:1;
-            for(int i=0;i<samples.Length;i++)samples[i]*=normalise;
-            var clip=AudioClip.Create(kind==0?"NEREID heavy confirmed gulp":kind==1?"NEREID throat pressure anticipation":kind==2?"NEREID resonant wet burp":"NEREID layered pressure spray",samples.Length,1,rate,false);clip.SetData(samples,0);return clip;
-        }
-
         void ResetObservation()
         {
             hasSnapshot=false;observedWorld=null;burpAt=-1;pendingSequence=int.MinValue;lastScheduled=int.MinValue;swallowAt=-10;LastBurpTime=-1;jetUntil=0;JawOpeningMetres=ThroatWaveAmount=0;
-            if(voice!=null)voice.Stop();if(pressureVoice!=null)pressureVoice.Stop();
             if(mist!=null){SetRate(mist,0);mist.Clear();}if(drops!=null){SetRate(drops,0);drops.Clear();}if(bubbles!=null){SetRate(bubbles,0);bubbles.Clear();}
             foreach(var ring in foam)if(ring!=null)ring.enabled=false;if(pressureLight!=null)pressureLight.intensity=0;
             if(creature!=null)creature.ClearFeedingReaction();
@@ -402,7 +358,6 @@ namespace Raid.Nereid
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
             if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);
-            if(swallowClip!=null)Destroy(swallowClip);if(burpClip!=null)Destroy(burpClip);if(jetClip!=null)Destroy(jetClip);if(inhaleClip!=null)Destroy(inhaleClip);
             if(ownsCameraImpulse&&cameraImpulse!=null)Destroy(cameraImpulse);
         }
     }

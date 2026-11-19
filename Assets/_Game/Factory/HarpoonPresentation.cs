@@ -17,7 +17,7 @@ namespace Raid
         Camera view;
         DiverMotor owner;
         HarpoonTool tool;
-        Transform model,legacyModel,reel,loadedBolt,slide;
+        Transform model,legacyModel,reel,loadedBolt,slide,staticHousing,buildParent;
         HarpoonShotFx shotFx;
         DiveHands hands;
         DiverMotor viewed;
@@ -25,8 +25,8 @@ namespace Raid
         float nextSuitCheck;
         int observedShot;
         Renderer statusLamp;
-        Vector3 previousPosition,sway;
-        float searchAt,bobClock,recoil,recoilVelocity;
+        Vector3 sway;
+        float searchAt,recoil,recoilVelocity;
 
         void OnEnable()
         {
@@ -61,7 +61,7 @@ namespace Raid
                     var camera=diver.GetComponentInChildren<Camera>();
                     if(camera==null)continue;
                     owner=diver;view=camera;tool=diver.GetComponent<HarpoonTool>();
-                    previousPosition=owner.transform.position;break;
+                    break;
                 }
                 if(view==null)return;
             }
@@ -84,11 +84,10 @@ namespace Raid
                 viewed=actor;viewedTool=actor==null?null:actor.GetComponent<HarpoonTool>();
                 shotFx.BindSource(viewedTool);
                 if(viewedTool!=null)observedShot=viewedTool.ShotSequence;
-                if(actor!=null)previousPosition=actor.transform.position;
             }
             visible&=viewedTool!=null;
             hands.SetVisible(visible);
-            if(!visible){model.gameObject.SetActive(false);previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
+            if(!visible){model.gameObject.SetActive(false);sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
             bool controlling=actor==owner&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
@@ -96,12 +95,6 @@ namespace Raid
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
             Vector3 desiredSway=new Vector3(Mathf.Clamp(-look.x*.00005f,-.0035f,.0035f),Mathf.Clamp(-look.y*.00004f,-.0025f,.0025f),0);
             sway=Vector3.Lerp(sway,desiredSway,1-Mathf.Exp(-12*dt));
-            float movement=Vector3.Distance(actor.transform.position,previousPosition);
-            previousPosition=actor.transform.position;
-            float speed=movement<.5f&&dt>.0001f?Mathf.Min(3,movement/dt):0;
-            bobClock+=dt*speed*2.1f;
-            float bobAmount=Mathf.Clamp01(speed*.4f);
-            Vector3 bob=new Vector3(Mathf.Sin(bobClock)*.0012f,Mathf.Sin(bobClock*2)*.0015f,0)*bobAmount;
             bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether;
             if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
             observedShot=viewedTool.ShotSequence;
@@ -116,9 +109,9 @@ namespace Raid
             float aim=actor==owner?Nereid.NereidAim.Blend:0;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
-            model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
+            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
-            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,speed,aim,dt,panelPress));
+            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 
@@ -126,6 +119,8 @@ namespace Raid
         {
             hands=new DiveHands(this,view.transform);
             model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
+            staticHousing=DiveOutfit.Pivot(model,"Pressure assembly",Vector3.zero);
+            buildParent=staticHousing;
             // Four axial rings and an eight-sided profile bevel every receiver edge.
             Box("Machined receiver",new Vector3(0,0,0),new Vector3(.108f,.088f,.232f),.012f,steel);
             Box("Rear shock block",new Vector3(0,-.004f,-.127f),new Vector3(.095f,.075f,.035f),.009f,dark);
@@ -179,8 +174,13 @@ namespace Raid
             Tube("Hydraulic hose",new[]{new Vector3(-.041f,-.031f,-.098f),new Vector3(-.071f,-.062f,-.14f),new Vector3(-.054f,-.098f,-.15f),new Vector3(.012f,-.078f,-.117f)},.006f,dark,8);
             Tube("Hose ferrule",new[]{new Vector3(-.041f,-.031f,-.098f),new Vector3(-.051f,-.042f,-.113f)},.008f,steel,8);
 
-            // Forearm enters from below the camera; compact finger pieces wrap the safety grip.
-            Tube("Diving sleeve",new[]{new Vector3(.12f,-.244f,-.16f),new Vector3(.053f,-.13f,-.095f)},.045f,amber,10,null,.040f);
+            Tube("Lower frame spar",new[]{new Vector3(0,-.042f,-.09f),new Vector3(0,-.063f,-.23f),new Vector3(0,-.035f,-.255f)},.012f,steel,8);
+            Box("Resilient shoulder pad",new Vector3(0,-.016f,-.248f),new Vector3(.073f,.107f,.035f),.013f,dark);
+            Box("Ochre breech cover",new Vector3(0,.013f,-.138f),new Vector3(.084f,.065f,.088f),.012f,amber);
+            for(int i=0;i<3;i++)
+                Box("Foregrip rib "+i,new Vector3(0,-.018f,.117f+i*.025f),new Vector3(.066f,.045f,.014f),.005f,dark);
+            buildParent=model;
+            // The articulated sleeve meets this cuff; the trigger fingers stay on the grip.
             Tube("Sealed glove cuff",new[]{new Vector3(.057f,-.14f,-.101f),new Vector3(.04f,-.103f,-.083f)},.043f,dark,10,null,.037f);
             Box("Glove palm",new Vector3(.030f,-.091f,-.063f),new Vector3(.053f,.065f,.067f),.012f,dark,Quaternion.Euler(-13,0,-12));
             for(int i=0;i<4;i++)
@@ -194,6 +194,44 @@ namespace Raid
             var muzzle=new GameObject("Harpoon muzzle anchor").transform;muzzle.SetParent(model,false);muzzle.localPosition=new Vector3(0,.025f,.34f);
             var fx=new GameObject("Owned harpoon shot presentation");fx.transform.SetParent(view.transform,false);shotFx=fx.AddComponent<HarpoonShotFx>();
             shotFx.Initialize(tool,muzzle,loadedBolt,reel,steel);tool.ShotVisual+=OnAcceptedShot;
+        }
+
+        // The diver carries the same assembled receiver, bolt and drum as the camera model.
+        // Batch each rigid mechanism by material so additional crew do not add a draw for every screw.
+        internal bool MakeWorldModel(Transform worldGun,List<Mesh> worldMeshes,out Transform bolt,out Transform drum,out Transform muzzle,out Transform shuttle)
+        {
+            bolt=drum=muzzle=shuttle=null;
+            if(staticHousing==null || loadedBolt==null || slide==null)return false;
+            CopyRigidGroup(staticHousing,worldGun,worldMeshes);
+            bolt=CopyRigidGroup(loadedBolt,worldGun,worldMeshes);
+            drum=CopyRigidGroup(reel,worldGun,worldMeshes);
+            shuttle=CopyRigidGroup(slide,worldGun,worldMeshes);
+            muzzle=DiveOutfit.Pivot(worldGun,"Cable guide",new Vector3(0,.025f,.34f));
+            return true;
+        }
+
+        Transform CopyRigidGroup(Transform source,Transform target,List<Mesh> owned)
+        {
+            var group=DiveOutfit.Pivot(target,source.name,source.localPosition);
+            var batches=new Dictionary<Material,List<CombineInstance>>();
+            var inverse=source.worldToLocalMatrix;
+            foreach(var renderer in source.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if(renderer==statusLamp)continue;
+                var material=renderer.sharedMaterial;
+                if(!batches.TryGetValue(material,out var parts))
+                    batches.Add(material,parts=new List<CombineInstance>());
+                parts.Add(new CombineInstance{mesh=renderer.GetComponent<MeshFilter>().sharedMesh,transform=inverse*renderer.transform.localToWorldMatrix});
+            }
+            foreach(var batch in batches)
+            {
+                var mesh=new Mesh{name=source.name+" / "+batch.Key.name,hideFlags=HideFlags.DontSave};
+                mesh.CombineMeshes(batch.Value.ToArray(),true,true);owned.Add(mesh);
+                var part=DiveOutfit.Pivot(group,batch.Key.name,Vector3.zero);
+                part.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+                part.gameObject.AddComponent<MeshRenderer>().sharedMaterial=batch.Key;
+            }
+            return group;
         }
 
         void OnAcceptedShot(Vector3 origin,Vector3 endpoint){recoilVelocity+=1.05f;}
@@ -215,7 +253,7 @@ namespace Raid
         {
             mesh.name=name+" / owned view mesh";mesh.hideFlags=HideFlags.DontSave;meshes.Add(mesh);
             var part=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));part.hideFlags=HideFlags.DontSave;
-            part.transform.SetParent(parent!=null?parent:model,false);part.transform.localPosition=position;part.transform.localRotation=rotation;
+            part.transform.SetParent(parent!=null?parent:buildParent,false);part.transform.localPosition=position;part.transform.localRotation=rotation;
             part.GetComponent<MeshFilter>().sharedMesh=mesh;var renderer=part.GetComponent<MeshRenderer>();renderer.sharedMaterial=material;
             renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=false;renderer.lightProbeUsage=LightProbeUsage.Off;
             return part.transform;
@@ -285,7 +323,7 @@ namespace Raid
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
             meshes.Clear();model=null;reel=null;loadedBolt=null;slide=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
-            sway=Vector3.zero;recoil=0;recoilVelocity=0;bobClock=0;
+            sway=Vector3.zero;recoil=0;recoilVelocity=0;
         }
         void OnDisable() { ReleaseModel();if(active==this)active=null; }
         void OnDestroy() { ReleaseModel();if(active==this)active=null; }

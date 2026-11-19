@@ -12,13 +12,31 @@ namespace Raid
         readonly List<Mesh> meshes=new List<Mesh>();
         readonly List<Visual> visuals=new List<Visual>();
         ThreatDirector director;
+        Material wetHide,wetFin,gum,enamel;
+        void BuildTissues()
+        {
+            if(wetHide!=null)return;
+            var shader=Resources.Load<Shader>("NereidFishSkin");
+            if(shader==null)return;
+            wetHide=Tissue(shader,"Blue-black dermis",new Color(.32f,.44f,.53f),new Color(.44f,.69f,.72f),.56f);
+            wetFin=Tissue(shader,"Fin and throat",new Color(.13f,.18f,.24f),new Color(.28f,.46f,.55f),.35f);
+            gum=Tissue(shader,"Exposed gill tissue",new Color(.55f,.27f,.22f),new Color(.68f,.40f,.31f),.74f);
+            enamel=Tissue(shader,"Weathered ivory",new Color(.84f,.77f,.55f),new Color(.94f,.93f,.74f),.8f);
+        }
+        static Material Tissue(Shader shader,string label,Color baseColor,Color rim,float gloss)
+        {
+            var mat=new Material(shader){name=label,hideFlags=HideFlags.DontSave};
+            mat.SetColor("_BaseColor",baseColor);mat.SetColor("_RimColor",rim);mat.SetFloat("_Smoothness",gloss);
+            return mat;
+        }
         float searchAt;
         sealed class Visual
         {
             public Transform source,root,tail,leftFin,rightFin,jaw;
             public Renderer original;
             public bool originalEnabled;
-            public float phase;
+            public float phase,finSpread;
+            public bool ambusher;
         }
 
         void LateUpdate()
@@ -43,34 +61,51 @@ namespace Raid
                 if(visual.source==null||visual.root==null)continue;
                 if(visual.original!=null&&visual.original.enabled)visual.original.enabled=false;
                 if(!visual.root.gameObject.activeSelf)visual.root.gameObject.SetActive(true);
-                float clock=Time.time*3.4f+visual.phase;
-                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*6,0);
-                visual.leftFin.localRotation=Quaternion.Euler(0,0,Mathf.Sin(clock*.72f)*3);
-                visual.rightFin.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(clock*.72f+.7f)*3);
-                visual.jaw.localRotation=Quaternion.Euler(6+Mathf.Sin(clock*.43f)*1.8f,0,0);
+                var hunt=visual.ambusher?director.AnglerStage:ThreatDirector.HuntStage.Watching;
+                bool display=hunt==ThreatDirector.HuntStage.Display;
+                bool rushing=hunt==ThreatDirector.HuntStage.Pursuit;
+                visual.phase=Mathf.Repeat(visual.phase+Time.deltaTime*(rushing?9f:3.4f),Mathf.PI*200);
+                float clock=visual.phase;
+                // Pectorals fan outward during the warning and sweep back into the body for the pursuit.
+                visual.finSpread=Mathf.MoveTowards(visual.finSpread,display?23f:rushing?-9f:0f,Time.deltaTime*80f);
+                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*(rushing?21:6),0);
+                visual.leftFin.localRotation=Quaternion.Euler(0,0,Mathf.Sin(clock*.72f)*3-visual.finSpread);
+                visual.rightFin.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(clock*.72f+.7f)*3+visual.finSpread);
+                float gape=visual.ambusher?(display?-2f:rushing?12f:-20f):6f;
+                visual.jaw.localRotation=Quaternion.Slerp(visual.jaw.localRotation,Quaternion.Euler(gape+Mathf.Sin(clock*.43f)*1.8f,0,0),
+                    1-Mathf.Exp(-Time.deltaTime*10));
             }
         }
 
         void Build(Transform source,bool raider)
         {
+            BuildTissues();
             var root=new GameObject(raider?"Prototype raider silhouette":"Prototype predator silhouette").transform;
             root.gameObject.hideFlags=HideFlags.DontSave;root.SetParent(source,false);
-            var visual=new Visual{source=source,root=root,original=source.GetComponent<Renderer>(),phase=raider?1.7f:0};
+            var visual=new Visual{ambusher=!raider,source=source,root=root,original=source.GetComponent<Renderer>(),phase=raider?1.7f:0};
             visual.originalEnabled=visual.original!=null&&visual.original.enabled;
             float width=raider?1.08f:1;
             Part(root,"Tapered asymmetric body",Loft(new[]{new Vector4(-.27f,.038f,.055f,.025f),new Vector4(-.18f,.105f,.13f,.035f),new Vector4(-.065f,.215f*width,.19f,.055f),new Vector4(.095f,.267f*width,.19f,.068f),new Vector4(.245f,.205f*width,.135f,.085f),new Vector4(.31f,.11f*width,.07f,.105f)},false),skin);
             Part(root,"Recessed mouth cavity",Loft(new[]{new Vector4(.19f,.063f,.045f,-.015f),new Vector4(.275f,.13f,.092f,-.035f),new Vector4(.365f,.178f,.123f,-.042f)},true),dark);
-            Tube(root,"Uneven upper lip",new[]{new Vector3(-.175f,-.041f,.353f),new Vector3(-.13f,.063f,.365f),new Vector3(-.025f,.091f,.38f),new Vector3(.112f,.071f,.363f),new Vector3(.178f,-.025f,.345f)},.019f,.015f,skin,7);
+            var lip=raider && gum!=null?gum:dark;
+            Tube(root,"Uneven upper lip",new[]{new Vector3(-.175f,-.041f,.353f),new Vector3(-.13f,.063f,.365f),new Vector3(-.025f,.091f,.38f),new Vector3(.112f,.071f,.363f),new Vector3(.178f,-.025f,.345f)},.019f,.015f,lip,7);
 
             visual.jaw=Pivot(root,"Open lower jaw",new Vector3(0,-.078f,.17f));
             Vector3 jawOrigin=visual.jaw.localPosition;
             var jawOutline=new[]{new Vector3(-.158f,-.144f,.15f),new Vector3(-.19f,-.16f,.27f),new Vector3(-.108f,-.177f,.375f),new Vector3(.005f,-.183f,.399f),new Vector3(.116f,-.167f,.366f),new Vector3(.18f,-.146f,.26f),new Vector3(.15f,-.132f,.15f)};
             Part(visual.jaw,"Bony lower mandible",Extruded(Offset(jawOutline,-jawOrigin),Vector3.up*.049f),skin);
-            Tube(visual.jaw,"Jaw inner ridge",Offset(new[]{jawOutline[1]+Vector3.up*.029f,jawOutline[2]+Vector3.up*.029f,jawOutline[3]+Vector3.up*.029f,jawOutline[4]+Vector3.up*.029f,jawOutline[5]+Vector3.up*.029f},-jawOrigin),.012f,.009f,dark,6);
+            Tube(visual.jaw,"Jaw inner ridge",Offset(new[]{jawOutline[1]+Vector3.up*.029f,jawOutline[2]+Vector3.up*.029f,jawOutline[3]+Vector3.up*.029f,jawOutline[4]+Vector3.up*.029f,jawOutline[5]+Vector3.up*.029f},-jawOrigin),.012f,.009f,lip,6);
+            if(gum!=null)
+            {
+                for(int side=-1;side<=1;side+=2)
+                    Tube(root,"Zygomatic ridge",new[]{new Vector3(side*.163f,.018f,.345f),
+                        new Vector3(side*.211f,.045f,.276f),new Vector3(side*.246f,.071f,.207f)},
+                        .013f,.005f,wetHide,7);
+            }
             // Sparse, unequal teeth leave the dark mouth readable instead of a uniform white fan.
-            Fang(root,"Long left fang",new Vector3(-.128f,.054f,.361f),new Vector3(-.115f,-.085f,.401f),.014f);
+            Fang(root,"Long left fang",new Vector3(-.128f,.054f,.361f),new Vector3(-.115f,raider?-.085f:-.032f,.394f),.014f);
             Fang(root,"Short left fang",new Vector3(-.057f,.079f,.376f),new Vector3(-.052f,-.008f,.399f),.009f);
-            Fang(root,"Right hooked fang",new Vector3(.126f,.055f,.35f),new Vector3(.103f,-.109f,.391f),.016f);
+            Fang(root,"Right hooked fang",new Vector3(.126f,.055f,.35f),new Vector3(.103f,raider?-.109f:-.042f,.391f),.016f);
             Fang(root,"Inner needle",new Vector3(.045f,.079f,.374f),new Vector3(.037f,-.013f,.398f),.008f);
             Fang(visual.jaw,"Left lower tusk",new Vector3(-.114f,-.139f,.335f)-jawOrigin,new Vector3(-.105f,-.043f,.384f)-jawOrigin,.012f);
             Fang(visual.jaw,"Right lower tusk",new Vector3(.13f,-.13f,.318f)-jawOrigin,new Vector3(.116f,-.039f,.365f)-jawOrigin,.010f);
@@ -129,7 +164,14 @@ namespace Raid
         {
             mesh.name=name+" / threat presentation";mesh.hideFlags=HideFlags.DontSave;meshes.Add(mesh);
             var part=new GameObject(name,typeof(MeshFilter),typeof(MeshRenderer));part.hideFlags=HideFlags.DontSave;part.transform.SetParent(parent,false);
-            part.GetComponent<MeshFilter>().sharedMesh=mesh;var renderer=part.GetComponent<MeshRenderer>();renderer.sharedMaterial=material;
+            part.GetComponent<MeshFilter>().sharedMesh=mesh;var renderer=part.GetComponent<MeshRenderer>();
+            if(wetHide!=null)
+            {
+                if(material==skin)material=wetHide;
+                else if(material==dark)material=wetFin;
+                else if(material==tooth)material=enamel;
+            }
+            renderer.sharedMaterial=material;
             renderer.shadowCastingMode=ShadowCastingMode.On;renderer.receiveShadows=true;
         }
 
@@ -212,6 +254,11 @@ namespace Raid
             RestoreOriginals();foreach(var visual in visuals)if(visual.root!=null)Destroy(visual.root.gameObject);
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
             meshes.Clear();visuals.Clear();director=null;
+            if(wetHide!=null)Destroy(wetHide);
+            if(wetFin!=null)Destroy(wetFin);
+            if(gum!=null)Destroy(gum);
+            if(enamel!=null)Destroy(enamel);
+            wetHide=wetFin=gum=enamel=null;
         }
         void OnDisable() { Release(); }
         void OnDestroy() { Release(); }

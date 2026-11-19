@@ -191,6 +191,7 @@ namespace Raid.Tests
         }
 
         [TestCase(0, FeedingOutcome.None, 1f)]
+        [TestCase(1, FeedingOutcome.Underfed, 11f/12f)]
         [TestCase(6, FeedingOutcome.Underfed, .5f)]
         [TestCase(12, FeedingOutcome.Enough, 0f)]
         [TestCase(20, FeedingOutcome.Overfed, 0f)]
@@ -200,8 +201,23 @@ namespace Raid.Tests
             HungerReport report = team.EvaluateHunger(tuning);
             Assert.That(report.outcome, Is.EqualTo(outcome));
             Assert.That(report.deficit, Is.EqualTo(deficit).Within(.001));
-            Assert.That(report.Attack, Is.EqualTo(offered < 12));
+            Assert.That(report.Attack, Is.EqualTo(offered == 0));
             Assert.That(team.offering, Is.EqualTo(Math.Min(3, Math.Max(0, offered - 12))));
+        }
+
+        [Test]
+        public void LastSecondMealProtectsOnlyTheDeadlineItReaches()
+        {
+            team.hungerRemaining = 121;
+            Assert.That(team.TickHunger(1, tuning), Is.False);
+            Assert.That(team.hungerRemaining, Is.EqualTo(120));
+            Assert.That(team.TickHunger(119.5f, tuning), Is.False);
+            team.Deposit(new CatchItem(91, 1, 0, 1, 1, 1));
+            Assert.That(team.Feed(91), Is.True);
+            Assert.That(team.TickHunger(.5f, tuning), Is.True);
+            Assert.That(team.EvaluateHunger(tuning).Attack, Is.False);
+            Assert.That(team.TickHunger(tuning.hungerInterval, tuning), Is.True);
+            Assert.That(team.EvaluateHunger(tuning).Attack, Is.True);
         }
 
         [Test]

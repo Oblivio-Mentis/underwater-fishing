@@ -12,16 +12,16 @@ namespace Raid.Nereid
         Transform clicker,clamShell,eel,kraken,warning,lure,shadow;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
-        AudioSource rasp;
+        float lureDisplay;
         ParticleSystem silt;
         Vector3 lastClicker;
-        byte previousEel,previousKraken;
+        byte previousKraken;
         bool first;
 
         public void Build(Transform angler)
         {
             skin=Material("NereidReef","Reef fauna");luminous=Material("NereidReef","Photophores");
-            luminous.SetFloat("_Glow",2);
+            skin.SetFloat("_Hide",1);luminous.SetFloat("_Glow",1.35f);
             mud=Material("NereidSilt","Silt bloom");
             MakeClicker();MakeClam();MakeEel();MakeKraken();MakeLure(angler);
             first=true;
@@ -116,21 +116,6 @@ namespace Raid.Nereid
                 face.Tube(new[]{new Vector3(s*.2f,.06f,.3f),new(s*.24f,.06f,.41f)},new[]{.076f,.038f},new Color(.81f,.43f,.12f),7);
             }
             Part(eel,"Scraping jaws",face,skin);
-            rasp=eel.gameObject.AddComponent<AudioSource>();rasp.playOnAwake=false;rasp.spatialBlend=1;rasp.rolloffMode=AudioRolloffMode.Linear;
-            rasp.minDistance=2;rasp.maxDistance=20;rasp.volume=.57f;
-            const int rate=22050;
-            var samples=new float[rate];
-            uint noise=703;
-            for(int i=0;i<samples.Length;i++)
-            {
-                float t=i/(float)rate;
-                noise=noise*1664525u+1013904223u;
-                float friction=((noise>>9)/8388608f-.5f);
-                float tooth=Mathf.Max(0,Mathf.Sin(t*72+t*t*84));
-                float ring=Mathf.Sin(2*Mathf.PI*(395*t+50*t*t))+.33f*Mathf.Sin(2*Mathf.PI*790*t);
-                samples[i]=(ring*.24f+friction*.5f)*tooth*Mathf.Sin(Mathf.PI*t)*Mathf.Exp(-t*.8f);
-            }
-            var clip=AudioClip.Create("Eel jaw rasp",samples.Length,1,rate,false);clip.SetData(samples,0);owned.Add(clip);rasp.clip=clip;
         }
 
         void MakeKraken()
@@ -192,7 +177,8 @@ namespace Raid.Nereid
         public void Present(ThreatDirector.ReefSnapshot state)
         {
             float t=Time.time,blend=first?1:1-Mathf.Exp(-Time.deltaTime*9);
-            var motion=state.Clicker-lastClicker;
+            var motion=state.ClickerHeading.sqrMagnitude>.1f?state.ClickerHeading:state.Clicker-lastClicker;
+            var angler=ThreatDirector.Instance.AnglerStage;
             clicker.position=Vector3.Lerp(clicker.position,state.Clicker,blend);
             if(motion.sqrMagnitude>.001f)clicker.rotation=Quaternion.Slerp(clicker.rotation,Quaternion.LookRotation(motion),blend);
             lastClicker=state.Clicker;
@@ -208,7 +194,6 @@ namespace Raid.Nereid
                     eelBody.Path[i]=new Vector3(Mathf.Sin(u*6.4f-t*(state.EelPhase==2?7.6f:3.7f))*.52f*u,Mathf.Sin(u*4-t*1.4f)*u*.24f,-3.7f*u);
                 }
                 eelBody.Deform();
-                if(state.EelPhase==1&&previousEel!=1)rasp.Play();
 
                 Vector3 rest=new(-4.2f,.15f,3.45f);
                 Vector3 destination=state.KrakenPhase is 1 or 2?kraken.InverseTransformPoint(state.Sweep):rest;
@@ -243,14 +228,19 @@ namespace Raid.Nereid
             }
             if(lure!=null)
             {
+                // The moving points on the lure spread into a pale fan before the fish commits to a strike.
+                lureDisplay=Mathf.MoveTowards(lureDisplay,angler==ThreatDirector.HuntStage.Display?1f:0f,Time.deltaTime*3.5f);
                 for(int i=0;i<lureFish.Length;i++)
                 {
                     float phase=t*1.22f+i*2.4f;
-                    lureFish[i].localPosition=new Vector3(Mathf.Cos(phase)*.13f,.04f*i+.018f*Mathf.Sin(phase),Mathf.Sin(phase)*.055f);
+                    var drift=new Vector3(Mathf.Cos(phase)*.13f,.04f*i+.018f*Mathf.Sin(phase),Mathf.Sin(phase)*.055f);
+                    float side=i-(lureFish.Length-1)*.5f;
+                    var fan=new Vector3(side*.11f,.12f-.018f*side*side,.03f);
+                    lureFish[i].localPosition=Vector3.Lerp(drift,fan,lureDisplay);
                     lureFish[i].localRotation=Quaternion.Euler(0,-phase*Mathf.Rad2Deg,0);
                 }
             }
-            previousEel=state.EelPhase;previousKraken=state.KrakenPhase;first=false;
+            previousKraken=state.KrakenPhase;first=false;
         }
 
         sealed class FlexibleBody

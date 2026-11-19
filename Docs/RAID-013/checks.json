@@ -1,0 +1,188 @@
+{
+  "unit": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "skipped": 0,
+    "durationSeconds": 1.1198603,
+    "resultState": "Passed"
+  },
+  "hookGeometry": "PASS: 16 body/flank/nose/fin hits across 4 species, 256 moving poses. Maximum surface error 0,000002 m.",
+  "fishing": {
+    "phase": "Hoist cargo into reservoir",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+      "Distinct connected owners 0 and 1",
+      "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+      "Both divers ready on the dry deck: host O2 120,0, peer O2 120,0.",
+      "Needlefish captured and stowed by one diver.",
+      "Both divers ready on the dry deck: host O2 120,0, peer O2 120,0.",
+      "Lanternfish captured and stowed by one diver.",
+      "Both divers ready on the dry deck: host O2 120,0, peer O2 120,0.",
+      "Needlefish captured and stowed by one diver.",
+      "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+      "Both divers ready on the dry deck: host O2 120,0, peer O2 120,0.",
+      "Heavy fish resisted a sustained solo reel at stamina 10,50.",
+      "Remote controls initiated grip; both peers observed the same shooter.",
+      "Hook #4, host/peer frames 2132/6845, attached travel 21,889/21,858 m, worst tip drift 0,000004/0,000004 m, worst nock drift 0,000000/0,000000 m.",
+      "Heavy capture completed with all three small catches intact; tool switch and fire blocked.",
+      "Four authoritative catch IDs now swim in both cages; hands and pockets are empty.",
+      "Both divers ready on the dry deck: host O2 120,0, peer O2 120,0.",
+      "Winch delivered each original ID to the reservoir and both cages emptied."
+    ]
+  },
+  "encounterChecks": [
+    "Travel begins with a quiet fishing ground",
+    "A single scout swims into the habitat",
+    "Scout advances along its patrol",
+    "An accepted near miss startles a free fish",
+    "Fish settles after the shot",
+    "A close living swimmer makes the scout flee",
+    "Startled fish actually moves away",
+    "Three fish arrive over separate release windows",
+    "Dry deck restores authored visibility",
+    "Depth one active",
+    "Nearby passive predator raises diver pulse in murky water",
+    "Angler gives a display before contact",
+    "Angler pursues after its warning",
+    "Angler ambush removes oxygen",
+    "Clicker strikes a sudden acceleration",
+    "Bottom trap closes and holds",
+    "Clam releases after server rescue",
+    "Depth two active",
+    "Eel warns with three occupied pockets",
+    "Dropped fish diverts eel",
+    "Deep encounter restarted",
+    "Eel bites and steals exactly one fish",
+    "Rift reset",
+    "Sustained winch telegraphs locked Kraken sweep",
+    "Exposed target takes Kraken sweep",
+    "Rift reset for escape",
+    "Second sweep telegraphs",
+    "Swimming out of the locked area avoids hit"
+  ],
+  "clientConsole": {
+    "page": "Terminal",
+    "control": "Buy_Reel",
+    "confirmed": "Confirm accept",
+    "reelLevel": [
+      0,
+      1
+    ],
+    "biomass": [
+      36,
+      30
+    ],
+    "remoteHarpoonShots": [
+      0,
+      0
+    ]
+  },
+  "airlock": {
+    "lateJoinOwner": 2,
+    "lateJoinPhase": "OuterOpen",
+    "lateJoinWater": 1,
+    "lateJoinInner": 0,
+    "lateJoinOuter": 1
+  },
+  "oxygen": {
+    "beginHealth": 100,
+    "beginOxygen": 0,
+    "unaidedHealthAt16_5": 3.31,
+    "aliveWhenMaskClears": true,
+    "maskClearsAtSeconds": 5.42,
+    "rescuedOxygenAt7_06": 34
+  },
+  "audio": {
+    "hostSources": 0,
+    "hostListeners": 0,
+    "peerSources": 0,
+    "peerListeners": 0
+  },
+  "lighting": {
+    "helmetOff": true,
+    "frameSize": [
+      1920,
+      1080
+    ],
+    "captureMedianEncodedRec709": {
+      "cargoFront": {
+        "on": 25.8,
+        "off": 4.92
+      },
+      "seabed": {
+        "on": 94.92,
+        "off": 24.94
+      },
+      "distant": {
+        "on": 0.07,
+        "off": 0.07
+      }
+    },
+    "cageFollow": {
+      "Loading": {
+        "samples": 2,
+        "yMin": -16.4,
+        "yMax": -16.4,
+        "maxAngle": 0
+      },
+      "Raising": {
+        "samples": 25,
+        "yMin": -15.87,
+        "yMax": 12.2,
+        "maxAngle": 0.03
+      },
+      "Returning": {
+        "samples": 19,
+        "yMin": -15.31,
+        "yMax": 12.2,
+        "maxAngle": 0.02
+      }
+    }
+  },
+  "windowsRelease": {
+    "source": "523445b62dbc4114f2c7cad20c3054c9d54b408f",
+    "timeUTC": "2026-11-19T12:20:42Z",
+    "durationSeconds": 14.6429049,
+    "sizeMB": 110.92,
+    "errors": 0,
+    "warnings": 0,
+    "checkedZipBytes": 51284442,
+    "sha256": "18758b5f4bf2cdc6598a64098209662ce09eea073dea608ed382ed87cbd6cfdf",
+    "smoke": "В сессии. Esc — курсор и меню"
+  },
+  "clientTether": {
+    "serverOwner": 0,
+    "pulledOwner": 1,
+    "peerSawPulled": true,
+    "peerCancelled": true,
+    "refusalSecondsObserved": 2.4865
+  },
+  "windowsDevelopment": {
+    "job_id": "build-996870d109",
+    "result": "succeeded",
+    "platform": "StandaloneWindows64",
+    "output_path": "Builds/RAID013-QA/UnderwaterFishing.exe",
+    "started_at": "2026-11-19T12:27:45.2000878Z",
+    "duration_seconds": 15.1156449,
+    "completed_at": "2026-11-19T12:28:00.3157327Z",
+    "total_size_mb": 176.77,
+    "errors": 0,
+    "warnings": 0
+  },
+  "clientRender": {
+    "device": "NVIDIA GeForce RTX 4070, Direct3D 11",
+    "size": [
+      1280,
+      720
+    ],
+    "cargo": "18-client-cargo.png",
+    "station": "19-client-computer.png",
+    "connectedPlayers": 2,
+    "owner": 1,
+    "consoleErrors": 0
+  }
+}

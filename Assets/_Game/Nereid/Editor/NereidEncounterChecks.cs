@@ -69,10 +69,60 @@ namespace Raid.Nereid.Editor
         static IEnumerable<Until> Sequence()
         {
             Stage(1);
+            var school=UnityEngine.Object.FindObjectsByType<FishActor>().Where(f=>f.depthTier==1).ToArray();
+            yield return Wait("Travel begins with a quiet fishing ground",()=>school.All(f=>!f.InHabitat));
+            yield return Wait("A single scout swims into the habitat",()=>school.Count(f=>f.InHabitat)==1,4);
+            var scout=school.First(f=>f.InHabitat);
+            var start=scout.transform.position;
+            yield return Wait("Scout swims several body lengths on patrol",()=>Vector3.Distance(scout.transform.position,start)>2f,4);
+            var aim=diver.AimDirection;
+            var side=Vector3.Cross(Vector3.up,aim).normalized;
+            var eye=scout.transform.position-aim*6.7f+side*1.65f;
+            Place(eye-Vector3.up*.6f);
+            int accepted=tool.ShotSequence;
+            if(!(bool)typeof(HarpoonTool).GetMethod("QaFireOwned",Private).Invoke(tool,null))throw new InvalidOperationException("Keep the harpoon equipped and the HUD closed to menus.");
+            yield return Wait("An accepted near miss startles a free fish",()=>tool.ShotSequence>accepted && scout.Startled && tool.HookedFish==null);
+            Place(new Vector3(1,1.1f,1));
+            yield return Wait("Fish settles after the shot",()=>!scout.Startled,6);
+            start=scout.transform.position;
+            Place(start+new Vector3(.3f,.15f,1.65f));
+            yield return Wait("A close living swimmer makes the scout flee",()=>scout.Startled);
+            yield return Wait("Startled fish actually moves away",()=>Vector3.Distance(diver.transform.position,scout.transform.position)>2.5f);
+            Place(new Vector3(1,1.1f,1));
+            yield return Wait("Three fish arrive over separate release windows",()=>school.Count(f=>f.InHabitat)==3,18);
+            yield return Pause(6.6f);
+            if(school.Count(f=>f.InHabitat)>3)throw new InvalidOperationException("A fourth wild fish exceeded the cap.");
+            foreach(bool breakLine in new[]{false,true})
+            {
+                // Stage only the shooter's position. Both the impact and line loss run through
+                // the real harpoon, collider, network command and server fish FSM.
+                Vector3 direction=diver.AimDirection;
+                var body=scout.ImpactSurface(false);
+                Place(body.TransformPoint(Vector3.forward*.09f)-direction*3.7f-Vector3.up*.6f);
+                if(!(bool)typeof(HarpoonTool).GetMethod("QaFireOwned",Private).Invoke(tool,null))
+                    throw new InvalidOperationException("Owned shot unavailable in escape check.");
+                yield return Wait("Harpoon attached before "+(breakLine?"range break":"release"),()=>tool.HookedFish==scout && scout.Mode==FishMode.Struggling);
+                if(breakLine) Place(diver.transform.position-direction*(tool.tuning.maxRange+1));
+                else if(!(bool)typeof(HarpoonTool).GetMethod("QaReleaseOwned",Private).Invoke(tool,null))
+                    throw new InvalidOperationException("Owned release unavailable.");
+                Vector3 releasePoint=diver.transform.position+Vector3.up*.6f;
+                float releaseRange=Vector3.Distance(scout.transform.position,releasePoint);
+                yield return Wait("Fish clears the angler after "+(breakLine?"a broken line":"manual release"),
+                    ()=>tool.HookedFish==null && scout.Startled && Vector3.Distance(scout.transform.position,releasePoint)>releaseRange+3f,3);
+                Place(new Vector3(1,1.1f,1));
+                yield return Wait("Escaped fish resumes its patrol",()=>scout.Mode==FishMode.Roam && !scout.Startled,6);
+            }
+            yield return Wait("Dry deck restores authored visibility",()=>UnderwaterLook.Instance.WaterBlend<.015f && RenderSettings.fogDensity<.03f);
             yield return Wait("Depth one active",()=>threats.Reef.Active&&!threats.Reef.Deep);
             var angler=threats.tuning.predatorSpawn;
+            Place(angler+new Vector3(0,.3f,7.5f));
+            yield return Wait("Nearby passive angler watches the diver in murky water",()=>
+                threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
+                UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.03f && RenderSettings.fogDensity<.05f);
             float health=diver.Oxygen;
-            Place(angler+new Vector3(0,.1f,.95f));
+            Place(angler+new Vector3(0,.1f,3.6f));
+            yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
+            yield return Wait("Angler pursues after its warning",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
             yield return Wait("Angler ambush removes oxygen",()=>diver.Oxygen<=health-10 && threats.Message.Contains("Фонарник"));
             Place(threats.Reef.Clicker+Vector3.right*5.8f);
             yield return Pause(.3f);
@@ -88,6 +138,7 @@ namespace Raid.Nereid.Editor
             Stage(2);
             yield return Wait("Depth two active",()=>threats.Reef.Active&&threats.Reef.Deep);
             FillCreel();Place(threats.Reef.Eel+Vector3.forward*1.2f);
+            yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.10f);
             yield return Wait("Eel warns with three occupied pockets",()=>threats.Reef.EelPhase==1&&tool.HasFullCreel);
             if(!tool.DropOneCatch())throw new InvalidOperationException("Could not drop the selected catch.");
             yield return Wait("Dropped fish diverts eel",()=>threats.Reef.EelPhase==3&&tool.CatchCount==2);
@@ -202,7 +253,7 @@ namespace Raid.Nereid.Editor
             catch(Exception e){failure=(failure??"")+" Restore: "+e.GetBaseException().Message;}
             finally{if(world!=null)Field(world,"savePath").SetValue(world,savePath);}
             Status=(failure==null?"PASS":"FAIL "+failure)+" | "+string.Join(" / ",passed);
-            if(failure==null)Debug.Log("[RAID012 reef] "+Status);else Debug.LogWarning("[RAID012 reef] "+Status);
+            if(failure==null)Debug.Log("[RAID reef] "+Status);else Debug.LogWarning("[RAID reef] "+Status);
         }
     }
 }

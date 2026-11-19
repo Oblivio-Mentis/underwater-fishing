@@ -18,7 +18,7 @@ namespace Raid
         public bool IsDead => _state.Value.Dead;
         public bool IsConsumed => _state.Value.Consumed;
         public bool CanRespawn => IsDead && _state.Value.MayReturn;
-        public bool CanBeRescued => !IsConsumed && (IsHelpless || IsTrapped);
+        public bool CanBeRescued => !IsConsumed && (IsHelpless || IsHypoxic || IsTrapped);
         public bool IsSprinting => _state.Value.Sprinting;
         public float ViewPitch => IsOwner && !IsDead ? _pitch : _state.Value.Pitch;
         public int InteractionSequence => interactionSequence.Value;
@@ -54,6 +54,8 @@ namespace Raid
             state.MayReturn=false;
             state.Sprinting=state.Trapped=false;
             state.Oxygen=0;
+            state.Health=0;
+            state.HypoxicSeconds=0;
             state.BodyRotation=transform.rotation;
             _state.Value=state;
             deathAge=_helplessTime=_trappedTime=0;
@@ -94,6 +96,8 @@ namespace Raid
             state.MayReturn=deathAge>=3;
             if(deathBody!=null)
             {
+                state.Inside=IsSealedInterior(deathBody.position);
+                deathBody.useGravity=state.Inside;
                 if(!deathBody.useGravity)
                 {
                     float surface=deathAnchor.y+.08f*Mathf.Sin(deathAge*1.32f);
@@ -137,6 +141,8 @@ namespace Raid
             state.Dead=state.Consumed=state.MayReturn=state.Trapped=false;
             state.Oxygen=Mathf.Clamp(tuning.rescueOxygen,1,tuning.oxygenCapacity*OxygenMultiplier);
             state.Stress=0;
+            state.Health=45;
+            state.HypoxicSeconds=0;
             transform.rotation=Quaternion.Euler(0,state.Yaw,0);
             state.BodyRotation=transform.rotation;
             _state.Value=state;
