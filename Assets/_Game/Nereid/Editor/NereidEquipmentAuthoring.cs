@@ -15,7 +15,7 @@ namespace Raid.Nereid.Editor
         const string ScenePath="Assets/_Game/Scenes/InterfaceVerticalSlice.unity";
         const string Path="Assets/_Game/Nereid/Generated/Equipment";
         const string RootName="NEREID equipment refinement";
-        static Material steel,dark,trim,ochre,cyan,glass,feedGlass,skin;
+        static Material steel,dark,trim,ochre,cyan,glass,tubeGlass,feedGlass,skin;
 
         public static void Upgrade()
         {
@@ -43,7 +43,8 @@ namespace Raid.Nereid.Editor
             ochre=Mat("Muted equipment ochre",new Color(.58f,.35f,.105f),.24f,.28f);
             cyan=Mat("Reservoir light diffuser",new Color(.18f,.56f,.59f),.25f,.37f,1.05f);
             glass=Flow("Pressure glass",new Color(.38f,.59f,.62f,.16f),new Color(.1f,.5f,.57f));
-            feedGlass=Flow("Feeding pressure glass",new Color(.48f,.52f,.46f,.16f),new Color(.6f,.41f,.16f));
+            tubeGlass=Flow("Process pipe pressure glass",new Color(.38f,.59f,.62f,.16f),new Color(.1f,.5f,.57f),CullMode.Back);
+            feedGlass=Flow("Feeding pressure glass",new Color(.48f,.52f,.46f,.16f),new Color(.6f,.41f,.16f),CullMode.Back);
             var original=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Factory/Generated/Materials/Living_mouth_skin.mat");
             string skinPath=Path+"/Materials/Rooted graft tissue.mat";
             skin=AssetDatabase.LoadAssetAtPath<Material>(skinPath);
@@ -94,7 +95,7 @@ namespace Raid.Nereid.Editor
         {
             foreach(var renderer in runtime.GetComponentsInChildren<Renderer>(true))
                 if(renderer.name.EndsWith("bolted pipe sleeves",StringComparison.Ordinal))renderer.enabled=false;
-            foreach(var r in runtime.processGlass)if(r!=null){r.sharedMaterial=glass;EditorUtility.SetDirty(r);}
+            foreach(var r in runtime.processGlass)if(r!=null){r.sharedMaterial=tubeGlass;EditorUtility.SetDirty(r);}
             foreach(var r in runtime.feedGlass)if(r!=null){r.sharedMaterial=feedGlass;EditorUtility.SetDirty(r);}
             PipeHardware(root,runtime.processTube,"Process");PipeHardware(root,runtime.feedTube,"Feeding");
         }
@@ -102,6 +103,12 @@ namespace Raid.Nereid.Editor
         {
             if(path==null||path.Length<2)return;
             var root=Group(name+" structural pipe supports",parent);
+            // A short hollow welded nozzle seats the transparent pipe in the actual reservoir wall.
+            var nozzleDirection=(path[1]-path[0]).normalized;
+            var nozzle=Ring("Reservoir outlet welded sleeve",root,.342f,.41f,-.12f,.28f,steel);
+            nozzle.localPosition=path[0];nozzle.localRotation=Quaternion.FromToRotation(Vector3.up,nozzleDirection);
+            var seat=Ring("Reservoir outlet machined seat",root,.342f,.43f,.275f,.34f,trim);
+            seat.localPosition=path[0];seat.localRotation=nozzle.localRotation;
             // An opaque lower cradle makes the full pressure tube legible without obscuring fish above it.
             Part("Lower pressure cradle",root,Trough(path,.35f),steel);
             float length=0;for(int i=1;i<path.Length;i++)length+=Vector3.Distance(path[i-1],path[i]);
@@ -265,11 +272,11 @@ namespace Raid.Nereid.Editor
             if(emission>0){material.EnableKeyword("_EMISSION");material.SetColor("_EmissionColor",color*emission);}
             EditorUtility.SetDirty(material);return material;
         }
-        static Material Flow(string name,Color color,Color flow)
+        static Material Flow(string name,Color color,Color flow,CullMode cull=CullMode.Off)
         {
             string path=Path+"/Materials/"+name+".mat";var material=AssetDatabase.LoadAssetAtPath<Material>(path);
             if(material==null){material=new Material(Shader.Find("RAID011/Factory Flow Glass")){name=name};AssetDatabase.CreateAsset(material,path);}
-            material.SetColor("_BaseColor",color);material.SetColor("_FlowColor",flow);material.SetFloat("_FlowActive",0);EditorUtility.SetDirty(material);return material;
+            material.SetColor("_BaseColor",color);material.SetColor("_FlowColor",flow);material.SetFloat("_FlowActive",0);material.SetFloat("_Cull",(float)cull);EditorUtility.SetDirty(material);return material;
         }
         static void Folder(string path)
         {if(AssetDatabase.IsValidFolder(path))return;int cut=path.LastIndexOf('/');Folder(path.Substring(0,cut));AssetDatabase.CreateFolder(path.Substring(0,cut),path.Substring(cut+1));}

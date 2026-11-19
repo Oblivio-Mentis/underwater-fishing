@@ -5,6 +5,7 @@ Shader "RAID011/Factory Flow Glass"
         _BaseColor("Glass tint",Color)=(.15,.55,.63,.16)
         _FlowColor("Flow signal",Color)=(.15,.8,.9,1)
         _FlowActive("Batch active",Float)=0
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull mode",Float)=0
     }
     SubShader
     {
@@ -14,7 +15,7 @@ Shader "RAID011/Factory Flow Glass"
             Tags {"LightMode"="UniversalForward"}
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
-            Cull Off
+            Cull [_Cull]
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
