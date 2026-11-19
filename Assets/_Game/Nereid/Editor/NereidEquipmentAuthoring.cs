@@ -350,7 +350,7 @@ namespace Raid.Nereid.Editor
                 if(underside.sqrMagnitude>.04f)
                     up=Quaternion.AngleAxis(Mathf.Clamp(Vector3.SignedAngle(up,underside.normalized,tangent),-3,3),tangent)*up;
                 var right=Vector3.Cross(tangent,up).normalized;
-                for(int side=0;side<=sides;side++){float a=Mathf.Lerp(-.57f,.57f,side/(float)sides);p.Add(path[ring]+(-up*Mathf.Cos(a)+right*Mathf.Sin(a))*radius);}
+                for(int side=0;side<=sides;side++){float a=Mathf.Lerp(-.24f,.24f,side/(float)sides);p.Add(path[ring]+(-up*Mathf.Cos(a)+right*Mathf.Sin(a))*radius);}
                 previousTangent=tangent;
             }
             for(int ring=0;ring<path.Length-1;ring++)for(int side=0;side<sides;side++)

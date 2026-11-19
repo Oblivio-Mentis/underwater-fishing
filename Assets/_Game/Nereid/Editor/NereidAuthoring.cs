@@ -298,7 +298,7 @@ namespace Raid.Nereid.Editor
         static void RerouteFeed()
         {
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
-            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(3.5f,1.3f,-3),new Vector3(3.5f,3.5f,-3),new Vector3(3.5f,3.5f,4.6f),new Vector3(2.35f,3.0f,6.35f),new Vector3(1.1f,2.4f,7.75f)};
+            var anchors=new[]{new Vector3(1.6f,1.3f,-3),new Vector3(3.2f,1.3f,-3),new Vector3(3.6f,1.85f,-.6f),new Vector3(3.6f,3.0f,4.5f),new Vector3(2.4f,3.0f,6.25f),new Vector3(1.1f,2.4f,7.75f)};
             factory.feedTube=BuildTube(anchors,factory.feedGlass,"FeedingShoulderPipe");
             foreach(var r in factory.GetComponentsInChildren<Renderer>(true))
                 if(r.sharedMaterial!=null&&r.sharedMaterial.name=="Enamel_safety_ochre")r.sharedMaterial=mats["Nereid_Ochre"];
@@ -315,7 +315,7 @@ namespace Raid.Nereid.Editor
             foreach(Transform bin in workshop)if(bin.name.StartsWith("Material output bin",StringComparison.Ordinal))
                 foreach(var label in bin.GetComponentsInChildren<TMPro.TMP_Text>(true))
                 {var point=label.transform.localPosition;point.z=-.27f;label.transform.localPosition=point;label.transform.localRotation=Quaternion.identity;}
-            var anchors=new[]{new Vector3(-1.6f,1.3f,-3),new Vector3(-3.5f,1.3f,-3),new Vector3(-3.5f,3.5f,-3),new Vector3(-3.5f,3.5f,-9.1f),new Vector3(-2.5f,2.35f,-10.95f)};
+            var anchors=new[]{new Vector3(-1.6f,1.3f,-3),new Vector3(-3.2f,1.3f,-3),new Vector3(-3.6f,1.85f,-5.4f),new Vector3(-3.6f,2.85f,-8.7f),new Vector3(-2.5f,2.35f,-10.95f)};
             factory.processTube=BuildTube(anchors,factory.processGlass,"ProcessingHallPipe");EditorUtility.SetDirty(factory);
         }
 
