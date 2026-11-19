@@ -53,7 +53,7 @@ namespace Raid
                 }
             }
             viewed=player!=null && player.Spectating!=null?player.Spectating:player;
-            bool wet=viewed!=null && !viewed.IsInside;
+            bool wet=IsEyeUnderwater();
             ambient.volume=Mathf.Lerp(ambient.volume,wet?.035f:.075f,.3f);
             if(bubbles!=null){var emission=bubbles.emission;emission.rateOverTime=wet&&root.Page==UI.UiPage.None?4:0;}
         }

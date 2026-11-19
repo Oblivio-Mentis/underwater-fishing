@@ -75,10 +75,18 @@ namespace Raid
             clip.SetData(samples,0);return clip;
         }
 
+        bool IsEyeUnderwater()
+        {
+            if(camera==null || viewed==null)return false;
+            var chamber=Nereid.NereidAirlock.Active;
+            var eye=camera.transform.position;
+            return chamber!=null && chamber.Contains(eye)?chamber.IsSubmerged(eye):!viewed.IsInside;
+        }
+
         void LateUpdate()
         {
             if(Nereid.NereidVessel.Active==null)return;
-            bool wet=camera!=null && viewed!=null && !viewed.IsInside;
+            bool wet=IsEyeUnderwater();
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
             float danger=wet && !viewed.IsDead && ThreatDirector.Instance!=null?
