@@ -225,7 +225,7 @@ namespace Raid
         {
             atBase.Value=pendingDepth==0; depth.Value=pendingDepth;
             for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(new Vector3((i-2)*1.5f,1.2f,1));
-            foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.SetDepthActive(!AtBase && fish.depthTier==pendingDepth);
+            foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(!AtBase && fish.depthTier==pendingDepth);
             foreach(var loot in FindObjectsByType<LootActor>()) loot.SetDepth(pendingDepth);
             if(threats!=null) threats.SetDepth(pendingDepth);
             message.Value=AtBase?"Base: process catch and upgrade equipment":"Depth "+depth.Value+": catch fish and deliver cargo";

@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public sealed class FishActor : NetworkBehaviour, IUniversalFsmStateChangeSource
+    public sealed partial class FishActor : NetworkBehaviour, IUniversalFsmStateChangeSource
     {
         public FishingTuning tuning;
         public UniversalFsmDefinitionAsset fsmDefinition;
@@ -23,7 +23,7 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public float Tension, Stamina;
-            public bool Active, Stowed;
+            public bool Active, Stowed, Startled;
             public int Holder;
         }
 
@@ -68,6 +68,7 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            ServerSchool.Add(this);
             if (tuning == null || fsmDefinition == null || fsmProfile == null)
                 throw new InvalidOperationException("Assign fishing tuning, native FSM definition and profile to FishActor.");
             _origin = transform.position;
@@ -99,6 +100,8 @@ namespace Raid
 
         public override void OnStopServer()
         {
+            ServerSchool.Remove(this);
+            arrivalPending=false;
             if (_hooker != null) _hooker.NotifyFishLost(this);
             _hooker = null;
             _runtime?.Dispose();
@@ -144,12 +147,16 @@ namespace Raid
         {
             if (!IsServerInitialized) return;
             if (_hooker != null) ReleaseHook(_hooker);
+            arrivalPending=false;
+            fleeRemaining=0;
             _depthActive = active;
             transform.position = _origin;
             DesiredState = FishMode.Roam;
             _runtime?.Reset();
             var state = _snapshot.Value;
             state.Position = _origin;
+            state.Rotation = transform.rotation;
+            state.Startled = false;
             state.Active = active;
             state.Stowed = false;
             state.Holder = -1;
@@ -170,6 +177,7 @@ namespace Raid
             state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
             state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
             if (state.Stowed) _hooker = null;
+            if (mode != FishMode.Roam) {state.Startled=false;fleeRemaining=0;}
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
@@ -187,7 +195,19 @@ namespace Raid
 
         private void FixedUpdate()
         {
-            if (!IsServerInitialized || !_depthActive || _runtime == null) return;
+            if (!IsServerInitialized || _runtime == null) return;
+            if(arrivalPending)TryArrive();
+            if(!_depthActive)return;
+            if(staggered && Mode==FishMode.Transported && _elapsed>=tuning.respawnSeconds)
+            {
+                ScheduleAt(Time.time+2.5f);
+                return;
+            }
+            if(staggered && Mode==FishMode.Roam && DesiredState==FishMode.Roam && Time.time>departureAt && NearestSwimmer(transform.position,14)==null)
+            {
+                ScheduleAt(Time.time+18);
+                return;
+            }
             _runtime.Tick(Time.fixedDeltaTime);
             _runtime.FixedTick(Time.fixedDeltaTime);
         }
@@ -200,6 +220,7 @@ namespace Raid
             switch (mode)
             {
                 case FishMode.Roam:
+                    if(Nereid.NereidVessel.Active!=null){SwimReef(dt,ref state);break;}
                     Vector3 patrol = _origin + new Vector3(Mathf.Sin(_clock * tuning.roamSpeed), Mathf.Sin(_clock * tuning.roamSpeed * 0.5f) * 0.25f, Mathf.Cos(_clock * tuning.roamSpeed)) * tuning.swimRadius;
                     MoveTowards(patrol, tuning.roamSpeed * dt);
                     break;
@@ -225,7 +246,7 @@ namespace Raid
                     if (_elapsed >= tuning.escapeRecoverySeconds) DesiredState = FishMode.Roam;
                     break;
                 case FishMode.Transported:
-                    if (_elapsed >= tuning.respawnSeconds)
+                    if (!staggered && _elapsed >= tuning.respawnSeconds)
                     {
                         transform.position = _origin;
                         RenewCargoId();

@@ -119,7 +119,7 @@ namespace Raid
             {
                 Phase("Solo capture / " + species);
                 var fish = Fish(species);
-                yield return Wait(() => fish.Mode == FishMode.Roam, 16, "School did not repopulate " + species + " while the first catch was stowed.");
+                yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "School did not repopulate " + species + " while the first catch was stowed.");
                 yield return Hook(fish);
                 yield return Reel(fish);
                 Require(!host.HandsFull && host.HookedFish == null && host.CarriedFish != null,
@@ -140,6 +140,7 @@ namespace Raid
 
             Phase("Heavy solo attempt");
             var heavy = Fish("Bristlefish");
+            yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,65,"Heavy school did not arrive.");
             yield return Hook(heavy);
             yield return Wait(() => heavy.Mode == FishMode.Struggling, 4, "Heavy fish did not enter its struggle.");
             float initial = heavy.Stamina;

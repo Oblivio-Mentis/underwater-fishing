@@ -62,7 +62,7 @@ namespace Raid
                 transform.position += escapeDirection * ((2.2f + Mathf.Sin(age*6)*.15f)*Time.deltaTime);
                 transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
             }
-            bool struggling = actor != null && actor.Mode == FishMode.Struggling;
+            bool struggling = actor != null && (actor.Mode == FishMode.Struggling || actor.Startled);
             float wave = Mathf.Sin(Time.time * (struggling ? 12 : 5.5f) + phase);
             tail.localRotation = Quaternion.Euler(0, wave * (struggling ? 30 : 16), 0);
         }
