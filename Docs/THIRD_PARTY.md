@@ -24,3 +24,9 @@ Hull/interior modules, rocks, kelp, wreck, parasite, fish fins, harpoon, materia
 | PT Sans Regular, unmodified static TTF; generated TMP SDF atlas | [Google Fonts / ParaType](https://github.com/google/fonts/tree/main/ofl/ptsans), TTF SHA256 `9cc831490532009bae2b3ce0d39c62adfc889060beb421593bfd9d2396d0f10a` | SIL OFL 1.1, copyright and full license retained in `Assets/_Game/UI/Overhaul/Fonts/OFL.txt`; permits commercial bundling |
 | TMP Essential Resources | Imported from already installed `com.unity.ugui` 2.5.0 package | Unity package terms and included notices; Liberation Sans default font license retained in imported Fonts folder |
 | UI panels, status marks and layout | Authored in this project, uGUI Images / TextMeshPro | Project-authored; no external icon pack |
+
+## RAID-011 industrial prototype expansion
+
+The reservoir, pipework, conveyors, processor, material outlets, physical control panels, aft exit, fish presentation meshes, organic mouth and its mounting hardware are authored in this project. `RAID011/Factory Flow Glass` and `RAID011/Living Tissue`, low-amplitude metal/tread textures, bubbles and procedural audio are also project-authored. No additional external 3D model, art pack, texture pack or audio recording was added for this expansion.
+
+The custom URP shaders include the already installed Unity shader libraries; those libraries remain covered by their existing Unity package terms and notices. The PT Sans/TMP resources and notices listed above continue to apply. User-supplied concept images guide the visual direction; they are not imported as game textures or presented as captured gameplay.
