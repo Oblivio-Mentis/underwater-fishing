@@ -39,6 +39,7 @@ namespace Raid.UI
         const string AimMouseLayout="RAID011BackgroundAimMouse";
         BackgroundAimMouse aimMouse;
         InputSettings originalInputSettings,qaInputSettings;
+        HideFlags originalInputFlags;
         float aimReleaseAt;
         bool aimReleasePending;
         static UiQaProbe aimTestOwner;
@@ -52,8 +53,16 @@ namespace Raid.UI
             aimTestOwner=this;
             try
             {
-                originalInputSettings=InputSystem.settings;qaInputSettings=Instantiate(originalInputSettings);
-                qaInputSettings.name="Transient NEREID synthetic aim input";qaInputSettings.hideFlags=HideFlags.HideAndDontSave;
+                originalInputSettings=InputSystem.settings;originalInputFlags=originalInputSettings.hideFlags;
+                // InputManager.settings destroys the previous object when its flags equal HideAndDontSave.
+                // Preserve an engine-created default settings object until the scope returns ownership.
+                if(originalInputFlags==HideFlags.HideAndDontSave)originalInputSettings.hideFlags=HideFlags.DontSave;
+                qaInputSettings=Instantiate(originalInputSettings);
+                qaInputSettings.name="Transient NEREID synthetic aim input";qaInputSettings.hideFlags=HideFlags.DontSave|HideFlags.HideInInspector;
+#if UNITY_EDITOR
+                UnityEditor.AssemblyReloadEvents.beforeAssemblyReload+=EndAimTest;
+                UnityEditor.EditorApplication.playModeStateChanged+=OnEditorPlayMode;
+#endif
                 qaInputSettings.backgroundBehavior=InputSettings.BackgroundBehavior.ResetAndDisableNonBackgroundDevices;
 #if UNITY_EDITOR
                 qaInputSettings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
@@ -74,8 +83,19 @@ namespace Raid.UI
 
         public void EndAimTest()
         {
+#if UNITY_EDITOR
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload-=EndAimTest;
+            UnityEditor.EditorApplication.playModeStateChanged-=OnEditorPlayMode;
+#endif
             if(aimTestOwner==this)aimTestOwner=null;
             aimReleasePending=false;
+            // Restore first: device callbacks must see live settings, even during shutdown/reload.
+            if(originalInputSettings!=null)
+            {
+                InputSystem.settings=originalInputSettings;
+                originalInputSettings.hideFlags=originalInputFlags;
+                originalInputSettings=null;
+            }
             if(aimMouse!=null)
             {
                 var aim=Nereid.NereidAim.Active;if(aim!=null)aim.EndBackgroundQa();
@@ -83,10 +103,15 @@ namespace Raid.UI
             }
             if(qaInputSettings!=null)
             {
-                if(InputSystem.settings==qaInputSettings&&originalInputSettings!=null)InputSystem.settings=originalInputSettings;
-                Destroy(qaInputSettings);qaInputSettings=null;originalInputSettings=null;
+                // Never destroy an object still owned by InputManager if an external tool invalidated the original.
+                if(!ReferenceEquals(InputSystem.settings,qaInputSettings))Destroy(qaInputSettings);
+                qaInputSettings=null;
             }
         }
+#if UNITY_EDITOR
+        void OnEditorPlayMode(UnityEditor.PlayModeStateChange state)
+        {if(state==UnityEditor.PlayModeStateChange.ExitingPlayMode)EndAimTest();}
+#endif
         void OnDisable(){EndAimTest();}
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
