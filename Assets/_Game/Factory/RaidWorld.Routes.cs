@@ -33,10 +33,16 @@ namespace Raid
             bool changed=false;
             while(state.completed<routeIds.Count && state.elapsed>=8f+state.completed*.18f)
             {
-                long id=routeIds[state.completed++];
-                changed|=state.feeding?team.Feed(id):team.Process(id);
+                long id=routeIds[state.completed];
+                try {changed|=state.feeding?team.Feed(id):team.Process(id);state.completed++;}
+                catch(System.OverflowException)
+                {
+                    state.active=false;state.failed=true;routeIds.Clear();changed=true;
+                    message.Value="Подача остановлена: достигнут предел ресурса. Оставшаяся рыба сохранена";
+                    break;
+                }
             }
-            if(state.completed>=routeIds.Count){state.active=false;routeIds.Clear();message.Value=state.feeding?"Корм доставлен чудовищу":"Переработка завершена";changed=true;}
+            if(state.active && state.completed>=routeIds.Count){state.active=false;routeIds.Clear();message.Value=state.feeding?"Корм доставлен чудовищу":"Переработка завершена";changed=true;}
             if(changed){Publish();Save();}
             if(changed || Time.unscaledTime>=nextRoutePublish){nextRoutePublish=Time.unscaledTime+.1f;fishRoute.Value=state;}
         }

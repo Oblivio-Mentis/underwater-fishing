@@ -16,7 +16,8 @@ namespace Raid.UI
         readonly TMP_Text[] resources=new TMP_Text[4];
         readonly Dictionary<string,Button> tabs=new Dictionary<string,Button>();
         readonly List<Action> refreshRows=new List<Action>();
-        readonly TMP_Text summary,footer;
+        readonly TMP_Text summary,footer,shellTitle;
+        readonly RectTransform tabRow;
         readonly RectTransform content;
         readonly ScrollRect scroll;
         string tab="catch",builtKey;
@@ -27,6 +28,7 @@ namespace Raid.UI
         {
             this.app=app;RectTransform root;
             var layout=TerminalParts.Shell(parent,"TerminalView",UiText.TerminalTitle,UiText.TerminalKicker,app,out root);Root=root;
+            shellTitle=layout.Find("Heading/Titles/Title").GetComponent<TMP_Text>();
             var resourceRow=UiKit.Row(layout,"Resources",12);UiKit.Size(resourceRow,66);
             string[] names={UiText.BiomassLabel,UiText.ChitinLabel,UiText.ScrapLabel,UiText.ElectronicsLabel};
             for(int i=0;i<4;i++)
@@ -36,7 +38,7 @@ namespace Raid.UI
                 TerminalParts.Text(body,"Name",names[i],22,17,UiTheme.Muted);resources[i]=TerminalParts.Text(body,"Amount","—",28,26);
             }
             summary=TerminalParts.Text(layout,"Summary",UiText.NoConfirmedState,30,21,UiTheme.Muted);
-            var tabRow=UiKit.Row(layout,"Tabs",8);UiKit.Size(tabRow,50);
+            tabRow=UiKit.Row(layout,"Tabs",8);UiKit.Size(tabRow,50);
             AddTab(tabRow,"catch",UiText.CatchTab);AddTab(tabRow,"upgrades",UiText.UpgradesTab);AddTab(tabRow,"depths",UiText.DepthsTab);AddTab(tabRow,"feeding",UiText.FeedingTab);
             scroll=TerminalParts.Body(layout,out content);
             footer=TerminalParts.Text(layout,"Footer","",40,19,UiTheme.Muted);
@@ -54,8 +56,15 @@ namespace Raid.UI
         {
             if(!Root.gameObject.activeInHierarchy)return;
             var ctx=app.Context;var view=ctx.View;
+            var station=ctx.SelectedConsole;
+            bool equipment=station!=null&&station.kind==ShipConsoleKind.Upgrades;
+            bool navigation=station!=null&&station.kind==ShipConsoleKind.Depths;
+            if(equipment)tab="upgrades";else if(navigation)tab="depths";
+            tabRow.gameObject.SetActive(!equipment&&!navigation);
+            UiKit.Set(shellTitle,station==null?UiText.TerminalTitle:station.Caption.ToUpperInvariant());
             foreach(var pair in tabs)
             {
+                pair.Value.gameObject.SetActive(station==null||station.kind!=ShipConsoleKind.Reservoir||pair.Key=="catch"||pair.Key=="feeding");
                 bool selected=pair.Key==tab;pair.Value.GetComponent<Image>().color=selected?UiTheme.Cyan:UiTheme.Panel;
                 pair.Value.GetComponentInChildren<TMP_Text>().color=selected?UiTheme.Steel:UiTheme.Text;
             }
@@ -67,8 +76,11 @@ namespace Raid.UI
             {
                 UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
                 UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired));
+                if(equipment)UiKit.Set(summary,ctx.AtBase?"Общее оборудование экипажа · установка на базе":"Установка оборудования доступна на базе");
+                if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  Для перехода вернитесь в лодку");
                 string reason=TerminalParts.BaseReason(app);
                 UiKit.Set(footer,ctx.World.TravelRemaining>0?UiText.TravelRemaining(ctx.World.TravelRemaining):!string.IsNullOrEmpty(reason)?reason:UiText.CargoSummary(view,ctx.Tuning));
+                if(equipment&&string.IsNullOrEmpty(reason))UiKit.Set(footer,"Улучшения действуют на весь экипаж");
                 footer.color=string.IsNullOrEmpty(reason)?UiTheme.Muted:UiTheme.Amber;
             }
             string key=BuildKey();if(key!=builtKey){builtKey=key;Rebuild();}

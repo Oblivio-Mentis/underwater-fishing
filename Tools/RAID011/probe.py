@@ -35,7 +35,7 @@ def send(directory, action="snapshot", name="", value="", number=0, number2=0, s
 
 
 def summary(current):
-    fields = ("page", "connected", "pending", "cursor", "inputBlocked", "width", "height", "players", "owner", "events", "canvases", "audioListeners", "atBase", "travel", "hookMode", "tension", "stamina", "rescueProgress", "stockLoss", "wave", "x", "y", "z", "oxygen", "stress", "aimYaw", "aimPitch", "lastSuccess")
+    fields = ("page", "connected", "pending", "cursor", "inputBlocked", "width", "height", "players", "owner", "events", "canvases", "audioListeners", "atBase", "travel", "hookMode", "tension", "stamina", "rescueProgress", "stockLoss", "wave", "x", "y", "z", "oxygen", "stress", "aimYaw", "aimPitch", "lastSuccess", "tetherActive", "isPulled", "tetherOwner", "tetherTarget", "tetherRefusal")
     result = {key: current.get(key) for key in fields}
     if current.get("team"):
         team = json.loads(current["team"])

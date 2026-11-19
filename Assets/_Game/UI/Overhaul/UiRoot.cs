@@ -116,7 +116,7 @@ namespace Raid.UI
                 canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=Context.Player.GetComponentInChildren<Camera>();
                 canvasRect.sizeDelta=new Vector2(1920,1080);
                 canvasRect.position=station.screenAnchor.position;canvasRect.rotation=station.screenAnchor.rotation;
-                canvasRect.localScale=Vector3.one*.0018f;
+                canvasRect.localScale=Vector3.one*station.screenScale;
                 Context.Player.LookAtConsole(station.screenAnchor.position);
             }
             else
@@ -169,7 +169,7 @@ namespace Raid.UI
                     hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
-                    if(worldMessage.StartsWith("SAVE ERROR") && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
+                    if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
                 }
                 if(menu.Root.gameObject.activeSelf)menu.Refresh();UpdatePending();
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");
@@ -183,14 +183,7 @@ namespace Raid.UI
             switch(Context.Interaction)
             {
                 case UiInteraction.Terminal:
-                    Context.SelectedConsole=Context.AimedConsole;
-                    if(Context.SelectedConsole!=null && (Context.SelectedConsole.kind==ShipConsoleKind.Process || Context.SelectedConsole.kind==ShipConsoleKind.Feed))
-                        ConfirmFishRoute(Context.SelectedConsole.kind==ShipConsoleKind.Feed);
-                    else
-                    {
-                        ShowPage(UiPage.Terminal);
-                        terminal.SelectTab(Context.SelectedConsole!=null&&Context.SelectedConsole.kind==ShipConsoleKind.Depths?"depths":"upgrades");
-                    }
+                    UseConsole(Context.AimedConsole);
                     break;
                 case UiInteraction.Cargo:
                     if(Context.View.hoistPhase!=HoistPhase.Loading)Toast(UiText.CargoLocked);
@@ -199,20 +192,35 @@ namespace Raid.UI
                 case UiInteraction.Loot: Send(WorldAction.Collect); break;
             }
         }
+        public void UseConsole(ShipConsole station)
+        {
+            if(!Context.Connected || Context.Player.IsHelpless || CommandPending || confirmAction!=null || Context.World.TravelRemaining>0)return;
+            if(station!=null&&!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
+            if(station==null&&ShipConsole.Stations.Count>0)return;
+            Context.SelectedConsole=station;
+            if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ConfirmFishRoute(station.kind==ShipConsoleKind.Feed);
+            else
+            {
+                ShowPage(UiPage.Terminal);
+                terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
+            }
+        }
         void ConfirmFishRoute(bool feeding)
         {
             var view=Context.View;if(view==null)return;
             if(Context.World.FishRoute.active){Toast(UiText.RouteBusy);return;}
             if(!feeding&&!Context.AtBase){Toast(UiText.ProcessAtBase);return;}
             var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
-            int count=fish.Count,food=0,biomass=0,chitin=0;
+            int count=fish.Count;long food=0,biomass=0,chitin=0;
+            long quoted=FishRouteQuote.Compute(fish,Context.FoodRequired);
             var station=Context.SelectedConsole;
             foreach(var item in fish){food+=item.offering;biomass+=item.biomass;chitin+=item.chitin;}
             string detail=feeding?"Пища: "+food+" / нужно "+Context.FoodRequired:"Выход: биомасса "+biomass+", хитин "+chitin;
             Confirm(feeding?"Отдать всю рыбу чудовищу?":"Переработать всю рыбу?", "Рыбы: "+count+"\n"+detail+"\n\n"+(feeding?"Рыба уйдёт по правой трубе в пасть. Материалов из неё не будет.":"Рыба уйдёт по левой трубе на конвейер. Материалы поступят после обработки."),()=>
             {
                 if(station==null || !station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
-                Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,count);
+                if(Context.View==null || FishRouteQuote.Compute(Context.View.tank,Context.FoodRequired)!=quoted){Toast(UiText.QuoteChanged,true);return;}
+                Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
             });
         }
         public void Send(WorldAction action,long id=0)
@@ -259,7 +267,7 @@ namespace Raid.UI
             if(computerSurface && viewCamera!=null && Context.SelectedConsole!=null)
             {
                 float distance=Vector3.Distance(viewCamera.transform.position,Context.SelectedConsole.screenAnchor.position);
-                desiredFov=Mathf.Clamp(2*Mathf.Atan(.0018f*810*.65f/Mathf.Max(.5f,distance))*Mathf.Rad2Deg,34,80);
+                desiredFov=Mathf.Clamp(2*Mathf.Atan(Context.SelectedConsole.screenScale*810*.65f/Mathf.Max(.5f,distance))*Mathf.Rad2Deg,34,80);
             }
         }
         void LateUpdate()

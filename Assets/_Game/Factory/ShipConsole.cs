@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum ShipConsoleKind { Process, Feed, Upgrades, Depths }
+    public enum ShipConsoleKind { Process, Feed, Upgrades, Depths, Reservoir }
 
     // Physical, scene-authored access points. Server validates its own station list.
     public sealed class ShipConsole : MonoBehaviour
@@ -11,8 +11,9 @@ namespace Raid
         public ShipConsoleKind kind;
         public Transform screenAnchor;
         public float range=3.2f;
+        public float screenScale=.0018f;
         public static readonly List<ShipConsole> Stations=new List<ShipConsole>();
-        public string Caption => kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер": "Навигация";
+        public string Caption => kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
         void OnEnable() { if(!Stations.Contains(this))Stations.Add(this); }
         void OnDisable() { Stations.Remove(this); }
         public bool InRange(DiverMotor diver) => diver!=null && (diver.transform.position-transform.position).sqrMagnitude<=range*range;
@@ -22,7 +23,7 @@ namespace Raid
             if(action==WorldAction.FeedAll)return kind==ShipConsoleKind.Feed;
             if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths;
             if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return)return kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Upgrades;
-            return kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths;
+            return kind==ShipConsoleKind.Reservoir;
         }
         public static bool CanUse(DiverMotor diver,WorldAction action)
         {

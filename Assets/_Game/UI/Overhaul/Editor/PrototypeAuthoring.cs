@@ -16,6 +16,7 @@ namespace Raid.UI.Editor
                 throw new System.InvalidOperationException("Bindings require the stopped InterfaceVerticalSlice scene");
             Bind("FishRoute_Process",ShipConsoleKind.Process);Bind("FishRoute_Feed",ShipConsoleKind.Feed);
             Bind("UpgradeConsole",ShipConsoleKind.Upgrades);Bind("DepthConsole",ShipConsoleKind.Depths);
+            AddReservoirMonitor();Bind("ReservoirConsole",ShipConsoleKind.Reservoir);
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
             if(factory!=null && factory.GetComponent<Raid.Factory.FishRoutePresentation>()==null)factory.gameObject.AddComponent<Raid.Factory.FishRoutePresentation>();
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene());AssetDatabase.SaveAssets();
@@ -28,14 +29,26 @@ namespace Raid.UI.Editor
             if(station.screenAnchor!=null && station.screenAnchor.GetComponent<Collider>()==null)
             {
                 var screenHit=station.screenAnchor.gameObject.AddComponent<BoxCollider>();
-                bool computer=kind==ShipConsoleKind.Upgrades||kind==ShipConsoleKind.Depths;
-                screenHit.size=computer?new Vector3(2.42f,1.77f,.025f):new Vector3(1.02f,.64f,.025f);
+                bool computer=kind==ShipConsoleKind.Upgrades||kind==ShipConsoleKind.Depths||kind==ShipConsoleKind.Reservoir;
+                screenHit.size=computer?new Vector3(station.screenScale*1250,station.screenScale*860,.025f):new Vector3(1.02f,.64f,.025f);
             }
             if(go.GetComponentInChildren<Collider>()==null)
             {
                 var collider=go.AddComponent<BoxCollider>();collider.center=new Vector3(0,1.1f,0);collider.size=new Vector3(.75f,1.5f,.65f);
             }
             EditorUtility.SetDirty(station);
+        }
+        static void AddReservoirMonitor()
+        {
+            if(GameObject.Find("ReservoirConsole")!=null)return;
+            var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();if(factory==null)return;
+            var root=new GameObject("ReservoirConsole");root.transform.SetParent(factory.transform,false);
+            root.transform.localPosition=new Vector3(0,0,-1.25f);root.transform.localRotation=Quaternion.Euler(0,180,0);
+            var station=root.AddComponent<ShipConsole>();station.screenScale=.001f;
+            var backing=GameObject.CreatePrimitive(PrimitiveType.Cube);backing.name="Reservoir inspection screen housing";backing.transform.SetParent(root.transform,false);
+            backing.transform.localPosition=new Vector3(0,1.22f,0);backing.transform.localScale=new Vector3(1.36f,1,.13f);
+            backing.GetComponent<Renderer>().sharedMaterial=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Factory/Generated/Materials/Machine_dark_steel.mat");
+            var anchor=new GameObject("ScreenAnchor").transform;anchor.SetParent(root.transform,false);anchor.localPosition=new Vector3(0,1.22f,-.08f);
         }
     }
 }

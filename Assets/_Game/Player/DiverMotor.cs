@@ -108,8 +108,9 @@ namespace Raid
             _camera.backgroundColor = RenderSettings.fogColor;
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            bool lockCursor=!UI.UiInputGate.Active || (Application.isFocused&&!UI.UiInputGate.Blocked);
+            Cursor.lockState = lockCursor?CursorLockMode.Locked:CursorLockMode.None;
+            Cursor.visible = !lockCursor;
         }
 
         public override void OnStopClient()

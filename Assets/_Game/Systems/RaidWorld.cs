@@ -164,12 +164,16 @@ namespace Raid
                 return;
             }
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && ShipConsole.Stations.Count==0)
+            {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            if(stationCommand && (action==WorldAction.Process || action==WorldAction.Feed) && team.tank.Exists(x=>x.id==id&&x.offering>0))
+            {Respond(sender,requestId,false,"use_route");return;}
             if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
             {Respond(sender,requestId,false,"route_busy");return;}
-            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id>0 && team.tank.FindAll(x=>x.offering>0).Count!=id)
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
             {Respond(sender,requestId,false,"changed");return;}
             if(action>=WorldAction.Reel && action<=WorldAction.Winch && expectedLevel>=0 && team.Level((Upgrade)((int)action-(int)WorldAction.Reel))!=expectedLevel)
             { Respond(sender,requestId,false,"changed"); return; }

@@ -10,7 +10,8 @@ using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.UI;
 namespace Raid.UI
 {
-    // Explicit opt-in local QA driver. No server commands, save edits or code execution.
+    // Explicit opt-in local QA driver. Only UI callbacks and owned-player actions;
+    // no direct server state, save edits or code execution.
     // Omitted from non-development players; inactive unless -raid-ui-probe <directory> is provided.
     public sealed class UiQaProbe : MonoBehaviour
     {
@@ -23,6 +24,9 @@ namespace Raid.UI
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,volume,aimYaw,aimPitch;
             public string team,hookedFish,hookMode;
             public float tension,stamina;
+            public bool tetherActive,isPulled;
+            public int tetherOwner=-1,tetherTarget=-1;
+            public float tetherRefusal;
             public Control[] controls;
         }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
@@ -55,7 +59,24 @@ namespace Raid.UI
         }
         void Execute(Request r)
         {
-            if(r.action=="capture") { ScreenCapture.CaptureScreenshot(Path.Combine(directory,Path.GetFileName(r.value)));return; }
+            if(r.action=="console")
+            {
+                var station=ShipConsole.Stations.FirstOrDefault(s=>s!=null&&s.name==r.name);
+                if(station==null)throw new InvalidOperationException("Physical console not found");
+                UiRoot.Instance.UseConsole(station);return;
+            }
+            if(r.action=="cancel_tether")
+            {
+                var tool=UiRoot.Instance.Context.Harpoon;
+                if(tool==null||!tool.IsOwner)throw new InvalidOperationException("Owned player is not connected");
+                tool.CancelFriendTether();return;
+            }
+            if(r.action=="capture")
+            {
+                string leaf=Path.GetFileName(string.IsNullOrEmpty(r.value)?r.name:r.value);
+                if(string.IsNullOrEmpty(leaf)||!leaf.EndsWith(".png",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Capture requires a PNG filename");
+                ScreenCapture.CaptureScreenshot(Path.Combine(directory,leaf));return;
+            }
             if(r.action=="key")
             {
                 Key key;if(!Enum.TryParse(r.value,true,out key))throw new ArgumentException("Unknown key");
@@ -92,6 +113,12 @@ namespace Raid.UI
                 uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,volume=root.Settings.volume,lastSuccess=root.LastCommandSucceeded,
                 team=context.View==null?"":JsonUtility.ToJson(context.View),hookedFish=fish==null?"":fish.SpeciesId,hookMode=fish==null?"":fish.Mode.ToString(),tension=fish==null?0:fish.Tension,stamina=fish==null?0:fish.Stamina,
                 rescueProgress=context.Rescue==null?0:context.Rescue.DisplayProgress,stockLoss=world==null?0:world.StockLossCount,wave=context.Threats!=null&&context.Threats.WaveActive};
+            if(context.Harpoon!=null)
+            {
+                var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;
+                snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
+                snapshot.tetherRefusal=tool.TetherOptOutRemaining;
+            }
             if(player!=null){snapshot.owner=player.OwnerId;snapshot.x=player.transform.position.x;snapshot.y=player.transform.position.y;snapshot.z=player.transform.position.z;snapshot.oxygen=player.Oxygen;snapshot.stress=player.PressureStress;snapshot.depth=player.Depth;}
             var camera=player==null?null:player.GetComponentInChildren<Camera>();if(camera!=null){snapshot.aimYaw=camera.transform.eulerAngles.y;snapshot.aimPitch=Mathf.DeltaAngle(0,camera.transform.eulerAngles.x);}
             snapshot.controls=UnityEngine.Object.FindObjectsByType<Button>().Where(b=>b.IsActive()).Select(b=>

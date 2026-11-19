@@ -13,5 +13,6 @@ namespace Raid.UI
         public const string CaptureContext="Подойдите к точке взаимодействия";
         public const string RootVersion="RAID-011 • ИНТЕРФЕЙС NEREID";
         public const string RouteBusy="Трубы заняты: дождитесь завершения подачи";
+        public const string UseFishRoute="Используйте пульт подачи у резервуара";
     }
 }

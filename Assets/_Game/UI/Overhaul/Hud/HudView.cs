@@ -57,7 +57,6 @@ namespace Raid.UI
             var strip=UiKit.Row(content,"Expedition Readouts",16);UiKit.Size(strip,82);
             var stock=UiKit.Column(strip,"Reservoir",2);UiKit.Size(stock,82,154);
             var stockHeading=UiKit.Row(stock,"Stock Heading",8);UiKit.Size(stockHeading,20);
-            var fishGlyph=UiKit.Node(stockHeading,"Fish Symbol");UiKit.Size(fishGlyph,20,26);fishGlyph.gameObject.AddComponent<HudFishGlyph>().color=UiTheme.Cyan;
             var stockTitle=UiKit.Label(stockHeading,"Stock Caption",UiText.HudStock,16,UiTheme.Muted);UiKit.Size(stockTitle,20,flexibleWidth:1);
             stockValue=Line(stock,"Stock Count","—",32,UiTheme.Text,34);
             stockDetail=Line(stock,"Stock Detail",UiText.HudReservoir,16,UiTheme.Muted,20);
@@ -129,6 +128,7 @@ namespace Raid.UI
 
             float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*player.OxygenMultiplier);
             float oxygenFraction=Mathf.Clamp01(player.Oxygen/capacity);
+            vitalsPanel.gameObject.SetActive(!player.IsInside || oxygenFraction<.995f || player.PressureStress>1);
             Color oxygenColor=player.IsHelpless?UiTheme.Red:player.IsInside?UiTheme.Green:oxygenFraction<=.1f?UiTheme.Red:oxygenFraction<=.2f?UiTheme.Amber:UiTheme.Cyan;
             UiKit.Set(oxygenLabel,UiText.HudOxygen(player.Oxygen,capacity));SetColor(oxygenBar,oxygenColor);UiKit.Fraction(oxygenBar,oxygenFraction);
             UiKit.Set(vitalsState,player.IsInside?UiText.HudInside:UiText.HudOutside);vitalsState.color=player.IsInside?UiTheme.Green:UiTheme.Muted;
@@ -151,6 +151,7 @@ namespace Raid.UI
                     if(item.offering>0 || item.biomass>0 || item.chitin>0)fishCount++;else technicalCount++;
                 }
                 UiKit.Set(stockValue,fishCount.ToString());UiKit.Set(stockDetail,UiText.HudStockDetail(technicalCount));
+                if(context.World.FishRoute.active)UiKit.Set(stockDetail,(context.World.FishRoute.feeding?"Кормление ":"В цех ")+context.World.FishRoute.completed+" / "+context.World.FishRoute.total);
                 int foodRequired=context.FoodRequired;
                 bool wave=context.Threats!=null && context.Threats.WaveActive;
                 UiKit.Set(hungerTime,UiText.HudHungerTime(view.hungerRemaining));
