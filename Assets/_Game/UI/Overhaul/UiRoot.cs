@@ -99,7 +99,9 @@ namespace Raid.UI
             Page=value;
             if(value!=UiPage.Terminal)Context.SelectedConsole=null;
             ConfigureSurface(value);
-            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4),new Vector2(value==UiPage.None?760:1080,38));
+            float boardMargin=computerSurface?(canvasRect.rect.height-terminal.Root.rect.height)*.5f:0;
+            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4-boardMargin),new Vector2(value==UiPage.None?760:1080,38));
+            if(pendingText!=null)pendingText.rectTransform.anchoredPosition=new Vector2(0,22+boardMargin);
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
