@@ -50,8 +50,9 @@ namespace Raid.Nereid
         NereidFeedingCameraImpulse cameraImpulse;
         bool ownsCameraImpulse;
         AudioSource voice,pressureVoice;
-        Material particleMaterial,mistMaterial;
-        Texture2D mistTexture;
+        Material particleMaterial,mistMaterial,dropMaterial,bubbleMaterial;
+        Texture2D mistTexture,dropTexture,bubbleTexture;
+        Mesh dropletMesh;
         AudioClip swallowClip,burpClip,jetClip,inhaleClip;
         RaidWorld observedWorld;
         bool ready,hasSnapshot,wasActive,wasFeeding;
@@ -101,17 +102,21 @@ namespace Raid.Nereid
             var source=Resources.Load<Material>("NereidBubbles");
             if(source!=null&&factory.bubbleMesh!=null)
             {
-                particleMaterial=new Material(source);particleMaterial.SetColor("_BaseColor",new Color(.9f,.94f,.89f,.95f));
-                mist=Emitter("Burp condensation pressure cloud",new Color(.63f,.69f,.61f,.46f),1.15f,2.4f,6.0f,9.5f,1.0f,1.9f,0,true);
-                drops=Emitter("Burp long wet spray",new Color(.55f,.73f,.69f,.72f),.065f,.15f,9,15,.65f,1.15f,.7f);
-                bubbles=Emitter("Burp aerated foam",new Color(.7f,.82f,.75f,.48f),.14f,.36f,5,9,.9f,1.5f,-.05f);
-                var renderer=drops.GetComponent<ParticleSystemRenderer>();renderer.renderMode=ParticleSystemRenderMode.Stretch;renderer.velocityScale=.10f;renderer.lengthScale=2.2f;renderer.sharedMaterial=mistMaterial;
+                particleMaterial=new Material(source);particleMaterial.SetColor("_BaseColor",Color.white);particleMaterial.SetColor("_Color",Color.white);
+                mistTexture=ParticleTexture(0);dropTexture=ParticleTexture(1);bubbleTexture=ParticleTexture(2);
+                mistMaterial=ParticleMaterial("Soft turbulent condensation",mistTexture);
+                dropMaterial=ParticleMaterial("Clear rounded water drops",dropTexture);
+                bubbleMaterial=ParticleMaterial("Hollow wet foam highlights",bubbleTexture);
+                dropletMesh=MakeDroplet();
+                mist=Emitter("Burp condensation pressure cloud",new Color(.87f,.9f,.92f,.23f),.58f,1.25f,6.0f,9.5f,1.0f,1.9f,0,true);
+                drops=Emitter("Burp short dimensional wet spray",new Color(.82f,.91f,.97f,.78f),.09f,.20f,9,15,.65f,1.15f,.7f);
+                bubbles=Emitter("Burp hollow aerated foam",new Color(.88f,.95f,1,.8f),.12f,.32f,5,9,.9f,1.5f,-.05f);
                 foamBlock=new MaterialPropertyBlock();
                 for(int i=0;i<foam.Length;i++)
                 {
                     var go=new GameObject("Broken expelled foam ring "+i);go.transform.SetParent(transform,false);var line=go.AddComponent<LineRenderer>();
                     line.useWorldSpace=true;line.loop=true;line.positionCount=48;line.sharedMaterial=particleMaterial;line.widthMultiplier=.12f;
-                    var gradient=new Gradient();gradient.SetKeys(new[]{new GradientColorKey(new Color(.68f,.78f,.69f),0),new GradientColorKey(new Color(.68f,.78f,.69f),1)},
+                    var gradient=new Gradient();gradient.SetKeys(new[]{new GradientColorKey(new Color(.84f,.91f,.94f),0),new GradientColorKey(new Color(.73f,.82f,.9f),1)},
                         new[]{new GradientAlphaKey(0,0),new GradientAlphaKey(.7f,.08f),new GradientAlphaKey(0,.22f),new GradientAlphaKey(.8f,.36f),new GradientAlphaKey(0,.53f),new GradientAlphaKey(.65f,.72f),new GradientAlphaKey(0,.88f),new GradientAlphaKey(0,1)});
                     line.colorGradient=gradient;line.enabled=false;foam[i]=line;
                 }
@@ -197,8 +202,8 @@ namespace Raid.Nereid
             if(cameraImpulse!=null)cameraImpulse.Release(mouth.position,LastBurpSeverity);
             PlaceEmitter(mist);PlaceEmitter(drops);PlaceEmitter(bubbles);
             foreach(var ps in new[]{mist,drops,bubbles})if(ps!=null)
-            {var main=ps.main;float low=ps==mist?1.15f:ps==drops?.065f:.14f,high=ps==mist?2.4f:ps==drops?.15f:.36f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
-            if(mist!=null)mist.Emit(Mathf.RoundToInt(66*visualGain));if(drops!=null)drops.Emit(Mathf.RoundToInt(96*visualGain));if(bubbles!=null)bubbles.Emit(Mathf.RoundToInt(56*visualGain));
+            {var main=ps.main;float low=ps==mist?.58f:ps==drops?.09f:.12f,high=ps==mist?1.25f:ps==drops?.20f:.32f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
+            if(mist!=null)mist.Emit(Mathf.RoundToInt(38*visualGain));if(drops!=null)drops.Emit(Mathf.RoundToInt(96*visualGain));if(bubbles!=null)bubbles.Emit(Mathf.RoundToInt(42*visualGain));
         }
 
         void AnimateMouth()
@@ -248,7 +253,7 @@ namespace Raid.Nereid
         {
             bool jet=Time.time<jetUntil&&IsBurping;
             float gain=Mathf.Lerp(1,1.55f,(LastBurpSeverity-1)/1.35f);
-            SetRate(mist,jet?72*gain:0);SetRate(drops,jet?130*gain:0);SetRate(bubbles,jet?58*gain:0);
+            SetRate(mist,jet?38*gain:0);SetRate(drops,jet?130*gain:0);SetRate(bubbles,jet?48*gain:0);
             float age=BurpAge;Vector3 origin=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));
             for(int ring=0;ring<foam.Length;ring++)if(foam[ring]!=null)
             {
@@ -256,7 +261,7 @@ namespace Raid.Nereid
                 float radius=(1.1f+t*3.4f)*Mathf.Sqrt(gain);Vector3 centre=origin-mouth.forward*(.4f+t*9);
                 for(int i=0;i<48;i++)
                 {float a=i*Mathf.PI*2/48;float r=radius*(1+.075f*Mathf.Sin(a*5+t*9+ring));foam[ring].SetPosition(i,centre+mouth.right*(Mathf.Cos(a)*r)+mouth.up*(Mathf.Sin(a)*r*.67f));}
-                foamBlock.SetColor("_BaseColor",new Color(.76f,.84f,.75f,(1-t/.78f)*.37f));foam[ring].SetPropertyBlock(foamBlock);foam[ring].widthMultiplier=.12f+t*.08f;
+                foamBlock.SetColor("_BaseColor",new Color(.84f,.92f,.97f,(1-t/.78f)*.37f));foam[ring].SetPropertyBlock(foamBlock);foam[ring].widthMultiplier=.12f+t*.08f;
             }
             if(IsBurping)PeakParticleCount=Mathf.Max(PeakParticleCount,BurstParticleCount);
         }
@@ -268,25 +273,82 @@ namespace Raid.Nereid
             go.transform.localScale=new Vector3(1/Mathf.Max(.001f,scale.x),1/Mathf.Max(.001f,scale.y),1/Mathf.Max(.001f,scale.z));
             var ps=go.AddComponent<ParticleSystem>();ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
             var main=ps.main;main.playOnAwake=false;main.loop=true;main.simulationSpace=ParticleSystemSimulationSpace.World;main.scalingMode=ParticleSystemScalingMode.Hierarchy;main.maxParticles=200;
-            main.startColor=tint;main.startSize=new ParticleSystem.MinMaxCurve(minSize,maxSize);main.startSpeed=new ParticleSystem.MinMaxCurve(minSpeed,maxSpeed);
+            main.startColor=new ParticleSystem.MinMaxGradient(new Color(tint.r*.78f,tint.g*.83f,tint.b*.88f,tint.a*.7f),tint);main.startSize=new ParticleSystem.MinMaxCurve(minSize,maxSize);main.startSpeed=new ParticleSystem.MinMaxCurve(minSpeed,maxSpeed);
             main.startLifetime=new ParticleSystem.MinMaxCurve(minLife,maxLife);main.gravityModifier=gravity;
             var shape=ps.shape;shape.shapeType=ParticleSystemShapeType.Cone;shape.angle=vapour?16:23;shape.radius=vapour?1.1f:1.25f;
             var emission=ps.emission;emission.rateOverTime=0;
             var color=ps.colorOverLifetime;color.enabled=true;var gradient=new Gradient();
-            gradient.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(new Color(.72f,.79f,.75f),1)},
+            gradient.SetKeys(new[]{new GradientColorKey(new Color(1,.96f,.89f),0),new GradientColorKey(new Color(.83f,.9f,1),1)},
                 new[]{new GradientAlphaKey(.72f,0),new GradientAlphaKey(1,.09f),new GradientAlphaKey(.75f,.48f),new GradientAlphaKey(0,1)});color.color=gradient;
             var size=ps.sizeOverLifetime;size.enabled=true;size.size=new ParticleSystem.MinMaxCurve(1,new AnimationCurve(new Keyframe(0,vapour?.65f:.8f),new Keyframe(.4f,1),new Keyframe(1,vapour?1.55f:.45f)));
-            var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=particleMaterial;renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=factory.bubbleMesh;
+            var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=bubbleMaterial;renderer.renderMode=ParticleSystemRenderMode.Billboard;
+            renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV});
+            renderer.sortMode=ParticleSystemSortMode.Distance;
             if(vapour)
             {
-                mistMaterial=new Material(particleMaterial);mistTexture=new Texture2D(64,64,TextureFormat.RGBA32,false,true);mistTexture.name="Project-authored turbulent condensation";
-                var pixels=new Color[64*64];
-                for(int y=0;y<64;y++)for(int x=0;x<64;x++)
-                {float u=(x-31.5f)/31.5f,v=(y-31.5f)/31.5f;float radial=Mathf.Pow(Mathf.Clamp01(1-u*u-v*v),1.35f);float wisps=.83f+.17f*Mathf.Sin(u*17+v*11)*Mathf.Sin(v*19-u*7);pixels[y*64+x]=new Color(1,1,1,radial*wisps);}
-                mistTexture.SetPixels(pixels);mistTexture.Apply(false,true);mistTexture.wrapMode=TextureWrapMode.Clamp;mistMaterial.SetTexture("_BaseMap",mistTexture);
-                renderer.sharedMaterial=mistMaterial;renderer.renderMode=ParticleSystemRenderMode.Billboard;
+                renderer.sharedMaterial=mistMaterial;
+                main.startRotation=new ParticleSystem.MinMaxCurve(-Mathf.PI,Mathf.PI);
+                var noise=ps.noise;noise.enabled=true;noise.strength=.65f;noise.frequency=.85f;noise.scrollSpeed=.6f;noise.octaveCount=2;noise.damping=true;
+                var limit=ps.limitVelocityOverLifetime;limit.enabled=true;limit.limit=4.5f;limit.dampen=.15f;
             }
+            else if(gravity>.5f)
+            {renderer.sharedMaterial=dropMaterial;renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=dropletMesh;renderer.alignment=ParticleSystemRenderSpace.Velocity;}
+            else
+            {var noise=ps.noise;noise.enabled=true;noise.strength=.25f;noise.frequency=1.15f;noise.scrollSpeed=.8f;}
             renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;renderer.receiveShadows=false;PlaceEmitter(ps);ps.Play();return ps;
+        }
+        Material ParticleMaterial(string name,Texture2D texture)
+        {
+            var material=new Material(particleMaterial);material.name=name;material.SetTexture("_BaseMap",texture);
+            material.SetColor("_BaseColor",Color.white);material.SetColor("_Color",Color.white);return material;
+        }
+        // Independent neutral textures prevent opaque bubble disks and the broad stretched cloud boards.
+        // Each puff has its own rotating, scalloped density field; bubbles keep only a thin rim and glints.
+        static Texture2D ParticleTexture(int kind)
+        {
+            const int n=96;var texture=new Texture2D(n,n,TextureFormat.RGBA32,false,true);
+            texture.name=kind==0?"Authored billowing condensation":kind==1?"Authored clear droplet highlights":"Authored hollow bubble rim";
+            var pixels=new Color[n*n];
+            for(int y=0;y<n;y++)for(int x=0;x<n;x++)
+            {
+                float u=(x+.5f)/n,v=(y+.5f)/n,px=u*2-1,py=v*2-1,r=Mathf.Sqrt(px*px+py*py);
+                float a,luminance;
+                if(kind==0)
+                {
+                    float noise=Mathf.PerlinNoise(u*5.7f+7.1f,v*5.7f+2.3f)*.65f+Mathf.PerlinNoise(u*11.3f,v*11.3f)*.35f;
+                    float edge=Mathf.Clamp01((1-r-(noise-.5f)*.28f)*1.25f);
+                    a=Mathf.Pow(edge,1.7f)*Mathf.Lerp(.32f,1,noise);luminance=.72f+noise*.28f;
+                }
+                else if(kind==1)
+                {
+                    // Latitude/longitude UVs on a small real 3D teardrop, without speed-based stretching.
+                    float glint=Mathf.Exp(-Mathf.Pow((u-.3f)/.075f,2)-Mathf.Pow((v-.7f)/.18f,2));
+                    float rim=Mathf.Pow(Mathf.Abs(Mathf.Cos(u*Mathf.PI*2)),5);
+                    a=.12f+rim*.28f+glint*.58f;luminance=.48f+rim*.34f+glint*.35f;
+                }
+                else
+                {
+                    float rim=Mathf.Exp(-Mathf.Pow((r-.82f)/.046f,2));
+                    float glint=Mathf.Exp(-Mathf.Pow((px+.36f)/.13f,2)-Mathf.Pow((py-.55f)/.095f,2));
+                    float lower=Mathf.Exp(-Mathf.Pow((r-.68f)/.055f,2))*Mathf.Clamp01(-py)*.24f;
+                    a=(rim*(.3f+.5f*Mathf.Clamp01(py+.45f))+glint*.95f+lower)*Mathf.Clamp01((1-r)*12);
+                    luminance=.75f+.25f*Mathf.Clamp01(glint+py*.35f);
+                }
+                pixels[y*n+x]=new Color(luminance,luminance,luminance,Mathf.Clamp01(a));
+            }
+            texture.SetPixels(pixels);texture.wrapMode=TextureWrapMode.Clamp;texture.filterMode=FilterMode.Bilinear;texture.Apply(false,true);return texture;
+        }
+        static Mesh MakeDroplet()
+        {
+            const int sides=10,rings=7;var vertices=new Vector3[(sides+1)*(rings+1)];var uv=new Vector2[vertices.Length];var triangles=new int[sides*rings*6];int t=0;
+            for(int ring=0;ring<=rings;ring++)for(int side=0;side<=sides;side++)
+            {
+                float v=ring/(float)rings,u=side/(float)sides,theta=v*Mathf.PI,angle=u*Mathf.PI*2;
+                float radius=Mathf.Sin(theta)*.33f*(.86f+.14f*v);int i=ring*(sides+1)+side;
+                vertices[i]=new Vector3(Mathf.Cos(angle)*radius,Mathf.Sin(angle)*radius,Mathf.Cos(theta)*.75f);uv[i]=new Vector2(u,v);
+                if(ring<rings&&side<sides){int j=i+sides+1;triangles[t++]=i;triangles[t++]=j;triangles[t++]=i+1;triangles[t++]=i+1;triangles[t++]=j;triangles[t++]=j+1;}
+            }
+            var mesh=new Mesh{name="Short rounded velocity-aligned water droplets"};mesh.vertices=vertices;mesh.uv=uv;mesh.triangles=triangles;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
         }
         void PlaceEmitter(ParticleSystem ps)
         {if(ps==null||mouth==null)return;ps.transform.position=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));ps.transform.rotation=Quaternion.LookRotation(-mouth.forward,mouth.up);}
@@ -340,6 +402,8 @@ namespace Raid.Nereid
         {
             RestoreMouth();if(animatedThroat!=null)Destroy(animatedThroat);
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
+            if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
+            if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);if(dropletMesh!=null)Destroy(dropletMesh);
             if(swallowClip!=null)Destroy(swallowClip);if(burpClip!=null)Destroy(burpClip);if(jetClip!=null)Destroy(jetClip);if(inhaleClip!=null)Destroy(inhaleClip);
             if(ownsCameraImpulse&&cameraImpulse!=null)Destroy(cameraImpulse);
         }
