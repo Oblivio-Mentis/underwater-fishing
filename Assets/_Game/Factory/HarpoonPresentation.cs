@@ -76,7 +76,9 @@ namespace Raid
                 BuildModel();
             }
             var actor=owner.IsDead?owner.Spectating:owner;
-            bool visible=!UI.UiInputGate.Modal&&actor!=null&&!actor.IsDead;
+            var uiRoot=UI.UiRoot.Instance;
+            bool panelPress=actor!=null&&uiRoot!=null&&uiRoot.Page==UI.UiPage.Terminal&&hands.HasPanelPress(actor);
+            bool visible=(!UI.UiInputGate.Modal||panelPress)&&actor!=null&&!actor.IsDead;
             if(actor!=viewed)
             {
                 viewed=actor;viewedTool=actor==null?null:actor.GetComponent<HarpoonTool>();
@@ -85,8 +87,7 @@ namespace Raid
             }
             visible&=viewedTool!=null;
             hands.SetVisible(visible);
-            if(!visible)model.gameObject.SetActive(false);
-            if(!visible){previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
+            if(!visible){model.gameObject.SetActive(false);previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
             bool controlling=actor==owner&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
@@ -116,7 +117,7 @@ namespace Raid
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
             model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
-            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,speed,aim,dt));
+            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,speed,aim,dt,panelPress));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 

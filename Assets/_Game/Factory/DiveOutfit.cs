@@ -7,7 +7,7 @@ namespace Raid
     // The visual rig never creates a collider or modifies the authoritative diver skeleton.
     sealed class DiveOutfit
     {
-        public enum Surface { Rubber, Canvas, Enamel, Metal, Glass, Lamp }
+        public enum Surface { Rubber, Fabric, Enamel, Metal, Glass, Lamp }
         readonly Material[] materials;
         readonly Dictionary<Surface,List<CombineInstance>> parts=new Dictionary<Surface,List<CombineInstance>>();
         readonly List<Mesh> ownedMeshes=new List<Mesh>();
@@ -116,7 +116,7 @@ namespace Raid
         {
             Bind(wrist);
             Oval(Surface.Rubber,new Vector3(0,0,.025f)*scale,new Vector3(.092f,.055f,.12f)*scale);
-            Block(Surface.Canvas,new Vector3(0,.022f,.018f)*scale,new Vector3(.074f,.016f,.079f)*scale);
+            Block(Surface.Fabric,new Vector3(0,.022f,.018f)*scale,new Vector3(.074f,.016f,.079f)*scale);
             for(int i=0;i<4;i++)
             {
                 float x=(i-1.5f)*.021f*side;

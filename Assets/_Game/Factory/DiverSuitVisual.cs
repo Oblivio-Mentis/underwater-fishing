@@ -32,7 +32,7 @@ namespace Raid
             body=DiveOutfit.Pivot(transform,"Expedition suit",Vector3.zero);
             outfit.Bind(body);
             outfit.Oval(Rubber,V(0,.18f,-.005f),V(.42f,.62f,.315f));
-            outfit.Oval(Canvas,V(0,.252f,.023f),V(.442f,.515f,.345f));
+            outfit.Oval(Fabric,V(0,.252f,.023f),V(.442f,.515f,.345f));
             outfit.Block(Rubber,V(0,.253f,.17f),V(.269f,.27f,.064f),V(5,0,0));
             outfit.Block(Metal,V(0,.24f,.201f),V(.20f,.168f,.033f));
             outfit.Block(Glass,V(-.016f,.258f,.224f),V(.117f,.062f,.013f));
@@ -49,7 +49,7 @@ namespace Raid
                 outfit.Pipe(Metal,V(s*.107f,.423f,-.271f),V(s*.107f,.474f,-.271f),.056f);
                 outfit.Block(Rubber,V(s*.132f,.25f,.145f),V(.045f,.31f,.041f),V(6,0,-s*7));
                 outfit.Block(Enamel,V(s*.134f,.207f,.171f),V(.042f,.044f,.014f));
-                outfit.Block(Canvas,V(s*.14f,-.03f,.13f),V(.078f,.094f,.068f));
+                outfit.Block(Fabric,V(s*.14f,-.03f,.13f),V(.078f,.094f,.068f));
             }
             outfit.Pipe(Rubber,V(.08f,.44f,-.25f),V(.196f,.48f,-.09f),.030f);
             outfit.Pipe(Rubber,V(.196f,.48f,-.09f),V(.183f,.414f,.096f),.032f);
@@ -72,25 +72,25 @@ namespace Raid
                 int s=i==0?-1:1;
                 var arm=arms[i]=Chain("Arm "+s,V(s*.231f,.362f,0),.246f,.233f);
                 outfit.Bind(arm.Upper);
-                outfit.Oval(Canvas,V(0,-.105f,0),V(.14f,.257f,.15f));
+                outfit.Oval(Fabric,V(0,-.105f,0),V(.14f,.257f,.15f));
                 outfit.Oval(Enamel,V(s*.012f,-.026f,0),V(.163f,.11f,.167f));
                 outfit.Pipe(Rubber,V(0,-.202f,0),V(0,-.246f,0),.113f);
                 outfit.Bind(arm.Lower);
-                outfit.Oval(Canvas,V(0,-.093f,0),V(.125f,.24f,.127f));
+                outfit.Oval(Fabric,V(0,-.093f,0),V(.125f,.24f,.127f));
                 outfit.Block(Metal,V(s*.051f,-.098f,-.006f),V(.033f,.101f,.084f));
                 if(s<0)outfit.Block(Lamp,V(s*.066f,-.092f,-.006f),V(.01f,.064f,.04f));
                 outfit.Pipe(Rubber,V(0,-.174f,0),V(0,-.219f,0),.108f);
                 outfit.Glove(arm.End,s,1.12f);
                 var leg=legs[i]=Chain("Leg "+s,V(s*.106f,-.153f,0),.343f,.328f);
                 outfit.Bind(leg.Upper);outfit.Oval(Rubber,V(0,-.141f,0),V(.176f,.348f,.176f));
-                outfit.Block(Canvas,V(s*.028f,-.134f,.045f),V(.134f,.194f,.117f));
+                outfit.Block(Fabric,V(s*.028f,-.134f,.045f),V(.134f,.194f,.117f));
                 outfit.Oval(Metal,V(0,-.312f,.052f),V(.118f,.121f,.092f));
                 outfit.Bind(leg.Lower);
                 outfit.Oval(Rubber,V(0,-.14f,0),V(.146f,.312f,.15f));
-                outfit.Pipe(Canvas,V(0,-.1f,0),V(0,-.16f,0),.144f);
+                outfit.Pipe(Fabric,V(0,-.1f,0),V(0,-.16f,0),.144f);
                 outfit.Bind(leg.End);
                 outfit.Oval(Rubber,V(0,.018f,.035f),V(.143f,.118f,.234f));
-                outfit.Blade(Canvas,V(0,-.012f,.168f),V(.15f,.037f,.20f),V(-4,0,0));
+                outfit.Blade(Fabric,V(0,-.012f,.168f),V(.15f,.037f,.20f),V(-4,0,0));
             }
             gun=DiveOutfit.Pivot(arms[1].End,"Service harpoon",V(0,.05f,.08f));outfit.Bind(gun);
             outfit.Block(Metal,V(0,.025f,0),V(.087f,.083f,.22f));

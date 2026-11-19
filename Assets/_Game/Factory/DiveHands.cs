@@ -27,7 +27,7 @@ namespace Raid
                 int s=i==0?-1:1;var arm=arms[i]=new Arm();
                 arm.Sleeve=DiveOutfit.Pivot(root,s<0?"Left sleeve":"Right sleeve",Vector3.zero);
                 outfit.Bind(arm.Sleeve);
-                outfit.Oval(Canvas,new Vector3(0,0,.4f),new Vector3(.119f,.115f,1.03f));
+                outfit.Oval(Fabric,new Vector3(0,0,.4f),new Vector3(.119f,.115f,1.03f));
                 outfit.Pipe(Rubber,new Vector3(0,0,.70f),new Vector3(0,0,.94f),.097f);
                 outfit.Pipe(Metal,new Vector3(0,0,.851f),new Vector3(0,0,.885f),.099f);
                 if(s<0)
@@ -45,7 +45,10 @@ namespace Raid
 
         public void SetVisible(bool value){if(root!=null&&root.gameObject.activeSelf!=value)root.gameObject.SetActive(value);}
 
-        public bool Animate(DiverMotor actor,HarpoonTool equipment,Transform gun,float speed,float aim,float dt)
+        public bool HasPanelPress(DiverMotor actor)
+            => viewed==actor && (press>0||sequence!=actor.InteractionSequence);
+
+        public bool Animate(DiverMotor actor,HarpoonTool equipment,Transform gun,float speed,float aim,float dt,bool panelPress)
         {
             if(viewed!=actor)
             {
@@ -81,7 +84,7 @@ namespace Raid
             for(int i=0;i<2;i++)
             {
                 int s=i==0?-1:1;var arm=arms[i];
-                bool visible=!ranged||s<0;
+                bool visible=panelPress?s<0:!ranged||s<0;
                 arm.Wrist.gameObject.SetActive(visible);arm.Sleeve.gameObject.SetActive(visible);
                 if(!visible)continue;
                 var start=new Vector3(s*.325f,-.443f,.09f);
@@ -114,7 +117,7 @@ namespace Raid
                 arm.Sleeve.localScale=new Vector3(1,1,axis.magnitude);
                 arm.Wrist.localPosition=wrist;arm.Wrist.localRotation=Quaternion.Euler(angles);
             }
-            return ranged;
+            return ranged&&!panelPress;
         }
 
         void UpdateFish(string next)
