@@ -16,7 +16,7 @@ namespace Raid.Nereid
         MeshRenderer ribbons,waterRenderer;
         Material flowMaterial;
         Mesh flowMesh;
-        readonly MaterialPropertyBlock surfaceProps=new();
+        MaterialPropertyBlock surfaceProps;
         int shownPhase;
         float shownHeight;
 
@@ -51,6 +51,7 @@ namespace Raid.Nereid
         {
             var shader=Resources.Load<Shader>("PressurePumpFlow");
             if(shader==null)return;
+            surfaceProps=new MaterialPropertyBlock();
             flowMaterial=new Material(shader){name="Aerated ballast discharge"};
             flowMaterial.SetVector("_Outlet",Outlet);
             flowMaterial.SetVector("_Intake",Intake);
