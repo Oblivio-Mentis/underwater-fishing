@@ -1,0 +1,138 @@
+{
+  "passed": true,
+  "build_job": "build-bf14299713",
+  "source_revision": "72d0e9da21231e7a8c135ce0315a9badb1c97d92",
+  "unity": "6000.5.6f1",
+  "development": false,
+  "executable": "E:\\Development\\Projects\\RAID\\Builds\\RAID011-NereidRebuild\\UnderwaterFishing.exe",
+  "executable_sha256": "e0f2357d8e9db65fc9f144e51124e3b366089de2d8496979070510e2282c8596",
+  "assembly_sha256": "3aa5772557f849f3544d8ea9916c37db1a8aed9ab260baaf848a29cf53dad1e3",
+  "metadata_check": {
+    "passed": true,
+    "method": "Mono.Cecil AssemblyDefinition metadata: recursive TypeDefinition and MethodDefinition enumeration; no byte-string matching or assembly execution",
+    "reader": "C:/Program Files/Unity/Hub/Editor/6000.5.6f1/Editor/Data/MonoBleedingEdge/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756/Mono.Cecil.dll",
+    "reader_sha256": "6df32e6bc78dbb44e99dbd976413f86983cbe44048e58e410a65924c69a8f979",
+    "assembly": "E:\\Development\\Projects\\RAID\\Builds\\RAID011-NereidRebuild\\UnderwaterFishing_Data\\Managed\\Assembly-CSharp.dll",
+    "assembly_sha256": "3aa5772557f849f3544d8ea9916c37db1a8aed9ab260baaf848a29cf53dad1e3",
+    "assembly_mvid": "00770629-e45e-4a9c-9fcd-c2c5e0046bb4",
+    "assembly_debuggable_attribute": true,
+    "type_count": 128,
+    "forbidden_types_absent": [
+      "Raid.UI.UiQaProbe",
+      "Raid.UI.UiQaProbe/BackgroundAimMouse"
+    ],
+    "forbidden_methods_absent": [
+      "Raid.HarpoonTool::QaFireOwned",
+      "Raid.HarpoonTool::QaReleaseOwned",
+      "Raid.Nereid.NereidAim::BeginBackgroundQa",
+      "Raid.Nereid.NereidAim::EndBackgroundQa",
+      "Raid.Nereid.NereidAim::get_BackgroundQaActive",
+      "Raid.Nereid.NereidFeedingReaction::BeginBackgroundCameraQa",
+      "Raid.Nereid.NereidFeedingCameraImpulse::BeginBackgroundQa"
+    ],
+    "required_types_present": [
+      "Raid.HarpoonTool",
+      "Raid.Nereid.NereidAim",
+      "Raid.Nereid.NereidFeedingReaction",
+      "Raid.Nereid.NereidFeedingCameraImpulse",
+      "Raid.HarpoonShotFx",
+      "Raid.HarpoonPresentation",
+      "Raid.UI.UiRoot",
+      "Raid.RaidSession",
+      "Raid.RaidWorld"
+    ],
+    "required_methods_present": [
+      "Raid.HarpoonTool::FireServer",
+      "Raid.HarpoonTool::ReleaseServer",
+      "Raid.Nereid.NereidAim::ResolveFieldOfView"
+    ],
+    "found_forbidden_types": [],
+    "found_forbidden_methods": [],
+    "missing_required_types": [],
+    "missing_required_methods": [],
+    "checked_utc": "2026-11-19T10:03:12.1079457Z"
+  },
+  "method": "Two independent real Windows release players, normal -raid-host/-raid-client Tugboat loopback on UDP 7770; hidden batchmode/nographics, no OS focus or synthetic input",
+  "started_utc": "2026-11-19T10:03:12.5859708Z",
+  "finished_utc": "2026-11-19T10:03:25.5732698Z",
+  "host_connection_started": true,
+  "remote_client_connection_started": true,
+  "stable_observation_seconds": 8,
+  "both_processes_stable": true,
+  "isolated_save": "E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host-test-save.json",
+  "isolated_save_valid_json": true,
+  "release_ignored_development_probe_flag": true,
+  "logs": [
+    "E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host.log",
+    "E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\client.log"
+  ],
+  "processes": [
+    {
+      "role": "host",
+      "id": 29064,
+      "executable": "E:\\Development\\Projects\\RAID\\Builds\\RAID011-NereidRebuild\\UnderwaterFishing.exe",
+      "start_ticks": 639306793926154379,
+      "log": "E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host.log",
+      "arguments": [
+        "-batchmode",
+        "-nographics",
+        "-raid-host",
+        "-raid-save",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host-test-save.json\"",
+        "-logFile",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host.log\"",
+        "-raid-ui-probe",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\release-must-not-create-ui-probe\""
+      ],
+      "stopped": true,
+      "stop_identity_verified": true
+    },
+    {
+      "role": "client",
+      "id": 47008,
+      "executable": "E:\\Development\\Projects\\RAID\\Builds\\RAID011-NereidRebuild\\UnderwaterFishing.exe",
+      "start_ticks": 639306793961209261,
+      "log": "E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\client.log",
+      "arguments": [
+        "-batchmode",
+        "-nographics",
+        "-raid-client",
+        "-raid-save",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\host-test-save.json\"",
+        "-logFile",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\client.log\"",
+        "-raid-ui-probe",
+        "\"E:\\Development\\Projects\\RAID\\Logs\\raid011\\release-smoke-20261119-100312-8206bc03\\release-must-not-create-ui-probe\""
+      ],
+      "stopped": true,
+      "stop_identity_verified": true
+    }
+  ],
+  "errors": [],
+  "failure": null,
+  "scope": "Release startup, actual LAN connection handshake, stability, isolated save and exclusion of dev probe; no rendering, gameplay interaction, Steam or remote-internet verification",
+  "cleanup": "Force-stopped only these two headless test players after executable path, start timestamp and isolated command line were checked. This does not test graceful in-game shutdown.",
+  "connection_log_evidence": [
+    {
+      "role": "host",
+      "bytes": 1643,
+      "sha256": "4afd5fe5eac44d24dea4e1c004b690f8f570fd9511fac1ccb951088c7e50268b",
+      "session_status_lines": [
+        "[RAID Session] Р—Р°РїСѓСЃРєР°РµС‚СЃСЏ Р»РѕРєР°Р»СЊРЅС‹Р№ С…РѕСЃС‚вЂ¦",
+        "[RAID Session] Р’ СЃРµСЃСЃРёРё. Esc вЂ” РєСѓСЂСЃРѕСЂ Рё РјРµРЅСЋ"
+      ]
+    },
+    {
+      "role": "client",
+      "bytes": 1625,
+      "sha256": "dabc45d7451496765c4e8211329e41a6a2f13b4c6bea3f671a4da0632aa0b2cf",
+      "session_status_lines": [
+        "[RAID Session] РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє 127.0.0.1",
+        "[RAID Session] Р’ СЃРµСЃСЃРёРё. Esc вЂ” РєСѓСЂСЃРѕСЂ Рё РјРµРЅСЋ"
+      ]
+    }
+  ],
+  "expected_headless_notices": [
+    "Null graphics device; reflection-probe HDR and hardware video decoding are unavailable with -nographics. Rendering was not part of this smoke."
+  ]
+}

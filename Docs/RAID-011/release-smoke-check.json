@@ -1,0 +1,24 @@
+{
+  "method": "Two hidden Windows non-development players; batchmode/nographics; local transport; no global input or Steam initialization",
+  "development_probe_present": false,
+  "archive_crc_check": "passed",
+  "evidence": {
+    "host": {
+      "session_lines": [
+        "[RAID Session] Запускается локальный хост…",
+        "[RAID Session] В сессии. Esc — курсор и меню"
+      ],
+      "errors": [],
+      "log_sha256": "c1c9321e16f7ec97cd3df794b2491a50914af312bec0f166d2c10ae2817c124a"
+    },
+    "client": {
+      "session_lines": [
+        "[RAID Session] Подключение к 127.0.0.1",
+        "[RAID Session] В сессии. Esc — курсор и меню"
+      ],
+      "errors": [],
+      "log_sha256": "6082d80308296fed639522c7d0d6dd478bafda1f996ee10a01b931aae5955716"
+    }
+  },
+  "native_graphics_input_tested": false
+}

@@ -8,6 +8,7 @@ namespace Raid
     public sealed class ThreatDirector : NetworkBehaviour
     {
         public ThreatTuning tuning;
+        public Vector3[] factoryWaveRoute;
         public static ThreatDirector Instance { get; private set; }
         public event Action<float> StockAttacked;
         public struct ThreatSnapshot
@@ -21,6 +22,7 @@ namespace Raid
         private Transform predatorView, waveView;
         private bool ownsTuning, throughAirlock;
         private int depthTier = 1, stockAttacks;
+        private int factoryWaypoint;
         private float predatorCooldown, respawn, waveRemaining, stockCooldown, waveDeficit, patrolTime;
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
@@ -79,7 +81,7 @@ namespace Raid
             next.WaveActive = true; next.WavePosition = tuning.waveSpawn;
             next.WaveHealth = tuning.waveHealth * Mathf.Max(1, masteredDepth - 1) * Mathf.Lerp(.5f, 1f, waveDeficit);
             next.Message = "ГОЛОД: мелководный налётчик идёт к резервуару! Защитите запас гарпунами.";
-            waveRemaining = Mathf.Max(1f, tuning.waveSeconds); stockCooldown = 0f; stockAttacks = 0; throughAirlock = false;
+            waveRemaining = Mathf.Max(1f, tuning.waveSeconds); stockCooldown = 0f; stockAttacks = 0; throughAirlock = false;factoryWaypoint=0;
             state.Value = next;
         }
 
@@ -92,11 +94,13 @@ namespace Raid
             if (next.WaveActive)
             {
                 waveRemaining -= dt;
-                Vector3 goal = throughAirlock ? tuning.reservoirPoint + tuning.reservoirApproachOffset : tuning.airlockWaypoint;
+                bool factoryPath=factoryWaveRoute!=null&&factoryWaveRoute.Length>0;
+                Vector3 goal = factoryPath?factoryWaveRoute[Mathf.Min(factoryWaypoint,factoryWaveRoute.Length-1)]:throughAirlock ? tuning.reservoirPoint + tuning.reservoirApproachOffset : tuning.airlockWaypoint;
                 next.WavePosition = Vector3.MoveTowards(next.WavePosition, goal, Mathf.Max(.1f, tuning.pursuitSpeed) * dt);
                 if (Vector3.Distance(next.WavePosition, goal) < .2f)
                 {
-                    if (!throughAirlock) throughAirlock = true;
+                    if(factoryPath&&factoryWaypoint<factoryWaveRoute.Length-1)factoryWaypoint++;
+                    else if (!factoryPath&&!throughAirlock) throughAirlock = true;
                     else if ((stockCooldown -= dt) <= 0f)
                     {
                         StockAttacked?.Invoke(waveDeficit);

@@ -1,0 +1,17 @@
+{
+  "fish": 16,
+  "delivered": 16,
+  "burps": 1,
+  "food": 48,
+  "required": 12,
+  "overfed": true,
+  "severity": 2.35,
+  "peakParticles": 389,
+  "jawMetres": 1.9817667,
+  "throatWave": 0.190373808,
+  "actualCameraPeakMetres": 0.07111348,
+  "actualCameraPeakDegrees": 1.20851076,
+  "residualPositionMetres": 0.0,
+  "residualDegrees": 0.0,
+  "peakCapture": true
+}

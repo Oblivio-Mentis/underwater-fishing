@@ -34,10 +34,24 @@ namespace Raid
         private float _yaw, _pitch;
         private bool _serverSprint, _ownsTuning;
         private Vector3 _previousPosition;
+        private float _indoorVerticalVelocity;
+        private bool _serverJumpHeld, _serverJumpQueued, _localJumpQueued, _wasWalking;
 
         public float Oxygen => _state.Value.Oxygen;
+        public float LocalLookMultiplier {get;set;} = 1f;
+        public void LookAtConsole(Vector3 point)
+        {
+            if(!IsOwner || _camera==null)return;
+            Vector3 direction=point-_camera.transform.position;
+            if(direction.sqrMagnitude<.01f)return;
+            var angles=Quaternion.LookRotation(direction).eulerAngles;
+            _yaw=angles.y;_pitch=Mathf.Clamp(Mathf.DeltaAngle(0,angles.x),-85,85);
+        }
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
+        public bool IsWalking => UsesIndoorWalking(_state.Value.Position);
+        // Ground contacts are authoritative on the server; remote replicas do not run a CharacterController.
+        public bool IsGrounded => NetworkObject!=null && IsServerInitialized && _controller!=null && _controller.enabled && _controller.isGrounded;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
         public bool IsHelpless => Oxygen <= 0f;
         public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f : _state.Value.Trapped;
@@ -63,6 +77,8 @@ namespace Raid
             _previousPosition = transform.position;
             _serverYaw = transform.eulerAngles.y;
             _lastInputTime = float.NegativeInfinity;
+            ResetIndoorMovement();
+            _wasWalking=UsesIndoorWalking(transform.position);
             _state.Value = new DiverState
             {
                 Position = transform.position,
@@ -77,6 +93,7 @@ namespace Raid
             ServerDivers.Remove(this);
             _controller.enabled = false;
             _serverInput = Vector3.zero;
+            ResetIndoorMovement();
         }
 
         public override void OnStartClient()
@@ -87,6 +104,7 @@ namespace Raid
             }
             if (!IsOwner) return;
             _yaw = _state.Value.Yaw;
+            _localJumpQueued=false;
             var view = new GameObject("Diver Camera", typeof(Camera), typeof(AudioListener));
             view.transform.SetParent(transform, false);
             view.transform.localPosition = Vector3.up * 0.6f;
@@ -99,12 +117,14 @@ namespace Raid
             _camera.backgroundColor = RenderSettings.fogColor;
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            bool lockCursor=!UI.UiInputGate.Active || (Application.isFocused&&!UI.UiInputGate.Blocked);
+            Cursor.lockState = lockCursor?CursorLockMode.Locked:CursorLockMode.None;
+            Cursor.visible = !lockCursor;
         }
 
         public override void OnStopClient()
         {
+            _localJumpQueued=false;
             if (_camera == null) return;
             _actions?.Disable();
             _actions?.Dispose();
@@ -134,27 +154,44 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null) return;
-            if (_release.WasPressedThisFrame()) SetCursor(false);
-            if (_capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
+            if (!UI.UiInputGate.Active && _release.WasPressedThisFrame()) SetCursor(false);
+            if (!UI.UiInputGate.Active && _capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
+            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
             if (controlling)
             {
-                Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity;
+                Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);
                 _pitch = Mathf.Clamp(_pitch - look.y, -85f, 85f);
             }
+            bool walking=UsesIndoorWalking(transform.position);
+            if(!controlling||!walking)_localJumpQueued=false;
+            else if(_rise.WasPressedThisFrame())_localJumpQueued=true;
             if (Time.unscaledTime < _nextSend) return;
             _nextSend = Time.unscaledTime + Mathf.Max(0.02f, tuning.sendInterval);
             Vector2 move = controlling ? _move.ReadValue<Vector2>() : Vector2.zero;
-            float vertical = controlling ? _rise.ReadValue<float>() - _sink.ReadValue<float>() : 0f;
+            float vertical = walking ? (controlling&&_localJumpQueued?1f:0f) : controlling ? _rise.ReadValue<float>() - _sink.ReadValue<float>() : 0f;
             SubmitInput(new Vector3(move.x, vertical, move.y), _yaw, _pitch, controlling && _sprint.IsPressed());
+            _localJumpQueued=false;
         }
 
         [ServerRpc]
         private void SubmitInput(Vector3 axes, float yaw, float pitch, bool sprint)
         {
             if (!Finite(axes.x) || !Finite(axes.y) || !Finite(axes.z) || !Finite(yaw) || !Finite(pitch)) return;
-            _serverInput = Vector3.ClampMagnitude(axes, 1f);
+            if(UsesIndoorWalking(transform.position))
+            {
+                // A jump request must not normalize away forward/strafe speed.
+                Vector2 planar=Vector2.ClampMagnitude(new Vector2(axes.x,axes.z),1);
+                _serverInput=new Vector3(planar.x,Mathf.Clamp(axes.y,-1,1),planar.y);
+                bool jump=axes.y>.5f;
+                if(jump&&!_serverJumpHeld)_serverJumpQueued=true;
+                _serverJumpHeld=jump;
+            }
+            else
+            {
+                _serverInput = Vector3.ClampMagnitude(axes, 1f);
+                _serverJumpQueued=false;_serverJumpHeld=axes.y>.5f;
+            }
             _serverYaw = Mathf.Repeat(yaw, 360f);
             _serverPitch = Mathf.Clamp(pitch, -85f, 85f);
             _serverSprint = sprint;
@@ -167,14 +204,38 @@ namespace Raid
             DiverState state = _state.Value;
             bool active = Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
             Vector3 axes = active && state.Oxygen > 0f && !IsTrapped ? _serverInput : Vector3.zero;
-            Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
-            direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-            float speed = Mathf.Max(0f, tuning.swimSpeed) * SpeedMultiplier * (_serverSprint ? Mathf.Max(1f, tuning.sprintMultiplier) : 1f);
-            if(state.Stress>=tuning.stressDanger) speed*=.5f;
-            Vector3 velocity = direction * speed;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
-            velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
-            _controller.Move(velocity * Time.fixedDeltaTime);
+            bool walking=UsesIndoorWalking(transform.position);
+            if(walking)
+            {
+                var vessel=Nereid.NereidVessel.Active;
+                if(!_wasWalking){_indoorVerticalVelocity=0;_serverJumpQueued=false;_serverJumpHeld=_serverInput.y>.5f;}
+                bool grounded=_controller.isGrounded;
+                if(grounded&&_indoorVerticalVelocity<0)_indoorVerticalVelocity=-2;
+                if(_serverJumpQueued&&active&&state.Oxygen>0&&!IsTrapped&&grounded)
+                    _indoorVerticalVelocity=Mathf.Sqrt(2*Mathf.Max(.1f,vessel.indoorGravity)*Mathf.Max(0,vessel.indoorJumpHeight));
+                _serverJumpQueued=false;
+                _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
+                Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
+                float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
+                if(state.Stress>=tuning.stressDanger)speed*=.5f;
+                var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
+                if((collision&CollisionFlags.Above)!=0&&_indoorVerticalVelocity>0)_indoorVerticalVelocity=0;
+                if((collision&CollisionFlags.Below)!=0&&_indoorVerticalVelocity<0)_indoorVerticalVelocity=-2;
+            }
+            else
+            {
+                _indoorVerticalVelocity=0;_serverJumpQueued=false;
+                // Previous scenes and open water retain their original pitch-driven swimming.
+                Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
+                direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
+                float speed = Mathf.Max(0f, tuning.swimSpeed) * SpeedMultiplier * (_serverSprint ? Mathf.Max(1f, tuning.sprintMultiplier) : 1f);
+                if(state.Stress>=tuning.stressDanger) speed*=.5f;
+                Vector3 velocity = direction * speed;
+                velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
+                _controller.Move(velocity * Time.fixedDeltaTime);
+            }
+            _wasWalking=walking;
             transform.rotation = Quaternion.Euler(0f, _serverYaw, 0f);
 
             state.Position = transform.position;
@@ -184,7 +245,7 @@ namespace Raid
             state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery : -1f) * Time.fixedDeltaTime,
                 0f, Mathf.Max(1f, tuning.oxygenCapacity * OxygenMultiplier));
             float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
-            float verticalExcess = Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
+            float verticalExcess = walking?0:Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
             float stressChange = state.Inside ? -1f : depthExcess + verticalExcess;
             state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
             if(!state.Inside && state.Stress>=tuning.stressDanger)
@@ -205,12 +266,23 @@ namespace Raid
             if (!IsServerInitialized || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
             _controller.Move(Vector3.ClampMagnitude(displacement, 2f));
         }
+        public void ApplyTetherMotion(Vector3 displacement)
+        {
+            if(!IsServerInitialized)return;
+            float before=transform.position.y;
+            ApplyExternalMotion(displacement);
+            // Friendly transport must not create a second rapid-ascent penalty on top
+            // of the participant's own swim input. Actual depth pressure still applies.
+            _previousPosition.y+=transform.position.y-before;
+        }
 
         public void Teleport(Vector3 position)
         {
             if (!IsServerInitialized) return;
             _controller.enabled=false; transform.position=position; _controller.enabled=true;
             _previousPosition=position;
+            ResetIndoorMovement();_wasWalking=UsesIndoorWalking(position);
+            _serverInput=Vector3.zero;_lastInputTime=float.NegativeInfinity;
             var state=_state.Value; state.Position=position; state.Inside=IsSealedInterior(position); _state.Value=state;
         }
 
@@ -242,6 +314,7 @@ namespace Raid
 
         private void OnGUI()
         {
+            if(UI.UiInputGate.Active) return;
             if (!IsClientInitialized || !IsOwner) return;
             GUI.Box(new Rect(16f, Screen.height - 112f, 420f, 96f), "");
             GUI.Label(new Rect(28f, Screen.height - 104f, 400f, 24f),
@@ -252,7 +325,12 @@ namespace Raid
             GUI.Label(new Rect(Screen.width * 0.5f - 5f, Screen.height * 0.5f - 10f, 20f, 20f), "+");
         }
 
-        private static bool IsSealedInterior(Vector3 p) => Mathf.Abs(p.x) < 6f && p.z > -8f && p.z < 8f && p.y > 0f && p.y < 4f;
+        private static bool IsSealedInterior(Vector3 p) => Nereid.NereidVessel.Active!=null
+            ? Nereid.NereidVessel.Active.ContainsSealed(p)
+            : Mathf.Abs(p.x) < 6f && p.z > -8f && p.z < 8f && p.y > 0f && p.y < 4f;
+        private static bool UsesIndoorWalking(Vector3 p) => Nereid.NereidVessel.Active!=null&&Nereid.NereidVessel.Active.ContainsSealed(p);
+        private void ResetIndoorMovement()
+        {_indoorVerticalVelocity=0;_serverJumpHeld=false;_serverJumpQueued=false;_localJumpQueued=false;_wasWalking=false;}
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 
         private static void SetCursor(bool captured)

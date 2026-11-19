@@ -11,6 +11,7 @@ namespace Raid
         private Button terminal;
         private void Start()
         {
+            if(UI.UiInputGate.Active) { enabled=false; return; }
             world=GetComponent<RaidWorld>();
             var root=new GameObject("RAID HUD",typeof(RectTransform),typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster));
             root.transform.SetParent(transform,false); canvas=root.GetComponent<Canvas>(); canvas.renderMode=RenderMode.ScreenSpaceOverlay;

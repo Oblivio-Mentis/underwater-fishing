@@ -28,7 +28,11 @@ namespace Raid.VisualSlice
                     MakeGun();
                 }
             }
-            if(gun!=null)gun.localPosition=new Vector3(.29f,-.29f,.52f)+Vector3.up*Mathf.Sin(Time.time*1.5f)*.002f;
+            if(gun!=null)
+            {
+                gun.gameObject.SetActive(!UI.UiInputGate.Active || !UI.UiInputGate.Modal);
+                gun.localPosition=new Vector3(.29f,-.29f,.52f)+Vector3.up*Mathf.Sin(Time.time*1.5f)*.002f;
+            }
             if(harpoonRope!=null && harpoonRope.enabled && harpoonRope.positionCount>0)
                 harpoonRope.SetPosition(0,diverCamera.transform.TransformPoint(new Vector3(.29f,-.22f,.85f)));
             if(tankFish!=null && RaidWorld.Instance!=null && RaidWorld.Instance.View!=null)

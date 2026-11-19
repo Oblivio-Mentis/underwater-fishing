@@ -20,6 +20,7 @@ namespace Raid
         public bool SteamMode { get; private set; }
         public bool Connected => manager.IsClientStarted;
         private string address = "127.0.0.1";
+        public string Address { get => address; set => address=string.IsNullOrWhiteSpace(value)?"127.0.0.1":value.Trim(); }
         private string lobbyId = "";
         private float startedAt;
 
@@ -138,6 +139,7 @@ namespace Raid
 
         private void OnGUI()
         {
+            if(UI.UiInputGate.Active) return;
             if (Connected && Cursor.lockState == CursorLockMode.Locked) return;
             GUI.skin.label.fontSize = 16;
             GUI.skin.button.fontSize = 16;

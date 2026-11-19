@@ -1,0 +1,109 @@
+{
+  "captured_utc": "2026-11-19",
+  "method": "Unity MCP; isolated save fixtures; no global/native input",
+  "cargo": {
+    "success": true,
+    "message": "Retrieved 4 log entries.",
+    "data": [
+      {
+        "type": "Log",
+        "message": "[FINAL CARGO] phase=Raising resolution=1920x1080 page=Cargo scale=1 visibleTexts=21 textOutsideScreen=0 nonScrollTextOverflow=0",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      },
+      {
+        "type": "Log",
+        "message": "[FINAL CARGO] phase=Unloading resolution=1920x1080 page=Cargo scale=1 visibleTexts=21 textOutsideScreen=0 nonScrollTextOverflow=0",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      },
+      {
+        "type": "Log",
+        "message": "[FINAL CARGO] phase=Returning resolution=1920x1080 page=Cargo scale=1 visibleTexts=21 textOutsideScreen=0 nonScrollTextOverflow=0",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      },
+      {
+        "type": "Log",
+        "message": "[FINAL CARGO] complete stock=1",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      }
+    ]
+  },
+  "feeding": {
+    "success": true,
+    "message": "Retrieved 2 log entries.",
+    "data": [
+      {
+        "type": "Log",
+        "message": "[FINAL FEED] route=True resolution=1920x1080 page=None scale=1 visibleTexts=14 textOutsideScreen=0 nonScrollTextOverflow=0",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      },
+      {
+        "type": "Log",
+        "message": "[FINAL FEED] hunger wave active; offering=0",
+        "file": "",
+        "line": 0,
+        "stackTrace": null
+      }
+    ]
+  },
+  "profile": {
+    "success": true,
+    "message": "Retrieved 1 log entries.",
+    "data": [
+      {
+        "type": "Log",
+        "message": "[RAID011 PROFILE] raid011-team-progress.json",
+        "file": "./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs",
+        "line": 553,
+        "stackTrace": null
+      }
+    ]
+  },
+  "fishing_previous_play_session": {
+    "captured_species": "Lanternfish",
+    "capture_seconds": 8.4938052,
+    "tank_before": 6,
+    "tank_after": 7,
+    "delivered_once": true,
+    "layout": "1920x1080 Cargo scale=1; textOutsideScreen=0 nonScrollTextOverflow=0",
+    "source": "Observed Unity MCP FINAL LOOP output before the final script compilation."
+  },
+  "resolution_matrix": {
+    "width_height": [
+      [
+        1280,
+        720
+      ],
+      [
+        1920,
+        1080
+      ],
+      [
+        2560,
+        1440
+      ],
+      [
+        3440,
+        1440
+      ]
+    ],
+    "ui_scale": 1.2,
+    "screens": [
+      "Settings",
+      "HUD",
+      "Physical navigation computer"
+    ],
+    "textOutsideScreen": 0,
+    "nonScrollTextOverflow": 0,
+    "evidence": "F30/F31/F32 player-camera screenshots; UiCapture.LayoutReport at every combination"
+  }
+}

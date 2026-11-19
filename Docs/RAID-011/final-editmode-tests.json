@@ -1,0 +1,16 @@
+{
+  "job_id": "1635d4bf1caa453a97d5205858a95891",
+  "status": "succeeded",
+  "result": {
+    "mode": "EditMode",
+    "summary": {
+      "total": 26,
+      "passed": 26,
+      "failed": 0,
+      "skipped": 0,
+      "durationSeconds": 0.8137043,
+      "resultState": "Passed"
+    },
+    "results": null
+  }
+}

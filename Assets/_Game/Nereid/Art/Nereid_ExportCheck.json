@@ -1,0 +1,179 @@
+{
+  "method": "Blender FBX export/reimport; expected Unity coordinates include the default importer X handedness conversion observed by root; ray tests prove the asymmetric hatch in that coordinate convention. Final live Unity verification remains with root.",
+  "result": {
+    "Interior": {
+      "unity_metre_bounds_min": [
+        -6.925000190734863,
+        -0.21999943256378174,
+        -16.934999465942383
+      ],
+      "unity_metre_bounds_max": [
+        7.0,
+        4.600000381469727,
+        8.300000190734863
+      ],
+      "root_scale2_world_bounds_min": [
+        -13.850000381469727,
+        -0.4399988651275635,
+        -33.869998931884766
+      ],
+      "root_scale2_world_bounds_max": [
+        14.0,
+        9.200000762939453,
+        16.600000381469727
+      ],
+      "imported_meshes": 8,
+      "asymmetric_hatch_rays": {
+        "port": {
+          "expected_unity_origin": [
+            -5.4,
+            0.5,
+            -14
+          ],
+          "expected_unity_direction": [
+            -1,
+            0,
+            0
+          ],
+          "hit": true,
+          "mesh": "Interior_Nereid_Hull",
+          "expected_unity_hit": [
+            -5.859999656677246,
+            0.5,
+            -14.0
+          ],
+          "expected_unity_normal": [
+            1.0,
+            0.0,
+            -0.0
+          ],
+          "triangle_or_polygon_index": 1238
+        },
+        "starboard": {
+          "expected_unity_origin": [
+            5.4,
+            0.5,
+            -14
+          ],
+          "expected_unity_direction": [
+            1,
+            0,
+            0
+          ],
+          "hit": false,
+          "mesh": null,
+          "expected_unity_hit": null,
+          "expected_unity_normal": null,
+          "triangle_or_polygon_index": 0
+        }
+      },
+      "starboard_exit_clearance_grid": {
+        "expected_unity_x_start": 5.4,
+        "expected_unity_x_end": 8.4,
+        "local_heights": [
+          0.25,
+          0.5,
+          0.62,
+          1,
+          1.75
+        ],
+        "local_depths": [
+          -15,
+          -14.5,
+          -14,
+          -13.5,
+          -13
+        ],
+        "clear_rays": 25,
+        "total_rays": 25
+      }
+    },
+    "Exterior": {
+      "unity_metre_bounds_min": [
+        -10.695561408996582,
+        -4.0553107261657715,
+        -31.450000762939453
+      ],
+      "unity_metre_bounds_max": [
+        10.695561408996582,
+        12.399999618530273,
+        12.032148361206055
+      ],
+      "root_scale2_world_bounds_min": [
+        -21.391122817993164,
+        -8.110621452331543,
+        -62.900001525878906
+      ],
+      "root_scale2_world_bounds_max": [
+        21.391122817993164,
+        24.799999237060547,
+        24.06429672241211
+      ],
+      "imported_meshes": 9,
+      "asymmetric_hatch_rays": {
+        "port": {
+          "expected_unity_origin": [
+            -5.4,
+            0.5,
+            -14
+          ],
+          "expected_unity_direction": [
+            -1,
+            0,
+            0
+          ],
+          "hit": true,
+          "mesh": "Exterior_Nereid_Dark",
+          "expected_unity_hit": [
+            -6.8949995040893555,
+            0.5,
+            -14.0
+          ],
+          "expected_unity_normal": [
+            0.9906269311904907,
+            -0.1365954428911209,
+            1.0312668941026004e-08
+          ],
+          "triangle_or_polygon_index": 328
+        },
+        "starboard": {
+          "expected_unity_origin": [
+            5.4,
+            0.5,
+            -14
+          ],
+          "expected_unity_direction": [
+            1,
+            0,
+            0
+          ],
+          "hit": false,
+          "mesh": null,
+          "expected_unity_hit": null,
+          "expected_unity_normal": null,
+          "triangle_or_polygon_index": 0
+        }
+      },
+      "starboard_exit_clearance_grid": {
+        "expected_unity_x_start": 5.4,
+        "expected_unity_x_end": 8.4,
+        "local_heights": [
+          0.25,
+          0.5,
+          0.62,
+          1,
+          1.75
+        ],
+        "local_depths": [
+          -15,
+          -14.5,
+          -14,
+          -13.5,
+          -13
+        ],
+        "clear_rays": 25,
+        "total_rays": 25
+      }
+    }
+  }
+}

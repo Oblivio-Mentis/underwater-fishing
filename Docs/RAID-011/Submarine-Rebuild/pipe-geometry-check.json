@@ -1,0 +1,56 @@
+{
+  "RerouteFeed": {
+    "samples": 244,
+    "elbow_radius_local": [
+      0.9999999999999994,
+      1.0000000000000004
+    ],
+    "straight_tank_nozzle_local": 0.7493454454093882,
+    "visible_straight_after_socket_local": 0.40934544540938816,
+    "max_inclination_degrees": 16.8187876954154,
+    "vertical_segments": 0,
+    "max_frame_step_degrees": 3.028122553414967,
+    "max_tangent_join_error": 1.3933070475609988e-15,
+    "minimum_nonlocal_axis_distance": 1.0781209896188293,
+    "tube_diameter": 0.68,
+    "floor_walking_clearance_world": 1.9000000000000001,
+    "start_world": [
+      3.2,
+      2.6,
+      -6.0
+    ],
+    "end_world": [
+      2.2,
+      4.8,
+      15.5
+    ]
+  },
+  "ConfigureProcessingHall": {
+    "samples": 183,
+    "elbow_radius_local": [
+      0.9999999999999997,
+      1.0000000000000002
+    ],
+    "straight_tank_nozzle_local": 0.7493454454093882,
+    "visible_straight_after_socket_local": 0.40934544540938816,
+    "max_inclination_degrees": 16.858398767738283,
+    "vertical_segments": 0,
+    "max_frame_step_degrees": 3.028122553414967,
+    "max_tangent_join_error": 9.238896857051836e-16,
+    "minimum_nonlocal_axis_distance": 1.0644628425002076,
+    "tube_diameter": 0.68,
+    "floor_walking_clearance_world": 1.9000000000000001,
+    "start_world": [
+      -3.2,
+      2.6,
+      -6.0
+    ],
+    "end_world": [
+      -5.0,
+      4.7,
+      -21.9
+    ],
+    "gallery_lateral_clearance_local": 0.125,
+    "aft_roof_clearance_local": 0.1515508700643089
+  }
+}

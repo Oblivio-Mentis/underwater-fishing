@@ -1,0 +1,35 @@
+{
+  "resolution": "1920x1080",
+  "context": "Editor background, player camera calm HUD, one Windows batch client, other user application active; uncontrolled GPU load",
+  "samples": [
+    {
+      "ui": true,
+      "fps": 476.01,
+      "frames": 3333,
+      "seconds": 7.002
+    },
+    {
+      "ui": false,
+      "fps": 481.09,
+      "frames": 3368,
+      "seconds": 7.001
+    },
+    {
+      "ui": true,
+      "fps": 485.14,
+      "frames": 3396,
+      "seconds": 7.0
+    },
+    {
+      "ui": false,
+      "fps": 479.76,
+      "frames": 3358,
+      "seconds": 6.999
+    }
+  ],
+  "gpu": "NVIDIA GeForce RTX 4070",
+  "counter": "Time.renderedFrameCount; equality with Time.frameCount and 0.00246 s delta verified",
+  "mean_ui_on": 480.575,
+  "mean_ui_off": 480.42499999999995,
+  "interpretation": "Difference below run-to-run noise; Editor observation only, not a controlled Windows benchmark."
+}

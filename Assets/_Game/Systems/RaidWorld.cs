@@ -8,9 +8,9 @@ using UnityEngine.InputSystem;
 
 namespace Raid
 {
-    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect }
+    public enum WorldAction { DiveOne, DiveTwo, Return, Process, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding }
 
-    public sealed class RaidWorld : NetworkBehaviour
+    public sealed partial class RaidWorld : NetworkBehaviour
     {
         public static RaidWorld Instance {get; private set;}
         public WorldTuning tuning;
@@ -21,6 +21,11 @@ namespace Raid
         private readonly SyncVar<int> depth=new();
         private readonly SyncVar<bool> atBase=new(true);
         private readonly SyncVar<string> message=new("Choose depth at the reservoir terminal");
+        private readonly SyncVar<float> travelDisplay=new();
+        private readonly SyncVar<int> stockLossDisplay=new();
+        public int StockLossCount => stockLossDisplay.Value;
+        public float TravelRemaining => travelDisplay.Value;
+        public event Action<int,bool,string> CommandResponded;
         private TeamProgress team,view;
         private DiverMotor localDiver;
         private InputAction interact;
@@ -38,6 +43,7 @@ namespace Raid
         public bool CanUseTerminal=>localDiver!=null && Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange;
         public void ToggleTerminal()
         {
+            if(UI.UiInputGate.Active) return;
             if(!CanUseTerminal) return;
             showTerminal=!showTerminal;
             Cursor.lockState=showTerminal?CursorLockMode.None:CursorLockMode.Locked; Cursor.visible=showTerminal;
@@ -46,9 +52,12 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            ResetFishRoute();
+            message.Value="Choose depth at the reservoir terminal";
             saveFailed=false;
+            travelDisplay.Value=0; stockLossDisplay.Value=0;
             atBase.Value=true; depth.Value=0; transitionRemaining=0; pendingDepth=0; waveLossBudget=0; commandTimes.Clear();
-            savePath=Path.Combine(Application.persistentDataPath,"team-progress.json");
+            savePath=Path.Combine(Application.persistentDataPath,UI.UiInputGate.Active?"raid011-team-progress.json":"team-progress.json");
             string[] args=Environment.GetCommandLineArgs();
             int saveArg=Array.IndexOf(args,"-raid-save");
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];
@@ -87,7 +96,7 @@ namespace Raid
             if(localDiver==null && ClientManager.Connection.FirstObject!=null)
                 localDiver=ClientManager.Connection.FirstObject.GetComponent<DiverMotor>();
             ApplyLocalTuning();
-            if(localDiver!=null && interact!=null && interact.WasPressedThisFrame())
+            if(!UI.UiInputGate.Active && localDiver!=null && interact!=null && interact.WasPressedThisFrame())
             {
                 if(Vector3.Distance(localDiver.transform.position,tuning.terminalPosition)<tuning.interactionRange)
                 { ToggleTerminal(); }
@@ -99,6 +108,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if(!IsServerInitialized || team==null) return;
+            TickRouteClock();
             team.TickHoist(Time.fixedDeltaTime,progression);
             if(team.TickHunger(Time.fixedDeltaTime,progression))
             {
@@ -115,6 +125,7 @@ namespace Raid
                 transitionRemaining-=Time.fixedDeltaTime;
                 if(transitionRemaining<=0) CompleteTravel();
             }
+            travelDisplay.Value=Mathf.Max(0,transitionRemaining);
             foreach(var diver in DiverMotor.ServerDivers)
             {
                 diver.SpeedMultiplier=1+team.finsLevel*progression.finsSpeedPerLevel;
@@ -135,24 +146,38 @@ namespace Raid
             container.position=Vector3.MoveTowards(container.position,destination,Time.deltaTime*4);
         }
         public void Command(WorldAction action,long id) { Act(action,id); }
+        public void RequestCommand(WorldAction action,long id,int requestId,int expectedLevel=-1) { Act(action,id,requestId,expectedLevel); }
         [ServerRpc(RequireOwnership=false)]
-        private void Act(WorldAction action,long id,NetworkConnection sender=null)
+        private void Act(WorldAction action,long id,int requestId=0,int expectedLevel=-1,NetworkConnection sender=null)
         {
-            if(sender==null || sender.FirstObject==null || team==null || transitionRemaining>0 || !Enum.IsDefined(typeof(WorldAction),action)) return;
+            if(sender==null || sender.FirstObject==null || team==null || !Enum.IsDefined(typeof(WorldAction),action)) return;
+            if(transitionRemaining>0) { Respond(sender,requestId,false,"travel"); return; }
             var diver=sender.FirstObject.GetComponent<DiverMotor>();
-            if(diver==null || diver.IsHelpless) return;
-            if(commandTimes.TryGetValue(sender.ClientId,out float last) && Time.unscaledTime-last<.15f) return;
+            if(diver==null || diver.IsHelpless) { Respond(sender,requestId,false,"helpless"); return; }
+            if(commandTimes.TryGetValue(sender.ClientId,out float last) && Time.unscaledTime-last<.15f) { Respond(sender,requestId,false,"cooldown"); return; }
             commandTimes[sender.ClientId]=Time.unscaledTime;
             if(action==WorldAction.Collect)
             {
-                if(AtBase) return;
+                if(AtBase) { Respond(sender,requestId,false,"unavailable"); return; }
                 if(Physics.Raycast(diver.transform.position+Vector3.up*.6f,diver.AimDirection,out var hit,3f))
-                    hit.collider.GetComponent<LootActor>()?.Pickup(diver);
+                { bool picked=hit.collider.GetComponent<LootActor>()?.Pickup(diver)??false; Respond(sender,requestId,picked,picked?"ok":"unavailable"); }
+                else Respond(sender,requestId,false,"range");
                 return;
             }
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.StopProcessing || action==WorldAction.StopFeeding) && ShipConsole.Stations.Count==0)
+            {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
-            if(Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) return;
+            bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
+            if(stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            if(stationCommand && (action==WorldAction.Process || action==WorldAction.Feed) && team.tank.Exists(x=>x.id==id&&x.offering>0))
+            {Respond(sender,requestId,false,"use_route");return;}
+            if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || action==WorldAction.Return || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
+            {Respond(sender,requestId,false,"route_busy");return;}
+            if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
+            {Respond(sender,requestId,false,"changed");return;}
+            if(action>=WorldAction.Reel && action<=WorldAction.Winch && expectedLevel>=0 && team.Level((Upgrade)((int)action-(int)WorldAction.Reel))!=expectedLevel)
+            { Respond(sender,requestId,false,"changed"); return; }
             bool success=false;
             switch(action)
             {
@@ -165,6 +190,10 @@ namespace Raid
                     pendingDepth=0; transitionRemaining=tuning.transitionSeconds; message.Value="Returning to base…"; success=true; break;
                 case WorldAction.Process: if(AtBase) success=team.Process(id); break;
                 case WorldAction.Feed: success=team.Feed(id); break;
+                case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
+                case WorldAction.FeedAll: success=BeginFishRoute(true); break;
+                case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;
+                case WorldAction.StopFeeding: success=StopFishRoute(true,id); break;
                 case WorldAction.LoadCargo:
                     var tool=diver.GetComponent<HarpoonTool>(); var fish=tool!=null?tool.CarriedFish:null;
                     if(AtBase || team.hoistPhase!=HoistPhase.Loading) break;
@@ -185,7 +214,9 @@ namespace Raid
             }
             if(success) { Publish(); Save(); }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
+            Respond(sender,requestId,success,success?"ok":"unavailable");
         }
+        [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
@@ -200,8 +231,15 @@ namespace Raid
         {
             if(!IsServerInitialized || waveLossBudget<=0) return;
             int count=Mathf.Min(waveLossBudget,Mathf.Max(1,Mathf.CeilToInt(severity)));
-            count=Mathf.Min(count,team.tank.Count);
-            if(count>0) { team.tank.RemoveRange(team.tank.Count-count,count); waveLossBudget-=count; Publish(); Save(); }
+            // Committed pipe batches are behind closed valves; only stock still
+            // available in the reservoir can be stolen. Original non-batch loss is unchanged.
+            var available=team.tank.FindAll(x=>!IsRouting(x.id));
+            count=Mathf.Min(count,available.Count);
+            if(count>0)
+            {
+                for(int i=0;i<count;i++)team.tank.Remove(available[available.Count-1-i]);
+                waveLossBudget-=count;stockLossDisplay.Value+=count;Publish();Save();
+            }
         }
         private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team); }
         private void Save()
@@ -213,6 +251,7 @@ namespace Raid
         private void OnDestroy() { interact?.Dispose(); if(Instance==this) Instance=null; }
         private void OnGUI()
         {
+            if(UI.UiInputGate.Active) return;
             if(!IsClientInitialized || view==null || localDiver==null) return;
             GUILayout.BeginArea(new Rect(Screen.width-420,16,400,Screen.height-160),GUI.skin.box);
             GUILayout.Label("DEPTH "+depth.Value+" / "+(AtBase?"BASE":"DIVE"));
