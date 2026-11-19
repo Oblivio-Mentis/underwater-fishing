@@ -85,13 +85,15 @@ namespace Raid.UI
         public void Refresh(UiContext c,float air,bool unobstructed)
         {
             var diver=c.Player.Spectating!=null?c.Player.Spectating:c.Player;
-            if(diver!=c.Player)air=Mathf.Clamp01(diver.Oxygen/Mathf.Max(1,diver.tuning.oxygenCapacity*diver.OxygenMultiplier));
+            // A pure client applies team equipment/depth tuning to its owned motor only.
+            float capacityBonus=c.View!=null&&c.Tuning!=null?1+c.View.tankLevel*c.Tuning.oxygenPerTankLevel:c.Player.OxygenMultiplier;
+            if(diver!=c.Player)air=Mathf.Clamp01(diver.Oxygen/Mathf.Max(1,diver.tuning.oxygenCapacity*capacityBonus));
             int count=0;
             foreach(var player in c.Players)
             {
                 if(player==null||!player.IsClientInitialized||count==crewRows.Length)continue;
                 var row=crewRows[count];row.gameObject.SetActive(true);
-                float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*player.OxygenMultiplier);
+                float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*capacityBonus);
                 float oxygenRatio=player.IsDead?0:Mathf.Clamp01(player.Oxygen/capacity);
                 UiKit.Fraction(crewGauge[count],oxygenRatio);
                 crewGauge[count].color=player.IsTrapped||player.IsHelpless||oxygenRatio<.16f?UiTheme.Red:Green;
@@ -99,9 +101,15 @@ namespace Raid.UI
                 UiKit.Set(crewName[count],UiText.HudPlayerName(player)+state);count++;
             }
             for(int i=count;i<crewRows.Length;i++)crewRows[i].gameObject.SetActive(false);
-            UiKit.Set(depth,"↓  −"+Mathf.RoundToInt(diver.Depth)+" м");
+            float metres=diver.Depth;
+            if(diver!=c.Player)
+            {
+                float seaLevel=c.AtBase?0:c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
+                metres=Mathf.Max(0,seaLevel-diver.transform.position.y);
+            }
+            UiKit.Set(depth,"↓  −"+Mathf.RoundToInt(metres)+" м");
             // A graduation passes the center index for each metre of real depth.
-            float offset=Mathf.Repeat(diver.Depth,3)*23;
+            float offset=Mathf.Repeat(metres,3)*23;
             for(int i=0;i<depthMarks.Length;i++)
             {
                 var tick=depthMarks[i].rectTransform;
