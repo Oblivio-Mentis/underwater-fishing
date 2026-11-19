@@ -16,6 +16,8 @@ namespace Raid
         private Transform tail;
         private float phase;
         private FishActor actor;
+        private float escapeAt = -1;
+        private Vector3 escapeDirection;
 
         public static bool Supports(string species) => species == "Lanternfish" || species == "Bristlefish"
             || species == "Needlefish" || species == "Sailray";
@@ -30,8 +32,16 @@ namespace Raid
             model.tail = MakePart("Caudal fin", body.transform, shape.tail, shape.colors).transform;
             model.tail.localPosition = Vector3.back * .43f;
             model.phase = Random.value * 6.28f;
-            model.actor = parent.GetComponent<FishActor>();
+            model.actor = parent == null ? null : parent.GetComponent<FishActor>();
             return body;
+        }
+
+        public static void Release(string species, Vector3 position, Quaternion facing)
+        {
+            var model = Create(null, species).GetComponent<CatchFishModel>();
+            model.escapeAt = Time.time;
+            model.escapeDirection = facing * new Vector3(Random.Range(-.6f,.6f),.18f,1).normalized;
+            model.transform.SetPositionAndRotation(position + model.escapeDirection*.55f, Quaternion.LookRotation(model.escapeDirection));
         }
 
         private static GameObject MakePart(string label, Transform parent, Mesh mesh, Material[] materials)
@@ -45,6 +55,13 @@ namespace Raid
 
         private void LateUpdate()
         {
+            if (escapeAt >= 0)
+            {
+                float age = Time.time - escapeAt;
+                if (age >= 2.3f) { Destroy(gameObject); return; }
+                transform.position += escapeDirection * ((2.2f + Mathf.Sin(age*6)*.15f)*Time.deltaTime);
+                transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
+            }
             bool struggling = actor != null && actor.Mode == FishMode.Struggling;
             float wave = Mathf.Sin(Time.time * (struggling ? 12 : 5.5f) + phase);
             tail.localRotation = Quaternion.Euler(0, wave * (struggling ? 30 : 16), 0);

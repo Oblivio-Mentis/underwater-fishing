@@ -49,6 +49,7 @@ namespace Raid
         public string SpeciesId => fishId;
         public bool RequiresPartner => cargoSize > 1;
         public long CargoId => _cargoId;
+        public CatchItem ToCargo(long id) => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier, species: SpeciesId);
         public bool IsStowed => _snapshot.Value.Stowed;
         public bool IsHeldByLocalPlayer => Mode == FishMode.Captured && IsClientInitialized
             && (_snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId
@@ -168,6 +169,7 @@ namespace Raid
             state.Mode = mode;
             state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
             state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
+            if (state.Stowed) _hooker = null;
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
@@ -210,7 +212,8 @@ namespace Raid
                     SimulateLine(ref state, mode == FishMode.Tired, dt);
                     break;
                 case FishMode.Captured:
-                    if (_hooker == null) DesiredState = FishMode.Roam;
+                    if (state.Stowed) DesiredState = FishMode.Transported;
+                    else if (_hooker == null) DesiredState = FishMode.Roam;
                     else
                     {
                         transform.position = _hooker.transform.TransformPoint(new Vector3(0, .05f, .7f));

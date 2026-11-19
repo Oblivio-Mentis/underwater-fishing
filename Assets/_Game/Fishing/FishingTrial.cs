@@ -111,22 +111,24 @@ namespace Raid
                 yield return Wait(() => !world.AtBase, 12, "Dive command refused: " + world.Message);
             }
             Require(world.CurrentDepth == 1 && world.Team.hoistPhase == HoistPhase.Loading, "Shallow depth and available winch required.");
-            Require(world.Team.Capacity(world.progression) - world.Team.CargoUsed >= 5, "The verified catches occupy five cage units.");
+            Require(world.Team.Capacity(world.progression) - world.Team.CargoUsed >= 6, "The verified catches occupy six cage units.");
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Host harpoon could not be equipped.");
 
-            foreach (var species in new[] { "Needlefish", "Lanternfish" })
+            foreach (var species in new[] { "Needlefish", "Lanternfish", "Needlefish" })
             {
                 Phase("Solo capture / " + species);
                 var fish = Fish(species);
+                yield return Wait(() => fish.Mode == FishMode.Roam, 16, "School did not repopulate " + species + " while the first catch was stowed.");
                 yield return Hook(fish);
                 yield return Reel(fish);
                 Require(!host.HandsFull && host.HookedFish == null && host.CarriedFish != null,
                     "Small catch was not transferred independently of the harpoon.");
                 Check(species + " captured and stowed by one diver.");
             }
-            Require(host.FishInSlot(2)?.SpeciesId == "Needlefish" && host.FishInSlot(3)?.SpeciesId == "Lanternfish",
-                "Slot contents did not preserve catch order.");
+            Require(host.FishInSlot(2)?.SpeciesId == "Needlefish" && host.FishInSlot(3)?.SpeciesId == "Lanternfish"
+                && host.FishInSlot(4)?.SpeciesId == "Needlefish" && host.HasFullCreel && host.CatchIdInSlot(2) != host.CatchIdInSlot(4),
+                "All three pockets must preserve independent identities, including two catches from the same shoal.");
             host.SelectSlot(2);
             yield return Wait(() => host.ActiveSlot == 2, 3, "Occupied pocket was not selectable.");
             Require(!host.QaFireOwned(), "Occupied pocket incorrectly fired the harpoon.");
@@ -134,7 +136,7 @@ namespace Raid
             Shot("catch-pockets.png");
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Could not return to the harpoon.");
-            Check("Two pocketed catches coexist; selecting a fish suppresses harpoon fire.");
+            Check("Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.");
 
             Phase("Heavy solo attempt");
             var heavy = Fish("Bristlefish");
@@ -161,26 +163,26 @@ namespace Raid
             yield return Reel(heavy);
             refreshGrip = false;
             Send("fish_grip", 0);
-            Require(host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 3,
+            Require(host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4,
                 "Paired capture lost a pocket or failed to occupy both hands.");
             Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
             yield return Pause(.5f);
             Shot("catch-heavy.png");
-            Check("Heavy capture completed with both small catches intact; tool switch and fire blocked.");
+            Check("Heavy capture completed with all three small catches intact; tool switch and fire blocked.");
 
             Phase("Deposit and observe swimming cargo on both peers");
             host.Motor.Teleport(world.tuning.cargoPosition - host.Motor.AimDirection * 2.65f - Vector3.up * .6f);
             Physics.SyncTransforms();
             var cage = world.container.GetComponentInChildren<WetCargoShoal>();
             int before = world.Team.cargo.Count, beforeSwimmers = cage == null ? 0 : cage.Count;
-            var caughtIds = new[] { host.FishInSlot(2).CargoId, host.FishInSlot(3).CargoId, heavy.CargoId };
+            var caughtIds = new[] { host.CatchIdInSlot(2), host.CatchIdInSlot(3), host.CatchIdInSlot(4), heavy.CargoId };
             world.Command(WorldAction.LoadCargo, 0);
-            yield return Wait(() => host.CatchCount == 0 && world.Team.cargo.Count == before + 3, 6, "Server did not deposit all three catches.");
+            yield return Wait(() => host.CatchCount == 0 && world.Team.cargo.Count == before + 4, 6, "Server did not deposit all four catches.");
             Require(caughtIds.All(id => world.Team.cargo.Count(item => item.id == id) == 1), "Deposit lost or duplicated a catch ID.");
-            yield return Wait(() => cage != null && cage.Count == beforeSwimmers + 3 && ReadClient()?.cageSwimmers == cage.Count,
-                10, "Host/client cage swimmers did not reflect three new entries.");
+            yield return Wait(() => cage != null && cage.Count == beforeSwimmers + 4 && ReadClient()?.cageSwimmers == cage.Count,
+                10, "Host/client cage swimmers did not reflect four new entries.");
             Shot("catch-cage.png");
-            Check("Three authoritative catch IDs now swim in both cages; hands and pockets are empty.");
+            Check("Four authoritative catch IDs now swim in both cages; hands and pockets are empty.");
 
             Phase("Hoist cargo into reservoir");
             yield return Pause(.3f);
@@ -210,7 +212,9 @@ namespace Raid
         {
             bool pulling = true;
             float deadline = Time.unscaledTime + 65;
-            while (fish.Mode != FishMode.Captured)
+            long capturedId = fish.CargoId;
+            while (fish.RequiresPartner ? fish.Mode != FishMode.Captured :
+                host.CatchIdInSlot(2) != capturedId && host.CatchIdInSlot(3) != capturedId && host.CatchIdInSlot(4) != capturedId)
             {
                 Require(Time.unscaledTime < deadline && host.HookedFish == fish && !host.Motor.IsHelpless,
                     "Line lost or expired: " + fish.SpeciesId + " / " + fish.Mode + " / stamina " + fish.Stamina.ToString("F2"));

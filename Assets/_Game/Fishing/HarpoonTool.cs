@@ -27,7 +27,12 @@ namespace Raid
         private bool _reelHeld, _assistHeld;
         private readonly SyncVar<NetworkObject> _assistTarget = new();
         private readonly SyncVar<NetworkObject> _assistant = new();
-        private readonly SyncVar<NetworkObject> _pocketA = new(), _pocketB = new(), _pocketC = new();
+        public struct PocketCatch
+        {
+            public NetworkObject species;
+            public long id;
+        }
+        private readonly SyncVar<PocketCatch> _pocketA = new(), _pocketB = new(), _pocketC = new();
         private readonly SyncVar<int> _slot = new(), _shotSequence = new();
         private InputAction[] _select;
         private InputAction _wheel;
@@ -41,20 +46,23 @@ namespace Raid
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
         public bool HandsFull => _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
-        public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value != null ? 1 : 0)
-            + (_pocketB.Value != null ? 1 : 0) + (_pocketC.Value != null ? 1 : 0);
-        public bool HasFullCreel => _pocketA.Value != null && _pocketB.Value != null && _pocketC.Value != null;
-        public int SmallestCatchSize => _pocketA.Value != null || _pocketB.Value != null || _pocketC.Value != null
+        public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value.id > 0 ? 1 : 0)
+            + (_pocketB.Value.id > 0 ? 1 : 0) + (_pocketC.Value.id > 0 ? 1 : 0);
+        public bool HasFullCreel => _pocketA.Value.id > 0 && _pocketB.Value.id > 0 && _pocketC.Value.id > 0;
+        public int SmallestCatchSize => _pocketA.Value.id > 0 || _pocketB.Value.id > 0 || _pocketC.Value.id > 0
             ? 1 : HandsFull ? _fish.cargoSize : 0;
         public FishActor CarriedFish => HandsFull ? _fish : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
 
-        private SyncVar<NetworkObject> Pocket(int slot) => slot switch { 2 => _pocketA, 3 => _pocketB, 4 => _pocketC, _ => null };
+        private SyncVar<PocketCatch> Pocket(int slot) => slot switch { 2 => _pocketA, 3 => _pocketB, 4 => _pocketC, _ => null };
 
         public FishActor FishInSlot(int slot)
         {
-            var item = Pocket(slot)?.Value;
-            return item == null ? null : item.GetComponent<FishActor>();
+            var pocket = Pocket(slot);
+            var species = pocket == null ? null : pocket.Value.species;
+            return species == null ? null : species.GetComponent<FishActor>();
         }
+
+        public long CatchIdInSlot(int slot) => Pocket(slot)?.Value.id ?? 0;
 
         public bool SelectSlot(int slot)
         {
@@ -106,7 +114,7 @@ namespace Raid
 
         public override void OnStopServer()
         {
-            ReleaseAll();
+            ReleaseAll(false);
             ServerTools.Remove(this);
         }
 
@@ -221,7 +229,7 @@ namespace Raid
             if (OwnsFriendTether) { ReleaseOutgoingFriend(); return; }
             if (AssistTarget != null) { DetachGrip(); _assistHeld = false; return; }
             if (_fish != null) _fish.ReleaseHook(this);
-            else FishInSlot(ActiveSlot)?.ReleaseHook(this);
+            else EmptyPocket(ActiveSlot, true);
         }
 
         /// <summary>Local-owner UI action. The server still checks ownership through ReleaseServer.</summary>
@@ -264,28 +272,73 @@ namespace Raid
             ReleaseAll();
         }
 
-        private void ReleaseAll()
+        private void ReleaseAll(bool showDrops = true)
         {
             ReleaseOutgoingFriend();
             ReleaseIncomingFriend();
             DetachGrip();
             ToolOf(_assistant.Value)?.DetachGrip();
             if (_fish != null) _fish.ReleaseHook(this);
-            for (int slot = 2; slot < 5; slot++) FishInSlot(slot)?.ReleaseHook(this);
+            for (int slot = 2; slot < 5; slot++) EmptyPocket(slot, showDrops);
         }
 
         public bool DropOneCatch()
         {
-            var fish = CarriedFish;
-            if (!IsServerInitialized || fish == null) return false;
-            fish.ReleaseHook(this);
+            if (!IsServerInitialized) return false;
+            if (HandsFull) { _fish.ReleaseHook(this); return true; }
+            return EmptyPocket(FirstOccupiedPocket(), true);
+        }
+
+        private int FirstOccupiedPocket()
+        {
+            if (CatchIdInSlot(ActiveSlot) > 0) return ActiveSlot;
+            for (int slot = 2; slot < 5; slot++)
+                if (CatchIdInSlot(slot) > 0) return slot;
+            return -1;
+        }
+
+        private bool EmptyPocket(int slot, bool showEscape)
+        {
+            var pocket = Pocket(slot);
+            if (pocket == null || pocket.Value.id == 0) return false;
+            var fish = FishInSlot(slot);
+            pocket.Value = default;
+            if (showEscape && fish != null && !Motor.IsInside)
+                FishReleasedObservers(fish.SpeciesId, transform.position, transform.rotation);
             return true;
         }
 
+        [ObserversRpc]
+        private void FishReleasedObservers(string species, Vector3 position, Quaternion rotation) =>
+            CatchFishModel.Release(species, position, rotation);
+
         public bool TakeCargo()
         {
-            var fish = CarriedFish;
-            return IsServerInitialized && fish != null && fish.MarkTransported(this);
+            if (!IsServerInitialized) return false;
+            return HandsFull ? _fish.MarkTransported(this) : EmptyPocket(FirstOccupiedPocket(), false);
+        }
+
+        internal bool UnloadCatches(TeamProgress team, ProgressionTuning progression)
+        {
+            if (!IsServerInitialized) return false;
+            bool loaded = false;
+            if (HandsFull)
+            {
+                var item = _fish.ToCargo(_fish.CargoId);
+                if (team.LoadCargo(item, progression))
+                {
+                    loaded = _fish.MarkTransported(this);
+                    if (!loaded) team.cargo.RemoveAll(entry => entry.id == item.id);
+                }
+            }
+            for (int slot = 2; slot < 5; slot++)
+            {
+                var species = FishInSlot(slot);
+                if (species == null || !team.LoadCargo(species.ToCargo(CatchIdInSlot(slot)), progression)) continue;
+                EmptyPocket(slot, false);
+                loaded = true;
+            }
+            return loaded;
         }
 
         internal bool StowCapture(FishActor fish)
@@ -294,8 +347,9 @@ namespace Raid
             for (int slot = 2; slot < 5; slot++)
             {
                 var pocket = Pocket(slot);
-                if (pocket.Value != null) continue;
-                pocket.Value = fish.NetworkObject;
+                if (pocket.Value.id != 0) continue;
+                // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
+                pocket.Value = new PocketCatch { species = fish.NetworkObject, id = fish.CargoId };
                 _fish = null;
                 _fishObject.Value = null;
                 return true;
@@ -312,8 +366,6 @@ namespace Raid
                 _fishObject.Value = null;
                 ToolOf(_assistant.Value)?.DetachGrip();
             }
-            for (int slot = 2; slot < 5; slot++)
-                if (Pocket(slot).Value == fish.NetworkObject) Pocket(slot).Value = null;
         }
 
         private void FixedUpdate()
