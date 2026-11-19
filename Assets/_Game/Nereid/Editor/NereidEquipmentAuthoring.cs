@@ -119,7 +119,8 @@ namespace Raid.Nereid.Editor
 
         static void Processor(Transform parent,Raid.Factory.FactoryVisuals runtime)
         {
-            var root=Group("Deep biomaterial pressure assembly",parent,new Vector3(-3.45f,0,-6.9f));
+            var root=Group("Deep biomaterial pressure assembly",parent,runtime.ProcessorPoint(new Vector3(-3.45f,0,-6.9f)));
+            root.localScale=runtime.processorScale;
             // The existing intakes, animation, colliders, material outputs and active lamp are untouched.
             Box("Upper sloping motor cover",root,new Vector3(0,2.27f,-.02f),new Vector3(4.08f,.45f,.88f),steel,.12f);
             Box("Processor chassis cap",root,new Vector3(0,2.51f,-.09f),new Vector3(3.38f,.11f,.68f),dark,.04f);

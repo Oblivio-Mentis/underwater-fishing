@@ -19,6 +19,8 @@ namespace Raid.Factory
         public Mesh bubbleMesh;
         public float beltY=.91f;
         public float[] beltX={-4.8f,-3.9f,-3f,-2.1f};
+        public Vector3 processorOffset;
+        public Vector3 processorScale=Vector3.one;
 
         readonly Transform[] travelling=new Transform[PoolSize];
         readonly Transform[] stock=new Transform[PoolSize];
@@ -113,14 +115,21 @@ namespace Raid.Factory
             }
             const float releaseAt=4.7f;Vector3 outlet=path[path.Length-1];
             if(age<releaseAt)return Along(path,(age-.9f)/(releaseAt-.9f));
-            int lane=(int)((uint)(index+batchSeed)%4);float x=beltX[lane];
-            float fallSeconds=Mathf.Sqrt(2*Mathf.Max(.01f,outlet.y-beltY)/9.81f);
+            int lane=(int)((uint)(index+batchSeed)%4);
+            Vector3 start=ProcessorPoint(new Vector3(beltX[lane],beltY,-4.95f));
+            Vector3 intake=ProcessorPoint(new Vector3(beltX[lane],beltY,-6.42f));
+            Vector3 end=ProcessorPoint(new Vector3(beltX[lane],.65f,-6.94f));
+            // Fish travel in factory-local coordinates; gravity remains 9.81 m/s² in world space.
+            float scaleY=Mathf.Max(.001f,Mathf.Abs(transform.lossyScale.y));
+            float fallSeconds=Mathf.Sqrt(2*Mathf.Max(.01f,outlet.y-start.y)*scaleY/9.81f);
             float fallAge=age-releaseAt;
-            if(fallAge<fallSeconds)return new Vector3(Mathf.Lerp(outlet.x,x,fallAge/fallSeconds),outlet.y-.5f*9.81f*fallAge*fallAge,Mathf.Lerp(outlet.z,-4.95f,fallAge/fallSeconds));
+            if(fallAge<fallSeconds)return new Vector3(Mathf.Lerp(outlet.x,start.x,fallAge/fallSeconds),outlet.y-.5f*(9.81f/scaleY)*fallAge*fallAge,Mathf.Lerp(outlet.z,start.z,fallAge/fallSeconds));
             float onBelt=releaseAt+fallSeconds;
-            if(age<7.55f)return new Vector3(x,beltY,Mathf.Lerp(-4.95f,-6.42f,Mathf.InverseLerp(onBelt,7.55f,age)));
-            return new Vector3(x,Mathf.Lerp(beltY,.65f,(age-7.55f)/.45f),Mathf.Lerp(-6.42f,-6.94f,(age-7.55f)/.45f));
+            if(age<7.55f)return Vector3.Lerp(start,intake,Mathf.InverseLerp(onBelt,7.55f,age));
+            return Vector3.Lerp(intake,end,(age-7.55f)/.45f);
         }
+
+        public Vector3 ProcessorPoint(Vector3 localPoint) => Vector3.Scale(localPoint,processorScale)+processorOffset;
 
         void UpdateStock()
         {
