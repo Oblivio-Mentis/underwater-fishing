@@ -24,7 +24,7 @@ foreach ($name in 'Start-Menu', 'Start-Solo') {
         'setlocal DisableDelayedExpansion'
         'cd /d "%~dp0" || exit /b 1'
         'if not exist "UserData\" mkdir "UserData" || exit /b 1'
-        ('start "" "%~dp0UnderwaterFishing.exe"' + $mode + ' -raid-save "%~dp0UserData\team-progress.json"')
+        ('start "" "%~dp0UnderwaterFishing.exe" -screen-fullscreen 1' + $mode + ' -raid-save "%~dp0UserData\team-progress.json"')
     )
     [IO.File]::WriteAllLines((Join-Path $buildDirectory "$name.cmd"), $lines, [Text.Encoding]::ASCII)
 }

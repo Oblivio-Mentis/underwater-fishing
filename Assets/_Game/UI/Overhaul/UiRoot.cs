@@ -48,6 +48,24 @@ namespace Raid.UI
         int requestSequence,pendingRequestId;
         string beforeFingerprint;
 
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        static void StartFullscreen()
+        {
+            if (Application.isBatchMode) return;
+            var args = Environment.GetCommandLineArgs();
+            int option = Array.IndexOf(args, "-screen-fullscreen");
+            if (option >= 0 && option + 1 < args.Length && args[option + 1] == "0") return;
+
+            // Older builds may have saved a smaller window for this display.
+            var monitor = Screen.mainWindowDisplayInfo;
+            if (monitor.width > 0 && monitor.height > 0 &&
+                (Screen.fullScreenMode != FullScreenMode.FullScreenWindow ||
+                 Screen.width != monitor.width || Screen.height != monitor.height))
+                Screen.SetResolution(monitor.width, monitor.height, FullScreenMode.FullScreenWindow);
+        }
+#endif
+
         void Awake()
         {
             if(Instance!=null){Destroy(gameObject);return;}Instance=this;UiInputGate.Reset();UiInputGate.Active=true;
