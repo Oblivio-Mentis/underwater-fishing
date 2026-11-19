@@ -196,11 +196,7 @@ namespace Raid.Nereid
             var world=RaidWorld.Instance;
             var target=landing+transform.up*.65f;
             if(world!=null && world.NetworkObject!=null && world.container!=null && (world.IsClientInitialized || world.IsServerInitialized))
-            {
-                // Follow the outdoor lift. After it crosses above the hull, hold the receiving pad for the next descent.
-                var point=world.container.position;
-                if(transform.InverseTransformPoint(point).x>=9.3f)target=point+transform.up*.65f;
-            }
+                target=world.container.position+transform.up*.65f;
             var direction=target-cradle.position;
             if(direction.sqrMagnitude>.001f)
                 cradle.rotation=Quaternion.RotateTowards(cradle.rotation,Quaternion.LookRotation(direction,transform.up),Time.deltaTime*175);
