@@ -17,10 +17,11 @@ namespace Raid
         Camera view;
         DiverMotor owner;
         HarpoonTool tool;
-        Transform model,legacyModel,reel;
+        Transform model,legacyModel,reel,loadedBolt,slide;
+        HarpoonShotFx shotFx;
         Renderer statusLamp;
         Vector3 previousPosition,sway;
-        float searchAt,bobClock,recoil,nextVisualShot;
+        float searchAt,bobClock,recoil,recoilVelocity;
 
         void OnEnable()
         {
@@ -62,7 +63,7 @@ namespace Raid
             }
             bool visible=!UI.UiInputGate.Modal;
             model.gameObject.SetActive(visible);
-            if(!visible){previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;return;}
+            if(!visible){previousPosition=owner.transform.position;sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
             bool controlling=Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
@@ -77,20 +78,20 @@ namespace Raid
             float bobAmount=Mathf.Clamp01(speed*.4f);
             Vector3 bob=new Vector3(Mathf.Sin(bobClock)*.0012f,Mathf.Sin(bobClock*2)*.0015f,0)*bobAmount;
             bool hasLine=tool!=null&&((tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired)||tool.OwnsFriendTether);
-            bool held=controlling&&mouse!=null&&mouse.leftButton.isPressed;
-            if(reel!=null&&hasLine&&held)reel.Rotate(Vector3.right,dt*280,Space.Self);
             if(statusLamp!=null)statusLamp.enabled=hasLine;
-            // Mirrors the local fire context only; no RPC, hit or successful catch is fabricated.
-            if(controlling&&mouse!=null&&mouse.leftButton.wasPressedThisFrame&&tool!=null&&tool.HookedFish==null&&!tool.TetherActive&&!owner.IsHelpless&&Time.unscaledTime>=nextVisualShot)
+            // The receiver's damped spring is kicked only by the accepted server-shot event.
+            float remaining=dt;
+            while(remaining>0)
             {
-                recoil=.016f;nextVisualShot=Time.unscaledTime+Mathf.Max(.1f,tool.tuning==null ? .6f : tool.tuning.fireCooldown);
+                float step=Mathf.Min(remaining,.008f);remaining-=step;
+                recoilVelocity+=(-recoil*260-recoilVelocity*22)*step;recoil=Mathf.Clamp(recoil+recoilVelocity*step,-.004f,.055f);
             }
             float aim=Nereid.NereidAim.Blend;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
             model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
-            recoil*=Mathf.Exp(-18*dt);
+            if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 
         void BuildModel()
@@ -108,8 +109,9 @@ namespace Raid
             Tube("Barrel collar",new[]{new Vector3(0,.025f,.105f),new Vector3(0,.025f,.142f)},.033f,steel,12);
             Tube("Pressure barrel",new[]{new Vector3(0,.025f,.14f),new Vector3(0,.025f,.305f)},.018f,dark,12);
             Tube("Muzzle sleeve",new[]{new Vector3(0,.025f,.278f),new Vector3(0,.025f,.335f)},.024f,steel,12);
-            Tube("Spear shaft",new[]{new Vector3(0,.025f,.19f),new Vector3(0,.025f,.389f)},.005f,steel,8);
-            Part("Barbed spearhead",Spearhead(),new Vector3(0,.025f,.385f),Quaternion.identity,steel);
+            loadedBolt=new GameObject("Loaded spear and barbed head").transform;loadedBolt.SetParent(model,false);
+            Tube("Spear shaft",new[]{new Vector3(0,.025f,.19f),new Vector3(0,.025f,.389f)},.005f,steel,8,loadedBolt);
+            Part("Barbed spearhead",Spearhead(),new Vector3(0,.025f,.385f),Quaternion.identity,steel,loadedBolt);
             Tube("Left barrel brace",new[]{new Vector3(-.026f,.019f,.112f),new Vector3(-.026f,.019f,.279f)},.004f,steel,6);
             Tube("Right barrel brace",new[]{new Vector3(.026f,.019f,.112f),new Vector3(.026f,.019f,.279f)},.004f,steel,6);
             Box("Front sight",new Vector3(0,.061f,.269f),new Vector3(.013f,.018f,.018f),.003f,amber);
@@ -158,7 +160,14 @@ namespace Raid
                 Box("Glove finger "+i,new Vector3(-.008f,y,-.041f),new Vector3(.048f,.013f,.028f),.004f,dark,Quaternion.Euler(-8,0,8));
             }
             Tube("Glove thumb",new[]{new Vector3(.039f,-.064f,-.07f),new Vector3(.017f,-.051f,-.04f),new Vector3(-.002f,-.06f,-.031f)},.012f,dark,7);
+            slide=new GameObject("Spring-loaded receiver slide").transform;slide.SetParent(model,false);
+            Part("Bolt shuttle",BeveledBox(new Vector3(.032f,.014f,.07f),.003f),new Vector3(0,.073f,.06f),Quaternion.identity,steel,slide);
+            var muzzle=new GameObject("Harpoon muzzle anchor").transform;muzzle.SetParent(model,false);muzzle.localPosition=new Vector3(0,.025f,.34f);
+            var fx=new GameObject("Owned harpoon shot presentation");fx.transform.SetParent(view.transform,false);shotFx=fx.AddComponent<HarpoonShotFx>();
+            shotFx.Initialize(tool,muzzle,loadedBolt,reel,steel);tool.ShotVisual+=OnAcceptedShot;
         }
+
+        void OnAcceptedShot(Vector3 origin,Vector3 endpoint){recoilVelocity+=1.05f;}
 
         Transform Box(string name,Vector3 position,Vector3 size,float bevel,Material material,Quaternion? rotation=null)
         {return Part(name,BeveledBox(size,bevel),position,rotation??Quaternion.identity,material);}
@@ -241,10 +250,12 @@ namespace Raid
 
         void ReleaseModel()
         {
+            if(tool!=null)tool.ShotVisual-=OnAcceptedShot;
+            if(shotFx!=null){shotFx.Release();Destroy(shotFx.gameObject);shotFx=null;}
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
-            meshes.Clear();model=null;reel=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
-            sway=Vector3.zero;recoil=0;bobClock=0;
+            meshes.Clear();model=null;reel=null;loadedBolt=null;slide=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
+            sway=Vector3.zero;recoil=0;recoilVelocity=0;bobClock=0;
         }
         void OnDisable() { ReleaseModel();if(active==this)active=null; }
         void OnDestroy() { ReleaseModel();if(active==this)active=null; }
