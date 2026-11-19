@@ -8,6 +8,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.Layouts;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 namespace Raid.UI
 {
@@ -246,7 +247,10 @@ namespace Raid.UI
             {
                 string leaf=Path.GetFileName(string.IsNullOrEmpty(r.value)?r.name:r.value);
                 if(string.IsNullOrEmpty(leaf)||!leaf.EndsWith(".png",StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Capture requires a PNG filename");
-                ScreenCapture.CaptureScreenshot(Path.Combine(directory,leaf));return;
+                string path=Path.Combine(directory,leaf);
+                if(Application.isBatchMode)CapturePeerCamera(path);
+                else ScreenCapture.CaptureScreenshot(path);
+                return;
             }
             if(r.action=="key")
             {
@@ -275,6 +279,65 @@ namespace Raid.UI
             }
             if(r.action!="snapshot")throw new InvalidOperationException("Unsupported UI-only QA action");
         }
+        // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
+        static void CapturePeerCamera(string path)
+        {
+            if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)
+                throw new InvalidOperationException("A graphics device is required for a peer camera capture");
+            var diver=UiRoot.Instance.Context.Player;
+            var camera=diver!=null && diver.IsOwner?diver.GetComponentInChildren<Camera>():null;
+            if(camera==null || !camera.isActiveAndEnabled)
+                throw new InvalidOperationException("An active camera on the local owned diver is required");
+
+            var overlays=UnityEngine.Object.FindObjectsByType<Canvas>()
+                .Where(c=>c.isActiveAndEnabled && c.isRootCanvas && c.renderMode==RenderMode.ScreenSpaceOverlay)
+                .Select(c=>(canvas:c,previousCamera:c.worldCamera,distance:c.planeDistance,rotation:c.transform.localRotation,
+                    scale:c.transform.localScale,position:c.transform.localPosition)).ToArray();
+            int width=Screen.width>1?Screen.width:1280, height=Screen.height>1?Screen.height:720;
+            var target=RenderTexture.GetTemporary(width,height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            var previousTarget=camera.targetTexture;
+            var previousActive=RenderTexture.active;
+            Texture2D pixels=null;
+            try
+            {
+                camera.targetTexture=target;
+                foreach(var overlay in overlays)
+                {
+                    overlay.canvas.renderMode=RenderMode.ScreenSpaceCamera;
+                    overlay.canvas.worldCamera=camera;
+                    overlay.canvas.planeDistance=camera.nearClipPlane+.02f;
+                }
+                Canvas.ForceUpdateCanvases();
+                var frame=new RenderPipeline.StandardRequest{destination=target};
+                if(!RenderPipeline.SupportsRenderRequest(camera,frame))
+                    throw new InvalidOperationException("The active render pipeline does not support camera-stack capture");
+                RenderPipeline.SubmitRenderRequest(camera,frame);
+                RenderTexture.active=target;
+                pixels=new Texture2D(width,height,TextureFormat.RGB24,false);
+                pixels.ReadPixels(new Rect(0,0,width,height),0,0,false);
+                pixels.Apply(false,false);
+                File.WriteAllBytes(path,pixels.EncodeToPNG());
+            }
+            finally
+            {
+                camera.targetTexture=previousTarget;
+                RenderTexture.active=previousActive;
+                foreach(var overlay in overlays)
+                {
+                    var canvas=overlay.canvas;
+                    if(canvas==null)continue;
+                    canvas.planeDistance=overlay.distance;
+                    canvas.worldCamera=overlay.previousCamera;
+                    canvas.renderMode=RenderMode.ScreenSpaceOverlay;
+                    canvas.transform.SetLocalPositionAndRotation(overlay.position,overlay.rotation);
+                    canvas.transform.localScale=overlay.scale;
+                }
+                Canvas.ForceUpdateCanvases();
+                if(pixels!=null)Destroy(pixels);
+                RenderTexture.ReleaseTemporary(target);
+            }
+        }
+
         void WriteSnapshot()
         {
             var root=UiRoot.Instance;var context=root.Context;var player=context.Player;var world=context.World;var fish=context.Harpoon==null?null:context.Harpoon.HookedFish;
