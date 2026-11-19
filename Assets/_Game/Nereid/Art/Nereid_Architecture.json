@@ -15,10 +15,10 @@
     "Interior": {
       "file": "Nereid_Interior.fbx",
       "objects": 8,
-      "triangles": 111832,
+      "triangles": 124856,
       "unity_bounds_min": [
         -6.925000190734863,
-        -0.23000000417232513,
+        -0.2199999988079071,
         -16.934999465942383
       ],
       "unity_bounds_max": [

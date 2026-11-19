@@ -2,7 +2,7 @@
 Run Blender -b --factory-startup --python-exit-code 1 -P this_file.
 Geometry, openings and materials are deterministic; no downloaded art.
 """
-import bpy, math, json
+import bpy, math, json, sys
 from pathlib import Path
 from mathutils import Vector
 
@@ -10,6 +10,7 @@ ROOT=Path(__file__).resolve().parents[2]
 OUT=ROOT/'Assets/_Game/Nereid/Art'
 OUT.mkdir(parents=True,exist_ok=True)
 PREVIEW=ROOT/'art/nereid'
+INTERIOR_ONLY='--interior-only' in sys.argv
 bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
 for d in list(bpy.data.materials):bpy.data.materials.remove(d)
 PALETTE={
@@ -149,7 +150,7 @@ for i in range(5):
 
 # Interior. Actual opaque walls respect windows; large-medium-small rhythm carries the space.
 S='Interior'
-box(S,'pressure deck foundation',(0,-.14,-4.05),(11.8,.18,23.9),'Nereid_Dark')
+box(S,'pressure deck foundation',(0,-.18,-4.05),(11.8,.08,23.9),'Nereid_Grate')
 for ix in range(8):
     for iz in range(16):
         x=-5.16+ix*1.475;z=-15.25+iz*1.49
@@ -157,8 +158,11 @@ for ix in range(8):
         if not grate:box(S,'deck tile',(x,-.031,z),(1.435,.055,1.45),'Nereid_Steel')
         else:
             # Open grating is genuine geometry over a dark underfloor, not just a printed checker.
-            for k in range(8):box(S,'grate bearing bar',(x-.68+k*.193,-.025,z),(.035,.05,1.44),'Nereid_Grate')
-            for k in range(5):box(S,'grate cross bar',(x,-.03,z-.68+k*.34),(1.43,.035,.025),'Nereid_Grate')
+            for k in range(8):box(S,'grate bearing bar',(x-.68+k*.193,-.025,z),(.065,.05,1.44),'Nereid_Grate')
+            for k in range(5):box(S,'grate cross bar',(x,-.03,z-.68+k*.34),(1.43,.035,.045),'Nereid_Grate')
+            for side in (-1,1):
+                box(S,'grating tile perimeter',(x+side*.704,-.022,z),(.035,.05,1.45),'Nereid_Steel')
+                box(S,'grating tile perimeter',(x,-.022,z+side*.707),(1.435,.05,.035),'Nereid_Steel')
         # Perimeter screws and edge bevels stay quiet at player distance.
         for sx in (-1,1):
             for sz in (-1,1):cylinder(S,(x+sx*.59,.003,z+sz*.59),.027,.018,mat='Nereid_Dark',sides=6)
@@ -292,7 +296,10 @@ for side in (-1,1):
 
 bpy.context.scene.unit_settings.system='METRIC';bpy.context.scene.unit_settings.scale_length=1
 meta={'coordinates':'Unity metres, x right, y up, z bow; geometry built in Blender(x,-z,y), exported FBX -Z forward/Y up','materials':list(PALETTE),'models':{},'openings':{'main_windows':'x=+-5.87 reveals to+-6.89; z=-7.8..6.55; y0.87..3.24','main_to_aft':'z=-8,width3.04,height3.15','aft_starboard_exit':'x5.8..7,z-15.6..-12.4,y0..3.0','bow_mouth':'z7.6,centre(0,1.85),width5.1,height3.58'}}
+if INTERIOR_ONLY:
+    meta['models']=json.loads((OUT/'Nereid_Architecture.json').read_text(encoding='utf-8'))['models']
 for scope,obs in objects.items():
+    if INTERIOR_ONLY and scope!='Interior':continue
     bpy.ops.object.select_all(action='DESELECT')
     for o in obs:o.select_set(True)
     bpy.context.view_layer.objects.active=obs[0]
@@ -320,9 +327,10 @@ for z in (-6,1,6):
     l=light('Preview cool ocean',(7,3,z),260,(.34,.65,1),4);aim(l,(0,1,z))
 for o in objects['Exterior']:o.hide_render=True
 camera.location=(3.8,6.6,1.7);aim(camera,(-1.8,1.85,2.3));scene.render.filepath=str(PREVIEW/'preview_interior.png');bpy.ops.render.render(write_still=True)
-for o in objects['Exterior']:o.hide_render=False
-camera.location=(30,-33,18);aim(camera,(0,1,-8));camera.data.lens=40
-l=light('Preview exterior key',(12,20,5),7000,(.45,.75,1),20);aim(l,(0,0,-7))
-l=light('Preview exterior rim',(-12,7,-14),5000,(.3,.65,1),15);aim(l,(0,1,-10))
-scene.render.filepath=str(PREVIEW/'preview_exterior.png');bpy.ops.render.render(write_still=True)
+if not INTERIOR_ONLY:
+    for o in objects['Exterior']:o.hide_render=False
+    camera.location=(30,-33,18);aim(camera,(0,1,-8));camera.data.lens=40
+    l=light('Preview exterior key',(12,20,5),7000,(.45,.75,1),20);aim(l,(0,0,-7))
+    l=light('Preview exterior rim',(-12,7,-14),5000,(.3,.65,1),15);aim(l,(0,1,-10))
+    scene.render.filepath=str(PREVIEW/'preview_exterior.png');bpy.ops.render.render(write_still=True)
 print('NEREID_EXPORT',json.dumps(meta))
