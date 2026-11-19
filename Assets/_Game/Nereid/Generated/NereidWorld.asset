@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: NereidWorld
   m_EditorClassIdentifier: Assembly-CSharp::Raid.WorldTuning
   terminalPosition: {x: 0, y: 2, z: -6}
-  cargoPosition: {x: 16, y: 0.8, z: -28}
+  cargoPosition: {x: 23, y: -16.4, z: -28}
   interactionRange: 4
   transitionSeconds: 3
   shallowDepth: 20
