@@ -11,6 +11,8 @@ namespace Raid
         public float lookSensitivity = 0.12f;
         public float oxygenCapacity = 120f;
         public float oxygenRecovery = 20f;
+        [Min(.1f)] public float suffocationDamagePerSecond = 4.5f;
+        [Min(0)] public float onboardHealingPerSecond = 5f;
         public float safeDepth = 35f;
         public float inputTimeout = 0.3f;
         public float sendInterval = 0.05f;

@@ -53,6 +53,7 @@ namespace Raid
         public override void OnStartServer()
         {
             ResetFishRoute();
+            ResetAirlock();
             message.Value="Choose depth at the reservoir terminal";
             saveFailed=false;
             travelDisplay.Value=0; stockLossDisplay.Value=0;
@@ -68,6 +69,7 @@ namespace Raid
         }
         public override void OnStartClient()
         {
+            if(Nereid.NereidAirlock.Active!=null)Nereid.NereidAirlock.Active.ApplyDoors(airlock.Value);
             WetCargoShoal.Attach(this);
             snapshot.OnChange+=OnSnapshot;
             OnSnapshot("",snapshot.Value,false);
@@ -109,6 +111,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if(!IsServerInitialized || team==null) return;
+            TickAirlock();
             TickRouteClock();
             team.TickHoist(Time.fixedDeltaTime,progression);
             if(team.TickHunger(Time.fixedDeltaTime,progression))

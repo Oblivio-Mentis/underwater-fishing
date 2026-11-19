@@ -15,11 +15,13 @@ namespace Raid.Nereid
         public Vector3[] cargoRail;
         public LineRenderer hoistCable;
         RaidWorld world;
+        NereidAirlock airlock;
         float railFraction=-1;
 
         void Awake()
         {
             Active=this;
+            airlock=NereidAirlock.Install(transform);
             var reef=new GameObject("NEREID fishing grounds");
             reef.transform.SetParent(transform,true);
             reef.AddComponent<NereidReef>();
@@ -28,10 +30,15 @@ namespace Raid.Nereid
 
         public bool ContainsSealed(Vector3 point)
         {
+            if(airlock!=null&&airlock.Contains(point))return !airlock.IsSubmerged(point+Vector3.up*.6f);
             if(sealedRooms==null)return false;
             point=transform.InverseTransformPoint(point);
             foreach(var room in sealedRooms)if(room.Contains(point))return true;
             return false;
+        }
+        public bool ContainsWalkingDeck(Vector3 point)
+        {
+            return airlock!=null&&airlock.Contains(point)?!airlock.IsSubmerged(point):ContainsSealed(point);
         }
 
         public bool InsideJaws(Vector3 chest)

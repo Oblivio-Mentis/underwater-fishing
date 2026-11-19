@@ -18,6 +18,7 @@ namespace Raid
             public Vector3 Position;
             public float Yaw;
             public float Oxygen;
+            public float Health, HypoxicSeconds;
             public float Stress;
             public bool Inside;
             public bool Trapped;
@@ -56,7 +57,10 @@ namespace Raid
         // Ground contacts are authoritative on the server; remote replicas do not run a CharacterController.
         public bool IsGrounded => NetworkObject!=null && IsServerInitialized && _controller!=null && _controller.enabled && _controller.isGrounded;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
-        public bool IsHelpless => IsDead || Oxygen <= 0f;
+        public float Health => _state.Value.Health;
+        public bool IsHypoxic => !IsDead && _state.Value.HypoxicSeconds>0;
+        public float HypoxiaSeverity => IsHypoxic?Mathf.Clamp01(.12f+_state.Value.HypoxicSeconds/20f):0;
+        public bool IsHelpless => IsDead || (Nereid.NereidVessel.Active==null && Oxygen<=0);
         public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f : _state.Value.Trapped;
         public Vector3 AimDirection => Quaternion.Euler(_serverPitch, _serverYaw, 0f) * Vector3.forward;
 
@@ -88,6 +92,7 @@ namespace Raid
                 Yaw = _serverYaw,
                 BodyRotation = transform.rotation,
                 Oxygen = tuning.oxygenCapacity,
+                Health = 100f,
                 Inside = IsSealedInterior(transform.position)
             };
         }
@@ -121,6 +126,7 @@ namespace Raid
             _camera.fieldOfView = 80f;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = RenderSettings.fogColor;
+            if(Nereid.NereidVessel.Active!=null)view.AddComponent<HypoxiaLens>().Bind(this);
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
             bool lockCursor=!UI.UiInputGate.Active || (Application.isFocused&&!UI.UiInputGate.Blocked);
@@ -220,7 +226,7 @@ namespace Raid
             DiverState state = _state.Value;
             if(state.Dead){AdvanceDeath(state);return;}
             bool active = Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
-            Vector3 axes = active && state.Oxygen > 0f && !IsTrapped ? _serverInput : Vector3.zero;
+            Vector3 axes = active && !IsHelpless && !IsTrapped ? _serverInput : Vector3.zero;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
             bool walking=UsesIndoorWalking(transform.position);
             if(walking)
@@ -229,7 +235,7 @@ namespace Raid
                 if(!_wasWalking){_indoorVerticalVelocity=0;_serverJumpQueued=false;_serverJumpHeld=_serverInput.y>.5f;}
                 bool grounded=_controller.isGrounded;
                 if(grounded&&_indoorVerticalVelocity<0)_indoorVerticalVelocity=-2;
-                if(_serverJumpQueued&&active&&state.Oxygen>0&&!IsTrapped&&grounded)
+                if(_serverJumpQueued&&active&&!IsHelpless&&!IsTrapped&&grounded)
                     _indoorVerticalVelocity=Mathf.Sqrt(2*Mathf.Max(.1f,vessel.indoorGravity)*Mathf.Max(0,vessel.indoorJumpHeight));
                 _serverJumpQueued=false;
                 _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
@@ -271,16 +277,28 @@ namespace Raid
             if(!state.Inside && state.Stress>=tuning.stressDanger)
                 state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*Time.fixedDeltaTime);
             _previousPosition = state.Position;
-            _state.Value = state;
             var vesselHere=Nereid.NereidVessel.Active;
             if(vesselHere!=null)
             {
+                if(state.Oxygen<=0)
+                {
+                    state.HypoxicSeconds+=Time.fixedDeltaTime;
+                    float damage=tuning.suffocationDamagePerSecond*Mathf.Lerp(1,1.55f,Mathf.Clamp01(state.HypoxicSeconds/15));
+                    state.Health=Mathf.Max(0,state.Health-damage*Time.fixedDeltaTime);
+                }
+                else
+                {
+                    state.HypoxicSeconds=0;
+                    if(state.Inside)state.Health=Mathf.Min(100,state.Health+tuning.onboardHealingPerSecond*Time.fixedDeltaTime);
+                }
+                _state.Value=state;
                 bool swallowed=vesselHere.InsideJaws(state.Position+Vector3.up*.35f);
-                if(swallowed || state.Oxygen<=0f){BeginDeath(swallowed);return;}
+                if(swallowed || state.Health<=0f){BeginDeath(swallowed);return;}
             }
+            else _state.Value=state;
             _trappedTime = Mathf.Max(0f, _trappedTime-Time.fixedDeltaTime);
             _helplessTime = state.Oxygen <= 0f ? _helplessTime+Time.fixedDeltaTime : 0f;
-            if (_helplessTime >= tuning.helplessWindow)
+            if (vesselHere==null && _helplessTime >= tuning.helplessWindow)
             {
                 Teleport(new Vector3(0,1.2f,1));
                 Rescue();
@@ -316,7 +334,6 @@ namespace Raid
         {
             if (!IsServerInitialized || IsDead) return;
             var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)); _state.Value=state;
-            if(state.Oxygen<=0 && Nereid.NereidVessel.Active!=null)BeginDeath(false);
         }
 
         public void Trap() { if(IsServerInitialized && !IsDead) _trappedTime=tuning.trappedDuration; }
@@ -362,7 +379,7 @@ namespace Raid
         private static bool IsSealedInterior(Vector3 p) => Nereid.NereidVessel.Active!=null
             ? Nereid.NereidVessel.Active.ContainsSealed(p)
             : Mathf.Abs(p.x) < 6f && p.z > -8f && p.z < 8f && p.y > 0f && p.y < 4f;
-        private static bool UsesIndoorWalking(Vector3 p) => Nereid.NereidVessel.Active!=null&&Nereid.NereidVessel.Active.ContainsSealed(p);
+        private static bool UsesIndoorWalking(Vector3 p) => Nereid.NereidVessel.Active!=null&&Nereid.NereidVessel.Active.ContainsWalkingDeck(p);
         private void ResetIndoorMovement()
         {_indoorVerticalVelocity=0;_serverJumpHeld=false;_serverJumpQueued=false;_localJumpQueued=false;_wasWalking=false;}
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
