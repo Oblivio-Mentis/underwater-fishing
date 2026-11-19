@@ -14,6 +14,7 @@ namespace Raid
         UnityEngine.Rendering.AmbientMode deckAmbientMode;
         Color deckSky,deckHorizon,deckGround;
         float shallowFill;
+        float predatorProximity, breathPhase;
         const float BeamCandela=245f;
         bool lampOn;
         Light diveLamp;
@@ -119,14 +120,22 @@ namespace Raid
             }
             else ResetFog();
             Shader.SetGlobalFloat(WaterShader,wetBlend);
+            // Keep a continuous breathing rhythm as the animal approaches or retreats.
+            var threats=ThreatDirector.Instance;
+            float danger=wet && viewed!=null && !viewed.IsDead && threats!=null
+                ? threats.NearbyDanger(camera.transform.position) : 0f;
+            predatorProximity=Mathf.MoveTowards(predatorProximity,danger,dt*(danger>predatorProximity?.8f:.48f));
+            breathPhase=Mathf.Repeat(breathPhase+dt*Mathf.Lerp(2.2f,3.65f,predatorProximity),2*Mathf.PI);
+            float fear=predatorProximity*wetBlend*(viewed!=null?1f-viewed.HypoxiaSeverity:0f);
+            float breath=Mathf.Sin(breathPhase);
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
-                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.19f:.28f,wetBlend));
+                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.19f:.28f,wetBlend)+fear*(.43f*breath-.06f));
                 color.saturation.Override(Mathf.Lerp(-5,-12,wetBlend));
                 color.contrast.Override(Mathf.Lerp(8,3,wetBlend));
             }
             if(profile!=null && profile.TryGet<Vignette>(out var vignette))
-                vignette.intensity.Override(Mathf.Lerp(.16f,.14f,wetBlend));
+                vignette.intensity.Override(Mathf.Lerp(.16f,.14f,wetBlend)+fear*(.065f-.05f*breath));
         }
 
         void ResetFog()

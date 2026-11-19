@@ -179,10 +179,15 @@ namespace Raid
         public float NearbyDanger(Vector3 eye)
         {
             var r=reefState.Value;
-            if(!r.Active)return 0;
-            float nearest=Vector3.Distance(eye,r.Clicker);
-            if(state.Value.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,state.Value.PredatorPosition));
-            if(r.Deep)nearest=Mathf.Min(nearest,Mathf.Min(Vector3.Distance(eye,r.Eel),Vector3.Distance(eye,Rift)*.8f));
+            var main=state.Value;
+            float nearest=main.WaveActive?Vector3.Distance(eye,main.WavePosition):float.PositiveInfinity;
+            if(r.Active)
+            {
+                nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Clicker));
+                if(main.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,main.PredatorPosition));
+                if(r.Deep)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel));
+                if(r.KrakenPhase!=0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Sweep));
+            }
             return 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2,13,nearest));
         }
 

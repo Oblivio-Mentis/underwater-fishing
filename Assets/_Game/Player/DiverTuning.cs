@@ -9,7 +9,7 @@ namespace Raid
         public float sprintMultiplier = 1.6f;
         public float verticalSpeed = 2f;
         public float lookSensitivity = 0.12f;
-        public float oxygenCapacity = 120f;
+        public float oxygenCapacity = 240f;
         public float oxygenRecovery = 20f;
         [Min(.1f)] public float suffocationDamagePerSecond = 4.5f;
         [Min(0)] public float onboardHealingPerSecond = 5f;

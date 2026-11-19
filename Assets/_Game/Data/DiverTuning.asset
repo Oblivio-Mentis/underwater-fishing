@@ -16,7 +16,7 @@ MonoBehaviour:
   sprintMultiplier: 1.6
   verticalSpeed: 2
   lookSensitivity: 0.12
-  oxygenCapacity: 120
+  oxygenCapacity: 240
   oxygenRecovery: 20
   safeDepth: 35
   inputTimeout: 0.3
