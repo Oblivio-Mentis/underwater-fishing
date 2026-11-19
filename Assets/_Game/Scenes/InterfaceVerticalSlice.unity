@@ -3225,7 +3225,7 @@ GameObject:
   - component: {fileID: 77263652}
   - component: {fileID: 77263651}
   m_Layer: 0
-  m_Name: Depth 1 Bristlefish
+  m_Name: Depth 1 Sailray
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3250,13 +3250,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Bristlefish
-  biomass: 6
+  fishId: Sailray
+  biomass: 8
   chitin: 0
-  offering: 6
+  offering: 9
   cargoSize: 3
   depthTier: 1
-  power: 1.5
+  power: 1.7
 --- !u!114 &77263652
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -68260,7 +68260,7 @@ GameObject:
   - component: {fileID: 1306939087}
   - component: {fileID: 1306939086}
   m_Layer: 0
-  m_Name: Depth 1 Lanternfish
+  m_Name: Depth 1 Needlefish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -68285,13 +68285,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Lanternfish
-  biomass: 3
+  fishId: Needlefish
+  biomass: 4
   chitin: 0
-  offering: 3
+  offering: 2
   cargoSize: 1
   depthTier: 1
-  power: 1
+  power: 0.8
 --- !u!114 &1306939087
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -81555,7 +81555,7 @@ GameObject:
   - component: {fileID: 1560204268}
   - component: {fileID: 1560204267}
   m_Layer: 0
-  m_Name: Depth 2 Bristlefish
+  m_Name: Depth 2 Sailray
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -81580,13 +81580,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Bristlefish
-  biomass: 12
+  fishId: Sailray
+  biomass: 16
   chitin: 3
-  offering: 6
+  offering: 9
   cargoSize: 3
   depthTier: 2
-  power: 3
+  power: 3.4
 --- !u!114 &1560204268
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -89509,7 +89509,7 @@ GameObject:
   - component: {fileID: 1705836807}
   - component: {fileID: 1705836806}
   m_Layer: 0
-  m_Name: Depth 2 Lanternfish
+  m_Name: Depth 2 Needlefish
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -89534,13 +89534,13 @@ MonoBehaviour:
   fsmDefinition: {fileID: 11400000, guid: 5e8516e3dee25b643ab5240436d2154a, type: 2}
   fsmProfile: {fileID: 11400000, guid: 29fc177668228d5478afc8d37f5f66a5, type: 2}
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
-  fishId: Lanternfish
-  biomass: 6
+  fishId: Needlefish
+  biomass: 8
   chitin: 1
-  offering: 3
+  offering: 2
   cargoSize: 1
   depthTier: 2
-  power: 2
+  power: 1.6
 --- !u!114 &1705836807
 MonoBehaviour:
   m_ObjectHideFlags: 0

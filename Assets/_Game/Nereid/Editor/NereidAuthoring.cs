@@ -286,7 +286,22 @@ namespace Raid.Nereid.Editor
             var positions=new[]{new Vector3(22,-2,-22),new Vector3(27,-3,-26),new Vector3(23,-5,-34),new Vector3(33,-5,-31)};
             var counters=new Dictionary<int,int>();
             foreach(var fish in Object.FindObjectsByType<FishActor>().OrderBy(f=>f.transform.GetSiblingIndex()))
-            {int i;counters.TryGetValue(fish.depthTier,out i);fish.transform.position=positions[i%positions.Length];counters[fish.depthTier]=i+1;EditorUtility.SetDirty(fish.transform);}
+            {
+                counters.TryGetValue(fish.depthTier,out int i);
+                int shoal = i % positions.Length;
+                fish.transform.position = positions[shoal];
+                fish.fishId = new[] { "Lanternfish", "Bristlefish", "Needlefish", "Sailray" }[shoal];
+                fish.gameObject.name = $"Depth {fish.depthTier} {fish.fishId}";
+                if (shoal == 2 || shoal == 3)
+                {
+                    fish.biomass = (shoal == 2 ? 4 : 8) * fish.depthTier;
+                    fish.offering = shoal == 2 ? 2 : 9;
+                    fish.power = (shoal == 2 ? .8f : 1.7f) * fish.depthTier;
+                }
+                counters[fish.depthTier] = i + 1;
+                EditorUtility.SetDirty(fish);
+                EditorUtility.SetDirty(fish.transform);
+            }
             counters.Clear();
             foreach(var loot in Object.FindObjectsByType<LootActor>().OrderBy(l=>l.transform.GetSiblingIndex()))
             {int i;counters.TryGetValue(loot.tier,out i);loot.transform.position=new Vector3(24+i*4,-6,-37-i*3);counters[loot.tier]=i+1;EditorUtility.SetDirty(loot.transform);}

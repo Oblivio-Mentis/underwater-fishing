@@ -33,6 +33,7 @@ namespace Raid
         private Vector3 _origin;
         private float _elapsed, _clock, _obstructed;
         private Renderer[] _renderers;
+        private GameObject _model;
         private Collider[] _colliders;
         private MaterialPropertyBlock _tint;
         private FsmPresentationDriver _presentation;
@@ -50,7 +51,8 @@ namespace Raid
         public long CargoId => _cargoId;
         public bool IsStowed => _snapshot.Value.Stowed;
         public bool IsHeldByLocalPlayer => Mode == FishMode.Captured && IsClientInitialized
-            && _snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId;
+            && (_snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId
+                || UI.UiRoot.Instance?.Context?.Player?.Spectating?.OwnerId == _snapshot.Value.Holder);
 
         private void RenewCargoId() => _cargoId = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
 
@@ -80,6 +82,12 @@ namespace Raid
 
         public override void OnStartClient()
         {
+            if (_model == null && CatchFishModel.Supports(SpeciesId))
+            {
+                foreach (var previous in _renderers) previous.enabled = false;
+                _model = CatchFishModel.Create(transform, SpeciesId);
+                _renderers = _model.GetComponentsInChildren<Renderer>();
+            }
             if (presentationProfile == null) return;
             _presentation = GetComponent<FsmPresentationDriver>();
             if (_presentation == null) _presentation = gameObject.AddComponent<FsmPresentationDriver>();
@@ -96,7 +104,11 @@ namespace Raid
             _runtime = null;
         }
 
-        public override void OnStopClient() => _presentation?.Unbind();
+        public override void OnStopClient()
+        {
+            _presentation?.Unbind();
+            foreach (var body in _renderers) body.enabled = false;
+        }
 
         public bool TryHook(HarpoonTool tool)
         {
@@ -299,10 +311,19 @@ namespace Raid
         {
             foreach (var body in _renderers)
             {
-                body.GetPropertyBlock(_tint);
-                _tint.SetColor("_BaseColor", color);
-                _tint.SetColor("_Color", color);
-                body.SetPropertyBlock(_tint);
+                if (_model != null)
+                {
+                    // Flash lateral markings during the fight while retaining each species' back and belly colors.
+                    var stripe = body.sharedMaterials[1].GetColor("_BaseColor");
+                    _tint.SetColor("_BaseColor", Color.Lerp(stripe, color, Mode == FishMode.Roam ? .10f : .5f));
+                    body.SetPropertyBlock(_tint, 1);
+                }
+                else
+                {
+                    _tint.SetColor("_BaseColor", color);
+                    _tint.SetColor("_Color", color);
+                    body.SetPropertyBlock(_tint);
+                }
             }
         }
     }

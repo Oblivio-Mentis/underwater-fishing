@@ -68,6 +68,7 @@ namespace Raid
         }
         public override void OnStartClient()
         {
+            WetCargoShoal.Attach(this);
             snapshot.OnChange+=OnSnapshot;
             OnSnapshot("",snapshot.Value,false);
             interact=new InputAction("Use",InputActionType.Button,"<Keyboard>/e"); interact.Enable();

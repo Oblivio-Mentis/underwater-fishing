@@ -41,6 +41,8 @@ namespace Raid
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
         public bool HandsFull => _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
+        public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value != null ? 1 : 0)
+            + (_pocketB.Value != null ? 1 : 0) + (_pocketC.Value != null ? 1 : 0);
         public bool HasFullCreel => _pocketA.Value != null && _pocketB.Value != null && _pocketC.Value != null;
         public int SmallestCatchSize => _pocketA.Value != null || _pocketB.Value != null || _pocketC.Value != null
             ? 1 : HandsFull ? _fish.cargoSize : 0;
