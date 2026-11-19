@@ -14,6 +14,7 @@ namespace Raid
 
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
+        public Transform Tail => tail;
         private float phase;
         private FishActor actor;
         private float escapeAt = -1;

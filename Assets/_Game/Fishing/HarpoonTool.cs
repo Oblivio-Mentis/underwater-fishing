@@ -14,6 +14,9 @@ namespace Raid
         public Material ropeMaterial;
         public float ReelMultiplier = 1f;
         public event System.Action<Vector3,Vector3> ShotVisual;
+        private readonly SyncVar<HarpoonContact> _impact = new();
+        public HarpoonContact LastShotContact { get; private set; }
+        public HarpoonContact AttachedContact => _impact.Value;
         private static readonly List<HarpoonTool> ServerTools = new();
         private readonly SyncVar<NetworkObject> _fishObject = new();
         private readonly SyncVar<NetworkObject> _friendTarget = new();
@@ -107,6 +110,7 @@ namespace Raid
         {
             if (!ServerTools.Contains(this)) ServerTools.Add(this);
             _friendTarget.Value = null; _friendSource.Value = null; _optOutRemaining.Value = 0;
+            _impact.Value=default;
             _friendRefuseUntil = _friendObstructed = 0;
             _friendLastPull = _lastControls = Time.unscaledTime;
             _reelHeld = _assistHeld = false;
@@ -152,7 +156,7 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
+            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved;
             // A pulled player can always refuse with R while focused, including from a local menu.
             // All firing/reeling/assisting remains behind the shared gameplay-input gate.
             if (controlling && !Motor.IsHelpless)
@@ -171,7 +175,7 @@ namespace Raid
             bool reel = controlling && ActiveSlot == 0 && _fire.IsPressed();
             bool assist = controlling && gripInput;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (!UI.UiInputGate.Blocked)
+            if (!UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved)
             {
                 reel |= Time.unscaledTime < _qaReelUntil;
                 assist |= Time.unscaledTime < _qaGripUntil;
@@ -187,21 +191,27 @@ namespace Raid
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
+            var endpoint=didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange;
+            var friend=didHit?hit.collider.GetComponentInParent<DiverMotor>():null;
+            var fish=didHit?hit.collider.GetComponentInParent<FishActor>():null;
+            HarpoonContact contact=default;
+            if(friend!=null)
+            {
+                if(TryHookFriend(friend.GetComponent<HarpoonTool>()))
+                    contact=HarpoonContact.FromHit(friend.NetworkObject,friend.transform,false,hit,Motor.AimDirection);
+            }
+            else if(fish!=null && (fish.RequiresPartner || !HasFullCreel) && fish.TryHook(this))
+            {
+                _fish=fish;
+                _fishObject.Value=fish.NetworkObject;
+                bool tail=hit.collider.transform==fish.ImpactSurface(true) && fish.ImpactSurface(true)!=fish.ImpactSurface(false);
+                contact=HarpoonContact.FromHit(fish.NetworkObject,fish.ImpactSurface(tail),tail,hit,Motor.AimDirection);
+            }
+            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
+            if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
+            _impact.Value=contact;
             _shotSequence.Value++;
-            ShotVisualObservers(eye,didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange);
-            var friend = didHit ? hit.collider.GetComponentInParent<DiverMotor>() : null;
-            if (friend != null)
-            {
-                TryHookFriend(friend.GetComponent<HarpoonTool>());
-                return; // Hitting a player never falls through to threat damage.
-            }
-            var fish = didHit?hit.collider.GetComponentInParent<FishActor>():null;
-            if (fish != null && (fish.RequiresPartner || !HasFullCreel) && fish.TryHook(this))
-            {
-                _fish = fish;
-                _fishObject.Value = fish.NetworkObject;
-            }
-            else if (fish == null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
+            ShotVisualObservers(eye,endpoint,contact);
         }
 
         [ServerRpc(RequireOwnership = true)]
@@ -214,8 +224,9 @@ namespace Raid
 
         // Acknowledges a real accepted shot, including misses; attachment still comes from replicated hook state.
         [ObserversRpc]
-        private void ShotVisualObservers(Vector3 origin, Vector3 endpoint)
+        private void ShotVisualObservers(Vector3 origin, Vector3 endpoint, HarpoonContact contact)
         {
+            LastShotContact=contact;
             ShotVisual?.Invoke(origin, endpoint);
         }
 
@@ -254,7 +265,7 @@ namespace Raid
         internal bool QaFireOwned()
         {
             if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null || Motor.Oxygen <= 0
-                || UI.UiInputGate.Blocked || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
+                || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
             FireServer(); return true;
         }
 
@@ -352,6 +363,7 @@ namespace Raid
                 pocket.Value = new PocketCatch { species = fish.NetworkObject, id = fish.CargoId };
                 _fish = null;
                 _fishObject.Value = null;
+                _impact.Value = default;
                 return true;
             }
             return false;
@@ -364,6 +376,7 @@ namespace Raid
             {
                 _fish = null;
                 _fishObject.Value = null;
+                _impact.Value = default;
                 ToolOf(_assistant.Value)?.DetachGrip();
             }
         }
@@ -427,12 +440,12 @@ namespace Raid
         private void LateUpdate()
         {
             if (_line == null) return;
-            var friend = TetherTarget;
-            bool outgoingFriend = OwnsFriendTether && friend != null;
-            _line.enabled = outgoingFriend || _fish != null && _fish.Mode >= FishMode.Hooked && _fish.Mode <= FishMode.Tired;
-            if (!_line.enabled) return;
-            _line.SetPosition(0, transform.position + Vector3.up * 0.6f + transform.right * 0.2f);
-            _line.SetPosition(1, outgoingFriend ? friend.transform.position + Vector3.up * .6f : _fish.transform.position);
+            bool attached = _impact.Value.Resolve(out _,out var contact,out _,out _)
+                && (OwnsFriendTether || HasFishingLine(this));
+            _line.enabled=attached;
+            if(!attached)return;
+            _line.SetPosition(0,transform.position+Vector3.up*.6f+transform.right*.2f);
+            _line.SetPosition(1,contact);
         }
 
         bool TryHookFriend(HarpoonTool target)
@@ -502,7 +515,8 @@ namespace Raid
         void ReleaseOutgoingFriend()
         {
             var target = ToolOf(_friendTarget.Value);
-            _friendTarget.Value = null; _friendObstructed = 0; _friendLastPull = _friendExpiresAt = 0;
+            _friendTarget.Value = null;
+            _impact.Value = default; _friendObstructed = 0; _friendLastPull = _friendExpiresAt = 0;
             if (target != null && target._friendSource.Value == NetworkObject) target._friendSource.Value = null;
         }
 

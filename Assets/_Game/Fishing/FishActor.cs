@@ -57,13 +57,34 @@ namespace Raid
 
         private void RenewCargoId() => _cargoId = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
 
+        Transform tailSurface;
+        public Transform ImpactSurface(bool tail) => _model == null ? transform : tail ? tailSurface : _model.transform;
+
         private void Awake()
         {
             _renderers = GetComponentsInChildren<Renderer>();
             _colliders = GetComponentsInChildren<Collider>();
+            if (CatchFishModel.Supports(SpeciesId))
+            {
+                foreach (var original in _renderers) original.enabled=false;
+                foreach (var hull in _colliders) hull.enabled=false;
+                _model=CatchFishModel.Create(transform,SpeciesId);
+                tailSurface=_model.GetComponent<CatchFishModel>().Tail;
+                _renderers=_model.GetComponentsInChildren<Renderer>();
+                _colliders=new Collider[] { SurfaceCollider(_model.transform),SurfaceCollider(tailSurface) };
+            }
             _tint = new MaterialPropertyBlock();
             _snapshot.OnChange += OnSnapshotChanged;
             if (tuning != null) _snapshot.UpdateSettings(new SyncTypeSettings(Mathf.Max(0.02f, tuning.snapshotInterval)));
+        }
+
+        private MeshCollider SurfaceCollider(Transform part)
+        {
+            part.gameObject.layer=gameObject.layer;
+            var surface=part.gameObject.AddComponent<MeshCollider>();
+            surface.sharedMesh=part.GetComponent<MeshFilter>().sharedMesh;
+            surface.enabled=false;
+            return surface;
         }
 
         public override void OnStartServer()
@@ -84,12 +105,6 @@ namespace Raid
 
         public override void OnStartClient()
         {
-            if (_model == null && CatchFishModel.Supports(SpeciesId))
-            {
-                foreach (var previous in _renderers) previous.enabled = false;
-                _model = CatchFishModel.Create(transform, SpeciesId);
-                _renderers = _model.GetComponentsInChildren<Renderer>();
-            }
             if (presentationProfile == null) return;
             _presentation = GetComponent<FsmPresentationDriver>();
             if (_presentation == null) _presentation = gameObject.AddComponent<FsmPresentationDriver>();
