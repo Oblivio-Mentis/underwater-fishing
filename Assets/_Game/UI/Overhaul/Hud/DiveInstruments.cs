@@ -107,7 +107,8 @@ namespace Raid.UI
                 float seaLevel=c.AtBase?0:c.World.CurrentDepth==2?c.World.tuning.deepDepth:c.World.tuning.shallowDepth;
                 metres=Mathf.Max(0,seaLevel-diver.transform.position.y);
             }
-            UiKit.Set(depth,"↓  −"+Mathf.RoundToInt(metres)+" м");
+            int depthMetres=Mathf.RoundToInt(metres);
+            UiKit.Set(depth,depthMetres>0?"↓  −"+depthMetres+" м":"↓  0 м");
             // A graduation passes the center index for each metre of real depth.
             float offset=Mathf.Repeat(metres,3)*23;
             for(int i=0;i<depthMarks.Length;i++)
