@@ -30,7 +30,7 @@ namespace Raid.UI
         sealed class CrewRow
         {
             public Image Panel, Mark;
-            public TMP_Text Number, Name, Identity, State;
+            public TMP_Text Name, Identity, State;
         }
         sealed class SettingRow
         {
@@ -124,11 +124,10 @@ namespace Raid.UI
                 for (int i = 0; i < crewRows.Count; i++)
                 {
                     var row = crewRows[i]; var player = i < ctx.Players.Count ? ctx.Players[i] : null;
-                    UiKit.Set(row.Number, (i + 1).ToString("00"));
                     UiKit.Set(row.Name, player == null ? UiText.MenuCrewEmpty : UiText.PlayerName(player));
-                    UiKit.Set(row.Identity, player == null ? "" : UiText.MenuOwner(player.OwnerId));
+                    UiKit.Set(row.Identity, player == null ? "" : "ЗДР  " + Mathf.CeilToInt(player.Health) + "     O₂  " + Mathf.CeilToInt(player.Oxygen));
                     UiKit.Set(row.State, player == null ? UiText.MenuCrewWaiting : UiText.PlayerState(player));
-                    Color signal = player == null ? UiTheme.Edge : player.IsHelpless ? UiTheme.Red : player.IsTrapped ? UiTheme.Amber : player.IsInside ? UiTheme.Green : UiTheme.Cyan;
+                    Color signal = player == null ? UiTheme.Edge : player.IsDead||player.IsHelpless||player.IsTrapped ? UiTheme.Red : player.IsHypoxic ? UiTheme.Amber : player.IsInside ? UiTheme.Green : UiTheme.Cyan;
                     row.Mark.color = signal; row.State.color = player == null ? UiTheme.Muted : signal;
                     row.Name.color = player == null ? UiTheme.Muted : UiTheme.Text;
                 }
@@ -260,11 +259,11 @@ namespace Raid.UI
                 var panel = UiKit.Panel(content, "CrewSlot" + (i + 1), UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 62);
                 var layout = UiKit.Row(panel.transform, "Row", 14, 9); UiKit.Fill(layout);
                 var mark = UiKit.Panel(layout, "Signal", UiTheme.Edge); UiKit.Size(mark, width: 5);
-                var number = UiKit.Label(layout, "Slot", (i + 1).ToString("00"), 25, UiTheme.Muted); UiKit.Size(number, width: 48);
+                var helmet=UiKit.Symbol(layout,"Suit",DiveInstruments.Mark.Helmet,UiTheme.Cyan); UiKit.Size(helmet,40,40);
                 var name = UiKit.Label(layout, "Name", UiText.MenuCrewEmpty, 25); UiKit.Size(name, flexibleWidth: 1);
                 var identity = UiKit.Label(layout, "Identity", "", 19, UiTheme.Muted); UiKit.Size(identity, width: 170);
                 var state = UiKit.Label(layout, "State", UiText.MenuCrewWaiting, 20, UiTheme.Muted); UiKit.Size(state, width: 245);
-                crewRows.Add(new CrewRow { Panel = panel, Mark = mark, Number = number, Name = name, Identity = identity, State = state });
+                crewRows.Add(new CrewRow { Panel = panel, Mark = mark, Name = name, Identity = identity, State = state });
             }
             crewLobby = Line(content, "LobbyNumber", UiText.MenuSteamLobbyInactive, 38, 22, UiTheme.Muted);
             var actions = UiKit.Row(content, "LobbyActions", 12); UiKit.Size(actions, 52);

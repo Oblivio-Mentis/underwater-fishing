@@ -171,7 +171,7 @@ namespace Raid.UI
                 else ClosePanel();
             }
             var mouse=Application.isFocused?Mouse.current:null;
-            UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,mouse==null?0:Mathf.Sign(mouse.scroll.ReadValue().y)*Mathf.Clamp01(Mathf.Abs(mouse.scroll.ReadValue().y)),!UiInputGate.Blocked);
+            UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),!UiInputGate.Blocked);
             if(!UiInputGate.Blocked && Context.Connected && Page==UiPage.None && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)Interact();
             if(Time.unscaledTime>=nextRefresh)
             {

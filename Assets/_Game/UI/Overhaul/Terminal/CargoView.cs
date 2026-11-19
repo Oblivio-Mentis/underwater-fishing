@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,7 +9,7 @@ namespace Raid.UI
     {
         public RectTransform Root {get;private set;}
         readonly IUiController app;
-        readonly TMP_Text capacity,phase,remaining,stock,description,loadReason,hoistReason,status;
+        readonly TMP_Text capacity,phase,remaining,stock,manifest,description,loadReason,hoistReason,status;
         readonly Image capacityBar,phaseBar;
         readonly Image[] steps=new Image[4];
         readonly Button load,hoist;
@@ -42,7 +43,7 @@ namespace Raid.UI
             hoist=UiKit.Button(hoistColumn,"StartHoist",UiText.StartHoistAction,()=>TerminalParts.Execute(app,HoistReason,WorldAction.Hoist),true,52);
             hoistReason=TerminalParts.Text(hoistColumn,"Reason","",56,20,UiTheme.Muted);
             stock=TerminalParts.Text(layout,"DeliveredStock","",30,23,UiTheme.Green);
-            TerminalParts.Text(layout,"ReturnHint",UiText.CargoReturnHint,48,21,UiTheme.Muted);
+            manifest=TerminalParts.Text(layout,"Cargo manifest","",48,21,UiTheme.Text);
             status=TerminalParts.Text(layout,"Status","",36,20,UiTheme.Amber);
             Root.gameObject.SetActive(false);
         }
@@ -66,6 +67,8 @@ namespace Raid.UI
             UiKit.Set(description,view.hoistPhase==HoistPhase.Loading?(view.cargo.Count==0?"Загрузите улов, затем запустите подъём.":UiText.CargoLoadingHint):view.hoistPhase==HoistPhase.Raising?UiText.CargoRaisingHint:view.hoistPhase==HoistPhase.Unloading?UiText.CargoUnloadingHint:UiText.CargoReturningHint);
             TerminalParts.ButtonReason(load,loadReason,LoadReason(),UiText.LoadReady);TerminalParts.ButtonReason(hoist,hoistReason,HoistReason(),UiText.HoistReady);
             UiKit.Set(stock,UiText.DeliveredStock(view.tank.Count));
+            if(view.cargo.Count==0)UiKit.Set(manifest,"Контейнер пуст");
+            else UiKit.Set(manifest,string.Join("   ·   ",view.cargo.GroupBy(UiText.CargoName).Select(group=>group.Key+" ×"+group.Count())));
             string unavailable=TerminalParts.BaseReason(app,true);UiKit.Set(status,unavailable);
         }
         string LoadReason()
