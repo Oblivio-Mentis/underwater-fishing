@@ -16,8 +16,6 @@ namespace Raid.Nereid
         Transform surface, gauge, impeller;
         PressureTransferFlow transfer;
         TMP_Text display;
-        AudioSource pump;
-        AudioClip pumpSound;
         float water,shownInner=1,shownOuter;
         public float WaterHeight => transform.position.y+Mathf.Lerp(-.12f,Height+.05f,water);
         public AirlockPad GetPad(int index) => index>=0&&index<pads.Length?pads[index]:null;
@@ -46,7 +44,7 @@ namespace Raid.Nereid
             BuildPad(1,false,.39f,1.92f,1);
             BuildPad(2,true,OuterX-.39f,-1.92f,-1);
             BuildPad(3,true,OuterX+.39f,1.92f,1);
-            BuildWater();BuildPump();
+            BuildWater();
             if(surface!=null)transfer=PressureTransferFlow.Install(transform,surface.GetComponent<MeshRenderer>(),steel,charcoal,trim);
             ApplyDoors(AirlockSnapshot.Dry);
         }
@@ -168,15 +166,6 @@ namespace Raid.Nereid
             surface.GetComponent<MeshRenderer>().shadowCastingMode=ShadowCastingMode.Off;
         }
 
-        void BuildPump()
-        {
-            pump=gameObject.AddComponent<AudioSource>();pump.playOnAwake=false;pump.loop=true;
-            pump.spatialBlend=1;pump.volume=.32f;pump.dopplerLevel=0;pump.minDistance=2;pump.maxDistance=14;
-            const int rate=16000;var samples=new float[rate];var random=new System.Random(1306);float low=0;
-            for(int i=0;i<rate;i++){float t=i/(float)rate;low=.9f*low+(float)(random.NextDouble()-.5)*.1f;samples[i]=.15f*Mathf.Sin(2*Mathf.PI*63*t)+.065f*Mathf.Sin(2*Mathf.PI*126*t)+low*.6f;}
-            pumpSound=AudioClip.Create("Ballast transfer pump",rate,1,rate,false);pumpSound.SetData(samples,0);pump.clip=pumpSound;
-        }
-
         void Update()
         {
             var w=RaidWorld.Instance;
@@ -194,8 +183,6 @@ namespace Raid.Nereid
             bool running=s.Phase==AirlockPhase.Flooding||s.Phase==AirlockPhase.Draining;
             if(transfer!=null)transfer.Present(s.Phase,surface.localPosition.y);
             if(running)impeller.Rotate(0,0,Time.deltaTime*240);
-            pump.mute=!Application.isFocused;
-            if(running&&!pump.isPlaying)pump.Play();else if(!running&&pump.isPlaying)pump.Stop();
             if(display!=null)
             {
                 int percent=Mathf.RoundToInt(water*100);
@@ -236,7 +223,6 @@ namespace Raid.Nereid
         {
             if(Active==this)Active=null;
             foreach(var mat in owned)if(mat!=null)Destroy(mat);
-            if(pumpSound!=null)Destroy(pumpSound);
         }
     }
 }

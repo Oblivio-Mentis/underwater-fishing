@@ -9,9 +9,7 @@ namespace Raid
         DiverMotor diver;
         RawImage mask;
         Texture2D texture;
-        AudioSource pulse;
-        AudioClip beat;
-        float severity, nextBeat;
+        float severity;
         public float Intensity => severity;
 
         public void Bind(DiverMotor owner) { diver=owner; }
@@ -32,11 +30,6 @@ namespace Raid
             mask.color=new Color(.012f,.017f,.031f,Mathf.Min(.92f,.2f+.68f*severity+.055f*breath));
             float span=.8f+.5f*severity;
             mask.uvRect=new Rect((1-span)*.5f,(1-span)*.5f,span,span);
-            if(Time.time>=nextBeat)
-            {
-                nextBeat=Time.time+Mathf.Lerp(1.05f,.65f,severity);
-                if(Application.isFocused)pulse.PlayOneShot(beat,.13f+.24f*severity);
-            }
         }
 
         void CreateMask()
@@ -58,16 +51,7 @@ namespace Raid
                 pixels[y*size+x]=new Color32(255,255,255,(byte)(opacity*255));
             }
             texture.SetPixels32(pixels);texture.Apply(false,true);mask.texture=texture;
-            pulse=go.AddComponent<AudioSource>();pulse.playOnAwake=false;pulse.spatialBlend=0;
-            const int rate=16000;var samples=new float[rate/2];
-            for(int i=0;i<samples.Length;i++)
-            {
-                float t=i/(float)rate;
-                samples[i]=Beat(t,53)+.65f*Beat(t-.16f,66);
-            }
-            beat=AudioClip.Create("Pressure in ears",samples.Length,1,rate,false);beat.SetData(samples,0);
         }
-        static float Beat(float t,float hz) => t<0?0:Mathf.Sin(t*hz*2*Mathf.PI)*Mathf.Min(1,t*140)*Mathf.Exp(-t*27);
-        void OnDestroy(){if(texture!=null)Destroy(texture);if(beat!=null)Destroy(beat);}
+        void OnDestroy(){if(texture!=null)Destroy(texture);}
     }
 }

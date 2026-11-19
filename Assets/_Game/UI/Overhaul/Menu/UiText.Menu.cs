@@ -59,7 +59,6 @@ namespace Raid.UI
         public const string MenuLobbyCopied = "Номер лобби скопирован";
         public const string MenuSettingsTitle = "Настройки приборов";
         public const string MenuSettingsSubtitle = "Применяются сразу и сохраняются локально, отдельно от прогресса экипажа.";
-        public const string MenuVolume = "ОБЩАЯ ГРОМКОСТЬ";
         public const string MenuScale = "МАСШТАБ ИНТЕРФЕЙСА";
         public const string MenuFov = "ПОЛЕ ЗРЕНИЯ";
         public const string MenuSensitivity = "ЧУВСТВИТЕЛЬНОСТЬ МЫШИ";

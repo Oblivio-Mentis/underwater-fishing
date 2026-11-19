@@ -38,15 +38,14 @@ namespace Raid.UI
     [System.Serializable]
     public sealed class UiSettings
     {
-        public float volume=0.8f, scale=1f, fov=80f, sensitivity=1f;
+        public float scale=1f, fov=80f, sensitivity=1f;
         public static UiSettings Load() => new UiSettings {
-            volume=Mathf.Clamp01(PlayerPrefs.GetFloat("RAID011.volume",.8f)),
             scale=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.scale",1f),.9f,1.2f),
             fov=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.fov",80f),65f,100f),
             sensitivity=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.sensitivity",1f),.4f,2f) };
         public void Save()
         {
-            PlayerPrefs.SetFloat("RAID011.volume",volume); PlayerPrefs.SetFloat("RAID011.scale",scale);
+            PlayerPrefs.SetFloat("RAID011.scale",scale);
             PlayerPrefs.SetFloat("RAID011.fov",fov); PlayerPrefs.SetFloat("RAID011.sensitivity",sensitivity); PlayerPrefs.Save();
         }
     }

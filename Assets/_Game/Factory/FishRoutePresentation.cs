@@ -23,10 +23,8 @@ namespace Raid.Factory
             connected=true;var state=world.FishRoute;
             if(!state.active){if(state.sequence==0)observedSequence=-1;if(visuals.IsPlaying)visuals.StopBatch();return;}
             if(observedSequence==state.sequence&&observedTotal==state.total&&observedStopping==state.stopping)return;
-            bool newSequence=observedSequence!=state.sequence;
             observedSequence=state.sequence;observedTotal=state.total;observedStopping=state.stopping;
             visuals.PlayBatch(state.feeding,state.total,state.sequence,state.elapsed);
-            if(newSequence)UnderwaterLook.Instance?.Valve();
         }
     }
 }

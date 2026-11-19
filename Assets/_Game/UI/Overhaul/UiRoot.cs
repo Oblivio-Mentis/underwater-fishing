@@ -43,7 +43,6 @@ namespace Raid.UI
         RaidWorld subscribedWorld;
         bool connectedBefore,overlayBefore,replyReceived,wasPulled,wasDead;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
-        [SerializeField,HideInInspector] float initialVolume=1;
         WorldAction pendingAction;
         long pendingId;
         int requestSequence,pendingRequestId;
@@ -52,7 +51,7 @@ namespace Raid.UI
         void Awake()
         {
             if(Instance!=null){Destroy(gameObject);return;}Instance=this;UiInputGate.Reset();UiInputGate.Active=true;
-            Settings=UiSettings.Load();UiKit.Font=font;initialVolume=AudioListener.volume;
+            Settings=UiSettings.Load();UiKit.Font=font;
             gameObject.AddComponent<UnderwaterLook>();
             canvas=gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;canvas.sortingOrder=100;
             scaler=gameObject.AddComponent<CanvasScaler>();scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -337,7 +336,7 @@ namespace Raid.UI
         }
         public void ApplySettings()
         {
-            AudioListener.volume=Settings.volume;scaler.referenceResolution=new Vector2(1920,1080)/Settings.scale;
+            scaler.referenceResolution=new Vector2(1920,1080)/Settings.scale;
             ApplyCameraSettings();saveSettingsAt=Time.unscaledTime+.4f;
         }
         void ApplyCameraSettings()
@@ -366,7 +365,7 @@ namespace Raid.UI
         void OnDestroy()
         {
             if(Instance!=this)return;if(subscribedWorld!=null)subscribedWorld.CommandResponded-=OnCommandReply;
-            Settings?.Save();AudioListener.volume=initialVolume;UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
+            Settings?.Save();UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
         }
     }
 }

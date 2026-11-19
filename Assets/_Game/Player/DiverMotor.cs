@@ -116,7 +116,7 @@ namespace Raid
             if (!IsOwner) return;
             _yaw = _state.Value.Yaw;
             _localJumpQueued=false;
-            var view = new GameObject("Diver Camera", typeof(Camera), typeof(AudioListener));
+            var view = new GameObject("Diver Camera", typeof(Camera));
             view.transform.SetParent(transform, false);
             view.transform.localPosition = Vector3.up * 0.6f;
             view.tag = "MainCamera";

@@ -284,14 +284,13 @@ namespace Raid.UI
         void BuildSettings()
         {
             Page(UiPage.Settings, true, out var content);
-            AddSetting(content, "Volume", UiText.MenuVolume, 0, 1, () => app.Settings.volume, value => app.Settings.volume = value, UiText.MenuPercent);
             AddSetting(content, "Scale", UiText.MenuScale, .9f, 1.2f, () => app.Settings.scale, value => app.Settings.scale = value, UiText.MenuPercent);
             AddSetting(content, "Fov", UiText.MenuFov, 65, 100, () => app.Settings.fov, value => app.Settings.fov = value, UiText.MenuDegrees);
             AddSetting(content, "Sensitivity", UiText.MenuSensitivity, .4f, 2, () => app.Settings.sensitivity, value => app.Settings.sensitivity = value, UiText.MenuPercent);
             Line(content, "LocalOnly", UiText.MenuSettingsLocalOnly, 62, 21, UiTheme.Muted);
             UiKit.Button(content, "RestoreDefaults", UiText.MenuRestore, () =>
             {
-                app.Settings.volume = .8f; app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1;
+                app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1;
                 foreach (var row in settingRows) row.Slider.SetValueWithoutNotify(row.Read());
                 app.ApplySettings(); Refresh(); app.Toast(UiText.MenuRestoreDone);
             });

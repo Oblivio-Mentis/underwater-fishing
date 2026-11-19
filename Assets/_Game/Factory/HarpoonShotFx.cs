@@ -56,8 +56,6 @@ namespace Raid
         LineRenderer cable,legacy;
         Material material;
         Texture2D braid;
-        AudioSource shotAudio,reelAudio;
-        AudioClip shotClip,reelClip;
         float shotAt=float.NegativeInfinity,flightSeconds,phaseAt,lastLength;
 
         public void Initialize(HarpoonTool source,Transform muzzleAnchor,Transform template,Transform spool,Material fallback,bool worldView=false)
@@ -78,15 +76,6 @@ namespace Raid
             else if(material.HasProperty("_MainTex"))material.mainTexture=braid;
             if(material.HasProperty("_BaseColor"))material.SetColor("_BaseColor",new Color(.72f,.66f,.45f));
             cable.sharedMaterial=material;cable.enabled=false;
-            shotAudio=gameObject.AddComponent<AudioSource>();shotAudio.playOnAwake=false;shotAudio.volume=.17f;shotAudio.mute=!Application.isFocused;
-            reelAudio=gameObject.AddComponent<AudioSource>();reelAudio.playOnAwake=false;reelAudio.volume=.065f;reelAudio.loop=true;reelAudio.mute=!Application.isFocused;
-            shotClip=Sound(false);reelClip=Sound(true);reelAudio.clip=reelClip;
-            if(worldView)
-            {
-                shotAudio.spatialBlend=reelAudio.spatialBlend=1;
-                shotAudio.minDistance=reelAudio.minDistance=1.5f;
-                shotAudio.maxDistance=reelAudio.maxDistance=24;
-            }
             BindSource(source);
         }
 
@@ -129,7 +118,6 @@ namespace Raid
             var direction=endpoint-flightStart;flightRotation=direction.sqrMagnitude>.001f?Quaternion.LookRotation(direction):muzzle.rotation;
             flightSeconds=Mathf.Lerp(minimumFlightSeconds,maximumFlightSeconds,Mathf.Clamp01(direction.magnitude/Mathf.Max(1,tool.tuning.maxRange)));
             attached=null;Phase=CablePhase.Flying;loadedBolt.gameObject.SetActive(false);flightBolt.gameObject.SetActive(true);
-            shotAudio.mute=!Application.isFocused;if(!shotAudio.mute){shotAudio.pitch=tool.Motor!=null&&!tool.Motor.IsInside?.78f:1;shotAudio.PlayOneShot(shotClip);}
         }
 
         void LateUpdate()
@@ -214,8 +202,6 @@ namespace Raid
                     else if(cableSpeed<-.15f)spin=Mathf.Min(900,-cableSpeed*220);
                 }
                 SpoolDegrees+=spin*dt;if(reel!=null)reel.localRotation=Quaternion.AngleAxis(SpoolDegrees,Vector3.right);
-                reelAudio.mute=!Application.isFocused||UI.UiInputGate.Modal;reelAudio.pitch=.85f+Mathf.Clamp01(Mathf.Abs(spin)/1800)*.6f;
-                if(Mathf.Abs(spin)>20&&!reelAudio.isPlaying)reelAudio.Play();else if(Mathf.Abs(spin)<=20&&reelAudio.isPlaying)reelAudio.Stop();
                 if(material!=null&&material.HasProperty("_BaseMap"))material.SetTextureOffset("_BaseMap",new Vector2(SpoolDegrees/1800,0));
                 lastLength=length;
             }
@@ -253,19 +239,6 @@ namespace Raid
         {
             Phase=CablePhase.Idle;attached=null;inFlightContact=default;lastLength=0;
             if(cable!=null)cable.enabled=false;if(flightBolt!=null)flightBolt.gameObject.SetActive(false);if(loadedBolt!=null)loadedBolt.gameObject.SetActive(true);
-            if(reelAudio!=null)reelAudio.Stop();if(shotAudio!=null)shotAudio.mute=!Application.isFocused;
-        }
-
-        static AudioClip Sound(bool reel)
-        {
-            const int rate=22050;var samples=new float[reel?rate:rate/5];var random=new System.Random(reel?12202:12201);float filtered=0;
-            for(int i=0;i<samples.Length;i++)
-            {
-                float t=i/(float)rate;filtered=filtered*.7f+(float)(random.NextDouble()*2-1)*.3f;
-                float envelope=reel?.7f+.3f*Mathf.Sin(t*Mathf.PI*2*12):Mathf.Exp(-t*32);
-                samples[i]=(filtered*(reel?.14f:.45f)+Mathf.Sin(t*Mathf.PI*2*(reel?96:170))*(reel?.06f:.22f))*envelope;
-            }
-            var clip=AudioClip.Create(reel?"NEREID cable drive":"NEREID pneumatic harpoon",samples.Length,1,rate,false);clip.SetData(samples,0);return clip;
         }
 
         public void Release()
@@ -273,8 +246,6 @@ namespace Raid
             if(tool!=null)tool.ShotVisual-=OnShot;
             Clear();if(legacy!=null)legacy.enabled=tool!=null&&tool.NetworkObject!=null&&tool.IsClientInitialized&&(tool.OwnsFriendTether||tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired);
             if(material!=null){Destroy(material);material=null;}if(braid!=null){Destroy(braid);braid=null;}
-            if(shotAudio!=null)shotAudio.Stop();if(reelAudio!=null)reelAudio.Stop();
-            if(shotClip!=null){Destroy(shotClip);shotClip=null;}if(reelClip!=null){Destroy(reelClip);reelClip=null;}
             tool=null;legacy=null;
         }
         void OnDisable(){if(Phase!=CablePhase.Idle)Clear();}
