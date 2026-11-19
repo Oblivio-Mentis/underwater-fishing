@@ -1,0 +1,19 @@
+{
+    "phase": "Hoist cargo into reservoir",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+        "Distinct connected owners 0 and 1",
+        "Needlefish captured and stowed by one diver.",
+        "Lanternfish captured and stowed by one diver.",
+        "Needlefish captured and stowed by one diver.",
+        "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+        "Heavy fish resisted a sustained solo reel at stamina 10,50.",
+        "Remote controls initiated grip; both peers observed the same shooter.",
+        "Heavy capture completed with all three small catches intact; tool switch and fire blocked.",
+        "Four authoritative catch IDs now swim in both cages; hands and pockets are empty.",
+        "Winch delivered each original ID to the reservoir and both cages emptied."
+    ]
+}
