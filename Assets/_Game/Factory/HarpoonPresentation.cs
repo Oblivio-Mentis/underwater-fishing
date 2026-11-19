@@ -85,8 +85,11 @@ namespace Raid
             {
                 recoil=.016f;nextVisualShot=Time.unscaledTime+Mathf.Max(.1f,tool.tuning==null ? .6f : tool.tuning.fireCooldown);
             }
-            model.localPosition=RestPosition+sway+bob+Vector3.back*recoil;
-            model.localRotation=Quaternion.Euler(-recoil*65-sway.y*90,sway.x*60,0);
+            float aim=Nereid.NereidAim.Blend;
+            Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
+            float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
+            model.localPosition=rest+(sway+bob)*steadiness+Vector3.back*(recoil*kick);
+            model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
             recoil*=Mathf.Exp(-18*dt);
         }
 
@@ -110,7 +113,9 @@ namespace Raid
             Tube("Left barrel brace",new[]{new Vector3(-.026f,.019f,.112f),new Vector3(-.026f,.019f,.279f)},.004f,steel,6);
             Tube("Right barrel brace",new[]{new Vector3(.026f,.019f,.112f),new Vector3(.026f,.019f,.279f)},.004f,steel,6);
             Box("Front sight",new Vector3(0,.061f,.269f),new Vector3(.013f,.018f,.018f),.003f,amber);
-            Box("Rear sight",new Vector3(0,.079f,-.058f),new Vector3(.039f,.018f,.015f),.003f,steel);
+            Box("Rear sight saddle",new Vector3(0,.071f,-.058f),new Vector3(.043f,.006f,.018f),.002f,steel);
+            foreach(int side in new[]{-1,1})
+                Box("Rear sight notch",new Vector3(side*.017f,.083f,-.058f),new Vector3(.008f,.024f,.016f),.002f,steel);
 
             var lamp=Box("Line engagement lamp",new Vector3(.039f,.047f,.006f),new Vector3(.013f,.005f,.038f),.001f,cyan!=null?cyan:amber);
             statusLamp=lamp.GetComponent<Renderer>();statusLamp.enabled=false;

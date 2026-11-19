@@ -13,7 +13,8 @@ namespace Raid.UI
         readonly TMP_Text harpoonState,tetherDistance,tensionValue,staminaValue,harpoonTip;
         readonly TMP_Text cargoCount,cargoPhase;
         readonly TMP_Text promptLabel,promptDetail,rescueLabel;
-        readonly TMP_Text noticeTitle,noticeDetail,reticle;
+        readonly TMP_Text noticeTitle,noticeDetail;
+        readonly AimReticle reticle;
         readonly Image oxygenBar,stressBar,foodBar,tensionBar,staminaBar,cargoBar,rescueBar;
         readonly Image vitalsEdge,noticeEdge,missionAccent;
         readonly RectTransform crewPanel,missionPanel,vitalsPanel,harpoonPanel,cargoPanel,promptPanel,noticePanel;
@@ -100,7 +101,8 @@ namespace Raid.UI
             cargoBar=UiKit.Bar(content,"Cargo Progress",UiTheme.Amber,5);
             cargoPhase=Line(content,"Cargo Phase","",16,UiTheme.Muted,22);
 
-            reticle=UiKit.Label(Root,"HUD Reticle","·",25,UiTheme.Text);UiKit.Place(reticle.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(24,24));reticle.alignment=TextAlignmentOptions.Center;
+            var reticleRoot=UiKit.Node(Root,"Harpoon Reticle");UiKit.Place(reticleRoot,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(64,64));
+            reticle=reticleRoot.gameObject.AddComponent<AimReticle>();reticle.Initialize(app);
             promptPanel=Instrument(Root,"HUD Context",new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(0,32),new Vector2(580,82),out content);
             promptLabel=Line(content,"Context Action","",20,UiTheme.Text,26);promptLabel.alignment=TextAlignmentOptions.Center;
             promptDetail=Line(content,"Context Reason","",16,UiTheme.Muted,22);promptDetail.alignment=TextAlignmentOptions.Center;
@@ -292,7 +294,7 @@ namespace Raid.UI
             rescueBar.transform.parent.gameObject.SetActive(rescuing);rescueLabel.gameObject.SetActive(rescuing);
             if(rescuing){UiKit.Fraction(rescueBar,rescue);UiKit.Set(rescueLabel,UiText.HudRescueProgress(target,rescue));}
             promptPanel.sizeDelta=new Vector2(580,rescuing?130:detail.Length>0?82:56);
-            reticle.color=context.AimedConsole!=null?color:context.AimedFish!=null && context.AimedFish.Mode==FishMode.Roam?UiTheme.Cyan:UiTheme.Text;
+            reticle.ContextColor=context.AimedConsole!=null?color:context.AimedFish!=null && context.AimedFish.Mode==FishMode.Roam?UiTheme.Cyan:UiTheme.Text;
         }
 
         void RefreshNotice(UiContext context,float oxygenFraction)

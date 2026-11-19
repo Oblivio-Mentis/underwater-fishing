@@ -266,7 +266,7 @@ namespace Raid.UI
         }
         void ApplyCameraSettings()
         {
-            if(Context.Player==null)return;Context.Player.LocalLookMultiplier=Settings.sensitivity;
+            if(Context.Player==null)return;Context.Player.LocalLookMultiplier=Settings.sensitivity*Nereid.NereidAim.SensitivityScale;
             viewCamera=Context.Player.GetComponentInChildren<Camera>();desiredFov=Settings.fov;
             if(computerSurface && viewCamera!=null && Context.SelectedConsole!=null)
             {
@@ -276,7 +276,14 @@ namespace Raid.UI
         }
         void LateUpdate()
         {
-            if(viewCamera!=null)viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+            var aim=Nereid.NereidAim.Active;
+            if(viewCamera!=null)
+            {
+                // ADS already eases per frame; physical computer zoom keeps its existing target.
+                if(aim!=null&&!computerSurface&&!UiInputGate.Modal&&Nereid.NereidAim.Blend>0)
+                    viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov);
+                else viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+            }
         }
         void OnApplicationFocus(bool focused)
         {
