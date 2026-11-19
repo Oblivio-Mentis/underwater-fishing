@@ -30,6 +30,7 @@ namespace Raid
         private bool _reelHeld, _assistHeld;
         private readonly SyncVar<NetworkObject> _assistTarget = new();
         private readonly SyncVar<NetworkObject> _assistant = new();
+        private readonly SyncVar<bool> _reelingActive = new();
         public struct PocketCatch
         {
             public NetworkObject species;
@@ -90,7 +91,9 @@ namespace Raid
         public DiverMotor TetherTarget => OwnsFriendTether ? MotorOf(_friendTarget.Value) : IsPulled ? Motor : null;
         public float TetherOptOutRemaining => _optOutRemaining.Value;
         public float TetherMaxRange => Mathf.Min(Safe(tuning == null ? 0 : tuning.maxRange, 0, 0, 100), Safe(friendTetherTuning == null ? 12 : friendTetherTuning.maximumRange, 12, 2, 20));
-        public bool Reeling => IsServerInitialized && _reelHeld && Time.unscaledTime - _lastControls < tuning.inputTimeout;
+        public bool Reeling => IsServerInitialized
+            ? _reelHeld && Time.unscaledTime - _lastControls < tuning.inputTimeout
+            : _reelingActive.Value;
         public bool IsAssisted => _assistant.Value != null;
 
         private void Awake()
@@ -112,6 +115,7 @@ namespace Raid
             if (!ServerTools.Contains(this)) ServerTools.Add(this);
             _friendTarget.Value = null; _friendSource.Value = null; _optOutRemaining.Value = 0;
             _impact.Value=default;
+            _reelingActive.Value=false;
             _friendRefuseUntil = _friendObstructed = 0;
             _friendLastPull = _lastControls = Time.unscaledTime;
             _reelHeld = _assistHeld = false;
@@ -387,6 +391,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if (!IsServerInitialized) return;
+            _reelingActive.Value=!Motor.IsHelpless && (OwnsFriendTether || HasFishingLine(this)) && Reeling;
             if (Motor.IsHelpless)
             {
                 ReleaseAll();

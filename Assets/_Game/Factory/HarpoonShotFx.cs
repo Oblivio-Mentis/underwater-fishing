@@ -196,7 +196,7 @@ namespace Raid
             {
                 float length=Vector3.Distance(MuzzlePoint(),tip);
                 bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&!UI.UiInputGate.PointerReserved&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
-                bool reeling=confirmed&&(tool.Reeling||ownerInput||(!tool.IsOwner && lastLength>0 && length<lastLength-.008f));
+                bool reeling=confirmed && (tool.Reeling || ownerInput);
                 float tension=tool.HookedFish==null?(reeling?1:0):tool.HookedFish.Tension;
                 DrawCable(MuzzlePoint(),LineKnot,now,tension,reeling);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -208,10 +208,10 @@ namespace Raid
                 else if(Phase==CablePhase.Retracting)spin=1800;
                 else if(Phase==CablePhase.Attached)
                 {
-                    float change=length-lastLength;
-                    if(change>.01f)spin=-Mathf.Min(1800,change/Mathf.Max(.001f,dt)*220);
+                    float cableSpeed=lastLength>0?(length-lastLength)/Mathf.Max(.001f,dt):0;
+                    if(cableSpeed>.25f)spin=-Mathf.Min(1800,cableSpeed*220);
                     else if(reeling)spin=620;
-                    else if(change<-.005f)spin=280;
+                    else if(cableSpeed<-.15f)spin=Mathf.Min(900,-cableSpeed*220);
                 }
                 SpoolDegrees+=spin*dt;if(reel!=null)reel.localRotation=Quaternion.AngleAxis(SpoolDegrees,Vector3.right);
                 reelAudio.mute=!Application.isFocused||UI.UiInputGate.Modal;reelAudio.pitch=.85f+Mathf.Clamp01(Mathf.Abs(spin)/1800)*.6f;
