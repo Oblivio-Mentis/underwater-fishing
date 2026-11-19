@@ -12,6 +12,7 @@ namespace Raid.Nereid
         Transform clicker,clamShell,eel,kraken,warning,lure,shadow;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
+        float lureDisplay;
         ParticleSystem silt;
         Vector3 lastClicker;
         byte previousKraken;
@@ -227,10 +228,15 @@ namespace Raid.Nereid
             }
             if(lure!=null)
             {
+                // The moving points on the lure spread into a pale fan before the fish commits to a strike.
+                lureDisplay=Mathf.MoveTowards(lureDisplay,angler==ThreatDirector.HuntStage.Display?1f:0f,Time.deltaTime*3.5f);
                 for(int i=0;i<lureFish.Length;i++)
                 {
                     float phase=t*1.22f+i*2.4f;
-                    lureFish[i].localPosition=new Vector3(Mathf.Cos(phase)*.13f,.04f*i+.018f*Mathf.Sin(phase),Mathf.Sin(phase)*.055f);
+                    var drift=new Vector3(Mathf.Cos(phase)*.13f,.04f*i+.018f*Mathf.Sin(phase),Mathf.Sin(phase)*.055f);
+                    float side=i-(lureFish.Length-1)*.5f;
+                    var fan=new Vector3(side*.11f,.12f-.018f*side*side,.03f);
+                    lureFish[i].localPosition=Vector3.Lerp(drift,fan,lureDisplay);
                     lureFish[i].localRotation=Quaternion.Euler(0,-phase*Mathf.Rad2Deg,0);
                 }
             }
