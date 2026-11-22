@@ -12,7 +12,7 @@ namespace Raid.UI
         public static readonly Color Green = Hex("82D283");
         public static readonly Color Amber = Hex("F0BC68");
         public static readonly Color Red = Hex("F48065");
-        static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
+        internal static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
     }
     // Local presentation state only. The server continues validating every action.
     public static class UiInputGate
