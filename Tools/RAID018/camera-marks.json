@@ -4,14 +4,14 @@
       "name": "00-nereid-profile",
       "depth": 1,
       "feet": {
-        "x": 53,
-        "y": -2,
-        "z": -39
+        "x": 39,
+        "y": 7,
+        "z": 12
       },
       "look": {
-        "x": 3,
-        "y": 3,
-        "z": -18
+        "x": 0,
+        "y": 5,
+        "z": -16
       },
       "shipLocal": false,
       "benchmark": true,
@@ -23,13 +23,13 @@
       "depth": 1,
       "feet": {
         "x": 34,
-        "y": -5.5,
-        "z": -39
+        "y": 4,
+        "z": -5
       },
       "look": {
-        "x": 6,
-        "y": 0.8,
-        "z": -14
+        "x": 0,
+        "y": 4,
+        "z": -6
       },
       "shipLocal": false,
       "benchmark": true,
@@ -40,14 +40,14 @@
       "name": "02-panoramic-hull",
       "depth": 1,
       "feet": {
-        "x": -15,
-        "y": 15,
-        "z": -68
+        "x": -24,
+        "y": 11,
+        "z": -64
       },
       "look": {
         "x": 0,
-        "y": 11,
-        "z": -52
+        "y": 5,
+        "z": -50
       },
       "shipLocal": false,
       "benchmark": false,
