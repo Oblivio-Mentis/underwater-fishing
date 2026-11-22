@@ -7,7 +7,7 @@ namespace Raid.UI
     // The whole display reads the same confirmed diver, world and tool snapshots as the terminals.
     sealed class DiveInstruments
     {
-        internal enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass, SlotOutline }
+        internal enum Mark { Helmet, Spear, Glove, Lantern, Bristle, Needle, Ray, Bottle, Jaw, Shield, Submarine, Tile, Compass, SlotOutline, Ball, Biomass, Chitin, Scrap, Electronics, Wrench, Bathymetry, Crate }
         static readonly Color Ink=new Color(.022f,.05f,.061f,.83f);
         static readonly Color Rim=new Color(.60f,.77f,.78f,.49f);
         static readonly Color Ivory=new Color(.95f,.97f,.94f);
@@ -85,8 +85,7 @@ namespace Raid.UI
             ballSlot=At(hotbar,"Held ball",Vector2.up,Vector2.up,370,0,66,92);
             var ballRim=Icon(ballSlot,"Selected ball",Mark.SlotOutline,0,0,66,66,Gold);
             var ballWell=Icon(ballRim.transform,"Ball well",Mark.Tile,3,-3,60,60,Ink);
-            var ballIcon=At(ballWell.transform,"Striped ball",Vector2.up,Vector2.up,4,-4,52,52).gameObject.AddComponent<DeckBallIcon>();
-            ballIcon.raycastTarget=false;
+            Icon(ballWell.transform,"Ball",Mark.Ball,5,-5,50,50,Color.white);
             UiKit.Set(Caption(ballSlot,"Ball label",0,-66,66,23,16,TextAlignmentOptions.Center),"МЯЧ");
             ballSlot.gameObject.SetActive(false);
             navigation=At(root,"HUD Navigation",Vector2.right,Vector2.right,-32,25,148,148);
@@ -166,7 +165,7 @@ namespace Raid.UI
                     bool selected=!ball && i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;
                     slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null;
-                    slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?Mark.Glove:CatchMark(fish))];
+                    slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?Mark.Glove:CatchMark(fish?.SpeciesId))];
                     slotArt[i].color=tool.HandsFull?new Color(.68f,.73f,.73f):Ivory;
                 }
             }
@@ -193,10 +192,9 @@ namespace Raid.UI
             if(clampToRim)r.localRotation=Quaternion.Euler(0,0,diver.transform.eulerAngles.y);
         }
 
-        static Mark CatchMark(FishActor fish)
+        internal static Mark CatchMark(string species)
         {
-            if(fish==null)return Mark.Lantern;
-            switch(fish.SpeciesId)
+            switch(species)
             {
                 case "Bristlefish":return Mark.Bristle;
                 case "Needlefish":return Mark.Needle;
@@ -213,13 +211,17 @@ namespace Raid.UI
 
         static void LoadArt()
         {
-            var tex=Resources.Load<Texture2D>("DiveInstruments");
-            art=new Sprite[14];
+            var instruments=Resources.Load<Texture2D>("DiveInstruments");
+            var equipment=Resources.Load<Texture2D>("NereidEquipmentIcons");
+            art=new Sprite[(int)Mark.Crate+1];
             for(int i=0;i<art.Length;i++)
             {
-                var rect=new Rect((i%8)*96,(1-i/8)*96,96,96);
-                art[i]=Sprite.Create(tex,rect,Center,100,0,SpriteMeshType.FullRect,(i==(int)Mark.Tile||i==(int)Mark.SlotOutline)?new Vector4(16,16,16,16):Vector4.zero);
-                art[i].name=((Mark)i).ToString();art[i].hideFlags=HideFlags.HideAndDontSave;
+                bool added=i>=(int)Mark.Ball;
+                var rect=added?new Rect((i-(int)Mark.Ball)*96,0,96,96):new Rect((i%8)*96,(1-i/8)*96,96,96);
+                Vector4 border=i==(int)Mark.Tile||i==(int)Mark.SlotOutline?new Vector4(16,16,16,16):Vector4.zero;
+                art[i]=Sprite.Create(added?equipment:instruments,rect,Center,100,0,SpriteMeshType.FullRect,border);
+                art[i].name=((Mark)i).ToString();
+                art[i].hideFlags=HideFlags.HideAndDontSave;
             }
         }
 

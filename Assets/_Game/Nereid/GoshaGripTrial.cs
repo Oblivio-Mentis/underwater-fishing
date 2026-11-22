@@ -16,7 +16,7 @@ namespace Raid.Nereid
             yield return new WaitForSeconds(.22f);
             var ball=camera.Find("Ball in diving gloves");
             check("Held ball and temporary orange item icon visible",
-                ball!=null && ball.gameObject.activeInHierarchy && ui.GetComponentInChildren<DeckBallIcon>()!=null);
+                ball!=null && ball.gameObject.activeInHierarchy && System.Array.Exists(ui.GetComponentsInChildren<UnityEngine.UI.Image>(),image=>image.sprite==DiveInstruments.Art(DiveInstruments.Mark.Ball)));
             var position=ball.localPosition;
             var rotation=ball.localRotation;
             float maxDistance=0,maxAngle=0,turned=0;

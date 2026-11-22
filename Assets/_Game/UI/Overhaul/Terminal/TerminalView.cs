@@ -13,7 +13,8 @@ namespace Raid.UI
     {
         public RectTransform Root {get;private set;}
         readonly IUiController app;
-        readonly TMP_Text[] resources=new TMP_Text[4];
+        readonly MaterialStrip wallet;
+        readonly Image stationIcon;
         readonly Dictionary<string,Button> tabs=new Dictionary<string,Button>();
         readonly List<Action> refreshRows=new List<Action>();
         readonly TMP_Text summary,footer,shellTitle;
@@ -29,14 +30,9 @@ namespace Raid.UI
             this.app=app;RectTransform root;
             var layout=TerminalParts.Shell(parent,"TerminalView",UiText.TerminalTitle,UiText.TerminalKicker,app,out root);Root=root;
             shellTitle=layout.Find("Heading/Titles/Title").GetComponent<TMP_Text>();
-            var resourceRow=UiKit.Row(layout,"Resources",12);UiKit.Size(resourceRow,66);
-            string[] names={UiText.BiomassLabel,UiText.ChitinLabel,UiText.ScrapLabel,UiText.ElectronicsLabel};
-            for(int i=0;i<4;i++)
-            {
-                var panel=UiKit.Panel(resourceRow,"Resource"+i,UiTheme.Panel);UiKit.Tile(panel);UiKit.Size(panel,66,flexibleWidth:1);
-                var body=UiKit.Column(panel.transform,"Layout",0);UiKit.Fill(body,10);
-                TerminalParts.Text(body,"Name",names[i],22,17,UiTheme.Muted);resources[i]=TerminalParts.Text(body,"Amount","—",28,26);
-            }
+            stationIcon=layout.Find("Heading/Station symbol").GetComponent<Image>();
+            TerminalParts.Text(layout,"Ledger heading","КАЗНА ЭКИПАЖА",21,17,UiTheme.Muted);
+            wallet=new MaterialStrip(layout,"Treasury",true);
             summary=TerminalParts.Text(layout,"Summary",UiText.NoConfirmedState,30,21,UiTheme.Muted);
             tabRow=UiKit.Row(layout,"Tabs",8);UiKit.Size(tabRow,50);
             AddTab(tabRow,"catch",UiText.CatchTab);AddTab(tabRow,"upgrades",UiText.UpgradesTab);AddTab(tabRow,"depths",UiText.DepthsTab);AddTab(tabRow,"feeding",UiText.FeedingTab);
@@ -62,6 +58,9 @@ namespace Raid.UI
             if(equipment)tab="upgrades";else if(navigation)tab="depths";
             tabRow.gameObject.SetActive(!equipment&&!navigation);
             UiKit.Set(shellTitle,station==null?UiText.TerminalTitle:station.Caption.ToUpperInvariant());
+            stationIcon.sprite=DiveInstruments.Art(equipment?DiveInstruments.Mark.Wrench:
+                navigation?DiveInstruments.Mark.Bathymetry:DiveInstruments.Mark.Submarine);
+            wallet.Balances(view);
             foreach(var pair in tabs)
             {
                 pair.Value.gameObject.SetActive(station==null||station.kind!=ShipConsoleKind.Reservoir||pair.Key=="catch"||pair.Key=="feeding");
@@ -70,11 +69,10 @@ namespace Raid.UI
             }
             if(view==null)
             {
-                foreach(var text in resources)UiKit.Set(text,"—");UiKit.Set(summary,UiText.NoConfirmedState);UiKit.Set(footer,UiText.NoConfirmedState);
+                UiKit.Set(summary,UiText.NoConfirmedState);UiKit.Set(footer,UiText.NoConfirmedState);
             }
             else
             {
-                UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
                 UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired,ctx.DefendingReservoir));
                 if(equipment)UiKit.Set(summary,"Бортовая мастерская · оборудование экипажа");
                 if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
@@ -112,7 +110,7 @@ namespace Raid.UI
                 TerminalParts.Text(empty,"Title",foodOnly?UiText.NoFoodStock:UiText.NoStock,40,28);
                 TerminalParts.Text(empty,"Description",foodOnly?UiText.NoFoodHint:UiText.NoStockHint,66,22,UiTheme.Muted);return;
             }
-            if(!foodOnly)TerminalParts.Text(content,"ListHint",UiText.StockIdentityHint,32,20,UiTheme.Muted);
+            if(!foodOnly)TerminalParts.Text(content,"ListHint","В РЕЗЕРВУАРЕ  /  "+items.Count,27,18,UiTheme.Muted);
             if(ShipConsole.Stations.Count>0 && items.Any(item=>item.offering>0))
             {
                 var hint=TerminalParts.Text(content,"RouteHint","",32,20,UiTheme.Cyan);
@@ -122,30 +120,34 @@ namespace Raid.UI
         }
         void AddItem(CatchItem item,int index,bool feedOnly)
         {
-            if(ShipConsole.Stations.Count>0 && item.offering>0)
-            {
-                var card=TerminalParts.Card(content,"Catch_"+item.id,100);
-                TerminalParts.Text(card,"Title",UiText.ItemTitle(index,item),30,25);
-                TerminalParts.Text(card,"Yield",UiText.YieldLabel(item)+"  •  "+UiText.FoodValue(item.offering),26,20,UiTheme.Muted);
-                return;
-            }
-            long id=item.id;var body=TerminalParts.Card(content,"Catch_"+id,192);
-            var titleRow=UiKit.Row(body,"TitleRow",16);UiKit.Size(titleRow,34);
-            var title=UiKit.Label(titleRow,"Title",UiText.ItemTitle(index,item),26);UiKit.Size(title,34,flexibleWidth:1);
-            var food=UiKit.Label(titleRow,"Food",UiText.FoodValue(item.offering),22,item.offering>0?UiTheme.Green:UiTheme.Muted);UiKit.Size(food,34,150);
-            TerminalParts.Text(body,"Yield",UiText.YieldLabel(item),30,21,UiTheme.Muted);
-            var actions=UiKit.Row(body,"Actions",12);UiKit.Size(actions,48);
-            var reason=TerminalParts.Text(body,"Reason","",30,19,UiTheme.Muted);
+            bool bulk=ShipConsole.Stations.Count>0 && item.offering>0;
+            long id=item.id;
+            var body=TerminalParts.Card(content,"Catch_"+id,bulk?105:173);
+            var heading=UiKit.Row(body,"TitleRow",12);UiKit.Size(heading,32);
+            var silhouette=UiKit.Symbol(heading,"Specimen",item.offering>0||item.biomass>0||item.chitin>0?
+                DiveInstruments.CatchMark(item.species):DiveInstruments.Mark.Crate,Color.white);
+            UiKit.Size(silhouette,32,46);
+            var title=UiKit.Label(heading,"Title",UiText.CargoName(item),26);UiKit.Size(title,32,flexibleWidth:1);
+            title.fontStyle=FontStyles.Bold;
+            var depth=UiKit.Label(heading,"Horizon","Горизонт "+item.depthTier,18,UiTheme.Muted);
+            UiKit.Size(depth,32,130);
+            var food=UiKit.Label(heading,"Food",UiText.FoodValue(item.offering),21,item.offering>0?UiTheme.Green:UiTheme.Muted);
+            UiKit.Size(food,32,132);
+            var yieldRow=new MaterialStrip(body,"Yield");
+            yieldRow.Quote(MaterialStrip.Yield(item));
+            if(bulk)return;
+            var actions=UiKit.Row(body,"Actions",12);UiKit.Size(actions,44);
+            var reason=TerminalParts.Text(body,"Reason","",25,19,UiTheme.Muted);
             if(!feedOnly && item.biomass+item.chitin+item.scrap+item.electronics>0)
             {
                 Func<string> check=()=>ItemReason(id,false);
-                var process=UiKit.Button(actions,"Process_"+id,UiText.ProcessAction,()=>ConfirmItem(id,false),false,48);
+                var process=UiKit.Button(actions,"Process_"+id,UiText.ProcessAction,()=>ConfirmItem(id,false),false,44);
                 refreshRows.Add(()=>process.interactable=string.IsNullOrEmpty(check()));
             }
             if(item.offering>0)
             {
                 Func<string> check=()=>ItemReason(id,true);
-                var feed=UiKit.Button(actions,"Feed_"+id,UiText.FeedAction,()=>ConfirmItem(id,true),true,48);
+                var feed=UiKit.Button(actions,"Feed_"+id,UiText.FeedAction,()=>ConfirmItem(id,true),true,44);
                 refreshRows.Add(()=>feed.interactable=string.IsNullOrEmpty(check()));
             }
             refreshRows.Add(()=>
@@ -166,8 +168,10 @@ namespace Raid.UI
         {
             string reason=ItemReason(id,feed);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
             var item=app.Context.View.tank.Find(x=>x.id==id);
-            string description=UiText.ItemName(item)+"\n"+(feed?UiText.FoodValue(item.offering):UiText.YieldLabel(item))+"\n\n"+UiText.ConsumeWarning;
-            app.Confirm(feed?UiText.FeedTitle:UiText.ProcessTitle,description,()=>TerminalParts.Execute(app,()=>ItemReason(id,feed),feed?WorldAction.Feed:WorldAction.Process,id));
+            string description=UiText.ItemName(item)+(feed?"\n"+UiText.FoodValue(item.offering):"")+"\n\n"+UiText.ConsumeWarning;
+            app.Confirm(feed?UiText.FeedTitle:UiText.ProcessTitle,description,
+                ()=>TerminalParts.Execute(app,()=>ItemReason(id,feed),feed?WorldAction.Feed:WorldAction.Process,id),
+                feed?null:MaterialStrip.Yield(item));
         }
         void BuildUpgrades()
         {
@@ -183,7 +187,8 @@ namespace Raid.UI
                 if(recipe==null){TerminalParts.Text(body,"MissingRecipe",UiText.MissingRecipe,70,22,UiTheme.Amber);continue;}
                 if(maximum){TerminalParts.Text(body,"Complete",UiText.MaxUpgrade,68,22,UiTheme.Muted);continue;}
                 var cost=view.Cost(upgrade,ctx.Tuning);
-                TerminalParts.Text(body,"Cost",UiText.UpgradeCost(cost),30,21,UiTheme.Muted);
+                var costRow=new MaterialStrip(body,"Cost");
+                costRow.Quote(cost);
                 var row=UiKit.Row(body,"Purchase",20);UiKit.Size(row,54);
                 var status=UiKit.Label(row,"Reason","",20,UiTheme.Amber);UiKit.Size(status,54,flexibleWidth:1);
                 var buy=UiKit.Button(row,"Buy_"+upgrade,UiText.BuyUpgradeLevel(level+1),()=>ConfirmUpgrade(upgrade),true,52);UiKit.Size(buy,52,210);buy.GetComponent<LayoutElement>().flexibleWidth=0;
@@ -204,12 +209,12 @@ namespace Raid.UI
             string reason=UpgradeReason(upgrade);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
             var ctx=app.Context;var view=ctx.View;
             int quotedLevel=view.Level(upgrade);var quotedCost=view.Cost(upgrade,ctx.Tuning);
-            app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(view.Level(upgrade)+1)+"\n"+UiText.UpgradeCost(view.Cost(upgrade,ctx.Tuning))+"\n\n"+UiText.UpgradeConfirmHint,
+            app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(quotedLevel+1)+"\n\n"+UiText.UpgradeConfirmHint,
                 ()=>
                 {
                     if(ctx.View==null||ctx.View.Level(upgrade)!=quotedLevel||!ctx.View.Cost(upgrade,ctx.Tuning).Equals(quotedCost)){app.Toast(UiText.QuoteChanged,true);return;}
                     TerminalParts.Execute(app,()=>UpgradeReason(upgrade),(WorldAction)((int)WorldAction.Reel+(int)upgrade));
-                });
+                },quotedCost);
         }
         void BuildDepths()
         {
@@ -223,7 +228,11 @@ namespace Raid.UI
         {
             var body=TerminalParts.Card(parent,"Depth_"+depth,356);
             TerminalParts.Text(body,"Title",depth==1?UiText.DepthOneTitle:UiText.DepthTwoTitle,36,28);
-            TerminalParts.Text(body,"Loot",depth==1?UiText.DepthOneLoot:UiText.DepthTwoLoot,70,22);
+            TerminalParts.Text(body,"Loot",depth==1?"Риф и грузовые ящики":"Разлом и глубинная живность",36,22);
+            var outlook=UiKit.Row(body,"Expected resources",8);UiKit.Size(outlook,37);
+            foreach(var kind in (depth==1?new[]{DiveInstruments.Mark.Biomass,DiveInstruments.Mark.Scrap}:
+                new[]{DiveInstruments.Mark.Chitin,DiveInstruments.Mark.Electronics}))
+                UiKit.Size(UiKit.Symbol(outlook,kind.ToString(),kind,Color.white),35,39);
             TerminalParts.Text(body,"Risk",depth==1?UiText.DepthOneRisk:UiText.DepthTwoRisk,54,20,UiTheme.Muted);
             var access=TerminalParts.Text(body,"Access","",50,20,UiTheme.Muted);
             var reason=TerminalParts.Text(body,"Reason","",26,19,UiTheme.Amber);
