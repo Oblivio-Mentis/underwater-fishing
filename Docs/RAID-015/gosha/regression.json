@@ -24,5 +24,15 @@
     "electronics": 0
   },
   "cargoId": "5014640262100495341",
-  "caughtBy": "requesting saved guest profile"
+  "caughtBy": "requesting saved guest profile",
+  "depthResetRegression": {
+    "host": "Unity Editor Play Mode, 824d9fe",
+    "client": "independent Windows x64 Development, b93d759",
+    "status": "passed",
+    "checks": 38,
+    "newCheck": "Depth-transition reset puts Gosha back on board and preserves the shared cooldown",
+    "cargoId": "4899523353598193031",
+    "closedDoorCrossings": 0,
+    "resultSha256": "18e9cf3fcc4a262807cca0e5655217a7e594ccb05c20c5e2d4004963b52f907e"
+  }
 }
