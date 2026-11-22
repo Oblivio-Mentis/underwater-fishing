@@ -1,0 +1,120 @@
+{
+  "Status": "passed",
+  "Error": "",
+  "Checks": [
+    "Fixture started with a clean manifest.",
+    "Q outside release reach does not load the physical cage.",
+    "Q from the open loading face targets the cage.",
+    "Solid rear grille blocks loading from outside.",
+    "Select the real Needlefish in the filled pocket.",
+    "Valid Q in the cage creates no duplicate world drop.",
+    "Staged Bristlefish #15000002",
+    "Staged Lanternfish #15000003",
+    "Staged Sailray #15000004",
+    "Cargo-size limit rejects an additional fish.",
+    "Swimming model keeps cargo identity #15000001",
+    "Swimming model keeps cargo identity #15000002",
+    "Swimming model keeps cargo identity #15000003",
+    "Swimming model keeps cargo identity #15000004",
+    "The owned world pointer dispatches the button click.",
+    "Original Needlefish #15000001 uses the exact same visible model in the aquarium.",
+    "Original Bristlefish #15000002 uses the exact same visible model in the aquarium.",
+    "Original Lanternfish #15000003 uses the exact same visible model in the aquarium.",
+    "Original Sailray #15000004 uses the exact same visible model in the aquarium.",
+    "All four active meshes remain in the aquarium while the lift returns.",
+    "Cage reopens at its original loading position with only one delivered copy per ID."
+  ],
+  "IndependentWindowsClient": {
+    "width": 1920,
+    "height": 1080,
+    "manifests": [
+      [
+        0,
+        0,
+        []
+      ],
+      [
+        1,
+        0,
+        []
+      ],
+      [
+        2,
+        0,
+        []
+      ],
+      [
+        4,
+        0,
+        []
+      ],
+      [
+        4,
+        1,
+        []
+      ],
+      [
+        4,
+        2,
+        []
+      ],
+      [
+        0,
+        3,
+        [
+          [
+            15000001,
+            "Needlefish"
+          ],
+          [
+            15000002,
+            "Bristlefish"
+          ],
+          [
+            15000003,
+            "Lanternfish"
+          ],
+          [
+            15000004,
+            "Sailray"
+          ]
+        ]
+      ],
+      [
+        0,
+        0,
+        [
+          [
+            15000001,
+            "Needlefish"
+          ],
+          [
+            15000002,
+            "Bristlefish"
+          ],
+          [
+            15000003,
+            "Lanternfish"
+          ],
+          [
+            15000004,
+            "Sailray"
+          ]
+        ]
+      ]
+    ],
+    "fields": [
+      "cageSwimmers",
+      "hoistPhase",
+      "delivered aquarium [(id,species)]"
+    ]
+  },
+  "Revision": "e96bc51",
+  "HostResolution": "1280x720",
+  "CaseStaging": "Clean disposable campaign; a real Needlefish profile was seeded into the owned pocket, followed by real keyboard Q, physical pointer dispatch and the scene's full winch cycle. The other three species fill the gauge and exercise its full color range.",
+  "AssemblySHA256": "df9cfe50f4e910c72c42715edf552a68d8788bb7fa47cbc8851a884ca0b53160",
+  "FrameCount": {
+    "closure-and-lift.webp": 17,
+    "wet-transfer.webp": 20
+  }
+}
