@@ -10,6 +10,7 @@ namespace Raid
     public enum GoshaBallMode : byte { Deck, Held, Flying, Carried }
     public enum GoshaAction : byte { Pet, PickUp, Throw }
 
+    [System.Serializable]
     public struct GoshaSnapshot
     {
         public GoshaMode Mode;

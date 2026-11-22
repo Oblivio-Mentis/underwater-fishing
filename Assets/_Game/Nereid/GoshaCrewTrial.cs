@@ -74,14 +74,15 @@ namespace Raid.Nereid
         }
         IEnumerator PressPad(int index)
         {
+            // Exercise the production interlock and moving doors. Start the pump on the
+            // host fixture; its panel raycast is covered by the separate airlock QA.
             var pad=chamber.GetPad(index);
-            var facing=index==1?Vector3.right:Vector3.left;
-            Stage(host,pad.transform.position+facing*1.25f-Vector3.up*.6f);
-            host.LookAtConsole(pad.transform.position);
-            yield return new WaitForSeconds(.30f);
-            var direction=(pad.transform.position-host.transform.position-Vector3.up*.6f).normalized;
-            world.RequestAirlockPad((byte)index,direction);
-            yield return Wait("Pressure pad "+index+" starts its cycle",()=>world.Airlock.Busy);
+            Stage(host,pad.transform.position+(index==1?Vector3.right:Vector3.left)*1.3f-Vector3.up*.58f);
+            var field=typeof(RaidWorld).GetField("airlock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance);
+            var replicated=(FishNet.Object.Synchronizing.SyncVar<AirlockSnapshot>)field.GetValue(world);
+            var lockState=replicated.Value;
+            Check("Production pressure lock accepts cycle "+index,lockState.Request(pad.Sea));replicated.Value=lockState;
+            yield return Wait("Pressure cycle "+index+" started",()=>world.Airlock.Busy);
         }
         UiQaProbe.Snapshot Remote()
         {
@@ -131,6 +132,9 @@ namespace Raid.Nereid
             Stage(host,world.Gosha.Position+new Vector3(-1.4f,.7f,-1.3f));
             host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.2f);
             HostShot("gosha-deck.png");
+            Stage(peer,world.Gosha.Position+Vector3.back*.95f+Vector3.up*.7f);
+            yield return PeerShot("gosha-deck-1080.png",world.Gosha.Position);
+            Stage(peer,world.Gosha.Position+Vector3.back*.95f+Vector3.up*.7f);
             Request("gosha_pet");
             yield return Wait("Remote owner's server-validated petting gesture",()=>world.Gosha.Pats>0 && world.Gosha.Mode==GoshaMode.Petted);
             host.LookAtConsole(world.Gosha.Position);HostShot("gosha-pet.png");
