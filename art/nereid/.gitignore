@@ -1,3 +1,4 @@
 build.log
 check.log
 *.blend1
+__pycache__/
