@@ -79,7 +79,7 @@ namespace Raid
             }
             if (result.status == "running") result.status = "passed";
             if (host != null) host.QaHoldOwned(false, 0);
-            if (helper != null)
+            if (helper != null && remoteReeling)
             {
                 try { Send("fish_reel", 0); } catch (IOException) { }
             }
@@ -164,6 +164,11 @@ namespace Raid
                 yield return Reel(fish);
                 Require(!host.HandsFull && host.HookedFish == null && host.CarriedFish != null,
                     "Small catch was not transferred independently of the harpoon.");
+                if(host.CatchCount==1)
+                {
+                    Require(fish.Stamina>0,"First catch unexpectedly required total exhaustion.");
+                    Check("First fish reached the hand with "+fish.Stamina.ToString("F2")+" stamina remaining.");
+                }
                 Check(species + " captured and stowed by one diver.");
             }
             Require(host.FishInSlot(2)?.SpeciesId == "Needlefish" && host.FishInSlot(3)?.SpeciesId == "Lanternfish"
@@ -180,6 +185,23 @@ namespace Raid
 
             var camera = host.Motor.GetComponentInChildren<Camera>();
             float pref = UiRoot.Instance.Settings.fishingCamera;
+            Phase("Full creel rejects a fourth small catch");
+            var spare=FindObjectsByType<FishActor>().FirstOrDefault(f=>f.InHabitat && f.Mode==FishMode.Roam && !f.RequiresPartner);
+            if(spare==null)
+            {
+                spare=Fish("Lanternfish");
+                yield return Wait(()=>spare.InHabitat && spare.Mode==FishMode.Roam,65,"No small fish to test full pockets.");
+            }
+            host.Motor.Teleport(spare.transform.position-host.Motor.AimDirection*3.5f-Vector3.up*.6f);
+            Physics.SyncTransforms();
+            Require(Physics.Raycast(host.transform.position+Vector3.up*.6f,host.Motor.AimDirection,out var pocketHit,host.tuning.maxRange,
+                host.tuning.hitMask,QueryTriggerInteraction.Ignore) && pocketHit.collider.GetComponentInParent<FishActor>()==spare,
+                "Full creel ray did not reach the small fish.");
+            int shots=host.ShotSequence;
+            Require(host.QaFireOwned(),"Full creel host could not fire equipped harpoon.");
+            yield return Wait(()=>host.ShotSequence>shots,3,"Server did not receive full-creel shot.");
+            Require(host.HookedFish==null && spare.HookCount==0 && host.CatchCount==3,"Fourth small fish was attached with full pockets.");
+            Check("Server accepted the shot on a visible fourth small fish and retained exactly three pockets.");
             Phase("Heavy solo attempt");
             yield return RefillOnDeck();
             var heavy = Fish("Bristlefish");
@@ -230,7 +252,7 @@ namespace Raid
             yield return HookPeer(heavy);
             Phase("Cooperative pull and heavy carry");
             axis=(host.HandAnchor-heavy.transform.position).normalized;
-            helper.Motor.Teleport(host.transform.position+axis*2.5f+host.transform.right*.65f);
+            helper.Motor.Teleport(host.transform.position+axis*2.2f+host.transform.right*2.0f);
             Physics.SyncTransforms();
             remoteReeling=true;
             nextRemoteReel=0;
@@ -330,6 +352,7 @@ namespace Raid
 
         private IEnumerator Hook(FishActor fish)
         {
+            yield return Pause(host.tuning.fireCooldown+.12f);
             Require(fish.Mode == FishMode.Roam && !host.Motor.IsHelpless, "Fish unavailable or host incapacitated.");
             Vector3 aim = host.Motor.AimDirection;
             host.Motor.Teleport(fish.transform.position - aim * 3.8f - Vector3.up * .6f);
@@ -344,6 +367,11 @@ namespace Raid
         private IEnumerator HookPeer(FishActor fish)
         {
             // Stage only the pose. The second process fires the normal owned RPC.
+            // Aim across the first shooter's ray to put the second bolt on another patch of skin.
+            float yaw = Quaternion.LookRotation(host.Motor.AimDirection).eulerAngles.y-24;
+            string view=Send("view",yaw);
+            yield return Wait(()=>ReadClient()?.request==view && Mathf.Abs(Mathf.DeltaAngle(
+                Quaternion.LookRotation(helper.Motor.AimDirection).eulerAngles.y,yaw))<1,3,"Client aim did not reach the second sightline.");
             Vector3 aim=helper.Motor.AimDirection;
             float until=Time.unscaledTime+5, retry=0;
             while(helper.HookedFish!=fish)
@@ -378,8 +406,20 @@ namespace Raid
                     Send("fish_reel",pulling?2:0);
                     nextRemoteReel=Time.unscaledTime+.65f;
                 }
-                if (remoteReeling && fish.Coordinated && !File.Exists(Path.Combine(Path.GetDirectoryName(reportPath),"catch-two-harpoons.png")))
+                if (remoteReeling && fish.Coordinated && Vector3.Distance(host.transform.position,fish.transform.position)<6
+                    && !File.Exists(Path.Combine(Path.GetDirectoryName(reportPath),"catch-two-harpoons.png")))
+                {
+                    bool hostAttached=host.AttachedContact.Resolve(out _,out var hostPoint,out _,out _);
+                    bool peerAttached=helper.AttachedContact.Resolve(out _,out var peerPoint,out _,out _);
+                    Require(hostAttached && peerAttached
+                        && Vector3.Distance(hostPoint,peerPoint)>.001f,"Two harpoons did not resolve distinct surface points.");
+                    Check($"Simultaneous contacts are {Vector3.Distance(hostPoint,peerPoint):F3} m apart on the moving fish.");
                     yield return Shot("catch-two-harpoons.png");
+                    string file="catch-two-harpoons-peer.png", peerPath=Path.Combine(clientDir,file);
+                    Send("capture",0,file);
+                    yield return Wait(()=>File.Exists(peerPath) && new FileInfo(peerPath).Length>0,6,"Client camera capture timed out.");
+                    File.Copy(peerPath,Path.Combine(Path.GetDirectoryName(reportPath),file),true);
+                }
                 yield return null;
             }
             host.QaHoldOwned(false, 0);
@@ -398,12 +438,12 @@ namespace Raid
                 && peer.activeBoltOwners.Contains(helper.OwnerId) && peer.anchorFrames>=6 && peer.anchorTravel>.05f,
                 "Peer did not observe the same two moving hooks.");
             Require(peer.anchorTipError<.001f && peer.anchorKnotError<.001f,"Remote bolt separated from the fish or its cable.");
-            Check($"Hook #{host.ShotSequence}, host/peer frames {local.VerifiedFrames}/{peer.anchorFrames}, attached travel {local.AnchorTravel:F3}/{peer.anchorTravel:F3} m, worst tip drift {local.MaxTipError:F6}/{peer.anchorTipError:F6} m, worst nock drift {local.MaxKnotError:F6}/{peer.anchorKnotError:F6} m.");
+            Check($"Host hook {host.OwnerId}/#{host.ShotSequence}, remote measured hook {peer.anchorOwner}/#{peer.anchorShot}, host/peer frames {local.VerifiedFrames}/{peer.anchorFrames}, attached travel {local.AnchorTravel:F3}/{peer.anchorTravel:F3} m, worst tip drift {local.MaxTipError:F6}/{peer.anchorTipError:F6} m, worst nock drift {local.MaxKnotError:F6}/{peer.anchorKnotError:F6} m.");
         }
 
-        private string Send(string action, float value)
+        private string Send(string action, float value, string filename=null)
         {
-            var request = new UiQaProbe.Request { id=Guid.NewGuid().ToString("N"), action=action, number=value };
+            var request = new UiQaProbe.Request { id=Guid.NewGuid().ToString("N"), action=action, number=value, value=filename };
             string path=Path.Combine(clientDir,"request.json"), temp=path+"."+request.id+".tmp";
             File.WriteAllText(temp,JsonUtility.ToJson(request));
             if(File.Exists(path)) File.Replace(temp,path,null);

@@ -1,0 +1,196 @@
+{
+  "result": "Passed",
+  "total": 47,
+  "passed": 47,
+  "failed": 0,
+  "cases": [
+    {
+      "name": "Raid.Tests.AirlockCycleTests.DoorsInterlockThroughoutFloodAndPumpOut",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.AirlockCycleTests.OccupiedThresholdKeepsPressureOnCurrentSide",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.079f,16,1)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishFlowStopTests.InvalidAgeCannotReserveStock",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishingLineTests.DistinctConnectionsShareOneFishUpToTheCrewLimit",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishingLineTests.EvenAtContactLandingRequiresTimeUnderLoad",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishingLineTests.ShippedGraphCanLandFromEitherFightState(\"Struggling\")",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishingLineTests.ShippedGraphCanLandFromEitherFightState(\"Tired\")",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishingLineTests.SwimmingToTheHookCannotWindOrLandIt",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishRouteQuoteTests.DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishRouteQuoteTests.EqualCountReplacementInvalidatesFishConfirmation",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.FishRouteQuoteTests.YieldChangeAndNewFoodRequirementInvalidateConfirmation",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.CargoCapacityAndDuplicateIdentityAreEnforced",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.DeliverySnapshotsItemAndCountsLifetimeOnlyOnce",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FailedDefenseLimitsStockLossAndPreservesPermanentProgress",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(1,Underfed,0.9166667f)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FifteenCatchesOfOneSpeciesRetainEachIdentityAcrossTwoFullCrewDeliveries",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(True)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(False)",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.LastSecondMealProtectsOnlyTheDeadlineItReaches",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.MaximumUpgradeLevelCannotSpendResourcesAgain",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.SaveRoundTripPreservesProgressFeedingAndMidHoistCargo",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.StockLossAlsoObeysFractionalCapForSmallStock",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.UpgradePriceScalesAndChargesExactMaterials",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.WinchUpgradeActuallyIncreasesCapacityAndShortensCycle",
+      "result": "Passed"
+    },
+    {
+      "name": "Raid.Tests.TeamProgressTests.ZeroOfferingLootCannotBeFedOrDiscardedByFeeding",
+      "result": "Passed"
+    }
+  ]
+}
