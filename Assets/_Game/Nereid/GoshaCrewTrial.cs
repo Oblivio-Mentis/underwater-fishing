@@ -257,6 +257,8 @@ namespace Raid.Nereid
                 hostInventory.ActiveSlot==2 && hostInventory.HasBallInSlot(2));
             Check("Ball uses five-slot hotbar and adds no catch",hostInventory.SlotCount==5 && hostInventory.CatchCount==0);
             var camera=host.GetComponentInChildren<Camera>().transform;
+            yield return Wait("The first ball draw brings it into the gloves",()=>
+                camera.Find("Ball in diving gloves")?.gameObject.activeSelf==true);
             UiRoot.Instance.HandleBallPointer(true,false);
             yield return Wait("LMB begins a wind-up with slot 3 selected",()=>world.Gosha.BallWind>0);
             Check("The wound-up ball owns the mouse pointer",UiInputGate.PointerReserved);

@@ -40,7 +40,7 @@ namespace Raid
         internal void SetReefBerth(Vector3 positionOnBed)
         {
             transform.position=spawn=positionOnBed;
-            if(IsServerInitialized)position.Value=spawn;
+            if(NetworkObject?.IsServerInitialized==true)position.Value=spawn;
         }
 
         private void Awake()
