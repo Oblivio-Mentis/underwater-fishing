@@ -103,17 +103,25 @@ namespace Raid
             if(wetBlend<=0 && !appliedFog)return;
             UpdateDiveLamp(wet);
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
+            float height=camera!=null?camera.transform.position.y:0f;
+            float belowShelf=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-13f,-24f,height));
+            float belowRift=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-24f,-40f,height));
+            float lowerWater=abyss?belowRift:belowShelf;
             ApplyShallowFill(abyss?0f:wetBlend);
             if(wetBlend>0)
             {
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
-                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,abyss?.108f:.038f,wetBlend);
-                var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.025f,.098f,.148f);
-                // Match the reef's custom transmission to the visible range of fish and hull materials.
-                Shader.SetGlobalVector(ReefClarityShader,abyss
-                    ?new Vector4(.00625f,1.04f,1f,0f)
-                    :new Vector4(.00136f,1.17f,.68f,0f));
+                float density=abyss?Mathf.Lerp(.108f,.139f,lowerWater):Mathf.Lerp(.038f,.048f,lowerWater);
+                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density,wetBlend);
+                var waterTint=abyss
+                    ?Color.Lerp(new Color(.032f,.075f,.106f),new Color(.034f,.042f,.096f),lowerWater)
+                    :Color.Lerp(new Color(.024f,.118f,.154f),new Color(.027f,.076f,.123f),lowerWater);
+                // Custom reef and hull transmission follows the camera through the same layers.
+                var clarity=abyss
+                    ?new Vector4(Mathf.Lerp(.00625f,.0094f,lowerWater),1.04f,1f,0f)
+                    :new Vector4(Mathf.Lerp(.00136f,.0023f,lowerWater),1.17f,.68f,0f);
+                Shader.SetGlobalVector(ReefClarityShader,clarity);
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
                 RenderSettings.fogColor=Color.Lerp(initialColor,fogTint,wetBlend);
@@ -132,9 +140,10 @@ namespace Raid
             float breath=Mathf.Sin(breathPhase);
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
-                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.045f:.28f,wetBlend)+fear*(.43f*breath-.06f));
-                color.saturation.Override(Mathf.Lerp(-5,-12,wetBlend));
-                color.contrast.Override(Mathf.Lerp(8,3,wetBlend));
+                float seaExposure=abyss?Mathf.Lerp(-.045f,-.23f,lowerWater):Mathf.Lerp(.27f,.02f,lowerWater);
+                color.postExposure.Override(Mathf.Lerp(.12f,seaExposure,wetBlend)+fear*(.43f*breath-.06f));
+                color.saturation.Override(Mathf.Lerp(-5,Mathf.Lerp(-8,-15,lowerWater),wetBlend));
+                color.contrast.Override(Mathf.Lerp(8,Mathf.Lerp(3,8,lowerWater),wetBlend));
             }
             if(profile!=null && profile.TryGet<Vignette>(out var vignette))
                 vignette.intensity.Override(Mathf.Lerp(.16f,.14f,wetBlend)+fear*(.065f-.05f*breath));
