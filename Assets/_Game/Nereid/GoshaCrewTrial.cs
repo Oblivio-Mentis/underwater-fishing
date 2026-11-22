@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using Raid.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 
 namespace Raid.Nereid
 {
@@ -117,6 +119,14 @@ namespace Raid.Nereid
             return id;
         }
         void HostShot(string leaf)=>UiQaProbe.CapturePeerCamera(Path.Combine(folder,leaf));
+        static IEnumerator PressSlotKey(Key key)
+        {
+            var keyboard=Keyboard.current??InputSystem.AddDevice<Keyboard>();
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));
+            yield return new WaitForSeconds(.1f);
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState());
+        }
+
         IEnumerator ThrowWithPointer()
         {
             UiRoot.Instance.HandleBallPointer(true,false);
@@ -247,13 +257,14 @@ namespace Raid.Nereid
             var camera=host.GetComponentInChildren<Camera>().transform;
             UiRoot.Instance.HandleBallPointer(true,false);
             yield return Wait("LMB begins a wind-up with slot 3 selected",()=>world.Gosha.BallWind>0);
-            Check("The normal slot selector can stow the wound-up ball",hostInventory.SelectSlot(0));
+            Check("The wound-up ball owns the mouse pointer",UiInputGate.PointerReserved);
+            yield return PressSlotKey(Key.Digit1);
             yield return Wait("Stowed ball leaves the harpoon usable and clears the wind-up",()=>hostInventory.HarpoonInHands &&
                 world.HasGoshaBall(host) && world.Gosha.BallWind==0 && camera.Find("Ball in diving gloves")!=null &&
                 !camera.Find("Ball in diving gloves").gameObject.activeSelf);
             UiRoot.Instance.HandleBallPointer(false,true);
             Check("Releasing LMB after stowing did not throw the ball",world.HasGoshaBall(host));
-            Check("Normal slot 3 can equip the ball again",hostInventory.SelectSlot(2));
+            yield return PressSlotKey(Key.Digit3);
             yield return Wait("Equipping the ordinary slot brings the ball back into both gloves",()=>world.GoshaBallInHands(host) &&
                 camera.Find("Ball in diving gloves").gameObject.activeSelf);
             yield return GoshaGripTrial.Verify(world,host,Check,HostShot);
