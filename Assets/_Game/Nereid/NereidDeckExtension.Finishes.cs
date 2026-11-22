@@ -89,7 +89,6 @@ namespace Raid.Nereid
         void BridgeFinishes()
         {
             float length=BridgeFront-BridgeBack;
-            float middle=(BridgeFront+BridgeBack)*.5f;
             const float width=BridgeHalfWidth;
             float floor=UpperDeck;
 
@@ -138,9 +137,6 @@ namespace Raid.Nereid
             Wash(new(0,floor+1.84f,BridgeFront-.8f),new(-2.91f,floor+.47f,BridgeFront-2.08f),WaterFill,7.7f,145);
             Wash(new(.1f,floor+1.79f,BridgeBack+.77f),new(.1f,floor+.34f,BridgeBack+.075f),AmberFill,7.3f,220);
 
-            BridgeEnvelope(floor-.14f,floor+.50f,1.26f,coating);
-            BridgeEnvelope(floor+1.83f,floor+2.46f,1.10f,coating);
-            Panel("Roof inspection runway",new(-.12f,floor+2.56f,middle),new(6.72f,.15f,3.89f),gunmetal);
             for(int s=-1;s<=1;s+=2)
             {
                 Tube(new[]{
@@ -149,7 +145,6 @@ namespace Raid.Nereid
                 for(int i=0;i<3;i++)
                 {
                     float z=BridgeFront-.85f-1.95f*i;
-                    Beam("Bridge shoulder buttress",new(s*4.45f,floor+.53f,z),new(s*3.85f,floor-1.15f,z+.31f),.28f,.28f,coating);
                     Panel("Exterior window running light",new(s*4.49f,floor+1.91f,z),new(.13f,.15f,.72f),warm);
                     Panel("Roof seam inspection tread",new(s*2.85f,floor+2.637f,z),new(1.15f,.042f,.79f),steel);
                 }
@@ -167,27 +162,6 @@ namespace Raid.Nereid
             for(int i=0;i<8;i++)
                 Panel("Hard keys",center+new Vector3(.28f+.15f*(i%3),.736f,.024f+.092f*(i/3)),new(.075f,.031f,.058f),i%5==0?ochre:steel);
             Tube(new[]{center+new Vector3(-.61f,.123f,.539f),center+new Vector3(.61f,.123f,.539f)},.047f,windowBrass);
-        }
-
-        void BridgeEnvelope(float bottom,float top,float cut,Material material)
-        {
-            const float lip=.46f;
-            float f=BridgeFront+.19f,b=BridgeBack-.19f,x=BridgeHalfWidth+lip;
-            var perimeter=new Vector2[]{new(-x+cut,b),new(x-cut,b),new(x,b+cut*.64f),new(x,f-cut*.64f),
-                new(x-cut,f),new(-x+cut,f),new(-x,f-cut*.64f),new(-x,b+cut*.64f)};
-            var shape=new ReefGeometry();
-            for(int i=0;i<perimeter.Length;i++)
-            {
-                if(bottom<UpperDeck && i>=4 && i<=5)continue;
-                var a=perimeter[i];
-                var n=perimeter[(i+1)%perimeter.Length];
-                int p=shape.Add(new Vector3(a.x,bottom,a.y),Color.white);
-                int q=shape.Add(new Vector3(n.x,bottom,n.y),Color.white);
-                int r=shape.Add(new Vector3(n.x*.96f,top,n.y),Color.white);
-                int s=shape.Add(new Vector3(a.x*.96f,top,a.y),Color.white);
-                shape.Quad(q,p,s,r);
-            }
-            PresentShape("Bevelled bridge fairing",shape,material);
         }
 
         void TiledPanel(Vector3 position,Vector3 size,Quaternion rotation,Material material,Rect tile)
