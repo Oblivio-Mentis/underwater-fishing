@@ -14,6 +14,7 @@ namespace Raid.Nereid
         readonly List<Material> owned=new();
         Material steel, charcoal, trim, paint, amber, cold, signal;
         Transform surface, gauge, impeller;
+        Mesh pressurePlate;
         PressureTransferFlow transfer;
         TMP_Text display;
         float water,shownInner=1,shownOuter;
@@ -141,9 +142,9 @@ namespace Raid.Nereid
                 for(int face=-1;face<=1;face+=2)
                 {
                     float skin=face*.128f;
-                    Box("Raised armour",new Vector3(skin,.16f,0),new Vector3(.042f,1.79f,.98f),trim,false,leaf);
-                    Box("Maintenance cover",new Vector3(face*.156f,.18f,0),new Vector3(.025f,1.53f,.82f),steel,false,leaf);
-                    Box("Status slit",new Vector3(face*.18f,.63f,0),new Vector3(.03f,.058f,.54f),signal,false,leaf);
+                    DressLeaf(leaf,face,sign);
+                    Box("Door instrumentation bezel",new Vector3(face*.174f,.66f,0),new Vector3(.035f,.22f,.77f),charcoal,false,leaf);
+                    Box("Door status slit",new Vector3(face*.195f,.685f,0),new Vector3(.018f,.056f,.54f),signal,false,leaf);
                     Box("Door caution band",new Vector3(skin,-1.13f,0),new Vector3(.045f,.24f,1.35f),paint,false,leaf);
                     for(int k=-1;k<=1;k++)
                     {
@@ -152,6 +153,40 @@ namespace Raid.Nereid
                     }
                 }
             }
+        }
+
+        void DressLeaf(Transform leaf,int face,float openingSide)
+        {
+            if(pressurePlate==null)
+            {
+                var shape=new ReefGeometry();
+                Vector2[] outline={
+                    new(-.62f,-.61f),new(-.47f,-.90f),new(.47f,-.90f),new(.62f,-.61f),
+                    new(.62f,.74f),new(.40f,1.03f),new(-.40f,1.03f),new(-.62f,.74f)
+                };
+                int center=shape.Add(new Vector3(.182f,.04f,0),Color.white);
+                for(int i=0;i<outline.Length;i++)
+                {
+                    Vector2 a=outline[i], b=outline[(i+1)%outline.Length];
+                    var outerA=shape.Add(new Vector3(.114f,a.y,a.x),Color.white);
+                    var outerB=shape.Add(new Vector3(.114f,b.y,b.x),Color.white);
+                    var innerA=shape.Add(new Vector3(.182f,a.y*.91f,a.x*.89f),Color.white);
+                    var innerB=shape.Add(new Vector3(.182f,b.y*.91f,b.x*.89f),Color.white);
+                    shape.Quad(outerA,innerA,innerB,outerB);
+                    shape.Face(center,innerB,innerA);
+                }
+                pressurePlate=shape.Mesh("Chamfered pressure leaf plate");
+            }
+            var assembly=new GameObject("Bevelled pressure armour");
+            assembly.transform.SetParent(leaf,false);
+            assembly.transform.localRotation=face>0?Quaternion.identity:Quaternion.Euler(0,180,0);
+            assembly.AddComponent<MeshFilter>().sharedMesh=pressurePlate;
+            assembly.AddComponent<MeshRenderer>().sharedMaterial=trim;
+            Box("Edge clamp",new Vector3(face*.14f,.24f,openingSide*.61f),
+                new Vector3(.080f,1.39f,.11f),charcoal,false,leaf);
+            for(int i=0;i<3;i++)
+                Box("Locking lug",new Vector3(face*.19f,-.22f+i*.46f,openingSide*.62f),
+                    new Vector3(.046f,.13f,.15f),paint,false,leaf);
         }
 
         void BuildPad(byte id,bool sea,float x,float z,int side)
@@ -231,6 +266,7 @@ namespace Raid.Nereid
         void OnDestroy()
         {
             if(Active==this)Active=null;
+            if(pressurePlate!=null)Destroy(pressurePlate);
             foreach(var mat in owned)if(mat!=null)Destroy(mat);
         }
     }
