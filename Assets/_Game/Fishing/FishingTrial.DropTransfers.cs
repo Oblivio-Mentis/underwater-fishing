@@ -45,6 +45,8 @@ namespace Raid
             Send("key",.15f,"Q");
             yield return Wait(()=>loot.CarrierOwnerId<0 && loot.IsVisible,6,"Remote Q did not put salvage down.");
             Check("Salvage "+original+" moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.");
+            Send("slot",0);
+            yield return Wait(()=>helper.ActiveSlot==0,4,"Remote could not re-equip its harpoon after salvage.");
             yield return RefillOnDeck();
         }
 

@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory)][string]$Player,
     [Parameter(Mandatory)][string]$Output,
     [ValidateRange(1,65535)][int]$Port = 17844,
-    [switch]$Ball
+    [switch]$Ball,
+    [switch]$VerifyDrops
 )
 $ErrorActionPreference = 'Stop'
 $playerPath = (Resolve-Path -LiteralPath $Player).Path
@@ -24,6 +25,7 @@ $resultPath = Join-Path $runPath 'result.json'
 try {
     $trialArgs = @('-raid-fishing-peer',$peerDir,'-raid-fishing-report',$resultPath)
     if ($Ball) { $trialArgs += '-raid-ball-harpoon' }
+    if ($VerifyDrops) { $trialArgs += '-raid-verify-drops' }
     $hostProcess = Start-Peer '-raid-host' $hostDir 1280 720 $trialArgs
     $until = (Get-Date).AddSeconds(70)
     do {
