@@ -269,6 +269,24 @@
       "benchmark": true,
       "prop": "shoal",
       "station": ""
+    },
+    {
+      "name": "15-sea-lock",
+      "depth": 1,
+      "feet": {
+        "x": 28,
+        "y": 1.4,
+        "z": -28
+      },
+      "look": {
+        "x": 20.55,
+        "y": 1.7,
+        "z": -28
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
     }
   ]
 }
