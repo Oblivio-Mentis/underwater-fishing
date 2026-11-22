@@ -173,8 +173,11 @@ namespace Raid.Nereid
             {
                 if(!station.InRange(owner) || ShipConsole.ResolveSight(owner,eye)!=station)
                     throw new InvalidOperationException("Viewmark must face physical monitor "+mark.station+" at "+owner.transform.position);
-                UiRoot.Instance.UseConsole(station);
+                if(!UiRoot.Instance.QaPointAtMonitor())
+                    throw new InvalidOperationException("Reticle did not activate "+mark.station);
                 yield return new WaitForSecondsRealtime(.25f);
+                if(Mathf.Abs(eye.fieldOfView-UiRoot.Instance.Settings.fov)>.4f)
+                    throw new InvalidOperationException("FOV changed while looking at "+mark.station);
             }
             if(mark.prop=="ball")
             {

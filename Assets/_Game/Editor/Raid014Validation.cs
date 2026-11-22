@@ -112,6 +112,7 @@ namespace Raid.Editor
                     await Until(() => !Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("Running"), "reef regression", 240);
                     Check(Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("PASS"), Raid.Nereid.Editor.NereidEncounterChecks.Status);
                 }
+                else if(Arg("-raid-case")=="new-decks") await CheckExpeditionDecks(diver);
                 else
                 {
                     await AirAndDefense(diver);
@@ -262,6 +263,45 @@ namespace Raid.Editor
                 "Repeat wave is stopped again by the closed outer door");
         }
 
+        static async Awaitable CheckExpeditionDecks(DiverMotor diver)
+        {
+            var vessel=Raid.Nereid.NereidVessel.Active;
+            var hull=vessel.transform;
+            var landings=new[]
+            {
+                new Vector3(0,.45f,-15.5f),new Vector3(0,.45f,-17.6f),
+                new Vector3(1.1f,.45f,-21.2f),
+                new Vector3(-2.58f,2.63f,-20.5f),
+                new Vector3(-2.58f,4.59f,-23.7f),
+                new Vector3(-2.58f,5.30f,-25.6f),new Vector3(.6f,5.30f,-28.2f)
+            };
+            foreach(var point in landings)
+            {
+                var worldPoint=hull.TransformPoint(point);
+                diver.Teleport(worldPoint);
+                await Until(()=>diver.IsInside && diver.IsWalking && diver.IsGrounded, "dry grounded deck at "+point,6);
+                Check(Vector3.Distance(diver.transform.position,worldPoint)<1.2f,"Reachable deck or stair "+point);
+            }
+
+            var camera=diver.GetComponentInChildren<Camera>();
+            foreach(var station in ShipConsole.Stations.Where(station=>station.IsMonitor))
+            {
+                var panel=station.screenAnchor;
+                Vector3 position=panel.position-panel.forward*1.72f-Vector3.up*.60f;
+                diver.Teleport(position);
+                await Until(()=>diver.IsInside && diver.IsGrounded,"walkable approach to "+station.kind,6);
+                await Until(()=>
+                {
+                    diver.LookAtConsole(panel.position);
+                    return ShipConsole.ResolveSight(diver,camera)==station && ShipConsole.CanUseKind(diver,station.kind);
+                },"sightline to "+station.kind,6);
+                var ui=UI.UiRoot.Instance;
+                Check(ui.QaPointAtMonitor() && ui.Context.SelectedConsole==station,"Physical display appears on sight "+station.kind);
+                await Awaitable.WaitForSecondsAsync(.3f);
+                Check(Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.35f,"Unchanged field of view at "+station.kind);
+            }
+        }
+
         static async Awaitable ShipRegression(DiverMotor host)
         {
             var w = RaidWorld.Instance;
@@ -290,6 +330,10 @@ namespace Raid.Editor
                 int before = feeding ? w.Team.offering : w.Team.biomass;
                 Check(w.Team.Deposit(new CatchItem(id, 2, 0, 1, 1, 1)), "Staged one fish in the reservoir");
                 w.Command(action,id);
+                var destination=feeding?CatchDestination.Feed:CatchDestination.Process;
+                await Until(()=>w.Team.tank.Any(item=>item.id==id && item.destination==destination),"confirm "+action);
+                await Awaitable.WaitForSecondsAsync(.19f);
+                w.Command(WorldAction.SendFish,FishRouteQuote.ComputeDraft(w.Team.tank));
                 await Until(() => w.FishRoute.active, "start " + action);
                 await Until(() => !w.FishRoute.active, "complete " + action, 30);
                 int added = (feeding ? w.Team.offering : w.Team.biomass) - before;

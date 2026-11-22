@@ -64,8 +64,9 @@ namespace Raid.Nereid
         {
             var source=Resources.Load<Material>("NereidShoal");
             if(source==null || !SystemInfo.supportsInstancing){enabled=false;return;}
-            var silverMesh=LoadMesh("Silver shoal fish");
-            var slateMesh=LoadMesh("Rift shoal fish");
+            var silverMesh=LoadMesh("DecorativeFish/Silver shoal fish");
+            var slateMesh=LoadMesh("DecorativeFish/Rift shoal fish");
+            var lanternMesh=LoadMesh("ExpeditionAssets/NvjobShoalFish")??slateMesh;
             silver=new Material(source){name="Silver shoal scales"};
             silver.SetColor("_Back",new Color(.125f,.255f,.269f));
             silver.SetColor("_Belly",new Color(.49f,.63f,.57f));
@@ -82,13 +83,13 @@ namespace Raid.Nereid
                 new School(1,silverMesh,silver,new Vector3(48,-10,-64),new Vector3(4.2f,.94f,3.4f),.33f,2.3f,35,21,.29f),
                 new School(2,slateMesh,slate,DeepShoal,new Vector3(2f,.65f,3.35f),.38f,2.9f,22,22,.35f),
                 new School(2,silverMesh,silver,new Vector3(45.3f,-8.8f,-50.1f),new Vector3(1.5f,.52f,2.2f),-.35f,2.1f,21,13,.26f),
-                new School(2,slateMesh,slate,new Vector3(51,-24.2f,-79),new Vector3(2.9f,1.03f,4.9f),.33f,1.3f,24,19,.32f),
+                new School(2,lanternMesh,slate,new Vector3(51,-24.2f,-79),new Vector3(2.9f,1.03f,4.9f),.33f,1.3f,24,19,.32f),
             };
         }
 
         static Mesh LoadMesh(string name)
         {
-            var prefab=Resources.Load<GameObject>("DecorativeFish/"+name);
+            var prefab=Resources.Load<GameObject>(name);
             return prefab!=null?prefab.GetComponentInChildren<MeshFilter>()?.sharedMesh:null;
         }
 
