@@ -146,7 +146,6 @@ namespace Raid.Nereid
                 {
                     float z=BridgeFront-.85f-1.95f*i;
                     Panel("Exterior window running light",new(s*4.49f,floor+1.91f,z),new(.13f,.15f,.72f),warm);
-                    Panel("Roof seam inspection tread",new(s*2.85f,floor+2.637f,z),new(1.15f,.042f,.79f),steel);
                 }
             }
         }
