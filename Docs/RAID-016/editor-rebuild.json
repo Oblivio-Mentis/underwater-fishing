@@ -1,0 +1,105 @@
+{
+  "status": "passed",
+  "phase": "13-rift",
+  "error": "",
+  "gpu": "NVIDIA GeForce RTX 4070",
+  "api": "Direct3D11",
+  "profile": "PC",
+  "pipeline": "PC_RPAsset",
+  "width": 640,
+  "height": 480,
+  "msaa": 1,
+  "vsync": 0,
+  "fittings": 21,
+  "renderScale": 1.0,
+  "views": [
+    {
+      "name": "01-reef",
+      "depth": 1,
+      "samples": 0,
+      "eye": {
+        "x": 36.0,
+        "y": -9.399999618530273,
+        "z": -42.0
+      },
+      "direction": {
+        "x": 0.6924405097961426,
+        "y": -0.35251519083976746,
+        "z": -0.6294915080070496
+      },
+      "inside": false,
+      "frameMedianMs": 0.0,
+      "frameP95Ms": 0.0,
+      "cpuMedianMs": 0.0,
+      "cpuP95Ms": 0.0,
+      "gpuMedianMs": 0.0,
+      "gpuP95Ms": 0.0
+    },
+    {
+      "name": "07-interior",
+      "depth": 1,
+      "samples": 0,
+      "eye": {
+        "x": 8.399999618530273,
+        "y": 1.5799998044967651,
+        "z": 2.0
+      },
+      "direction": {
+        "x": -0.669063925743103,
+        "y": 0.288334459066391,
+        "z": -0.6849938631057739
+      },
+      "inside": true,
+      "frameMedianMs": 0.0,
+      "frameP95Ms": 0.0,
+      "cpuMedianMs": 0.0,
+      "cpuP95Ms": 0.0,
+      "gpuMedianMs": 0.0,
+      "gpuP95Ms": 0.0
+    },
+    {
+      "name": "09-reservoir-monitor",
+      "depth": 1,
+      "samples": 0,
+      "eye": {
+        "x": 1.5561253974283318e-07,
+        "y": 1.5799999237060547,
+        "z": 0.2800019383430481
+      },
+      "direction": {
+        "x": -8.552613905976614e-08,
+        "y": -0.20717017352581024,
+        "z": -0.9783048629760742
+      },
+      "inside": true,
+      "frameMedianMs": 0.0,
+      "frameP95Ms": 0.0,
+      "cpuMedianMs": 0.0,
+      "cpuP95Ms": 0.0,
+      "gpuMedianMs": 0.0,
+      "gpuP95Ms": 0.0
+    },
+    {
+      "name": "13-rift",
+      "depth": 2,
+      "samples": 0,
+      "eye": {
+        "x": 36.0,
+        "y": -9.399999618530273,
+        "z": -42.0
+      },
+      "direction": {
+        "x": 0.6924405097961426,
+        "y": -0.35251519083976746,
+        "z": -0.6294915080070496
+      },
+      "inside": false,
+      "frameMedianMs": 0.0,
+      "frameP95Ms": 0.0,
+      "cpuMedianMs": 0.0,
+      "cpuP95Ms": 0.0,
+      "gpuMedianMs": 0.0,
+      "gpuP95Ms": 0.0
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 # studioigor - Underwater Fishing
 PROJECT: Underwater Fishing
 PHASE: 6 — Mechanics
-UPDATED: 2026-11-22 16:49
+UPDATED: 2026-11-22 18:27
 ## Now
-Совместный плейтест Crew-Update и ревью PR #12. Steam через интернет между двумя ПК остаётся на отдельную проверку.
+Художественный плейтест Windows-сборки и ревью ветки RAID-016.
 
 ## Open questions
 Second Steam account/computer available later per user's answer. Cross-account Steam and human co-op/feel acceptance NOT RUN.
@@ -20,3 +20,4 @@ Second Steam account/computer available later per user's answer. Cross-account S
 | 2026-11-19 15:43 | 6 — Mechanics | Настроены цвет воды, рассеянный свет и сигналы Фонарника. Сборка RAID013-Expedition проверена из камер хоста и клиента. | Ручная оценка тональности сборки и ревью PR #11. Отдельно предстоит Steam-плейтест на двух аккаунтах. |
 | 2026-11-22 16:16 | 6 — Mechanics | RAID-014. Два Windows-игрока доставили совместный улов. Гоша прошёл шлюз, вернул мяч и сохранился после перезапуска. Прошли 49 тестов EditMode и 34 проверки рифа. Собрана Windows x64 Release. | Ревью PR #12 и совместная игра экипажа. Интернет-сессия между двумя ПК и Steam-аккаунтами предстоит. |
 | 2026-11-22 16:49 | 6 — Mechanics | По игровому отзыву переработаны замах, апорт и Q/E-обмен. Windows-пара на 7ed4417 проверила Гошу на руках, лестницы и пасть, трос для мяча, передачу гарпунов и уловов, сохранение CargoId. Выпущен Crew-Update. | Совместный плейтест Crew-Update и ревью PR #12. Steam через интернет между двумя ПК остаётся на отдельную проверку. |
+| 2026-11-22 18:27 | 6 — Mechanics | RAID-016. Обновлены оба горизонта, интерьер, приборы и мяч. Сопоставлены 17 пар кадров и профили D3D11. Пройдены EditMode, Windows LAN и Play Mode после повторной авторской сборки NEREID. | Художественный плейтест Windows-сборки и ревью ветки RAID-016. |

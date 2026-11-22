@@ -1,0 +1,31 @@
+{
+  "manifest": {
+    "scene": "InterfaceVerticalSlice",
+    "source": "0e61fe1",
+    "unity": "6000.5.6f1",
+    "target": "Windows x64 Release",
+    "steamProtocol": "nereid-submarine-expedition-v4-art016",
+    "buildReport": "RAID014_BUILD Succeeded errors=0 warnings=0 bytes=137833634"
+  },
+  "archive": "UnderwaterFishing-RAID016-Windows.zip",
+  "bytes": 50187715,
+  "sha256": "9e773bb7c9760cf0b217dbd21bb0f9a49164655fc03f94f70d03551fc0c97a43",
+  "files": 219,
+  "assemblySha256": "f4ed61f8973966c8453fa83f4d3ddce936dda78f8e0dace2535aeec11c0068c3",
+  "transport": "FishNet Tugboat loopback; Windows x64 host 1280x720 and client 1920x1080; five seconds after peer authenticated",
+  "logs": {
+    "host": [
+      "[RAID Session] Запускается локальный хост…",
+      "[RAID Session] В сессии. Esc — курсор и меню"
+    ],
+    "peer": [
+      "[RAID Session] Подключение к 127.0.0.1",
+      "[RAID Session] В сессии. Esc — курсор и меню"
+    ]
+  },
+  "runtimeErrors": {
+    "host": [],
+    "peer": []
+  },
+  "status": "passed"
+}

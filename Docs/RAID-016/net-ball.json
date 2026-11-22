@@ -1,0 +1,19 @@
+{
+  "phase": "Drop the held ball, then drop a loaded harpoon",
+  "status": "passed",
+  "error": "",
+  "host": 0,
+  "client": 1,
+  "checks": [
+    "Distinct connected owners 0 and 1",
+    "The solid test partition took the first raycast hit. Ball stayed loose.",
+    "Both clients observed the ball tether. R released it onto the deck.",
+    "A solid barrier introduced after attachment severed the line and left the ball on its original side.",
+    "A second owner's shot at the reserved physical ball did not reassign it.",
+    "Reel moved the physical ball 6,83 m to the hands. Both peers observed the held state.",
+    "The deck ball travelled down the line into the shooter's numbered pocket.",
+    "Reel moved the physical ball 3,00 m to the hands. Both peers observed the held state.",
+    "Submerged owner retained the same physical ball in numbered slot 3.",
+    "Q released the held ball underwater and preserved the original harpoon. Q on the loaded gun then freed the ball and replicated that same gun ID once."
+  ]
+}
