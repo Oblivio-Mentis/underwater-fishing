@@ -240,7 +240,7 @@ namespace Raid.Nereid.Editor
             Box("Asymmetric control housing shoulder",root,new Vector3(.48f,1.18f,.13f),new Vector3(.17f,.39f,.35f),steel,.045f);
             Box("Selector function plaque",root,new Vector3(.02f,.985f,-.345f),new Vector3(.99f,.36f,.045f),dark,.028f);
             RouteLabel(feeding?"КОРМЛЕНИЕ":"ПЕРЕРАБОТКА",root,new Vector3(.02f,1.055f,-.373f),.112f,new Vector2(.96f,.14f),new Color(.88f,.93f,.89f));
-            RouteLabel("E · ПУСК / СТОП",root,new Vector3(.02f,.92f,-.373f),.072f,new Vector2(.96f,.13f),feeding?new Color(.92f,.65f,.3f):new Color(.25f,.8f,.84f));
+            RouteLabel("ЛКМ · ПУСК/СТОП",root,new Vector3(.02f,.92f,-.373f),.072f,new Vector2(.96f,.13f),feeding?new Color(.92f,.65f,.3f):new Color(.25f,.8f,.84f));
         }
 
         static void RouteLabel(string text,Transform parent,Vector3 position,float size,Vector2 bounds,Color color)

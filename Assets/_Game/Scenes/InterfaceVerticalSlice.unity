@@ -27287,7 +27287,7 @@ GameObject:
   - component: {fileID: 529398308}
   - component: {fileID: 529398307}
   m_Layer: 0
-  m_Name: "Route function / E \xB7 \u041F\u0423\u0421\u041A / \u0421\u0422\u041E\u041F"
+  m_Name: "Route function / \u041B\u041A\u041C \xB7 \u041F\u0423\u0421\u041A/\u0421\u0422\u041E\u041F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -27332,7 +27332,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "E \xB7 \u041F\u0423\u0421\u041A / \u0421\u0422\u041E\u041F"
+  m_text: "\u041B\u041A\u041C \xB7 \u041F\u0423\u0421\u041A/\u0421\u0422\u041E\u041F"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8108eda61d3c4194a9256a72ce6c67b0, type: 2}
   m_sharedMaterial: {fileID: -7068542288542507648, guid: 8108eda61d3c4194a9256a72ce6c67b0, type: 2}
@@ -103667,7 +103667,7 @@ GameObject:
   - component: {fileID: 1945813733}
   - component: {fileID: 1945813732}
   m_Layer: 0
-  m_Name: "Route function / E \xB7 \u041F\u0423\u0421\u041A / \u0421\u0422\u041E\u041F"
+  m_Name: "Route function / \u041B\u041A\u041C \xB7 \u041F\u0423\u0421\u041A/\u0421\u0422\u041E\u041F"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -103712,7 +103712,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "E \xB7 \u041F\u0423\u0421\u041A / \u0421\u0422\u041E\u041F"
+  m_text: "\u041B\u041A\u041C \xB7 \u041F\u0423\u0421\u041A/\u0421\u0422\u041E\u041F"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8108eda61d3c4194a9256a72ce6c67b0, type: 2}
   m_sharedMaterial: {fileID: -7068542288542507648, guid: 8108eda61d3c4194a9256a72ce6c67b0, type: 2}
