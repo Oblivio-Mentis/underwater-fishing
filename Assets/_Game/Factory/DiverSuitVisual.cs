@@ -115,6 +115,7 @@ namespace Raid
             return limb;
         }
 
+        float fall;
         void LateUpdate()
         {
             if(body==null||diver==null||tool==null)return;
@@ -147,7 +148,8 @@ namespace Raid
             float beat=Mathf.Sin(movingPhase);
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
-            var pocket=tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
+            bool ball=RaidWorld.Instance?.HasGoshaBall(diver)??false;
+            var pocket=!ball&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
             gun.gameObject.SetActive(!diver.IsDead && tool.HarpoonInHands);
             UpdateFish(pocket!=null&&!held&&!diver.IsDead?pocket.SpeciesId:null);
             if(diver.IsDead)
@@ -157,8 +159,9 @@ namespace Raid
                 for(int i=0;i<2;i++){int s=i==0?-1:1;Pose(arms[i],-11,0,s*(22+idle*2),-17,0,81);Pose(legs[i],s*7,0,s*6,9,0,-6);}return;
             }
             float lean=Mathf.Lerp(diver.IsSprinting?9:1,Mathf.Lerp(32,71,stride),swimming);
-            body.localRotation=Quaternion.Euler(lean,0,beat*stride*(1-swimming)*2.5f);
-            body.localPosition=V(0,(1-swimming)*Mathf.Abs(beat)*.027f*stride+idle*.006f,0);
+            fall=Mathf.MoveTowards(fall,(RaidWorld.Instance?.GoshaKnocked(diver)??false)?1:0,dt*5.5f);
+            body.localRotation=Quaternion.Euler(lean-fall*79,0,fall*13+beat*stride*(1-swimming)*2.5f);
+            body.localPosition=V(0,-fall*.53f+(1-swimming)*Mathf.Abs(beat)*.027f*stride+idle*.006f,0);
             head.localRotation=Quaternion.Euler(Mathf.Clamp(diver.ViewPitch-lean*.68f,-48,46),0,0);
             for(int i=0;i<2;i++)
             {
@@ -168,7 +171,7 @@ namespace Raid
                 Pose(legs[i],thigh,0,s*4,knee,0,-knee*.48f+swimming*18);
                 float shoulder=cycle*stride*27,elbow=-18-Mathf.Max(0,cycle)*17*stride;
                 float roll=s*7,yaw=0,wrist=83;
-                if(held||helper)
+                if(held||helper||ball)
                 {
                     shoulder=helper?-73:-42;elbow=helper?-13:-51;roll=s*(helper?4:19);yaw=-s*12;
                 }

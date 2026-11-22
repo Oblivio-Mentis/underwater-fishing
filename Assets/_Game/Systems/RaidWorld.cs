@@ -65,6 +65,7 @@ namespace Raid
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];
             try { team=File.Exists(savePath)?TeamSave.Load(savePath):new TeamProgress(progression); }
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="SAVE ERROR: original preserved; progress is temporary"; Debug.LogError("[RAID Save] "+e.Message); }
+            StartGosha();
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
             Publish();
         }
@@ -78,9 +79,10 @@ namespace Raid
         }
         public override void OnStopServer()
         {
+            StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; }
+        public override void OnStopClient() { HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -113,6 +115,7 @@ namespace Raid
         {
             if(!IsServerInitialized || team==null) return;
             TickAirlock();
+            TickGosha();
             TickRouteClock();
             team.TickHoist(Time.fixedDeltaTime,progression);
             // A defense belongs to the deadline that just expired. The next feeding
@@ -148,6 +151,7 @@ namespace Raid
         }
         private void LateUpdate()
         {
+            PresentGosha();
             var state=IsServerInitialized?team:view;
             if(container==null || state==null) return;
             Vector3 destination=state.hoistPhase==HoistPhase.Raising || state.hoistPhase==HoistPhase.Unloading?tuning.terminalPosition:tuning.cargoPosition;
@@ -224,6 +228,7 @@ namespace Raid
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
+            ResetGosha();
             depth.Value=pendingDepth;
             for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(new Vector3((i-2)*1.5f,1.2f,1));
             foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(fish.depthTier==pendingDepth);

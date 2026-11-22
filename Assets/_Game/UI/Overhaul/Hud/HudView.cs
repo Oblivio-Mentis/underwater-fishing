@@ -130,6 +130,7 @@ namespace Raid.UI
             string prompt="",detail="";Color color=UiTheme.Text;
             var player=context.Player;var view=context.View;
             if(player.IsHelpless)prompt=UiText.HudWaitForRescue;
+            else if(context.World.HasGoshaBall(player))prompt=context.World.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing?"Гоша догоняет вас!":"ЛКМ — Бросить мяч";
             else if(UiRoot.Instance!=null && UiRoot.Instance.AimedPad!=null)
             {
                 var pad=UiRoot.Instance.AimedPad;
@@ -139,6 +140,8 @@ namespace Raid.UI
             }
             else switch(context.Interaction)
             {
+                case UiInteraction.PetGosha: prompt="E — Погладить Гошу";break;
+                case UiInteraction.PickUpBall: prompt="E — Взять мяч";break;
                 case UiInteraction.Rescue:
                     if(context.RescueTarget!=null){prompt=UiText.HudRescuePrompt(context.RescueTarget);detail=UiText.HudRescueDuration(player.tuning.rescueSeconds);}break;
                 case UiInteraction.Terminal:

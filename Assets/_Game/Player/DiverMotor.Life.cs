@@ -12,7 +12,7 @@ namespace Raid
         readonly SyncVar<int> interactionSequence = new();
         Rigidbody deathBody;
         Vector3 deathAnchor;
-        float deathAge, lastStationPress;
+        float deathAge, lastStationPress, goshaFall;
         Image deathShade;
         bool viewingDeath;
         public bool IsDead => _state.Value.Dead;
@@ -201,7 +201,13 @@ namespace Raid
                 _camera.transform.localPosition=Vector3.up*.6f;
                 viewingDeath=false;
             }
-            _camera.transform.rotation=Quaternion.Euler(_pitch,_yaw,0);
+            bool knocked=RaidWorld.Instance?.GoshaKnocked(this)??false;
+            if(knocked || goshaFall>0)
+            {
+                goshaFall=Mathf.MoveTowards(goshaFall,knocked?1:0,Time.deltaTime*5.5f);
+                _camera.transform.localPosition=Vector3.up*(.6f-.66f*goshaFall);
+            }
+            _camera.transform.rotation=Quaternion.Euler(_pitch,_yaw,goshaFall*11);
         }
     }
 }

@@ -1,0 +1,110 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace Raid.Nereid
+{
+    // The original Clicker's ring-built carapace, pale claws and eight walking legs.
+    // Geometry is client-side, with articulated limbs on the same body in sea and on deck.
+    internal sealed class GoshaView : MonoBehaviour
+    {
+        readonly List<Mesh> meshes=new();
+        readonly Transform[] legs=new Transform[8], feelers=new Transform[2];
+        Transform creature,body,ball;
+        Material shell;
+        bool presented;
+        Vector3 lastBall;
+        readonly Color rose=new(.49f,.21f,.42f),plates=new(.54f,.39f,.51f),ivory=new(.86f,.71f,.66f);
+        Transform Node(Transform parent,string label,Vector3 offset)
+        {var o=new GameObject(label).transform;o.SetParent(parent,false);o.localPosition=offset;return o;}
+        void MeshPart(Transform node,ReefGeometry source)
+        {
+            var mesh=source.Mesh(node.name);meshes.Add(mesh);
+            node.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+            node.gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
+        }
+        void Awake()
+        {
+            shell=new Material(Resources.Load<Shader>("NereidReef")){name="Gosha lacquer and woven ball"};
+            creature=Node(transform,"Гоша",Vector3.zero);
+            body=Node(creature,"Shieldback",Vector3.zero);body.localScale=Vector3.one*.24f;
+            var g=new ReefGeometry();
+            g.Tube(new[]{new Vector3(0,0,-1.52f),new(0,-.08f,-.94f),new(0,.03f,-.25f),new(0,.04f,.54f),new(0,-.17f,1.13f)},
+                new[]{.08f,.4f,.63f,.65f,.35f},rose,12,.7f);
+            for(int i=0;i<5;i++)
+            {
+                float z=-.88f+i*.35f,w=.42f+.19f*Mathf.Sin((i+1)*.56f);
+                g.Tube(new[]{new Vector3(0,.12f,z-.29f),new(0,.17f,z-.09f),new(0,.14f,z+.16f)},
+                    new[]{w*.71f,w,w*.93f},Color.Lerp(plates,ivory,.11f*i),12,.63f);
+            }
+            for(int j=0;j<2;j++)
+            {
+                int side=j==0?-1:1;
+                g.Tube(new[]{new Vector3(.4f*side,-.08f,.7f),new(.69f*side,-.24f,1.1f),new(.55f*side,-.28f,1.41f),new(.23f*side,-.18f,1.48f)},
+                    new[]{.24f,.17f,.105f,.014f},ivory,8,.62f);
+                g.Tube(new[]{new Vector3(.34f*side,.12f,.87f),new(.4f*side,.17f,1.03f),new(.39f*side,.17f,1.11f)},new[]{.07f,.115f,.05f},new Color(.059f,.029f,.083f),9);
+                g.Tube(new[]{new Vector3(.4f*side,.2f,1.095f),new(.4f*side,.208f,1.11f)},new[]{.036f,.025f},new Color(.96f,.82f,.56f),8);
+                var tip=new ReefGeometry();feelers[j]=Node(body,"Sensory filament",new Vector3(side*.32f,.05f,.9f));
+                tip.Tube(new[]{Vector3.zero,new(.26f*side,.29f,.35f),new(.66f*side,.41f,.64f),new(.95f*side,.34f,.8f)},new[]{.07f,.04f,.023f,.009f},ivory,6);
+                MeshPart(feelers[j],tip);
+                for(int i=0;i<4;i++)
+                {
+                    var leg=legs[j*4+i]=Node(body,"Walking leg",new Vector3(side*.43f,-.06f,.53f-i*.37f));
+                    var limb=new ReefGeometry();
+                    limb.Tube(new[]{Vector3.zero,new Vector3(side*.42f,-.22f,-.12f),new(side*.59f,-.57f,-.29f)},new[]{.125f,.085f,.024f},Color.Lerp(rose,ivory,.4f),7);
+                    MeshPart(leg,limb);
+                }
+            }
+            MeshPart(body,g);
+            ball=Node(transform,"Мяч Гоши",Vector3.zero);
+            var ropeBall=new ReefGeometry();
+            const int rows=12,cols=20;
+            for(int j=0;j<=rows;j++)for(int i=0;i<cols;i++)
+            {
+                float angle=(i+(j%2)*.18f)*Mathf.PI*2/cols,lat=Mathf.PI*j/rows;
+                var normal=new Vector3(Mathf.Sin(lat)*Mathf.Cos(angle),Mathf.Cos(lat),Mathf.Sin(lat)*Mathf.Sin(angle));
+                var color=j==3||j==9?new Color(.96f,.86f,.55f):j==4||j==8?new Color(.06f,.33f,.38f):new Color(1,.32f,.085f);
+                ropeBall.Add(normal*(i%5==0?.142f:.146f),color);
+                if(j>0){int a=(j-1)*cols+i,b=(j-1)*cols+(i+1)%cols;ropeBall.Quad(a,b,b+cols,a+cols);}
+            }
+            MeshPart(ball,ropeBall);
+        }
+        public void Show(GoshaSnapshot s)
+        {
+            float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
+            creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);
+            Vector3 at=s.Position;var dir=s.Heading;
+            var ui=UI.UiRoot.Instance;
+            if(s.Mode==GoshaMode.Riding && ui!=null)
+                foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)
+                    {at=d.transform.TransformPoint(new Vector3(.23f,.37f,-.22f));dir=d.transform.forward;break;}
+            creature.position=!presented||s.Mode==GoshaMode.Riding?at:Vector3.Lerp(creature.position,at,blend);
+            if(dir.sqrMagnitude>.01f)creature.rotation=Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
+            bool happy=s.Mode==GoshaMode.Petted,swim=s.Mode==GoshaMode.Swimming;
+            bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
+            float phase=t*(happy?13:idle?2:swim?6:10);
+            body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
+            body.localRotation=Quaternion.Euler(happy?-12:swim?5*Mathf.Sin(phase*.6f):0,0,(happy?10:2)*Mathf.Sin(phase));
+            for(int i=0;i<legs.Length;i++)
+            {
+                float cycle=Mathf.Sin(phase+i*1.72f);int sign=i<4?-1:1;
+                legs[i].localRotation=Quaternion.Euler((idle?4:16)*cycle,sign*(swim?19:8)*cycle,sign*(idle?3:11)*Mathf.Max(0,-cycle));
+            }
+            for(int j=0;j<2;j++)feelers[j].localRotation=Quaternion.Euler((happy?-26:0)+Mathf.Sin(phase*.73f+j)*8,(j==0?-1:1)*Mathf.Cos(phase*.7f)*8,0);
+            var ballAt=s.BallPosition;bool localHand=false;
+            if(s.Ball==GoshaBallMode.Held && ui!=null && ui.Context.Player!=null && ui.Context.Player.OwnerId==s.Holder)
+            {
+                var cam=ui.Context.Player.GetComponentInChildren<Camera>();
+                if(cam!=null){ballAt=cam.transform.TransformPoint(new Vector3(.11f,-.205f,.48f));localHand=true;}
+            }
+            if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(new Vector3(0,-.02f,1.31f));
+            ball.position=localHand?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
+            if(presented && (s.Ball==GoshaBallMode.Deck || s.Ball==GoshaBallMode.Flying))
+            {
+                var delta=ball.position-lastBall;Vector3 axis=Vector3.Cross(Vector3.up,delta);
+                if(axis.sqrMagnitude>.000001f)ball.Rotate(axis.normalized,Mathf.Min(delta.magnitude/.145f*Mathf.Rad2Deg,60),Space.World);
+            }
+            lastBall=ball.position;presented=true;
+        }
+        void OnDestroy(){if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
+    }
+}

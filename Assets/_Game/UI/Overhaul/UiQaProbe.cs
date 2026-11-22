@@ -24,6 +24,7 @@ namespace Raid.UI
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
             public float health,hypoxia,airlockWater,innerDoor,outerDoor;
             public string airlockPhase,reticleControl;
+            public GoshaSnapshot gosha;
             public int watchedOwner=-1,depthTier;
             public string request,page,error,cursor,worldMessage,scene;
             public bool connected,pending,inputBlocked,lastSuccess,wave;
@@ -244,6 +245,13 @@ namespace Raid.UI
                 if(tool==null||!tool.IsOwner)throw new InvalidOperationException("Owned player is not connected");
                 tool.CancelFriendTether();return;
             }
+            if(r.action=="gosha_pet" || r.action=="gosha_pickup" || r.action=="gosha_throw")
+            {
+                var player=UiRoot.Instance.Context.Player;var world=RaidWorld.Instance;
+                if(player==null || !player.IsOwner || world==null)throw new InvalidOperationException("Owned player required");
+                world.RequestGosha(r.action=="gosha_pet"?GoshaAction.Pet:r.action=="gosha_throw"?GoshaAction.Throw:GoshaAction.PickUp);
+                return;
+            }
             if(r.action=="capture")
             {
                 string leaf=Path.GetFileName(string.IsNullOrEmpty(r.value)?r.name:r.value);
@@ -281,7 +289,7 @@ namespace Raid.UI
             if(r.action!="snapshot")throw new InvalidOperationException("Unsupported UI-only QA action");
         }
         // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
-        internal static void CapturePeerCamera(string path)
+        public static void CapturePeerCamera(string path)
         {
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)
                 throw new InvalidOperationException("A graphics device is required for a peer camera capture");
@@ -364,7 +372,7 @@ namespace Raid.UI
             }
             if(world!=null)
             {
-                snapshot.fishRoute=world.FishRoute;
+                snapshot.fishRoute=world.FishRoute;snapshot.gosha=world.Gosha;
                 var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
                 if(player!=null)
                 {

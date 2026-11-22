@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 namespace Raid.UI
 {
-    public enum UiInteraction { None, Rescue, Terminal, Cargo, Loot, Assist, Fish }
+    public enum UiInteraction { None, Rescue, Terminal, Cargo, Loot, Assist, Fish, PetGosha, PickUpBall }
     // Reads spawned client state; never mutates TeamProgress or server SyncVars.
     public sealed class UiContext
     {
@@ -49,6 +49,8 @@ namespace Raid.UI
             foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
+            var petUse=World.GoshaContext(Player,Player.transform.position+Vector3.up*.6f,Player.transform.forward);
+            if(petUse.HasValue){Interaction=petUse==GoshaAction.Pet?UiInteraction.PetGosha:UiInteraction.PickUpBall;return;}
             AimedConsole=ShipConsole.ResolveSight(Player,Player.GetComponentInChildren<Camera>());
             if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}
             if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}

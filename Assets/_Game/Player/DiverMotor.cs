@@ -227,7 +227,7 @@ namespace Raid
             if (!IsServerInitialized) return;
             DiverState state = _state.Value;
             if(state.Dead){AdvanceDeath(state);return;}
-            bool active = Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
+            bool active = !(RaidWorld.Instance?.GoshaKnocked(this)??false) && Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
             Vector3 axes = active && !IsHelpless && !IsTrapped ? _serverInput : Vector3.zero;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
             bool walking=UsesIndoorWalking(transform.position);

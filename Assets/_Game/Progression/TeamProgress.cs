@@ -33,6 +33,7 @@ namespace Raid
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
         public int reelLevel, finsLevel, tankLevel, hullLevel, winchLevel;
+        public bool goshaMet,goshaTamed;
         public int highestDepth = 1;
         public int offering;
         public float hungerRemaining = 180f;

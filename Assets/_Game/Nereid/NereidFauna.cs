@@ -9,12 +9,11 @@ namespace Raid.Nereid
         static readonly Color Armour=new(.19f,.25f,.229f),Soft=new(.152f,.079f,.119f),Pale=new(.66f,.66f,.46f),Dark=new(.061f,.104f,.137f);
         readonly List<Object> owned=new();
         Material skin,luminous,mud;
-        Transform clicker,clamShell,eel,kraken,warning,lure,shadow;
+        Transform clamShell,eel,kraken,warning,lure,shadow;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
         float lureDisplay;
         ParticleSystem silt;
-        Vector3 lastClicker;
         byte previousKraken;
         bool first;
 
@@ -23,7 +22,7 @@ namespace Raid.Nereid
             skin=Material("NereidReef","Reef fauna");luminous=Material("NereidReef","Photophores");
             skin.SetFloat("_Hide",1);luminous.SetFloat("_Glow",1.35f);
             mud=Material("NereidSilt","Silt bloom");
-            MakeClicker();MakeClam();MakeEel();MakeKraken();MakeLure(angler);
+            MakeClam();MakeEel();MakeKraken();MakeLure(angler);
             first=true;
         }
 
@@ -43,35 +42,6 @@ namespace Raid.Nereid
             piece.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
             piece.gameObject.AddComponent<MeshRenderer>().sharedMaterial=material;
             return piece;
-        }
-
-        void MakeClicker()
-        {
-            clicker=Node(transform,"Щелкун",Vector3.zero);
-            var g=new ReefGeometry();
-            g.Tube(new[]{new Vector3(0,0,-1.52f),new(0,-.08f,-.94f),new(0,.03f,-.25f),new(0,.04f,.54f),new(0,-.17f,1.13f)},
-                new[]{.08f,.4f,.63f,.65f,.35f},Soft,11,.7f);
-            for(int i=0;i<5;i++)
-            {
-                float z=-.88f+i*.35f,w=.42f+.19f*Mathf.Sin((i+1)*.56f);
-                g.Tube(new[]{new Vector3(0,.12f,z-.29f),new(0,.17f,z-.09f),new(0,.14f,z+.16f)},
-                    new[]{w*.71f,w,w*.93f},Armour*(.9f+.032f*i),10,.63f);
-            }
-            for(int side=-1;side<=1;side+=2)
-            {
-                float s=side;
-                g.Tube(new[]{new Vector3(.4f*s,-.08f,.7f),new(.69f*s,-.24f,1.1f),new(.55f*s,-.28f,1.41f),new(.23f*s,-.18f,1.48f)},
-                    new[]{.24f,.17f,.105f,.014f},Pale,8,.62f);
-                g.Tube(new[]{new Vector3(.32f*s,.05f,.9f),new(.58f*s,.34f,1.25f),new(.98f*s,.46f,1.54f),new(1.27f*s,.39f,1.7f)},
-                    new[]{.07f,.04f,.022f,.008f},Pale,6);
-                for(int leg=0;leg<4;leg++)
-                {
-                    float z=.53f-leg*.37f;
-                    g.Tube(new[]{new Vector3(s*.43f,-.06f,z),new(s*.85f,-.28f,z-.12f),new(s*1.02f,-.63f,z-.29f)},
-                        new[]{.125f,.085f,.024f},Armour,6);
-                }
-            }
-            Part(clicker,"Overlapping blind carapace and antennae",g,skin);
         }
 
         void MakeClam()
@@ -177,11 +147,7 @@ namespace Raid.Nereid
         public void Present(ThreatDirector.ReefSnapshot state)
         {
             float t=Time.time,blend=first?1:1-Mathf.Exp(-Time.deltaTime*9);
-            var motion=state.ClickerHeading.sqrMagnitude>.1f?state.ClickerHeading:state.Clicker-lastClicker;
             var angler=ThreatDirector.Instance.AnglerStage;
-            clicker.position=Vector3.Lerp(clicker.position,state.Clicker,blend);
-            if(motion.sqrMagnitude>.001f)clicker.rotation=Quaternion.Slerp(clicker.rotation,Quaternion.LookRotation(motion),blend);
-            lastClicker=state.Clicker;
             clamShell.localRotation=Quaternion.Slerp(clamShell.localRotation,Quaternion.Euler(state.ClamClosed?-1:-34+2*Mathf.Sin(t*.85f),0,0),1-Mathf.Exp(-Time.deltaTime*10));
             eel.gameObject.SetActive(state.Deep);kraken.gameObject.SetActive(state.Deep);
             if(state.Deep)

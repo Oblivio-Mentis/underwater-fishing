@@ -237,6 +237,12 @@ namespace Raid.UI
             var player=Context.Player;
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
+            if(Context.World.HasGoshaBall(player))
+            {
+                UiInputGate.PointerReserved=true;
+                if(clicked && allowed)Context.World.RequestGosha(GoshaAction.Throw);
+                return clicked;
+            }
             var station=ShipConsole.ResolveSight(player,cam);
             if(station!=dismissedConsole)dismissedConsole=null;
             if(computerSurface && station!=Context.SelectedConsole)
@@ -287,6 +293,8 @@ namespace Raid.UI
                     if(Context.View.hoistPhase!=HoistPhase.Loading)Toast(UiText.CargoLocked);
                     else if(Context.HasCargo && Context.View.CargoUsed+Context.CarriedSize<=Context.View.Capacity(Context.Tuning))Send(WorldAction.LoadCargo);
                     ShowPage(UiPage.Cargo);break;
+                case UiInteraction.PetGosha: Context.World.RequestGosha(GoshaAction.Pet);break;
+                case UiInteraction.PickUpBall: Context.World.RequestGosha(GoshaAction.PickUp);break;
                 case UiInteraction.Loot: Send(WorldAction.Collect); break;
             }
         }

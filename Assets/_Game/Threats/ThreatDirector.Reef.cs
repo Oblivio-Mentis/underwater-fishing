@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using FishNet.Object.Synchronizing;
 using Raid.Nereid;
 using UnityEngine;
@@ -11,35 +10,24 @@ namespace Raid
         public struct ReefSnapshot
         {
             public bool Active,Deep,ClamClosed;
-            public Vector3 Clicker,ClickerHeading,Eel,EelHeading,Sweep;
-            public HuntStage ClickerStage;
+            public Vector3 Eel,EelHeading,Sweep;
             public byte EelPhase,KrakenPhase;
         }
-        static readonly Vector3 ClickerHome=new(36,-11,-37),EelHome=new(41,-9,-29);
+        static readonly Vector3 EelHome=new(41,-9,-29);
         public static readonly Vector3 ClamBed=new(29,-15.9f,-33),Rift=new(48,-14,-50);
         readonly SyncVar<ReefSnapshot> reefState=new();
         public ReefSnapshot Reef => reefState.Value;
         const float ThinkPeriod=.12f;
-        float nextThink,clickerCooldown,eelCooldown,eelDelay,krakenCharge,krakenClock,anglerClock;
-        Vector3 clickerGoal,eelDecoy;
+        float nextThink,eelCooldown,eelDelay,krakenCharge,krakenClock,anglerClock;
+        Vector3 eelDecoy;
         DiverMotor clampedDiver,eelTarget,anglerTarget;
-        float clickerWarn;
         float clamCooldown;
         NereidFauna reefView;
-        sealed class Hearing
-        {
-            public Vector3 lastPosition,noiseAt;
-            public float noiseLeft,lastSpeed;
-            public bool hadCargo;
-        }
-        readonly Dictionary<DiverMotor,Hearing> sounds=new();
-        readonly List<DiverMotor> staleSounds=new();
-
         void ResetReef()
         {
-            reefState.Value=new ReefSnapshot{Clicker=ClickerHome,Eel=EelHome,EelHeading=Vector3.forward};
-            sounds.Clear();clampedDiver=null;eelTarget=null;anglerTarget=null;clickerWarn=0;
-            clickerGoal=ClickerHome;nextThink=clickerCooldown=eelCooldown=eelDelay=anglerClock=clamCooldown=krakenClock=krakenCharge=0;
+            reefState.Value=new ReefSnapshot{Eel=EelHome,EelHeading=Vector3.forward};
+            clampedDiver=null;eelTarget=null;anglerTarget=null;
+            nextThink=eelCooldown=eelDelay=anglerClock=clamCooldown=krakenClock=krakenCharge=0;
         }
 
         void TickReef(ref ThreatSnapshot main,float delta)
@@ -57,52 +45,6 @@ namespace Raid
             reef.Active=true;reef.Deep=depthTier>1;
             bool winch=w.Team.hoistPhase==HoistPhase.Raising || w.Team.hoistPhase==HoistPhase.Returning;
             bool movingWinch=winch&&w.container!=null;
-            Vector3 noise=movingWinch?w.container.position:ClickerHome;
-            float best=movingWinch?27:0;
-            DiverMotor noisy=null;
-            foreach(var diver in DiverMotor.ServerDivers)
-            {
-                if(!CanHunt(diver))continue;
-                if(!sounds.TryGetValue(diver,out var sound))
-                {
-                    sound=new Hearing{lastPosition=diver.transform.position};
-                    sounds.Add(diver,sound);
-                }
-                var pos=diver.transform.position;
-                float speed=Vector3.Distance(sound.lastPosition,pos)/dt;
-                var tool=diver.GetComponent<HarpoonTool>();
-                bool struggle=tool!=null&&tool.HookedFish!=null&&tool.Reeling;
-                bool cargo=tool!=null&&tool.CarriedFish!=null;
-                bool drop=sound.hadCargo&&!cargo;
-                if(struggle || drop || speed>4.7f || (speed>2.8f && speed-sound.lastSpeed>2.2f))
-                {
-                    sound.noiseLeft=drop?5f:2.6f;
-                    sound.noiseAt=pos;
-                }
-                sound.lastSpeed=speed;sound.lastPosition=pos;sound.hadCargo=cargo;
-                sound.noiseLeft-=dt;
-                float intensity=32-Vector3.Distance(sound.noiseAt,reef.Clicker)+(struggle?6:0);
-                if(sound.noiseLeft>0 && intensity>best){best=intensity;noise=sound.noiseAt;noisy=diver;}
-            }
-            staleSounds.Clear();
-            foreach(var entry in sounds)if(!CanHunt(entry.Key))staleSounds.Add(entry.Key);
-            foreach(var diver in staleSounds)sounds.Remove(diver);
-            clickerCooldown-=dt;
-            clickerGoal=best>0?noise:ClickerHome+new Vector3(Mathf.Sin(Time.time*.14f)*2.4f,0,Mathf.Cos(Time.time*.14f)*2.4f);
-            if(clickerCooldown<=0)
-            {
-                if(best<=0)reef.ClickerStage=HuntStage.Watching;
-                else if(reef.ClickerStage is HuntStage.Watching or HuntStage.Recovery)
-                {reef.ClickerStage=HuntStage.Display;clickerWarn=.66f;}
-                else if(reef.ClickerStage==HuntStage.Display && (clickerWarn-=dt)<=0)reef.ClickerStage=HuntStage.Pursuit;
-                var aim=clickerGoal-reef.Clicker;
-                if(aim.sqrMagnitude>.05f)reef.ClickerHeading=aim.normalized;
-                float pace=reef.ClickerStage==HuntStage.Display?.16f:best>0?4.25f:1.15f;
-                reef.Clicker=Swim(reef.Clicker,clickerGoal,pace*dt,noisy);
-                if(reef.ClickerStage==HuntStage.Pursuit && noisy!=null && Vector3.Distance(noisy.transform.position,reef.Clicker)<1.8f && ClearTo(reef.Clicker,noisy))
-                {noisy.DamageOxygen(14);clickerCooldown=4;reef.ClickerStage=HuntStage.Recovery;main.Message="Щелкун ударил по источнику шума.";}
-            }
-
             clamCooldown-=dt;
             if(clampedDiver!=null)
             {
@@ -183,7 +125,6 @@ namespace Raid
             float nearest=main.WaveActive?Vector3.Distance(eye,main.WavePosition):float.PositiveInfinity;
             if(r.Active)
             {
-                nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Clicker));
                 if(main.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,main.PredatorPosition));
                 if(r.Deep)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel));
                 if(r.KrakenPhase!=0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Sweep));
@@ -261,7 +202,6 @@ namespace Raid
         {
             var reef=reefState.Value;
             if(!reef.Active)return false;
-            if(Hits(origin,direction,reef.Clicker)){clickerCooldown=4.5f;return true;}
             if(reef.Deep&&Hits(origin,direction,reef.Eel)){eelTarget=null;eelDecoy=EelHome;eelCooldown=6;reef.EelPhase=3;reefState.Value=reef;return true;}
             return false;
         }

@@ -77,8 +77,9 @@ namespace Raid
             float stow=Mathf.Sin(Mathf.Clamp01(switchTime/.34f)*Mathf.PI);
             float push=Mathf.Pow(Mathf.Max(0,Mathf.Sin(press/.46f*Mathf.PI)),.7f);
             bool grip=equipment.AssistTarget!=null;
-            bool ranged=displaySlot==0 && !displayedHeavy && !grip;
-            var caught=displayedHeavy?equipment.CarriedFish:displaySlot>=2?equipment.FishInSlot(displaySlot):null;
+            bool ball=RaidWorld.Instance?.HasGoshaBall(actor)??false;
+            bool ranged=!ball && displaySlot==0 && !displayedHeavy && !grip;
+            var caught=ball?null:displayedHeavy?equipment.CarriedFish:displaySlot>=2?equipment.FishInSlot(displaySlot):null;
             UpdateFish(caught!=null?caught.SpeciesId:null);
             stride.Advance(actor,Time.deltaTime);
             float freedom=(1f-aim)*(1f-push);
@@ -105,7 +106,7 @@ namespace Raid
                     wrist=gun.localPosition+gun.localRotation*socket;
                     angles=(gun.localRotation*Quaternion.Euler(-14,28,50)).eulerAngles;
                 }
-                else if(caught!=null)
+                else if(caught!=null || ball)
                 {
                     float spread=displayedHeavy?.214f:.108f;
                     wrist=fishPos+new Vector3(s*spread,-(displayedHeavy?.044f:.034f),-.048f);

@@ -124,12 +124,6 @@ namespace Raid.Nereid.Editor
             yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
             yield return Wait("Angler pursues after its warning",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
             yield return Wait("Angler ambush removes oxygen",()=>diver.Oxygen<=health-10 && threats.Message.Contains("Фонарник"));
-            Place(threats.Reef.Clicker+Vector3.right*5.8f);
-            yield return Pause(.3f);
-            health=diver.Oxygen;
-            Place(threats.Reef.Clicker+Vector3.right*.75f);
-            yield return Wait("Clicker strikes a sudden acceleration",()=>diver.Oxygen<=health-10 && threats.Message.Contains("Щелкун"));
-
             Place(ThreatDirector.ClamBed+Vector3.up*.21f);
             yield return Wait("Bottom trap closes and holds",()=>diver.IsTrapped&&threats.Reef.ClamClosed);
             diver.Rescue();

@@ -61,7 +61,7 @@ namespace Raid
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
-        public bool HarpoonInHands => ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
+        public bool HarpoonInHands => !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
@@ -209,6 +209,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
+            if ((RaidWorld.Instance?.HasGoshaBall(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
             if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
