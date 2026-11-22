@@ -60,7 +60,7 @@ namespace Raid.Nereid
                 {
                     catwalk.Add(Light, new Vector3(side * 2.7f, 3.72f, z), new Vector3(1.10f, .15f, .39f), Quaternion.identity);
                     catwalk.Add(Cable, new Vector3(side * 5.76f, 3.94f, z), new Vector3(.29f, .94f, 3.20f),
-                        Quaternion.Euler(0, side > 0 ? 180 : 0, 0));
+                        Quaternion.Euler(0, side < 0 ? 180 : 0, 0));
                 }
                 catwalk.Build();
             }
@@ -70,7 +70,7 @@ namespace Raid.Nereid
         void FitAftHall(Transform hull)
         {
             var bulkhead = new Bay(this, transform, "Aft workshop service bulkhead");
-            bulkhead.Add(Cable, new Vector3(-3.56f, 2.70f, -15.90f), new Vector3(.31f, .83f, 3.28f), Quaternion.Euler(0, -90, 0));
+            bulkhead.Add(Cable, new Vector3(-3.56f, 2.70f, -15.90f), new Vector3(.31f, .83f, 3.28f), Quaternion.Euler(0, 90, 0));
             bulkhead.Add(Vent, new Vector3(3.8f, 1.76f, -15.90f), new Vector3(2.3f, .15f, .65f), Quaternion.Euler(90, 0, 0));
             bulkhead.Add("Details_Plate_Details", new Vector3(3.77f, 2.38f, -15.89f),
                 new Vector3(.93f, .79f, .10f), Quaternion.identity);
@@ -123,8 +123,8 @@ namespace Raid.Nereid
                 if (bay.Add(Light, new Vector3(x, 3.91f, 0), new Vector3(1.47f, .12f, .28f), Quaternion.Euler(0, 90, 0)))
                     HideChamberSkin(chamber, "Inspection light", x);
             }
-            bay.Add("RoofTile_Pipes1", new Vector3(4.22f, 4.03f, -1.68f), new Vector3(2.43f, .23f, 2.32f), Quaternion.identity);
-            bay.Add(Cable, new Vector3(3.95f, 3.57f, -3.02f), new Vector3(.23f, .67f, 4.6f), Quaternion.Euler(0, -90, 0));
+            bay.Add("RoofTile_Pipes1", new Vector3(4.22f, 4.03f, -1.68f), new Vector3(2.43f, .23f, 2.32f), Quaternion.Euler(180, 0, 0));
+            bay.Add(Cable, new Vector3(3.95f, 3.57f, -3.02f), new Vector3(.23f, .67f, 4.6f), Quaternion.Euler(0, 90, 0));
             bay.Build();
         }
 
