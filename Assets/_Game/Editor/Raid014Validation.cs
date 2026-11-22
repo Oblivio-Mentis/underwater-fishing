@@ -81,6 +81,14 @@ namespace Raid.Editor
             }
             catch (Exception e)
             {
+                var t = ThreatDirector.Instance;
+                if (t != null && t.IsServerInitialized)
+                {
+                    observations.Add($"Wave active={t.WaveActive}, position={t.WavePosition}, health={t.WaveHealth}, lock={RaidWorld.Instance.Airlock.Phase}");
+                    var near = Physics.OverlapSphere(t.WavePosition, 1, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                        .Where(c => !c.transform.IsChildOf(t.transform)).Select(c => c.name);
+                    observations.Add("Nearby physical surfaces: " + string.Join(", ",near));
+                }
                 observations.Add("FAILED " + e);
                 File.WriteAllLines(Path.Combine(Output, "air-defense.txt"), observations);
                 Debug.LogException(e);
@@ -114,6 +122,21 @@ namespace Raid.Editor
             SetLock(a);
             d.Teleport(chamber.transform.TransformPoint(new Vector3(4, 1, 0)));
             await Awaitable.WaitForSecondsAsync(.4f);
+            // The zero-window control reproduces the previous build's wet-tick rule at this position.
+            float limit = d.tuning.airlockBreathingWindow;
+            d.tuning.airlockBreathingWindow = 0;
+            float controlStart = d.Oxygen;
+            try
+            {
+                a.Request(true); SetLock(a);
+                await Until(() => w.Airlock.Phase == AirlockPhase.OpeningOuter, "control departure", 35);
+                float debit = controlStart - d.Oxygen;
+                Check(debit > 1, $"Zero-window departure spent {debit:F2} O2 before the opening");
+            }
+            finally { d.tuning.airlockBreathingWindow = limit; }
+            a = AirlockSnapshot.Dry;
+            SetLock(a);
+            await Awaitable.WaitForSecondsAsync(.6f);
             float initial = d.Oxygen;
             a.Request(true); SetLock(a);
             await Until(() => !d.IsInside && w.Airlock.Phase == AirlockPhase.Flooding, "helmet submerged");
@@ -136,10 +159,14 @@ namespace Raid.Editor
             SetLock(AirlockSnapshot.Dry); w.enabled=true;
 
             var t = ThreatDirector.Instance;
+            // Extend just this wave so two real pressure cycles and peer capture fit the same trial.
+            t.tuning = UnityEngine.Object.Instantiate(t.tuning);
+            t.tuning.waveSeconds = 100;
             t.StartWave(1,1);
             var origin = t.WavePosition;
             var gate = chamber.GetPad(2).transform.position;
-            await Until(() => Vector3.Distance(t.WavePosition,origin)>4,"raider approach");
+            await Awaitable.WaitForSecondsAsync(5);
+            observations.Add($"Approach {origin} -> {t.WavePosition}, outer control {gate}, active={t.WaveActive}");
             await Awaitable.WaitForSecondsAsync(5);
             var stopped = t.WavePosition;
             await Awaitable.WaitForSecondsAsync(.6f);
@@ -166,6 +193,18 @@ namespace Raid.Editor
             Capture(d,"raider-door.png");
             if (DiverMotor.ServerDivers.Count == 2)
                 await RemoteShot(d,t,aimPoint,stopped);
+            int attacks = 0;
+            t.StockAttacked += _ => attacks++;
+            a = w.Airlock; a.Request(true); SetLock(a);
+            await Until(() => chamber.Contains(t.WavePosition) && w.Airlock.Phase == AirlockPhase.OuterOpen,
+                "raider enters through open outer door", 40);
+            await Awaitable.WaitForSecondsAsync(4);
+            Check(t.WavePosition.x > chamber.transform.position.x && attacks == 0,
+                $"Inner door holds the raider at {t.WavePosition}");
+            a = w.Airlock; a.Request(false); SetLock(a);
+            await Until(() => attacks > 0, "reachable reservoir attacked through cycled gates", 50);
+            Check(!chamber.Contains(t.WavePosition) && Vector3.Distance(t.WavePosition, t.tuning.reservoirPoint) < 5,
+                $"Physical contact at the tank: {t.WavePosition}");
         }
 
         static async Awaitable RemoteShot(DiverMotor host, ThreatDirector t, Vector3 point, Vector3 stopped)
