@@ -50,7 +50,7 @@ namespace Raid
             return true;
         }
 
-        IEnumerable<string> LandingOwners(HarpoonTool winner)
+        IEnumerable<string> LandingOwners(HarpoonTool winner, bool tired)
         {
             var world=RaidWorld.Instance;
             yield return world.ProgressKey(winner.Motor);
@@ -59,8 +59,7 @@ namespace Raid
             foreach(var line in lines)if(line.Tool==winner){primary=line;break;}
             if(primary==null)yield break;
             foreach(var line in lines)
-                if(line!=primary && line.Working && line.Tension<1 && line.Spool.WindingTime>=tuning.minimumWindingSeconds &&
-                    Vector3.Dot(line.PullDirection,primary.PullDirection)>=tuning.pullDirectionDot)
+                if(line!=primary && ReadyForLanding(line,primary,tired))
                     yield return world.ProgressKey(line.Tool.Motor);
         }
 
@@ -140,26 +139,41 @@ namespace Raid
             }
         }
 
-        bool CanTakeInHand(HookLine line, bool tired)
+        bool ReadyForLanding(HookLine line, HookLine leader, bool tired)
         {
-            float reach = tuning.captureRange;
-            float winding = tuning.minimumWindingSeconds;
-            if (line.Spool.AtHand(line.Distance, reach, winding)) return true;
-            if (!tired || !RequiresPartner) return false;
+            // For heavy fish, winding time only accrues while two lines genuinely
+            // pull together. A line may go slack when the exhausted fish reaches a hand.
+            if (!line.Tool.Reeling || line.BlockedTime > 0 || line.Tension >= 1 ||
+                line.Spool.WindingTime < tuning.minimumWindingSeconds) return false;
+            return tired || (line.Working && Vector3.Dot(line.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot);
+        }
 
-            // A diver alongside a tired large fish can grab its body even if the
-            // harpoon landed on the far flank. Count the cable running across the body.
-            Vector3 hand = line.Tool.HandAnchor;
+        bool GripTiredFish()
+        {
+            foreach (var candidate in lines)
+            {
+                if (!ReadyForLanding(candidate, candidate, true) || !WithinHandReach(candidate.Tool.HandAnchor)) continue;
+                foreach (var support in lines)
+                {
+                    if (support == candidate || !ReadyForLanding(support, candidate, true)) continue;
+                    landingTool = candidate.Tool;
+                    DesiredState = FishMode.Captured;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool WithinHandReach(Vector3 hand)
+        {
             Vector3 toFish = transform.position - hand;
-            if (toFish.sqrMagnitude < .0001f) return false;
-            Vector3 contact = hand - line.TowardHand;
+            if (toFish.sqrMagnitude <= .25f * tuning.captureRange * tuning.captureRange)
+                return !SolidAhead(hand, transform.position);
+            // A mesh ray can grab a near flank when the harpoon itself is on the far side.
             var approach = new Ray(hand, toFish.normalized);
             foreach (var surface in _colliders)
-            {
-                if (!surface.Raycast(approach, out var grip, reach) || SolidAhead(hand, grip.point)) continue;
-                float lengthAlongBody = Vector3.Distance(grip.point, contact);
-                if (line.Spool.AtHand(line.Distance, reach + lengthAlongBody, winding)) return true;
-            }
+                if (surface.Raycast(approach, out var grip, tuning.captureRange) && !SolidAhead(hand, grip.point))
+                    return true;
             return false;
         }
 
@@ -169,6 +183,7 @@ namespace Raid
             state.HookCount = lines.Count;
             state.Coordinated = false;
             if (lines.Count == 0) { DesiredState = FishMode.Escaped; return; }
+            if (tired && RequiresPartner && lines.Count >= 2 && GripTiredFish()) return;
             fightClock += dt;
             float period = Mathf.Max(tuning.warningSeconds + tuning.burstDuration + .1f, tuning.burstPeriod);
             float untilSurge = period - Mathf.Repeat(fightClock, period);
@@ -231,11 +246,10 @@ namespace Raid
                 state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * dt * (leader.Paired ? 1 + tuning.assistBonus : 1));
                 bool partnerReady = !RequiresPartner;
                 foreach (var other in lines)
-                    if (other != leader && other.Working && other.Tension < 1 && other.Spool.WindingTime >= tuning.minimumWindingSeconds
-                        && Vector3.Dot(other.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot)
+                    if (other != leader && ReadyForLanding(other, leader, false))
                         partnerReady = true;
                 if (leader.Tension < 1 && partnerReady && (RequiresPartner || !leader.Tool.HasFullCreel)
-                    && CanTakeInHand(leader, tired))
+                    && leader.Spool.AtHand(leader.Distance, tuning.captureRange, tuning.minimumWindingSeconds))
                 {
                     landingTool = leader.Tool;
                     DesiredState = FishMode.Captured;

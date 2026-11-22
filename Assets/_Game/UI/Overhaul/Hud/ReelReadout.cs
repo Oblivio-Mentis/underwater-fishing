@@ -86,6 +86,7 @@ namespace Raid.UI
             string action = t>=.82f ? "Отпустите ЛКМ · леска натянута"
                 : fish.Surging ? "Рывок · следите за леской" : fish.SurgeWarning ? "Рыба готовится к рывку"
                 : fish.RequiresPartner && fish.HookCount < 2 ? "Нужно два гарпуна"
+                : fish.RequiresPartner && fish.Mode == FishMode.Tired ? "Подплывите к рыбе, удерживая ЛКМ"
                 : fish.RequiresPartner && !fish.Coordinated ? "Тяните в одну сторону"
                 : fish.Mode == FishMode.Tired ? "Рыба устала · ЛКМ — тянуть"
                 : fish.Coordinated ? "Тянете вместе" : "ЛКМ — сматывать";

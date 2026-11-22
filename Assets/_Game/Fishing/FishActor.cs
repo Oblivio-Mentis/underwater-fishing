@@ -197,13 +197,14 @@ namespace Raid
             _elapsed = 0f;
             DesiredState = mode;
             var state = _snapshot.Value;
+            bool exhausted=state.Mode==FishMode.Tired;
             state.Mode = mode;
             if (mode == FishMode.Captured)
             {
                 // The collecting diver is chosen by the server when its own line reaches its hands.
                 _carrier = landingTool;
                 if(_carrier!=null && RaidWorld.Instance!=null)
-                    RaidWorld.Instance.RecordCatch(_cargoId,LandingOwners(_carrier));
+                    RaidWorld.Instance.RecordCatch(_cargoId,LandingOwners(_carrier,exhausted));
                 state.CaptureId = _cargoId;
                 state.Holder = _carrier != null ? _carrier.OwnerId : -1;
                 state.Stowed = _carrier != null && _carrier.StowCapture(this);
