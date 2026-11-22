@@ -72,7 +72,7 @@ namespace Raid
                 catch (Exception error)
                 {
                     result.status = "failed";
-                    result.error = error.Message;
+                    result.error = error.ToString();
                     break;
                 }
                 yield return instruction;
@@ -92,7 +92,8 @@ namespace Raid
         private IEnumerator Run()
         {
             Phase("Connect host and independent client");
-            yield return Wait(() => RaidWorld.Instance != null && RaidWorld.Instance.IsServerInitialized
+            yield return Wait(() => UiRoot.Instance?.Context.Player != null && RaidWorld.Instance != null
+                && RaidWorld.Instance.NetworkObject != null && RaidWorld.Instance.IsServerInitialized
                 && DiverMotor.ServerDivers.Count(d=>d!=null && d.IsServerInitialized)==2 && !UiInputGate.Blocked
                 && File.Exists(Path.Combine(clientDir,"state.json")),120,"Two independent connected peers did not arrive.");
             world = RaidWorld.Instance;
@@ -104,10 +105,12 @@ namespace Raid
             result.host = host.OwnerId;
             result.client = helper.OwnerId;
             var hello = Send("snapshot", 0);
-            yield return Wait(() => ReadClient()?.request == hello, 12, "Remote development probe did not acknowledge this trial.");
-            var remote = ReadClient();
-            Require(remote != null && remote.owner == helper.OwnerId && remote.connected && remote.players == 2 && !remote.inputBlocked,
-                "Remote must be connected, playing, and own the other diver.");
+            yield return Wait(() =>
+            {
+                var peer = ReadClient();
+                return peer != null && peer.request == hello && peer.connected && peer.owner == helper.OwnerId
+                    && peer.players == 2 && !peer.inputBlocked;
+            }, 15, "Remote did not enter gameplay as the second owner.");
             Require(!UiInputGate.Blocked && !host.Motor.IsHelpless && !helper.Motor.IsHelpless, "Both peers must be alive with gameplay controls.");
             Require(host.CatchCount == 0 && host.HookedFish == null && !host.TetherActive, "Host must start with free hands and empty catch pockets.");
             Check("Distinct connected owners " + host.OwnerId + " and " + helper.OwnerId);
