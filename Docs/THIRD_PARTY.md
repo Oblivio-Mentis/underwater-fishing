@@ -30,3 +30,14 @@ Hull/interior modules, rocks, kelp, wreck, parasite, fish fins, harpoon, materia
 The reservoir, pipework, conveyors, processor, material outlets, physical control panels, aft exit, fish presentation meshes, organic mouth and its mounting hardware are authored in this project. `RAID011/Factory Flow Glass` and `RAID011/Living Tissue`, low-amplitude metal/tread textures, bubbles and procedural audio are also project-authored. No additional external 3D model, art pack, texture pack or audio recording was added for this expansion.
 
 The custom URP shaders include the already installed Unity shader libraries; those libraries remain covered by their existing Unity package terms and notices. The PT Sans/TMP resources and notices listed above continue to apply. User-supplied concept images guide the visual direction; they are not imported as game textures or presented as captured gameplay.
+
+## RAID-016 visual art pass
+
+| Component | Use | License |
+|---|---|---|
+| [Quaternius Ultimate Modular Sci-Fi](https://quaternius.com/packs/ultimatemodularscifi.html) | Processor vent, workshop service plate and airlock ceiling pipes | CC0 1.0, notice in Docs/Licenses |
+| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.com/packs/modularscifimegakit.html) | Six selected fittings for NEREID, adapted to the ship palette | CC0 1.0, notice in Docs/Licenses |
+| [Kenney Nature Kit 2.1](https://kenney.nl/assets/nature-kit) | rock_largeC, rock_smallFlatB and rock_tallH in the shallow reef and deep rift | CC0 1.0, notice in Docs/Licenses |
+| [Quaternius Animated Fish](https://opengameart.org/content/animated-fish) | Fish1 and Fish2 in decorative shoals | CC0 1.0, notice in Docs/Licenses |
+
+The new instrument glyphs, terrain, coral, kelp settings and the adapted bubble surfaces were authored in this project.

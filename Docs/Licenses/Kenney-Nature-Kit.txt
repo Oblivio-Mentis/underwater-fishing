@@ -1,0 +1,9 @@
+Kenney Nature Kit 2.1
+Author: Kenney
+Source: https://kenney.nl/assets/nature-kit
+Archive: https://opengameart.org/content/nature-kit
+License: Creative Commons CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Included forms: rock_largeC, rock_smallFlatB, rock_tallH.
+RAID converts the selected geometry to compact vertex and face data and supplies its own colours.

@@ -67,7 +67,6 @@ namespace Raid.UI
         }
 
         internal static MaterialCost Yield(CatchItem item) => new(item.biomass,item.chitin,item.scrap,item.electronics);
-        internal static readonly MaterialCost Empty=default;
 
         internal void Quote(MaterialCost quote)
         {

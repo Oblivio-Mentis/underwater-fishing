@@ -116,9 +116,9 @@ namespace Raid.UI
                 var hint=TerminalParts.Text(content,"RouteHint","",32,20,UiTheme.Cyan);
                 refreshRows.Add(()=>UiKit.Set(hint,app.Context.World.FishRoute.active?UiText.RouteBusy:"Подача всей рыбы: пульты по сторонам резервуара"));
             }
-            for(int i=0;i<items.Count;i++)AddItem(items[i],i,foodOnly);
+            foreach(var item in items)AddItem(item,foodOnly);
         }
-        void AddItem(CatchItem item,int index,bool feedOnly)
+        void AddItem(CatchItem item,bool feedOnly)
         {
             bool bulk=ShipConsole.Stations.Count>0 && item.offering>0;
             long id=item.id;

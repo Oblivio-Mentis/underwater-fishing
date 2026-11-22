@@ -1,0 +1,292 @@
+{
+  "cameras": [
+    {
+      "name": "01-reef",
+      "depth": 1,
+      "feet": {
+        "x": 36,
+        "y": -10,
+        "z": -42
+      },
+      "look": {
+        "x": 47,
+        "y": -15,
+        "z": -52
+      },
+      "shipLocal": false,
+      "benchmark": true,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "02-hull",
+      "depth": 1,
+      "feet": {
+        "x": 27,
+        "y": -5.5,
+        "z": -35
+      },
+      "look": {
+        "x": 4,
+        "y": 0.8,
+        "z": -14
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "03-survey-wreck",
+      "depth": 1,
+      "feet": {
+        "x": 31,
+        "y": -11.3,
+        "z": -17.4
+      },
+      "look": {
+        "x": 26,
+        "y": -16.1,
+        "z": -16
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "04-kelp",
+      "depth": 1,
+      "feet": {
+        "x": 25,
+        "y": -11.8,
+        "z": -26.4
+      },
+      "look": {
+        "x": 27,
+        "y": -13,
+        "z": -22.5
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "kelp-peer",
+      "station": ""
+    },
+    {
+      "name": "05-reef-shoal",
+      "depth": 1,
+      "feet": {
+        "x": 29,
+        "y": -5.3,
+        "z": -27
+      },
+      "look": {
+        "x": 34,
+        "y": -5.6,
+        "z": -28.7
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "shoal",
+      "station": ""
+    },
+    {
+      "name": "06-sailray",
+      "depth": 1,
+      "feet": {
+        "x": 24.3,
+        "y": -5.8,
+        "z": -45
+      },
+      "look": {
+        "x": 33.1,
+        "y": -5.2,
+        "z": -45.0
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "large",
+      "station": ""
+    },
+    {
+      "name": "07-interior",
+      "depth": 1,
+      "feet": {
+        "x": 4.2,
+        "y": 0.55,
+        "z": 1
+      },
+      "look": {
+        "x": 0,
+        "y": 2.6,
+        "z": -3.3
+      },
+      "shipLocal": true,
+      "benchmark": true,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "08-reservoir-bubbles",
+      "depth": 1,
+      "feet": {
+        "x": 3,
+        "y": 0.55,
+        "z": -5.8
+      },
+      "look": {
+        "x": 0,
+        "y": 1.7,
+        "z": -3.2
+      },
+      "shipLocal": true,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "09-reservoir-monitor",
+      "depth": 1,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": "Reservoir"
+    },
+    {
+      "name": "10-workshop-monitor",
+      "depth": 1,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": "Upgrades"
+    },
+    {
+      "name": "11-navigation-monitor",
+      "depth": 1,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": "Depths"
+    },
+    {
+      "name": "12-ball",
+      "depth": 1,
+      "feet": {
+        "x": 1,
+        "y": 0.99,
+        "z": 3.08
+      },
+      "look": {
+        "x": 1,
+        "y": 0.45,
+        "z": 3.95
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "ball",
+      "station": ""
+    },
+    {
+      "name": "13-rift",
+      "depth": 2,
+      "feet": {
+        "x": 36,
+        "y": -10,
+        "z": -42
+      },
+      "look": {
+        "x": 47,
+        "y": -15,
+        "z": -52
+      },
+      "shipLocal": false,
+      "benchmark": true,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "14-rift-floor",
+      "depth": 2,
+      "feet": {
+        "x": 41,
+        "y": -15,
+        "z": -45
+      },
+      "look": {
+        "x": 46,
+        "y": -22,
+        "z": -54
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "15-rift-shoal",
+      "depth": 2,
+      "feet": {
+        "x": 39,
+        "y": -7,
+        "z": -39
+      },
+      "look": {
+        "x": 44,
+        "y": -7.9,
+        "z": -41.35
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "shoal",
+      "station": ""
+    },
+    {
+      "name": "16-processing",
+      "depth": 2,
+      "feet": {
+        "x": 1,
+        "y": 0.55,
+        "z": -10
+      },
+      "look": {
+        "x": -3.3,
+        "y": 1.8,
+        "z": -14.8
+      },
+      "shipLocal": true,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    }
+  ]
+}
