@@ -118,19 +118,28 @@ namespace Raid
             bool large=item.cargoSize>1;
             string species=string.IsNullOrEmpty(item.species)?large?"Bristlefish":"Lanternfish":item.species;
             var model=CatchFishModel.Create(transform,species,item.id).transform;
-            float seed=(item.id%1009)/1009f;
+            float seed=HabitatNoise((ulong)item.id);
             fish=new Swimmer
             {
                 Model=model,
                 Phase=seed*Mathf.PI*2,
                 Ring=seed,
-                Depth=(item.id%337)/337f,
+                Depth=HabitatNoise((ulong)item.id^0x9e3779b9U),
                 Speed=.62f+seed*.6f,
                 Size=large?1.07f:.65f,
                 Delay=.29f+seed*.20f
             };
             swimmers.Add(item.id,fish);
             return fish;
+        }
+
+        static float HabitatNoise(ulong id)
+        {
+            // Sequential IDs still need statistically separate positions and cadence.
+            uint bits=unchecked((uint)(id^(id>>32)));
+            bits=unchecked((bits^(bits>>16))*0x7feb352dU);
+            bits=unchecked((bits^(bits>>15))*0x846ca68bU);
+            return ((bits^(bits>>16)) & 0x00ffffffU)/16777216f;
         }
 
         void SwimInCage(Swimmer fish)

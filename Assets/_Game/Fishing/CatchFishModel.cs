@@ -9,7 +9,7 @@ namespace Raid
         private sealed class Shape
         {
             public Mesh body, tail;
-            public Material[] colors, wildColors;
+            public Material[] colors, wildColors, catchColors;
         }
 
         private static readonly Dictionary<string, Shape> Shapes = new();
@@ -31,7 +31,8 @@ namespace Raid
             if (!Shapes.TryGetValue(species, out var shape) || shape.body == null)
                 Shapes[species] = shape = Build(species);
             var live=parent==null?null:parent.GetComponent<FishActor>();
-            var finish=live==null || shape.wildColors==null?shape.colors:shape.wildColors;
+            var finish=live!=null?shape.wildColors: cargoId>0?shape.catchColors:null;
+            finish ??= shape.colors;
             var body = MakePart(species, parent, shape.body, finish);
             var model = body.AddComponent<CatchFishModel>();
             model.tail = MakePart("Caudal fin", body.transform, shape.tail, finish).transform;
@@ -120,10 +121,10 @@ namespace Raid
             }
 
             var wetShader=Resources.Load<Shader>("NereidFishSkin");
-            Material[] wild=null;
+            Material[] wild=null,loaded=null;
             if(wetShader!=null)
             {
-                wild=new Material[colors.Length];
+                wild=new Material[colors.Length];loaded=new Material[colors.Length];
                 for(int i=0;i<wild.Length;i++)
                 {
                     var lit=colors[i];
@@ -132,7 +133,10 @@ namespace Raid
                     waterSkin.SetColor("_BaseColor",albedo);
                     waterSkin.SetColor("_RimColor",Color.Lerp(albedo,new Color(.60f,.81f,.81f),.56f));
                     waterSkin.SetColor("_EmissionColor",lit.GetColor("_EmissionColor"));
-                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));wild[i]=waterSkin;
+                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));
+                    wild[i]=waterSkin;
+                    loaded[i]=new Material(waterSkin){name=species+" / transported scales "+i,hideFlags=HideFlags.DontSave};
+                    loaded[i].SetFloat("_CargoLighting",1);
                 }
             }
 
@@ -229,7 +233,7 @@ namespace Raid
             else foreach (int sign in new[]{-1,1})
                 tail.Fin(new Vector3(0,sign*.045f,.015f),new Vector3(0,sign*(needle?.16f:.22f),-.30f),
                          new Vector3(0,sign*.035f,-.18f),3);
-            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors,wildColors=wild};
+            return new Shape {body=body.Mesh(species), tail=tail.Mesh(species + " tail"), colors=colors,wildColors=wild,catchColors=loaded};
         }
 
         private static Vector3 Point(Vector3 ring, float angle) =>

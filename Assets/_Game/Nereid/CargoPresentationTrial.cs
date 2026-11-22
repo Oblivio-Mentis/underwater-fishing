@@ -50,6 +50,8 @@ namespace Raid
                 var cage=world.container.GetComponentInChildren<WetCargoShoal>();
                 var control=world.container.GetComponentInChildren<CargoDispatch>();
                 if(world.threats!=null)world.threats.enabled=false;
+                // Keep the fixture camera on the cage rather than the optional first-meeting rider.
+                world.Team.goshaMet=world.Team.goshaTamed=true;
                 var camera=host.GetComponentInChildren<Camera>();
                 var awaitingPeer=Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-cargo-peer")>=0;
                 if(awaitingPeer)await Until(()=>DiverMotor.ServerDivers.Count==2,"Standalone Windows peer",45);

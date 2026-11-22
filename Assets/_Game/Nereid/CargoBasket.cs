@@ -157,7 +157,7 @@ namespace Raid.Nereid
             label.transform.SetParent(parent,false);label.transform.localPosition=at;
             label.transform.localRotation=Quaternion.LookRotation(Vector3.left);
             label.rectTransform.sizeDelta=rect;label.alignment=TextAlignmentOptions.Center;label.font=font;
-            label.fontSize=size*10;label.color=new Color(.84f,.91f,.94f);
+            label.isOrthographic=false;label.fontSize=size*10;label.color=new Color(.84f,.91f,.94f);
             return label;
         }
 
