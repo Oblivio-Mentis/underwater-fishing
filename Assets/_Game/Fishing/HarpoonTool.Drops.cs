@@ -16,6 +16,7 @@ namespace Raid
         public long HarpoonId => _harpoonId.Value;
         public FishActor LiftedHeavy => _liftedHeavy.Value.species == null ? null : _liftedHeavy.Value.species.GetComponent<FishActor>();
         FishActor HeavySpecies => LiftedHeavy ?? _fish;
+        public long HeldCargoId => HandsFull?HeavyId:CatchIdInSlot(ActiveSlot);
         long HeavyId => _liftedHeavy.Value.id > 0 ? _liftedHeavy.Value.id : _fish.CargoId;
 
         static long NewToolId() => BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;

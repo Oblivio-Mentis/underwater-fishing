@@ -83,7 +83,7 @@ namespace Raid.UI
         public const string CargoRaisingHint="Контейнер поднимается. Новая загрузка временно закрыта.";
         public const string CargoUnloadingHint="Улов передаётся в резервуар после завершения разгрузки.";
         public const string CargoReturningHint="Улов уже в резервуаре. Дождитесь возвращения пустой корзины.";
-        public static string TerminalSummary(TeamProgress view,int required,bool defending) => "Улов: "+view.tank.Count+"   •   Пища: "+view.offering+" / "+required+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
+        public static string TerminalSummary(TeamProgress view,int required,bool defending) => "Улов: "+view.tank.Count+"   •   Пища: "+TeamProgress.FoodText(view.offeringPoints)+" / "+required+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
         public static string CargoSummary(TeamProgress view,ProgressionTuning tuning) => "Контейнер "+view.CargoUsed+" / "+view.Capacity(tuning)+"   •   "+Phase(view.hoistPhase)+(view.hoistPhase==HoistPhase.Loading?"":"   "+Time(view.hoistRemaining));
         public static string YieldLabel(CatchItem item) => Materials(item.biomass,item.chitin,item.scrap,item.electronics);
         public static string ItemTitle(int index,CatchItem item) => (index+1).ToString("00")+"  /  "+ItemName(item);

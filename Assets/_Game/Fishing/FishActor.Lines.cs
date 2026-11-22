@@ -54,7 +54,7 @@ namespace Raid
         {
             var world=RaidWorld.Instance;
             yield return world.ProgressKey(winner.Motor);
-            if(!RequiresPartner)return;
+            if(!RequiresPartner)yield break;
             HookLine primary=null;
             foreach(var line in lines)if(line.Tool==winner){primary=line;break;}
             if(primary==null)yield break;

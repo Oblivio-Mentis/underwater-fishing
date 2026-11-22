@@ -64,8 +64,7 @@ namespace Raid.UI
             var context=app.Context;
             if(context==null || !context.Connected || context.Player.tuning==null)
             {observedPlayer=null;observedWorld=null;return;}
-            var player=context.Player;var view=context.View;
-            if(player.MarkerActive)detail=player.ScanLabel;var tuning=context.Tuning;
+            var player=context.Player;var view=context.View;var tuning=context.Tuning;
             float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*player.OxygenMultiplier);
             float oxygenFraction=Mathf.Clamp01(player.Oxygen/capacity);
             reel.Refresh(context);
@@ -128,8 +127,8 @@ namespace Raid.UI
 
         void RefreshContext(UiContext context)
         {
-            string prompt="",detail="";Color color=UiTheme.Text;
             var player=context.Player;var view=context.View;
+            string prompt="",detail=player.MarkerActive?player.ScanLabel:"";Color color=UiTheme.Text;
             if(player.IsHelpless)prompt=UiText.HudWaitForRescue;
             else if(context.World.HasGoshaBall(player))prompt=context.World.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing?"Гоша догоняет вас!":UiRoot.Instance.WindingBall?"Отпустите ЛКМ — бросить мяч":"Удерживайте ЛКМ — замах · Q — выложить мяч";
             else if(context.World.IsHoldingGosha(player))prompt="E — опустить Гошу на палубу";

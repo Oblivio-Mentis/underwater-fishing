@@ -103,6 +103,10 @@ namespace Raid
         [TargetRpc]
         void ApplyProfile(NetworkConnection target,string data) => LocalProgress=JsonUtility.FromJson<PlayerProgress>(data);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void RefreshCrewProfilesForTrial()=>PublishProfiles();
+#endif
+
         void PublishProfiles()
         {
             foreach(var pair in crewProfiles)

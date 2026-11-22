@@ -262,6 +262,7 @@ namespace Raid.UI
                 if(menu.Root.gameObject.activeSelf)menu.Refresh();UpdatePending();
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");
             }
+            terminal.UpdateReceipt();
             if(saveSettingsAt>=0 && Time.unscaledTime>=saveSettingsAt){saveSettingsAt=-1;Settings.Save();}
         }
         public Nereid.AirlockPad AimedPad => aimedPad;
@@ -439,7 +440,8 @@ namespace Raid.UI
         {
             var v=Context.View;if(v==null)return "";
             if(pendingAction>=WorldAction.Reel && pendingAction<=WorldAction.Winch)return v.Level((Upgrade)((int)pendingAction-(int)WorldAction.Reel)).ToString();
-            if(pendingAction==WorldAction.Process||pendingAction==WorldAction.Feed)return v.tank.Exists(x=>x.id==pendingId).ToString();
+            if(pendingAction==WorldAction.Process||pendingAction==WorldAction.Feed||pendingAction==WorldAction.HoldFish)
+                return v.tank.Find(x=>x.id==pendingId)?.destination.ToString() ?? "gone";
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();
             if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
             if(pendingAction==WorldAction.ProcessAll||pendingAction==WorldAction.FeedAll)return Context.World.FishRoute.sequence.ToString();

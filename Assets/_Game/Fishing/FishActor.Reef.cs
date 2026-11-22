@@ -5,7 +5,7 @@ namespace Raid
 {
     public sealed partial class FishActor
     {
-        static readonly List<FishActor> ServerSchool=new();
+        internal static readonly List<FishActor> ServerSchool=new();
         readonly RaycastHit[] swimHits=new RaycastHit[12];
         bool arrivalPending,staggered;
         float arrivalAt,departureAt,fleeRemaining,swimSpeed,senseAt,hookAvailableAt,avoidUntil;
