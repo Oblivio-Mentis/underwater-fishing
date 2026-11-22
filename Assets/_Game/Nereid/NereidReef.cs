@@ -26,7 +26,7 @@ namespace Raid.Nereid
             basalt=CreateMaterial(reefShader,"Thin-bedded abyssal basalt");
             basalt.SetFloat("_Rift",1);
             bioluminescence=CreateMaterial(reefShader,"Abyssal cold-water polyps");
-            bioluminescence.SetFloat("_Glow",.9f);
+            bioluminescence.SetFloat("_Glow",1.38f);
             lightColumns=CreateMaterial(shaftShader,"Suspended water light");
             LoadRockForms();
 
@@ -87,27 +87,18 @@ namespace Raid.Nereid
             var land=Terrain(ShoalHeight,false);
             // The first pool is open from the cargo lift. A split arch marks the far haul route.
             var shelves=new[]{
-                new Vector4(30,-39,4.4f,8),new(34,-41,3.3f,4.2f),new(40,-24,4,5.5f),
-                new(43,-46,4,11),new(53,-47,4,12),new(55,-42,3.5f,6),
-                new(17,-48,5,4),new(23,-53,4,5.5f),new(60,-59,7,10),new(52,-63,4,6),
-                new(42,-10,6,6),new(63,-29,5,10)
+                new Vector4(30,-39,3.5f,6.3f),new(34,-41,2.8f,4.6f),new(40,-24,4,5.5f),
+                new(50,-43,2.7f,4.4f),new(55,-41,3.6f,6.5f),new(17,-48,4,4),
+                new(23,-53,3.6f,4.5f),new(61,-59,4.4f,9.2f),new(56,-63,3.7f,5.1f),
+                new(42,-10,5.3f,5.2f),new(65,-29,4.9f,10),new(29,-44,2.0f,3.2f)
             };
             var tops=new List<Vector3>();
             foreach(var s in shelves)tops.Add(Rock(land,new Vector3(s.x,ShoalHeight(s.x,s.y)-.32f,s.y),s.z,s.w));
-            var archTint=new Color(.145f,.208f,.231f);
-            land.Tube(new[]{new Vector3(43,-8,-46),new(44,-5.8f,-46.5f),new(47,-4.3f,-47.2f),new(50,-4.6f,-47),new(52.8f,-6.1f,-47)},
-                new[]{1.45f,1.45f,1.25f,1.2f,1.65f},archTint,7,.84f);
-            // Break the arch profile with asymmetric stratified shoulders around its feet.
-            foreach(var foot in new[]{new Vector3(41.5f,0,-46.5f),new(54.2f,0,-48.2f),new(52.4f,0,-44.6f)})
-                for(int i=0;i<4;i++)
-                {
-                    float x=foot.x+Range(-1.6f,1.3f),z=foot.z+Range(-1.8f,1.45f);
-                    Rock(land,new Vector3(x,ShoalHeight(x,z)-.28f,z),Range(1.25f,2.25f),Range(2.1f,5.2f));
-                }
-            Escarpment(land,0);Escarpment(land,1);
-            var ground=Publish("Pale sandbars, split arch and limestone shelves",land,bedMaterial,true,shoal.transform);
-
             var life=new ReefGeometry();
+            ShelfGate(land,life);
+            Escarpment(land,0);Escarpment(land,1);
+            var ground=Publish("Pale Shoals / shelf terraces and sand channels",land,bedMaterial,true,shoal.transform);
+
             for(int group=0;group<30;group++)
             {
                 float x=Range(16,60),z=Range(-65,-15);
@@ -149,12 +140,15 @@ namespace Raid.Nereid
             Publish("Washed cobbles around the shelves",rubble,rock,false,shoal.transform);
             Publish("Fan corals, sponges and ribbon kelp",life,rock,false,shoal.transform);
             Publish("Broken survey skiff",SurveyWreck(),rock,true,shoal.transform);
+            ExpeditionWreck();
+            SurveyTrail(false,shoal.transform);
             var beams=new ReefGeometry();
-            Vector2[] pools={new(22,-34),new(29,-24),new(32,-38),new(38,-40),new(46,-46),new(52,-43),new(-19,14),new(19,10),new(14,27)};
+            Vector2[] pools={new(22,-34),new(29,-24),new(32,-38),new(39,-43),new(49,-52),new(52,-43),new(43,-64),new(57,-74),new(35,-65),new(-19,14),new(19,10),new(14,27)};
             foreach(var pool in pools)
             {
-                var bottom=new Vector3(pool.x,-16.3f,pool.y);
-                beams.Tube(new[]{bottom,bottom+new Vector3(-5,20,2.4f),bottom+new Vector3(-9.5f,39,4.4f)},new[]{Range(1.4f,2.2f),Range(.9f,1.55f),Range(.55f,.95f)},Color.white,12);
+                var bottom=new Vector3(pool.x,ShoalHeight(pool.x,pool.y)+.1f,pool.y);
+                beams.Tube(new[]{bottom,bottom+new Vector3(-5,19,2.4f),bottom+new Vector3(-9.5f,42,4.4f)},
+                    new[]{Range(1.7f,3.6f),Range(1.15f,2.3f),Range(.46f,.99f)},Color.white,11);
             }
             Publish("Sunbeams over the fishing grounds",beams,lightColumns,false,shoal.transform);
             return ground.GetComponent<MeshCollider>();

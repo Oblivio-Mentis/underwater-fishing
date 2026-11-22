@@ -76,10 +76,9 @@ namespace Raid.Nereid
         static float ShoalHeight(float x,float z)
         {
             float cove=1-IslandMask(x,z,35,-38,18,36);
-            if(cove<=0)return BedHeight(x,z);
             float lane=Mathf.PerlinNoise(x*.065f+5,z*.082f+21);
             float dune=.38f*Mathf.Sin(x*.34f+z*.25f+lane*3.1f)+.74f*(lane-.55f);
-            return BedHeight(x,z)+dune*cove*FishingFloorMask(x,z);
+            return BedHeight(x,z)+(dune*cove+ExpeditionShelf(x,z))*FishingFloorMask(x,z);
         }
 
         static float RiftAxis(float z)=>43.6f-(z+48)*.22f+1.7f*Mathf.Sin((z+46)*.10f);
@@ -88,33 +87,32 @@ namespace Raid.Nereid
         {
             float extent=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-24,-40,z))*
                 Mathf.SmoothStep(0,1,Mathf.InverseLerp(-92,-66,z));
-            if(extent<=0)return BedHeight(x,z);
             float across=Mathf.Abs(x-RiftAxis(z));
             float ravine=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.5f,8.6f,across));
             float jagged=.62f+.38f*Mathf.PerlinNoise(x*.38f+6,z*.31f+14);
             // A real recessed bed replaces the shallows collider. Stay at the original height under gameplay fixtures.
             float bay=8.8f+2.4f*Mathf.Sin(z*.17f+4.9f);
-            return BedHeight(x,z)-extent*ravine*jagged*bay*FishingFloorMask(x,z);
+            return BedHeight(x,z)+(ExpeditionRift(x,z)-extent*ravine*jagged*bay)*FishingFloorMask(x,z);
         }
 
         static float TerrainX(int i)
         {
             // Finer sampling through the coast and trench, with an inexpensive far horizon.
             if(i<18)return -141+i*(147f/18);
-            if(i<=75)return 6+(i-18)*1.13f;
-            return 70.41f+(i-75)*7.9f;
+            if(i<=85)return 6+(i-18)*1.25f;
+            return 89.75f+(i-85)*7.9f;
         }
 
         static float TerrainZ(int i)
         {
-            if(i<12)return -174+i*7.2f;
-            if(i<=83)return -87.6f+(i-12)*1.15f;
-            return -5.95f+(i-83)*7.2f;
+            if(i<12)return -194.4f+i*7.2f;
+            if(i<=100)return -108+(i-12)*1.20f;
+            return -2.4f+(i-100)*7.2f;
         }
 
         static ReefGeometry Terrain(Func<float,float,float> height,bool deep)
         {
-            const int columns=92, rows=107;
+            const int columns=103, rows=125;
             var bed=new ReefGeometry();
             for(int z=0;z<rows;z++)
             for(int x=0;x<columns;x++)
@@ -123,8 +121,11 @@ namespace Raid.Nereid
                 float y=height(wx,wz);
                 float tide=Mathf.PerlinNoise(wx*.185f+4,wz*.196f+3);
                 float current=Mathf.Sin(wx*.56f+wz*.34f+2*tide)*.18f;
+                float bedSlope=Mathf.Abs(y-height(wx+.45f,wz))+Mathf.Abs(y-height(wx,wz+.45f));
                 var grit=deep?Color.Lerp(RiftSlate,Mineral,tide*.64f):
                     Color.Lerp(Silt,Chalk,Mathf.Clamp01(tide*.85f+current));
+                var stratum=deep?new Color(.073f,.096f,.126f):new Color(.102f,.150f,.148f);
+                grit=Color.Lerp(grit,stratum,Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,1.16f,bedSlope))*.82f);
                 bed.Add(new Vector3(wx,y,wz),grit);
                 if(x>0 && z>0)
                 {
@@ -151,8 +152,17 @@ namespace Raid.Nereid
                     var at=new Vector3(x,ShoalHeight(x,z)-.1f,z);
                     ScatterStone(rubble,at,Range(.64f,1.75f),Color.Lerp(Silt,Chalk,Range(.45f,.74f)));
                     at.y+=.22f;
-                    if(i%3==0)Coral(life,at,Range(.9f,1.3f),j!=2);
-                    else if(i%3==1)Fan(life,at,angle);
+                    if(i%3==0)
+                    {
+                        var tint=j==2?new Color(.27f,.10f,.37f):new Color(.59f,.16f,.20f);
+                        if(!PlaceReefProp(life,"coral_table",at,Range(1.1f,1.64f),angle*Mathf.Rad2Deg,tint))
+                            Coral(life,at,Range(.9f,1.3f),j!=2);
+                    }
+                    else if(i%3==1)
+                    {
+                        if(!PlaceReefProp(life,"coral_fan",at,Range(1.25f,2.25f),angle*Mathf.Rad2Deg,new Color(.51f,.16f,.28f)))
+                            Fan(life,at,angle);
+                    }
                     else Sponge(life,at,Range(.8f,1.55f));
                 }
             }
@@ -249,10 +259,13 @@ namespace Raid.Nereid
                     ScatterStone(rocks,new Vector3(x,RiftHeight(x,z)-.11f,z),Range(.74f,1.82f),RiftSlate);
                 }
             }
+            RiftSaddle(bed,rocks,glow);
+            SurveyTrail(true,abyss.transform);
             Vector2[] vents={new(38,-40.5f),new(41,-46.2f),new(45.5f,-58),new(52,-52.2f),new(48,-65.5f)};
             foreach(var at in vents)Vent(rocks,glow,new Vector3(at.x,RiftHeight(at.x,at.y)-.09f,at.y));
             Publish("Deep talus and extinct mineral vents",rocks,basalt,false,abyss.transform);
-            Publish("Sparse cyan polyps around fissure vents",glow,bioluminescence,false,abyss.transform);
+            Publish("Fissure vents and cold-light lantern colonies",glow,bioluminescence,false,abyss.transform)
+                .GetComponent<MeshRenderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
             var ground=Publish("Needle Rift floor and collision",bed,basalt,true,abyss.transform);
             return ground.GetComponent<MeshCollider>();
         }

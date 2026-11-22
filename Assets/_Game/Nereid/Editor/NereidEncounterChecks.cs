@@ -70,6 +70,7 @@ namespace Raid.Nereid.Editor
         static IEnumerable<Until> Sequence()
         {
             Stage(1);
+            yield return Wait("Shelf has a fixed cargo berth, an elevated ledge and a traversable gate",()=>LandscapeReady(false),6);
             var school=UnityEngine.Object.FindObjectsByType<FishActor>().Where(f=>f.depthTier==1).ToArray();
             yield return Wait("Travel begins with a quiet fishing ground",()=>school.All(f=>!f.InHabitat));
             yield return Wait("A single scout swims into the habitat",()=>school.Count(f=>f.InHabitat)==1,4);
@@ -141,6 +142,7 @@ namespace Raid.Nereid.Editor
 
             Stage(2);
             yield return Wait("Depth two active",()=>threats.Reef.Active&&threats.Reef.Deep);
+            yield return Wait("Rift has a fixed cargo berth and an open descent to the lower fault",()=>LandscapeReady(true),6);
             FillCreel(2);
             int previousSlot=tool.ActiveSlot;
             if(!(bool)typeof(HarpoonTool).GetMethod("StoreBall",Private).Invoke(tool,null))
@@ -190,6 +192,39 @@ namespace Raid.Nereid.Editor
             health=diver.Oxygen;Vector3 locked=threats.Reef.Sweep;
             Place(locked+Vector3.forward*7.3f);
             yield return Wait("Swimming out of the locked area avoids hit",()=>threats.Reef.KrakenPhase==2&&Vector3.Distance(locked,threats.Reef.Sweep)<.1f&&diver.Oxygen>health-8,4);
+        }
+
+        static bool LandscapeReady(bool deep)
+        {
+            string label=deep?"Needle Rift floor and collision":"Pale Shoals / shelf terraces and sand channels";
+            var floor=GameObject.Find(label)?.GetComponent<MeshCollider>();
+            if(floor==null)return false;
+            bool Height(float x,float z,out float y)
+            {
+                if(floor.Raycast(new Ray(new Vector3(x,16,z),Vector3.down),out var hit,78))
+                {
+                    y=hit.point.y;
+                    return true;
+                }
+                y=0;
+                return false;
+            }
+            if(!Height(23,-28,out float berth) || Mathf.Abs(berth+17.47f)>.22f)return false;
+            if(deep)
+            {
+                if(!Height(46,-88,out float fault) || fault>berth-17)return false;
+                return PassageClear(new(50,-22,-68),new(49,-24,-81));
+            }
+            if(!Height(60,-49,out float ledge) || ledge<berth+5 ||
+                !Height(47.5f,-72,out float basin) || basin>berth-3)return false;
+            return PassageClear(new(43,-11.9f,-43),new(44.5f,-11.9f,-57));
+        }
+
+        static bool PassageClear(Vector3 from,Vector3 to)
+        {
+            Vector3 delta=to-from;
+            return !Physics.SphereCast(from,.56f,delta.normalized,out _,delta.magnitude,
+                Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
         }
 
         static Vector3 AnglerWater(float distance, Vector3 awayFromAim=default)
