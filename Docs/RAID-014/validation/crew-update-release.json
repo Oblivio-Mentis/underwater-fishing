@@ -1,0 +1,24 @@
+{
+  "release": {
+    "game": "Underwater Fishing",
+    "scene": "InterfaceVerticalSlice",
+    "unity": "6000.5.6f1",
+    "source": "7ed44178835a1be83d92d0ff8c5963fbfa037d1b",
+    "steamProtocol": "nereid-submarine-expedition-v4",
+    "displayMode": "FullScreenWindow",
+    "target": "Windows x64 Release",
+    "assemblySha256": "e98209b15ec08b16d281532bea06cdc02ab3073548a586e2302a9650fe93c006"
+  },
+  "archive": "UnderwaterFishing-RAID014-Crew-Update.zip",
+  "bytes": 49645175,
+  "files": 215,
+  "sha256": "b0f671bb4b6e22c13bcbc76747c46c28249965b598173430d721e9dcbabb1cb1",
+  "archiveCheck": "All member CRCs valid. Every extracted byte matched the tested Windows folder. No debug files or profiles.",
+  "buildReport": {
+    "result": "Succeeded",
+    "errors": 0,
+    "warnings": 0,
+    "totalBytes": 134968110
+  },
+  "smoke": "crew-update-smoke.json"
+}

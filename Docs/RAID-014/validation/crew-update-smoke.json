@@ -1,0 +1,42 @@
+{
+    "source":  "7ed44178835a1be83d92d0ff8c5963fbfa037d1b",
+    "scene":  "Assets/_Game/Scenes/InterfaceVerticalSlice.unity",
+    "sceneCheck":  "Single scene included by Raid014Validation.Build",
+    "scope":  "Windows Release network handshake on Tugboat localhost with separate D3D11 processes; five seconds of connected runtime",
+    "development":  false,
+    "stampUtc":  "2026-11-22T13:47:40.8453814Z",
+    "port":  28919,
+    "graphics":  "Direct3D11",
+    "hostResolution":  "1280x720",
+    "peerResolution":  "1920x1080",
+    "releaseDll":  "E98209B15EC08B16D281532BEA06CDC02AB3073548A586E2302A9650FE93C006",
+    "connected":  [
+                      {
+                          "role":  "host",
+                          "pid":  45644,
+                          "status":  "В сессии",
+                          "elapsedSeconds":  12.3143095
+                      },
+                      {
+                          "role":  "client",
+                          "pid":  73204,
+                          "status":  "В сессии",
+                          "elapsedSeconds":  3.9859204999999998
+                      }
+                  ],
+    "errors":  [
+
+               ],
+    "fail":  null,
+    "status":  "passed",
+    "logs":  [
+                 {
+                     "name":  "host.log",
+                     "sha256":  "D95DCA153031ADBFDBE216CCAD90CE03FF1A6E7736706EA0003BC674754440F5"
+                 },
+                 {
+                     "name":  "peer.log",
+                     "sha256":  "F5FAD0642FB545B51A486E517C40CE5A30F402FA8D7409817ACA11DC4C527D6A"
+                 }
+             ]
+}
