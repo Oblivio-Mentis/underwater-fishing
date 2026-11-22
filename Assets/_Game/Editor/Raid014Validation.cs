@@ -166,6 +166,8 @@ namespace Raid.Editor
             // Extend just this wave so two real pressure cycles and peer capture fit the same trial.
             t.tuning = UnityEngine.Object.Instantiate(t.tuning);
             t.tuning.waveSeconds = 100;
+            int attacks = 0;
+            t.StockAttacked += _ => attacks++;
             t.StartWave(1,1);
             var origin = t.WavePosition;
             var gate = chamber.GetPad(2).transform.position;
@@ -174,7 +176,7 @@ namespace Raid.Editor
             await Awaitable.WaitForSecondsAsync(5);
             var stopped = t.WavePosition;
             await Awaitable.WaitForSecondsAsync(.6f);
-            Check(t.WaveActive && (t.WavePosition-stopped).magnitude<.05f && stopped.x>gate.x && w.StockLossCount==0,
+            Check(t.WaveActive && (t.WavePosition-stopped).magnitude<.05f && stopped.x>gate.x && attacks==0 && w.StockLossCount==0,
                 $"Closed ocean door stops raider at {stopped}, pad {gate}, stock loss {w.StockLossCount}");
             var aimPoint = t.transform.Find("Reservoir raider").GetComponentsInChildren<MeshRenderer>().First(r=>r.name=="Tapered asymmetric body").bounds.center;
             var tool = d.GetComponent<HarpoonTool>();
@@ -203,8 +205,6 @@ namespace Raid.Editor
             Capture(d,"raider-at-seal.png");
             if (DiverMotor.ServerDivers.Count == 2)
                 await RemoteShot(d,t,aimPoint,stopped);
-            int attacks = 0;
-            t.StockAttacked += _ => attacks++;
             a = w.Airlock; a.Request(true); SetLock(a);
             await Until(() => chamber.Contains(t.WavePosition) && w.Airlock.Phase == AirlockPhase.OuterOpen,
                 "raider enters through open outer door", 40);
@@ -215,6 +215,14 @@ namespace Raid.Editor
             await Until(() => attacks > 0, "reachable reservoir attacked through cycled gates", 50);
             Check(!chamber.Contains(t.WavePosition) && Vector3.Distance(t.WavePosition, t.tuning.reservoirPoint) < 5,
                 $"Physical contact at the tank: {t.WavePosition}");
+            await Until(() => !t.WaveActive, "wave expires after bounded attacks", 30);
+            int previousAttacks = attacks;
+            t.StartWave(1,1);
+            Check(t.WaveActive && t.WaveHealth == hp && Vector3.Distance(t.WavePosition, origin) < .1f,
+                "Next wave spawns outside with full health");
+            await Awaitable.WaitForSecondsAsync(5);
+            Check(attacks == previousAttacks && t.WavePosition.x > gate.x,
+                "Repeat wave is stopped again by the closed outer door");
         }
 
         static async Awaitable ShipRegression(DiverMotor host)
