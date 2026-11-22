@@ -111,15 +111,25 @@ namespace Raid.Nereid
                 new(48.7f,-5.7f,-48.1f),new(51.5f,-10.3f,-48.8f),
                 new(53.5f,ShoalHeight(53.5f,-49.6f)-.8f,-49.6f)
             };
-            arch.Tube(curve,new[]{2.75f,2.48f,2.18f,1.96f,2.22f,2.08f,2.51f,2.8f},
-                new Color(.135f,.198f,.191f),9,1.16f);
+            RockSpan(arch,curve,new[]{2.75f,2.48f,2.18f,1.96f,2.22f,2.08f,2.51f,2.8f},
+                new Color(.105f,.163f,.148f),.67f);
             for(int i=1;i<curve.Length-1;i++)
             {
                 Vector3 at=curve[i]+Vector3.up*2.04f;
                 ScatterStone(life,at,Range(.7f,1.35f),Chalk*.79f);
                 if(i%2!=0)Coral(life,at,Range(.91f,1.25f),i%3!=1);
             }
-            Publish("Ridge gate / limestone arch",arch,rock,true,shoal.transform);
+            var strata=CreateMaterial(rock.shader,"Split limestone arch");
+            strata.SetFloat("_StoneArch",1);
+            Publish("Ridge gate / limestone arch",arch,strata,true,shoal.transform);
+            for(int bank=-1;bank<=1;bank+=2)
+            for(int i=0;i<13;i++)
+            {
+                float x=43+bank*Range(6.8f,10.7f),z=-45-i*.91f;
+                var point=new Vector3(x,Seafloor(false,x,z)-.13f,z);
+                ScatterStone(life,point,Range(.70f,2.35f),Chalk*Range(.54f,.90f));
+                if(i%3!=1)Coral(life,point+Vector3.up*.24f,Range(.71f,1.35f),i%4!=1);
+            }
             Vector4[] places={
                 new(30,-52,3.5f,8.2f),new(25,-63,4.9f,13.4f),new(29,-69,4.7f,11),
                 new(36,-68,2.9f,6.4f),new(23,-81,5.8f,13.5f),new(62,-42,4.3f,10),
@@ -158,7 +168,26 @@ namespace Raid.Nereid
                 new(43.8f,-16.7f,-73.6f),new(50.8f,-15.9f,-74.4f),
                 new(56.1f,-17.8f,-75.1f),new(61.9f,RiftHeight(61.9f,-75.3f)-.7f,-75.3f)
             };
-            stone.Tube(arch,new[]{2.64f,2.42f,1.9f,2.18f,2.2f,2.4f},RiftSlate,8,1.21f);
+            RockSpan(stone,arch,new[]{2.64f,2.42f,1.9f,2.18f,2.2f,2.4f},RiftSlate,.54f);
+            // Break up the lower slopes with mineral ledges rooted on the same triangles as collision.
+            Vector2[] terraces={new(43,-74),new(52.9f,-76.8f),new(42.2f,-82.4f),
+                new(52.1f,-85.2f),new(43,-92.3f),new(50.3f,-94.4f),new(46.2f,-96.7f)};
+            for(int i=0;i<terraces.Length;i++)
+            {
+                var mark=terraces[i];
+                var foundation=new Vector3(mark.x,Seafloor(true,mark.x,mark.y)-.6f,mark.y);
+                var rim=Rock(talus,foundation,Range(1.25f,2.63f),Range(1.4f,3.1f));
+                ScatterStone(talus,rim-Vector3.up*.37f,Range(1.2f,2.1f),Mineral*1.21f);
+                Lantern(talus,glow,rim-Vector3.up*.2f,Range(.73f,1.25f),i%3==1?VioletPolyp:BluePolyp);
+                for(int j=0;j<5;j++)
+                {
+                    float angle=j*2.39996f;
+                    var p=foundation+new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle))*Range(1.2f,2.8f);
+                    p.y=Seafloor(true,p.x,p.z)-.13f;
+                    ScatterStone(talus,p,Range(.36f,.91f),Mineral);
+                    if(j%2==0)Coral(talus,p,Range(.43f,.83f),false);
+                }
+            }
             Vector2[] fields={
                 new(42,-56),new(50,-63),new(42,-67),new(56,-69),new(41.5f,-77),
                 new(51,-80),new(43,-86),new(48.4f,-88.5f),new(53.2f,-91.4f),new(47,-95)
@@ -168,12 +197,53 @@ namespace Raid.Nereid
             {
                 float angle=i*2.39996f+Range(-.21f,.21f),radius=.32f+i*.42f;
                 var p=new Vector3(fields[j].x+Mathf.Cos(angle)*radius,0,fields[j].y+Mathf.Sin(angle)*radius);
-                p.y=RiftHeight(p.x,p.z)-.13f;
+                p.y=Seafloor(true,p.x,p.z)-.17f;
                 float size=i==0?Range(1.3f,2.45f):Range(.34f,1.25f);
                 var hue=j%3==1?VioletPolyp:BluePolyp;
                 if(i%3!=2 || !PlaceReefProp(glow,"sea_anemone",p,size,angle*Mathf.Rad2Deg,hue))
                     Lantern(talus,glow,p,size,hue);
                 if(i%3==0)ScatterStone(talus,p-Vector3.up*.18f,Range(.84f,1.55f),RiftSlate);
+            }
+        }
+
+        void RockSpan(ReefGeometry mesh,Vector3[] skeleton,float[] radius,Color tone,float roughness)
+        {
+            const int sides=12;
+            int count=skeleton.Length*2-1;
+            var rings=new Vector3[count,sides];
+            for(int ring=0;ring<count;ring++)
+            {
+                int corner=ring/2;
+                bool joint=ring%2==0;
+                var center=joint?skeleton[corner]:Vector3.Lerp(skeleton[corner],skeleton[corner+1],.52f);
+                float r=joint?radius[corner]:Mathf.Lerp(radius[corner],radius[corner+1],.53f)*.91f;
+                var travel=joint?skeleton[Mathf.Min(corner+1,skeleton.Length-1)]-skeleton[Mathf.Max(corner-1,0)]:
+                    skeleton[corner+1]-skeleton[corner];
+                var side=Vector3.Cross(travel.normalized,Vector3.forward).normalized;
+                var normal=Vector3.Cross(side,travel.normalized);
+                for(int vertex=0;vertex<sides;vertex++)
+                {
+                    float a=(vertex+.23f*(ring%3))*Mathf.PI*2/sides;
+                    float fracture=1+roughness*(.23f*Mathf.Cos(a*3+ring*.73f)+Range(-.21f,.20f));
+                    var bedding=side*Mathf.Cos(a)*r*fracture;
+                    var edge=normal*Mathf.Sin(a)*1.12f*r*fracture;
+                    rings[ring,vertex]=center+bedding+edge+travel.normalized*Range(-.14f,.14f);
+                }
+            }
+            for(int ring=1;ring<count;ring++)
+            for(int vertex=0;vertex<sides;vertex++)
+            {
+                int next=(vertex+1)%sides;
+                float shade=Range(.65f,1.2f)*(ring%4==0?.83f:1);
+                Flat(mesh,rings[ring-1,vertex],rings[ring,vertex],rings[ring,next],rings[ring-1,next],tone*shade);
+            }
+            for(int vertex=0;vertex<sides;vertex++)
+            {
+                int next=(vertex+1)%sides;
+                int bottom=mesh.Add(skeleton[0],tone);
+                mesh.Face(bottom,mesh.Add(rings[0,next],tone),mesh.Add(rings[0,vertex],tone));
+                int top=mesh.Add(skeleton[skeleton.Length-1],tone);
+                mesh.Face(top,mesh.Add(rings[count-1,vertex],tone),mesh.Add(rings[count-1,next],tone));
             }
         }
 
@@ -253,7 +323,12 @@ namespace Raid.Nereid
                 trim.Tube(new[]{Local(-1.68f,1.07f,start-.49f),Local(-1.68f,1.07f,start+.49f)},new[]{.13f,.13f},PressureSteel,6);
                 lamps.Tube(new[]{Local(-1.68f,.96f,start-.42f),Local(-1.68f,.96f,start+.42f)},new[]{.065f,.065f},ReturnMarker,6);
             }
-            Publish("Survey wreck / flooded pressure fuselage",shell,rock,true,shoal.transform);
+            var patina=CreateMaterial(rock.shader,"Oxidized survey fuselage");
+            patina.SetFloat("_Wreck",1);
+            patina.SetFloat("_PigmentLightCap",1.62f);
+            patina.SetVector("_WreckDirection",attitude*Vector3.forward);
+            patina.SetVector("_WreckLampOrigin",Local(-1.68f,1.10f,-7.35f));
+            Publish("Survey wreck / flooded pressure fuselage",shell,patina,true,shoal.transform);
             var anchorAt=new Vector3(43.4f,ShoalHeight(43.4f,-62.9f)-.08f,-62.9f);
             if(!PlaceReefProp(trim,"ship_anchor",anchorAt,2.4f,49,Rust))
             {
@@ -262,7 +337,7 @@ namespace Raid.Nereid
                 trim.Tube(new[]{anchorAt+new Vector3(-.91f,.55f,0),anchorAt,anchorAt+new Vector3(.91f,.55f,0)},
                     new[]{.094f,.23f,.094f},PressureSteel,7);
             }
-            Publish("Survey wreck / cable runs and warning paint",trim,rock,false,shoal.transform);
+            Publish("Survey wreck / cable runs and warning paint",trim,patina,false,shoal.transform);
             Publish("Survey wreck / failing amber circuits",lamps,bioluminescence,false,shoal.transform);
         }
 
@@ -278,7 +353,7 @@ namespace Raid.Nereid
             for(int i=0;i<route.Length;i++)
             {
                 var p=route[i];
-                float height=deep?RiftHeight(p.x,p.y):ShoalHeight(p.x,p.y);
+                float height=Seafloor(deep,p.x,p.y);
                 var at=new Vector3(p.x,height-.13f,p.y);
                 var light=at+Vector3.up*(i==0?2.12f:1.34f);
                 towers.Tube(new[]{at,Vector3.Lerp(at,light,.24f),light},new[]{.4f,.105f,.12f},PressureSteel,6);

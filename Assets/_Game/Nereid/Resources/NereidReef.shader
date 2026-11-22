@@ -8,6 +8,10 @@ Shader "RAID/Nereid Reef"
         _BasaltLayers("Basalt layers",Range(0,1))=0
         _Sand("Current-washed sand",Float)=0
         _Rift("Abyssal strata",Float)=0
+        _StoneArch("Exposed limestone fractures",Float)=0
+        _Wreck("Oxidized hull finish",Float)=0
+        _WreckDirection("Wreck length",Vector)=(0,0,1,0)
+        _WreckLampOrigin("First worklight",Vector)=(0,0,0,0)
         _PigmentLightCap("Matte pigment light cap",Float)=0
     }
     SubShader
@@ -25,7 +29,8 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap;
+            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck;
+            float4 _WreckDirection, _WreckLampOrigin;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
@@ -116,6 +121,22 @@ Shader "RAID/Nereid Reef"
                     base=lerp(half3(.062,.099,.114),half3(.16,.21,.19),mineral)
                         *(.80+.20*saturate(n.y+.4))*(1-.13*seam);
                 }
+                if(_StoneArch>.5)
+                {
+                    float upheaval=ReefNoise(i.pos.xz*.35+i.pos.y*.11);
+                    float strata=i.pos.y*.98+dot(i.pos.xz,float2(.113,-.062))+upheaval*.72;
+                    float seam=1-smoothstep(.045,.118,abs(frac(strata)-.5));
+                    float chip=ReefNoise(i.pos.xz*1.27+i.pos.y*.82);
+                    base*=((.72+.39*upheaval)*(.83+.29*chip))*(1.-.39*seam);
+                    base=lerp(base,half3(.13,.19,.117),smoothstep(.57,.83,upheaval)*max(0.,n.y)*.43);
+                }
+                if(_Wreck>.5)
+                {
+                    float corrosion=ReefNoise(i.pos.xz*1.04+i.pos.y*.91);
+                    float grime=ReefNoise(i.pos.xz*.32+i.pos.y*.57);
+                    float rust=smoothstep(.47,.79,corrosion*.7+grime*.37);
+                    base=lerp(base*(.44+.36*grime),half3(.165,.058,.025)*(.64+.48*corrosion),rust*.80);
+                }
                 if(_Sand>.5)
                 {
                     float slope=smoothstep(.48,.97,n.y);
@@ -144,6 +165,14 @@ Shader "RAID/Nereid Reef"
                     rgb+=(blueGlow*half3(.011,.049,.110)+violetGlow*half3(.072,.020,.093))*
                         saturate((-i.pos.y-21.)*.12)*(.50+.50*abs(n.y));
                 }
+                if(_Wreck>.5)
+                {
+                    float3 fromLamp=i.pos-_WreckLampOrigin.xyz;
+                    float nearest=4.2*clamp(round(dot(fromLamp,_WreckDirection.xyz)/4.2),0,3);
+                    float3 delta=fromLamp-_WreckDirection.xyz*nearest;
+                    float warmth=exp2(-dot(delta,delta)*.21);
+                    rgb+=warmth*half3(.27,.13,.038)*(.44+.56*abs(n.y));
+                }
                 rgb+=half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
                 // Wavelength-dependent extinction gives both cliff layers an underwater silhouette.
                 float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
@@ -164,7 +193,7 @@ Shader "RAID/Nereid Reef"
                 half3 workTransmission=lerp(transmit,exp2(-d*_NereidReefClarity.z*half3(.14,.114,.10)),_NereidTurbidity);
                 half3 result=lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission;
                 // A close mask lamp should still reveal the companion's shell markings.
-                if (_PigmentLightCap>0) result=min(result,base*_PigmentLightCap+.022);
+                if (_PigmentLightCap>0) result=min(result,base*_PigmentLightCap+.022+rgb*_Wreck*.38);
                 return half4(result,1);
             }
             ENDHLSL
