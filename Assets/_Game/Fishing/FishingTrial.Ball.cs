@@ -141,7 +141,7 @@ namespace Raid
             Require(world.Gosha.Ball==GoshaBallMode.Tethered,"Distant shot teleported straight to hands.");
             yield return Wait(()=>world.HasGoshaBall(host.Motor) && ReadClient()?.gosha.Holder==host.OwnerId &&
                 ReadClient()?.gosha.Ball==GoshaBallMode.Held,5,"Peers did not agree on the held ball.");
-            host.QaHoldOwned(false,0);
+            Require(host.QaHoldOwned(false,0),"Could not release the owner reel after pickup.");
             float travel=Vector3.Distance(start,world.Gosha.BallPosition);
             Require(travel>1,"The ball did not travel the staged distance.");
             Check($"Reel moved the physical ball {travel:F2} m to the hands. Both peers observed the held state.");

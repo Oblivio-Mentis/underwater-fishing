@@ -296,7 +296,10 @@ namespace Raid
 
         internal bool QaHoldOwned(bool grip, float duration)
         {
-            if (!IsClientInitialized || !IsOwner || Motor.IsHelpless || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved) return false;
+            if (!IsClientInitialized || !IsOwner) return false;
+            // A held ball reserves the pointer immediately. Releasing a previous synthetic hold
+            // still has to clear the owner timer before the next independent shot.
+            if (duration > 0 && (Motor.IsHelpless || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved)) return false;
             float until = Time.unscaledTime + Mathf.Clamp(duration, 0, 15);
             if (grip) _qaGripUntil = until;
             else _qaReelUntil = until;
