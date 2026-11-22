@@ -19,6 +19,7 @@ namespace Raid
         Transform body,head,gun,fishAnchor;
         GameObject fishModel;
         string fishSpecies;
+        long visibleCatchId;
         int shotSequence,useSequence,previousSlot;
         float stride,speed,swimming,kick,reach,draw,movingPhase;
         Vector3 previous;
@@ -153,7 +154,7 @@ namespace Raid
             var pocket=!ball&&!cuddling&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
             gun.gameObject.SetActive(!diver.IsDead && !cuddling && tool.HarpoonInHands);
             var shownFish = held ? tool.LiftedHeavy : pocket;
-            UpdateFish(!diver.IsDead && shownFish != null ? shownFish.SpeciesId : null);
+            UpdateFish(!diver.IsDead && shownFish!=null ? shownFish.SpeciesId:null,shownFish!=null?tool.HeldCargoId:0);
             if(diver.IsDead)
             {
                 body.localPosition=Vector3.zero;body.localRotation=Quaternion.identity;
@@ -242,11 +243,11 @@ namespace Raid
             arm.End.rotation=handRotation;
         }
 
-        void UpdateFish(string species)
+        void UpdateFish(string species,long id)
         {
-            if(species==fishSpecies)return;
-            fishSpecies=species;if(fishModel!=null){fishModel.SetActive(false);Destroy(fishModel);fishModel=null;}
-            if(species!=null)fishModel=CatchFishModel.Create(fishAnchor,species);
+            if(species==fishSpecies && id==visibleCatchId)return;
+            fishSpecies=species;visibleCatchId=id;if(fishModel!=null){fishModel.SetActive(false);Destroy(fishModel);fishModel=null;}
+            if(species!=null)fishModel=CatchFishModel.Create(fishAnchor,species,id);
         }
 
         static void Pose(Limb chain,float pitch,float yaw,float roll,float hinge,float twist,float wrist)

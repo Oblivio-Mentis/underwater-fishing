@@ -14,6 +14,7 @@ namespace Raid
         readonly Transform root,fishAnchor;
         readonly Arm[] arms=new Arm[2];
         string species;
+        long catchId;
         GameObject fish;
         DiverMotor viewed;
         int sequence,displaySlot,targetSlot;
@@ -87,7 +88,8 @@ namespace Raid
             float wind=ball?GoshaBallGrip.Charge(actor):0;
             bool ranged=equipment.OwnsHarpoon && !ball && !cuddling && releaseStroke==0 && displaySlot==0 && !displayedHeavy && !grip;
             var caught=ball||cuddling?null:displayedHeavy?equipment.CarriedFish:displaySlot>=2?equipment.FishInSlot(displaySlot):null;
-            UpdateFish(caught!=null?caught.SpeciesId:null);
+            long nextId=caught==null?0:displayedHeavy?equipment.HeldCargoId:equipment.CatchIdInSlot(displaySlot);
+            UpdateFish(caught?.SpeciesId,nextId);
             stride.Advance(actor,Time.deltaTime);
             float freedom=(1f-aim)*(1f-push);
             float breath=Mathf.Sin(Time.time*1.7f)*Mathf.Lerp(.0024f,.00035f,aim);
@@ -180,12 +182,12 @@ namespace Raid
             sleeve.localScale=new Vector3(1,1,axis.magnitude);
         }
 
-        void UpdateFish(string next)
+        void UpdateFish(string next,long id)
         {
-            if(next==species)return;
-            species=next;
+            if(next==species && id==catchId)return;
+            species=next;catchId=id;
             if(fish!=null){fish.SetActive(false);Object.Destroy(fish);fish=null;}
-            if(species!=null)fish=CatchFishModel.Create(fishAnchor,species);
+            if(species!=null)fish=CatchFishModel.Create(fishAnchor,species,catchId);
         }
 
         public void Release(){if(root!=null)Object.Destroy(root.gameObject);outfit.Release();}
