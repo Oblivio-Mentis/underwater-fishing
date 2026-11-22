@@ -75,8 +75,10 @@ namespace Raid
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
-        public bool HandsFull => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
-        public int CatchCount => PocketCount+(HandsFull?1:0);
+        public LootActor CarriedSalvage => LootActor.HeldBy(Motor);
+        public bool HoldingHeavyCatch => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
+        public bool HandsFull => HoldingHeavyCatch || CarriedSalvage != null;
+        public int CatchCount => PocketCount+(HoldingHeavyCatch?1:0);
         int PocketCount
         {
             get
@@ -88,8 +90,8 @@ namespace Raid
         }
 
         public bool HasFullCreel => FreePocket()<0;
-        public int SmallestCatchSize => PocketCount>0?1:HandsFull?HeavySpecies.cargoSize:0;
-        public FishActor CarriedFish => HandsFull?HeavySpecies:FishInSlot(FirstOccupiedPocket());
+        public int SmallestCatchSize => HoldingHeavyCatch?HeavySpecies.cargoSize:PocketCount>0?1:0;
+        public FishActor CarriedFish => HoldingHeavyCatch?HeavySpecies:FishInSlot(FirstOccupiedPocket());
 
         PocketItem Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
         void SetPocket(int slot,PocketItem item) => pockets[slot-2]=item;
@@ -110,7 +112,7 @@ namespace Raid
         internal bool StoreBall()
         {
             int slot=FreePocket();
-            if(!IsServerInitialized || slot<0 || BallSlot>=0)return false;
+            if(!IsServerInitialized || HandsFull || slot<0 || BallSlot>=0)return false;
             SetPocket(slot,new PocketItem{ball=true});
             EquipSlot(slot);
             return true;
@@ -195,6 +197,7 @@ namespace Raid
 
         public override void OnStopServer()
         {
+            CarriedSalvage?.DropAtFeet(Motor);
             ReleaseAll(false);
             ServerTools.Remove(this);
         }
@@ -398,7 +401,7 @@ namespace Raid
         {
             if (!IsServerInitialized) return false;
             if (_liftedHeavy.Value.id > 0) { _liftedHeavy.Value = default; return true; }
-            if (HandsFull) { _fish.ReleaseHook(this); return true; }
+            if (HoldingHeavyCatch) { _fish.ReleaseHook(this); return true; }
             return EmptyPocket(FirstOccupiedPocket(), true);
         }
 
@@ -427,14 +430,14 @@ namespace Raid
         public bool TakeCargo()
         {
             if (!IsServerInitialized) return false;
-            return HandsFull ? RemoveHeavy() : EmptyPocket(FirstOccupiedPocket(), false);
+            return HoldingHeavyCatch ? RemoveHeavy() : EmptyPocket(FirstOccupiedPocket(), false);
         }
 
         internal bool UnloadCatches(TeamProgress team, ProgressionTuning progression)
         {
             if (!IsServerInitialized) return false;
             bool loaded = false;
-            if (HandsFull)
+            if (HoldingHeavyCatch)
             {
                 var item = HeavySpecies.ToCargo(HeavyId);
                 if (team.LoadCargo(item, progression))

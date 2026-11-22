@@ -21,8 +21,11 @@ namespace Raid
         GameObject fishModel;
         string fishSpecies;
         long visibleCatchId;
-        int shotSequence,useSequence,previousSlot;
-        float stride,speed,swimming,kick,reach,draw,movingPhase;
+        int shotSequence,useSequence,displaySlot,targetSlot;
+        internal bool BallVisible { get; private set; }
+        internal Vector3 BallCenter { get; private set; }
+        internal bool Visible => body!=null && body.gameObject.activeSelf;
+        float stride,speed,swimming,kick,reach,draw,movingPhase,shownWind;
         Vector3 previous;
         Renderer legacyVisor,legacyCapsule;
 
@@ -105,7 +108,7 @@ namespace Raid
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
             fishAnchor.localScale=Vector3.one*.27f;
-            previous=transform.position;shotSequence=tool.ShotSequence;useSequence=diver.InteractionSequence;previousSlot=tool.ActiveSlot;
+            previous=transform.position;shotSequence=tool.ShotSequence;useSequence=diver.InteractionSequence;displaySlot=targetSlot=tool.ActiveSlot;
             body.gameObject.SetActive(false);
         }
 
@@ -132,8 +135,14 @@ namespace Raid
             float rawSpeed=dt>.0001f?Vector3.Distance(transform.position,previous)/dt:0;previous=transform.position;
             if(tool.ShotSequence!=shotSequence){kick=1;shotSequence=tool.ShotSequence;}
             if(diver.InteractionSequence!=useSequence){reach=1;useSequence=diver.InteractionSequence;}
-            if(tool.ActiveSlot!=previousSlot){draw=1;previousSlot=tool.ActiveSlot;}
-            if(!visible)return;
+            if(!visible)
+            {
+                BallVisible=false;
+                draw=shownWind=0;
+                displaySlot=targetSlot=tool.ActiveSlot;
+                return;
+            }
+            if(tool.ActiveSlot!=targetSlot){draw=GoshaBallGrip.SwapDuration;targetSlot=tool.ActiveSlot;}
             if(!weaponBuilt && equipment!=null && equipment.MakeWorldModel(gun,weaponMeshes,out var bolt,out var drum,out var muzzle,out shuttle))
             {
                 weaponBuilt=true;
@@ -146,17 +155,23 @@ namespace Raid
             float blend=1-Mathf.Exp(-10*dt);
             speed=Mathf.Lerp(speed,Mathf.Min(rawSpeed,8),blend);stride=Mathf.Lerp(stride,Mathf.Clamp01(speed*.44f),blend);
             swimming=Mathf.Lerp(swimming,diver.IsWalking?0:1,blend);
-            kick=Mathf.MoveTowards(kick,0,dt*5.3f);reach=Mathf.MoveTowards(reach,0,dt*2.1f);draw=Mathf.MoveTowards(draw,0,dt*3.2f);
+            kick=Mathf.MoveTowards(kick,0,dt*5.3f);reach=Mathf.MoveTowards(reach,0,dt*2.1f);draw=Mathf.Max(0,draw-dt);
+            if(draw<GoshaBallGrip.SwapDuration*.5f)displaySlot=targetSlot;
             movingPhase+=dt*Mathf.Lerp(3.1f,diver.IsSprinting?12.3f:9.1f,stride);
             float beat=Mathf.Sin(movingPhase);
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
-            bool ball=RaidWorld.Instance?.GoshaBallInHands(diver)??false;
-            bool cuddling=RaidWorld.Instance?.IsHoldingGosha(diver)??false;
-            var pocket=!ball&&!cuddling&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
-            gun.gameObject.SetActive(!diver.IsDead && !cuddling && tool.HarpoonInHands);
-            var shownFish = held ? tool.LiftedHeavy : pocket;
-            UpdateFish(!diver.IsDead && shownFish!=null ? shownFish.SpeciesId:null,shownFish!=null?tool.HeldCargoId:0);
+            var salvage=tool.CarriedSalvage;
+            var world=RaidWorld.Instance;
+            bool cuddling=world?.IsHoldingGosha(diver)==true;
+            bool ball=BallVisible=!diver.IsDead && !held && !cuddling && world?.HasGoshaBall(diver)==true && tool.HasBallInSlot(displaySlot);
+            float wind=shownWind=ball ? displaySlot==tool.ActiveSlot?GoshaBallGrip.Charge(diver):shownWind : 0;
+            BallCenter=GoshaBallGrip.ObserverCenter(wind)+GoshaBallGrip.Lower(GoshaBallGrip.Stow(draw));
+            var pocket=!ball&&!cuddling&&!held?tool.FishInSlot(displaySlot):null;
+            gun.gameObject.SetActive(!diver.IsDead && !cuddling && !held && !helper && tool.OwnsHarpoon && displaySlot==0);
+            var shownFish=tool.HoldingHeavyCatch?tool.LiftedHeavy:pocket;
+            long shownId=tool.HoldingHeavyCatch?tool.HeldCargoId:tool.CatchIdInSlot(displaySlot);
+            UpdateFish(!diver.IsDead?shownFish?.SpeciesId:null,shownFish!=null?shownId:0);
             if(diver.IsDead)
             {
                 body.localPosition=Vector3.zero;body.localRotation=Quaternion.identity;
@@ -183,7 +198,7 @@ namespace Raid
                 else if(gun.gameObject.activeSelf||pocket!=null)
                 {
                     shoulder=s>0?-48:-39;elbow=s>0?-40:-57;yaw=-s*(s>0?8:24);roll=s*(s>0?5:8);
-                    shoulder-=15*kick;shoulder+=Mathf.Sin(draw*Mathf.PI)*30;
+                    shoulder-=15*kick;shoulder+=GoshaBallGrip.Stow(draw)*30;
                 }
                 else
                 {
@@ -198,14 +213,14 @@ namespace Raid
                 if(swimming>.01f&&(held||helper||gun.gameObject.activeSelf||pocket!=null))shoulder-=lean*.73f;
                 Pose(arms[i],shoulder,yaw,roll,elbow,0,wrist);
             }
-            if(ball || cuddling)
+            if(ball || cuddling || salvage!=null)
             {
-                float wind=ball?GoshaBallGrip.Charge(diver):0;
-                var center=ball?GoshaBallGrip.ObserverCenter(wind):new Vector3(0,.18f,.48f);
+                var center=ball?BallCenter:salvage!=null?LootActor.ObserverCenter:new Vector3(0,.18f,.48f);
                 for(int i=0;i<2;i++)
                 {
                     int side=i==0?-1:1;
-                    var grip=ball?GoshaBallGrip.GloveOffset(side,wind):new Vector3(side*.19f,-.04f,-.035f);
+                    var grip=ball?GoshaBallGrip.GloveOffset(side,wind):salvage!=null
+                        ?salvage.GloveOffset(side,salvage.transform.lossyScale):new Vector3(side*.19f,-.04f,-.035f);
                     if(cuddling && side>0)grip+=new Vector3(-.075f,.13f,.07f)*(.5f+.5f*Mathf.Sin(Time.time*5.6f));
                     ReachGrip(arms[i],transform.TransformPoint(center+grip),transform.rotation*Quaternion.Euler(-16,side*24,-side*48),
                         transform.rotation*new Vector3(side*.8f,-.65f,-.3f));
@@ -217,7 +232,7 @@ namespace Raid
         void HoldHarpoon(float beat,float idle)
         {
             var yaw=Quaternion.Euler(0,diver.transform.eulerAngles.y,0);
-            float lowered=Mathf.Sin(draw*Mathf.PI)*32;
+            float lowered=GoshaBallGrip.Stow(draw)*32;
             var aim=yaw*Quaternion.Euler(Mathf.Clamp(diver.ViewPitch,-80,80)+lowered-kick*5,0,0);
             var shoulders=(arms[0].Upper.position+arms[1].Upper.position)*.5f;
             gun.SetPositionAndRotation(shoulders+yaw*(Vector3.right*.095f-Vector3.up*.115f)

@@ -9,7 +9,8 @@ namespace Raid.Nereid
     internal sealed class CargoBasket : MonoBehaviour
     {
         internal const float Width=3.40f, Depth=3.38f;
-        const float Side=Width*.5f, End=Depth*.5f, Floor=-.96f, Rim=1.14f;
+        internal const float Floor=-.96f;
+        const float Side=Width*.5f, End=Depth*.5f, Rim=1.14f;
         internal Transform CableSocket { get; private set; }
         readonly Transform[] lids=new Transform[2], trapdoors=new Transform[2];
         readonly MeshRenderer[] meter=new MeshRenderer[24];

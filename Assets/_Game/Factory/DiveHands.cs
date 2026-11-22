@@ -16,10 +16,14 @@ namespace Raid
         string species;
         long catchId;
         GameObject fish;
+        Transform salvageModel;
+        LootActor salvageSource;
+        internal bool BallVisible { get; private set; }
+        internal Vector3 BallCenter { get; private set; }
         DiverMotor viewed;
         int sequence,displaySlot,targetSlot;
         bool displayedHeavy,targetHeavy;
-        float press,switchTime,releaseStroke;
+        float press,switchTime,releaseStroke,shownWind;
         bool hadBall;
 
         public DiveHands(HarpoonPresentation source,Transform camera)
@@ -54,7 +58,7 @@ namespace Raid
         {
             if(root==null||root.gameObject.activeSelf==value)return;
             root.gameObject.SetActive(value);
-            if(!value)stride.Reset();
+            if(!value){stride.Reset();BallVisible=false;}
         }
 
         public bool HasPanelPress(DiverMotor actor)
@@ -66,40 +70,48 @@ namespace Raid
             {
                 viewed=actor;sequence=actor.InteractionSequence;
                 displaySlot=targetSlot=equipment.ActiveSlot;displayedHeavy=targetHeavy=equipment.HandsFull;
-                press=switchTime=releaseStroke=0;hadBall=false;
+                press=switchTime=releaseStroke=shownWind=0;hadBall=false;
                 stride.Reset();
             }
             if(targetSlot!=equipment.ActiveSlot||targetHeavy!=equipment.HandsFull)
             {
-                targetSlot=equipment.ActiveSlot;targetHeavy=equipment.HandsFull;switchTime=.34f;
+                targetSlot=equipment.ActiveSlot;targetHeavy=equipment.HandsFull;switchTime=GoshaBallGrip.SwapDuration;
             }
             if(sequence!=actor.InteractionSequence){sequence=actor.InteractionSequence;press=.46f;}
             switchTime=Mathf.Max(0,switchTime-dt);press=Mathf.Max(0,press-dt);
-            if(switchTime<.17f){displaySlot=targetSlot;displayedHeavy=targetHeavy;}
-            float stow=Mathf.Sin(Mathf.Clamp01(switchTime/.34f)*Mathf.PI);
+            if(switchTime<GoshaBallGrip.SwapDuration*.5f){displaySlot=targetSlot;displayedHeavy=targetHeavy;}
+            float stow=GoshaBallGrip.Stow(switchTime);
             float push=Mathf.Pow(Mathf.Max(0,Mathf.Sin(press/.46f*Mathf.PI)),.7f);
             bool grip=equipment.AssistTarget!=null;
-            bool ball=RaidWorld.Instance?.GoshaBallInHands(actor)??false;
-            if(hadBall && !ball && RaidWorld.Instance!=null && RaidWorld.Instance.Gosha.Ball==GoshaBallMode.Flying &&
-                RaidWorld.Instance.Gosha.Thrower==actor.OwnerId)releaseStroke=.23f;
-            hadBall=ball;
+            var world=RaidWorld.Instance;
+            bool selectedBall=world?.GoshaBallInHands(actor)==true;
+            if(hadBall && !selectedBall && world!=null && world.Gosha.Ball==GoshaBallMode.Flying &&
+                world.Gosha.Thrower==actor.OwnerId)releaseStroke=.23f;
+            hadBall=selectedBall;
             releaseStroke=Mathf.Max(0,releaseStroke-dt);
-            bool cuddling=RaidWorld.Instance?.IsHoldingGosha(actor)??false;
-            float wind=ball?GoshaBallGrip.Charge(actor):0;
+            bool cuddling=world?.IsHoldingGosha(actor)==true;
+            bool ball=BallVisible=!cuddling && !displayedHeavy && world?.HasGoshaBall(actor)==true && equipment.HasBallInSlot(displaySlot);
+            float wind=shownWind=ball ? selectedBall?GoshaBallGrip.Charge(actor):shownWind : 0;
+            Vector3 stowOffset=GoshaBallGrip.Lower(stow);
+            BallCenter=GoshaBallGrip.CameraCenter(wind)+stowOffset;
             bool ranged=equipment.OwnsHarpoon && !ball && !cuddling && releaseStroke==0 && displaySlot==0 && !displayedHeavy && !grip;
-            var caught=ball||cuddling?null:displayedHeavy?equipment.CarriedFish:displaySlot>=2?equipment.FishInSlot(displaySlot):null;
+            var salvage=displayedHeavy?equipment.CarriedSalvage:null;
+            var caught=ball||cuddling||salvage!=null?null:displayedHeavy?equipment.CarriedFish:equipment.FishInSlot(displaySlot);
             long nextId=caught==null?0:displayedHeavy?equipment.HeldCargoId:equipment.CatchIdInSlot(displaySlot);
             UpdateFish(caught?.SpeciesId,nextId);
             stride.Advance(actor,Time.deltaTime);
             float freedom=(1f-aim)*(1f-push);
             float breath=Mathf.Sin(Time.time*1.7f)*Mathf.Lerp(.0024f,.00035f,aim);
-            Vector3 lower=new Vector3(0,-.20f*stow+breath,-.036f*stow);
+            Vector3 lower=stowOffset+Vector3.up*breath;
             gun.localPosition+=lower+stride.Offset*freedom;
             gun.localRotation*=Quaternion.Euler(stride.Tilt*freedom+new Vector3(12*stow,0,-stow*8));
             Vector3 fishPos=new Vector3(displayedHeavy?0:.11f,displayedHeavy?-.245f:-.207f,displayedHeavy?.67f:.51f)+stride.Offset*.55f+lower;
             fishAnchor.localPosition=fishPos;
             fishAnchor.localRotation=Quaternion.Euler(-8,displayedHeavy?77:57,displayedHeavy?-8:-19);
             fishAnchor.localScale=Vector3.one*(displayedHeavy?.63f:.29f);
+            Vector3 salvagePos=salvage==null?Vector3.zero:LootActor.CameraCenter+lower+stride.Offset*.35f;
+            const float salvageScale=.42f;
+            UpdateSalvage(salvage,salvagePos,salvageScale);
             for(int i=0;i<2;i++)
             {
                 int s=i==0?-1:1;var arm=arms[i];
@@ -117,7 +129,7 @@ namespace Raid
                 }
                 else if(ball)
                 {
-                    wrist=GoshaBallGrip.CameraCenter(wind)+GoshaBallGrip.GloveOffset(s,wind);
+                    wrist=BallCenter+GoshaBallGrip.GloveOffset(s,wind);
                     angles=new Vector3(-22,-s*32,-s*48);
                 }
                 else if(releaseStroke>0 && s>0)
@@ -133,6 +145,11 @@ namespace Raid
                     if(s>0)wrist=Vector3.Lerp(new Vector3(.18f,-.16f,.73f),new Vector3(.065f,-.055f,.81f),stroke);
                     angles=new Vector3(s>0?16:-20,-s*25,-s*52);
                 }
+                else if(salvage!=null)
+                {
+                    wrist=salvagePos+salvage.GloveOffset(s,Vector3.one*salvageScale);
+                    angles=new Vector3(-18,-s*31,-s*62);
+                }
                 else if(caught!=null)
                 {
                     float spread=displayedHeavy?.214f:.108f;
@@ -146,7 +163,7 @@ namespace Raid
                     angles=new Vector3(8,-s*18,-s*35)+tilt;
                     if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.6f),.85f);
                 }
-                if(s<0&&push>0&&!ball&&!cuddling)
+                if(s<0&&push>0&&!ball&&!cuddling&&!displayedHeavy)
                 {
                     wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.596f),push);
                     angles=Quaternion.Slerp(Quaternion.Euler(angles),Quaternion.Euler(-12,1,12),push).eulerAngles;
@@ -180,6 +197,19 @@ namespace Raid
             sleeve.localPosition=start;
             sleeve.localRotation=Quaternion.LookRotation(axis,Vector3.up);
             sleeve.localScale=new Vector3(1,1,axis.magnitude);
+        }
+
+        void UpdateSalvage(LootActor next,Vector3 at,float scale)
+        {
+            if(salvageSource!=next)
+            {
+                if(salvageModel!=null){salvageModel.gameObject.SetActive(false);Object.Destroy(salvageModel.gameObject);}
+                salvageSource=next;
+                salvageModel=next==null?null:next.CopyModel(root,next.DisplayName);
+            }
+            if(salvageModel==null)return;
+            salvageModel.localPosition=at;
+            salvageModel.localScale=Vector3.one*scale;
         }
 
         void UpdateFish(string next,long id)

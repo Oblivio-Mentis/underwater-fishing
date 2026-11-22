@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using Raid.UI;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Raid.Nereid
 {
@@ -23,6 +24,24 @@ namespace Raid.Nereid
                 icon.transform.parent.parent.name=="Slot "+(tool.ActiveSlot+1));
             var position=ball.localPosition;
             var rotation=ball.localRotation;
+            int ballSlot=tool.ActiveSlot;
+            check("The neighboring inventory slot can be selected before the wheel test",tool.SelectSlot(ballSlot-1));
+            float swapEnds=Time.realtimeSinceStartup+2;
+            while((tool.ActiveSlot==ballSlot || ball.gameObject.activeInHierarchy) && Time.realtimeSinceStartup<swapEnds)
+                yield return null;
+            var mouse=Mouse.current??InputSystem.AddDevice<Mouse>();
+            InputSystem.QueueDeltaStateEvent(mouse.scroll,new Vector2(0,-1));
+            float lowest=position.y;
+            swapEnds=Time.realtimeSinceStartup+2;
+            while(Time.realtimeSinceStartup<swapEnds)
+            {
+                yield return null;
+                if(!ball.gameObject.activeInHierarchy)continue;
+                lowest=Mathf.Min(lowest,ball.localPosition.y);
+                if(lowest<position.y-.10f && Mathf.Abs(position.y-ball.localPosition.y)<.001f)break;
+            }
+            check($"Mouse wheel redraws the ball through a {position.y-lowest:F2} m lift",
+                tool.ActiveSlot==ballSlot && lowest<position.y-.10f && Mathf.Abs(position.y-ball.localPosition.y)<.001f);
             float maxDistance=0,maxAngle=0,turned=0;
             foreach(float yaw in new[]{-72f,88f,0f})
             {

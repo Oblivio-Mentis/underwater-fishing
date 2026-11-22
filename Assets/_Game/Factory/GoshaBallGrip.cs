@@ -5,6 +5,9 @@ namespace Raid
     // Shared by the glove rigs and the single visible ball for each camera.
     internal static class GoshaBallGrip
     {
+        internal const float SwapDuration=.34f;
+        internal static float Stow(float secondsLeft) => Mathf.Sin(Mathf.Clamp01(secondsLeft/SwapDuration)*Mathf.PI);
+        internal static Vector3 Lower(float stow) => new(0,-.20f*stow,-.036f*stow);
         internal static float Charge(DiverMotor diver)
         {
             var ui=UI.UiRoot.Instance;

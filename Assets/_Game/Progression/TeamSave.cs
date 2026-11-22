@@ -62,6 +62,7 @@ namespace Raid
                     progress.MigrateV2(combined);
                 }
                 progress.Validate();
+                progress.RecoverLegacySalvage();
                 return progress;
             }
             catch (Exception error) when (error is ArgumentException || error is InvalidOperationException || error is InvalidDataException || error is OverflowException)
