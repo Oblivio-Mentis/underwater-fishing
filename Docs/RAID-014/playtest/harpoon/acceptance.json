@@ -1,0 +1,35 @@
+{
+  "gameplayRevision": "a2356020a565ea96293a2284daa90a5377aced6b",
+  "player": "RAID014-Crew-Repeat",
+  "unity": "6000.5.6f1",
+  "execution": "Two independent Windows development players using Tugboat on 127.0.0.1:17844, Direct3D 11.",
+  "setup": "The trial positions the two divers and the existing server ball on deck and in open water. It inserts a temporary solid collider for both obstruction checks. All shots, release, reel and Q actions pass through the normal owned RPCs.",
+  "sha256": {
+    "UnderwaterFishing.exe": "95d0c3362277726adce36509ace867138edb472da0d02db64eb4beeaff0c29bc",
+    "UnderwaterFishing_Data/Managed/Assembly-CSharp.dll": "63bac7dc368d18e433c2663130dec79510250a02a333885f46c86ff9bd716c8c",
+    "UnderwaterFishing_Data/level0": "ce21bc2574e7bd22cac38391a00b29ba0824c021bc3425f5cff085deee28a014"
+  },
+  "report": {
+    "phase": "Drop the held ball, then drop a loaded harpoon",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+      "Distinct connected owners 0 and 1",
+      "The solid test partition took the first raycast hit. Ball stayed loose.",
+      "Both clients observed the ball tether. R released it onto the deck.",
+      "A solid barrier introduced after attachment severed the line and left the ball on its original side.",
+      "A second owner's shot at the reserved physical ball did not reassign it.",
+      "Reel moved the physical ball 6,83 m to the hands. Both peers observed the held state.",
+      "The deck ball travelled down the line into the shooter's temporary hand slot.",
+      "Reel moved the physical ball 3,00 m to the hands. Both peers observed the held state.",
+      "Submerged owner retrieved the same loose ball, and retained it underwater without using a fish pocket.",
+      "Q released the held ball underwater and preserved the original harpoon. Q on the loaded gun then freed the ball and replicated that same gun ID once."
+    ]
+  },
+  "camera": [
+    "ball-hook-deck.png",
+    "ball-hook-water.png"
+  ]
+}
