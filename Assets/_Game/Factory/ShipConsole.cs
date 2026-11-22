@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum ShipConsoleKind { Process, Feed, Upgrades, Depths, Reservoir }
+    public enum ShipConsoleKind { Process, Feed, Upgrades, Depths, Reservoir, SkillTree }
 
     // Physical, scene-authored access points. Server validates its own station list.
     public sealed class ShipConsole : MonoBehaviour
@@ -13,17 +13,22 @@ namespace Raid
         public float range=3.2f;
         public float screenScale=.0018f;
         public static readonly List<ShipConsole> Stations=new List<ShipConsole>();
-        public string Caption => kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
+        public string Caption => kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
         void OnEnable() { if(!Stations.Contains(this))Stations.Add(this); }
         void OnDisable() { Stations.Remove(this); }
         public bool InRange(DiverMotor diver) => diver!=null && (diver.transform.position-transform.position).sqrMagnitude<=range*range;
-        public bool IsMonitor => kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Reservoir;
+        public bool IsMonitor => kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Reservoir || kind==ShipConsoleKind.SkillTree;
 
         // Use the physical face collider and its actual world-space display plane. Hull props occlude the ray.
         public static ShipConsole ResolveSight(DiverMotor player,Camera camera)
         {
             if(player==null || !player.IsInside || camera==null)return null;
             var ray=camera.ViewportPointToRay(new Vector3(.5f,.5f,0));
+            return ResolveSight(player,ray);
+        }
+
+        static ShipConsole ResolveSight(DiverMotor player, Ray ray)
+        {
             if(!Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore))return null;
             var station=hit.collider.GetComponentInParent<ShipConsole>();
             if(station==null || !station.InRange(player))return null;
@@ -35,6 +40,14 @@ namespace Raid
             var point=Quaternion.Inverse(anchor.rotation)*(ray.GetPoint(distance)-anchor.position);
             return Mathf.Abs(point.x)<=station.screenScale*610 && Mathf.Abs(point.y)<=station.screenScale*426 ? station : null;
         }
+        public static bool CanUseKind(DiverMotor diver, ShipConsoleKind kind)
+        {
+            if(diver==null || diver.IsHelpless || diver.IsTrapped || !diver.IsInside)return false;
+            var eye=diver.transform.position+Vector3.up*.6f;
+            var station=ResolveSight(diver,new Ray(eye,diver.AimDirection));
+            return station!=null && station.kind==kind && station.gameObject.scene==diver.gameObject.scene;
+        }
+
         public bool Supports(WorldAction action)
         {
             if(action==WorldAction.ProcessAll||action==WorldAction.StopProcessing)return kind==ShipConsoleKind.Process;

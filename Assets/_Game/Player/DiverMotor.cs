@@ -185,7 +185,8 @@ namespace Raid
                 if(controlling && CanRespawn && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)RequestRespawn();
                 return;
             }
-            if (controlling)
+            bool usingSkillMonitor = UI.UiInputGate.SkillMonitorLook && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
+            if (controlling || usingSkillMonitor)
             {
                 Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);

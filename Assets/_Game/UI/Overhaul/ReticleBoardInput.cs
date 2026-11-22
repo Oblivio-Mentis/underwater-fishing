@@ -21,7 +21,7 @@ namespace Raid.UI
             pointer = new PointerEventData(events) { button = PointerEventData.InputButton.Left, pointerId = -1 };
         }
 
-        public bool Update(Vector2 center, bool down, bool up, float wheel)
+        public bool Update(Vector2 center, bool down, bool up, float wheel, bool skillPurchase = false)
         {
             pointer.position = center;
             hits.Clear();
@@ -29,6 +29,13 @@ namespace Raid.UI
             pointer.pointerCurrentRaycast = hits.Count == 0 ? default : hits[0];
             GameObject hit = pointer.pointerCurrentRaycast.gameObject;
             GameObject next = ExecuteEvents.GetEventHandler<IPointerEnterHandler>(hit);
+            bool purchased=false;
+            if(skillPurchase && hit!=null && hit.GetComponentInParent<SkillPurchaseButton>() is SkillPurchaseButton node
+                && node.IsActive() && node.IsInteractable())
+            {
+                node.Purchase?.Invoke();
+                purchased=true;
+            }
             if (next != hovered)
             {
                 if (hovered != null) ExecuteEvents.Execute(hovered, pointer, ExecuteEvents.pointerExitHandler);
@@ -53,7 +60,10 @@ namespace Raid.UI
                 lastPoint = raycaster.transform.InverseTransformPoint(pointer.pointerCurrentRaycast.worldPosition);
                 if (dragged != null) ExecuteEvents.Execute(dragged, pointer, ExecuteEvents.initializePotentialDrag);
             }
-            if (dragged != null && !down && pressed != null && hovered == dragged && dragged.GetComponent<Scrollbar>() != null)
+            bool dragScrollbar=dragged!=null && hovered==dragged && dragged.GetComponent<Scrollbar>()!=null;
+            bool dragGraph=dragged!=null && pressed==dragged && hit!=null && dragged.GetComponent<SkillGraphPan>()!=null &&
+                hit.transform.IsChildOf(dragged.transform);
+            if (!down && pressed!=null && (dragScrollbar || dragGraph))
             {
                 Vector2 point = raycaster.transform.InverseTransformPoint(pointer.pointerCurrentRaycast.worldPosition);
                 if (!pointer.dragging)
@@ -79,7 +89,7 @@ namespace Raid.UI
                         clicked = ExecuteEvents.Execute(prior, pointer, ExecuteEvents.pointerClickHandler);
                 }
             }
-            return clicked;
+            return clicked || purchased;
         }
 
         public void Clear()

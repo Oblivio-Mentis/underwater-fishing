@@ -38,6 +38,7 @@ namespace Raid.UI
         HudView hud;
         TerminalView terminal;
         CargoView cargo;
+        SkillTreeView skills;
         CanvasGroup[] modalGroups;
         GameObject cancelConfirmationButton;
         UiPage settingsBack=UiPage.Main;
@@ -86,8 +87,8 @@ namespace Raid.UI
             boardInput=new ReticleBoardInput(GetComponent<GraphicRaycaster>(),events);
             hud=new HudView(transform,this);
             var dim=UiKit.Panel(transform,"Menu shade",new Color(.012f,.027f,.031f,.62f),true);shade=dim.rectTransform;UiKit.Fill(shade);
-            menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);
-            modalGroups=new[]{menu.Root.gameObject.AddComponent<CanvasGroup>(),terminal.Root.gameObject.AddComponent<CanvasGroup>(),cargo.Root.gameObject.AddComponent<CanvasGroup>()};
+            menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);skills=new SkillTreeView(transform,this);
+            modalGroups=new[]{menu.Root.gameObject.AddComponent<CanvasGroup>(),terminal.Root.gameObject.AddComponent<CanvasGroup>(),cargo.Root.gameObject.AddComponent<CanvasGroup>(),skills.Root.gameObject.AddComponent<CanvasGroup>()};
             MakeConfirmation();
             var dot=UiKit.Panel(transform,"Physical monitor sight",UiTheme.Amber);
             boardPointer=dot.rectTransform;UiKit.Place(boardPointer,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(9,9));
@@ -128,25 +129,28 @@ namespace Raid.UI
             bool previousBoard=computerSurface;
             Page=value;
             if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
-            if(value!=UiPage.Terminal)Context.SelectedConsole=null;
+            if(value!=UiPage.Terminal && value!=UiPage.SkillTree)Context.SelectedConsole=null;
+            if(value!=UiPage.SkillTree)skills.Close();
             boardInput.Clear();
             ConfigureSurface(value);
-            float boardMargin=computerSurface?(canvasRect.rect.height-terminal.Root.rect.height)*.5f:0;
+            float boardMargin=computerSurface?(canvasRect.rect.height-
+                (value==UiPage.SkillTree?skills.Root.rect.height:terminal.Root.rect.height))*.5f:0;
             if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4-boardMargin),new Vector2(value==UiPage.None?760:1080,38));
             if(pendingText!=null)pendingText.rectTransform.anchoredPosition=new Vector2(0,22+boardMargin);
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
-            terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);
+            terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);skills.Root.gameObject.SetActive(value==UiPage.SkillTree);
             shade.gameObject.SetActive(value!=UiPage.None&&!computerSurface);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
             if(!computerSurface && !(previousBoard && value==UiPage.None))UiInputGate.ResumeAt=Time.unscaledTime+.15f;
             SetCursor();EventSystem.current?.SetSelectedGameObject(null);
             if(Context.Connected && value==UiPage.Terminal)terminal.Refresh();if(Context.Connected&&value==UiPage.Cargo)cargo.Refresh();
+            if(value==UiPage.SkillTree)skills.Refresh();
             Canvas.ForceUpdateCanvases();
         }
         void ConfigureSurface(UiPage page)
         {
             var station=Context.SelectedConsole;
-            computerSurface=page==UiPage.Terminal && station!=null && station.screenAnchor!=null;
+            computerSurface=(page==UiPage.Terminal || page==UiPage.SkillTree) && station!=null && station.screenAnchor!=null;
             if(computerSurface)
             {
                 canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=Context.Player.GetComponentInChildren<Camera>();
@@ -164,9 +168,33 @@ namespace Raid.UI
         public void ClosePanel()
         {
             if(confirmation.gameObject.activeSelf){CancelConfirmation();return;}
+            if(Page==UiPage.SkillTree && skills.TreasuryOnly)
+            {
+                CloseTreasury();
+                return;
+            }
             if(computerSurface)dismissedConsole=Context.SelectedConsole;
             ShowPage(Page==UiPage.Settings?settingsBack:Page==UiPage.Crew?crewBack:Context.Connected?UiPage.None:UiPage.Main);
         }
+        public void OpenTreasury()
+        {
+            if(Page==UiPage.SkillTree){skills.ShowTreasury(true);return;}
+            if(Page!=UiPage.Terminal || Context.SelectedConsole?.kind!=ShipConsoleKind.Upgrades)return;
+            skills.Open(true);
+            ShowPage(UiPage.SkillTree);
+        }
+
+        public void CloseTreasury()
+        {
+            if(Page!=UiPage.SkillTree)return;
+            if(skills.TreasuryOnly)
+            {
+                ShowPage(UiPage.Terminal);
+                terminal.SelectTab("upgrades");
+            }
+            else skills.ShowTreasury(false);
+        }
+
         void SetCursor()
         {
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
@@ -176,8 +204,9 @@ namespace Raid.UI
                 inputModule.enabled=Application.isFocused&&!overlay&&!computerSurface;
             }
             if(EventSystem.current!=null)EventSystem.current.sendNavigationEvents=!computerSurface;
-            UiInputGate.Modal=(!computerSurface && (Page!=UiPage.None||confirmation.gameObject.activeSelf))||overlay;
-            bool locked=Context.Connected && !UiInputGate.Modal && Application.isFocused;
+            UiInputGate.SkillMonitorLook=computerSurface && Page==UiPage.SkillTree && !overlay;
+            UiInputGate.Modal=UiInputGate.SkillMonitorLook || (!computerSurface && (Page!=UiPage.None||confirmation.gameObject.activeSelf))||overlay;
+            bool locked=Context.Connected && (!UiInputGate.Modal || UiInputGate.SkillMonitorLook) && Application.isFocused;
             Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;
         }
         void Update()
@@ -192,7 +221,11 @@ namespace Raid.UI
                 else ClosePanel();
             }
             var mouse=Application.isFocused?Mouse.current:null;
-            UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),!UiInputGate.Blocked);
+            bool skillPurchase=Page==UiPage.SkillTree && !skills.TreasuryOnly && mouse!=null && mouse.rightButton.wasPressedThisFrame;
+            bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.SkillMonitorLook && mouse!=null && !overlayBefore;
+            UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
+                mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
+            skills.Animate(Time.unscaledDeltaTime);
             if(!UiInputGate.Blocked && Context.Connected && Page==UiPage.None && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)Interact();
             if(Time.unscaledTime>=nextRefresh)
             {
@@ -220,7 +253,7 @@ namespace Raid.UI
                     bool pulled=Context.Harpoon!=null&&Context.Harpoon.IsPulled;
                     if(pulled&&!wasPulled&&Page!=UiPage.None)Toast("Напарник тянет вас к себе. R — отцепиться");
                     wasPulled=pulled;
-                    hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();
+                    hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();else if(Page==UiPage.SkillTree)skills.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
                     if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена:")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
@@ -232,6 +265,7 @@ namespace Raid.UI
             if(saveSettingsAt>=0 && Time.unscaledTime>=saveSettingsAt){saveSettingsAt=-1;Settings.Save();}
         }
         public Nereid.AirlockPad AimedPad => aimedPad;
+        public bool AimedCargoDispatch { get; private set; }
 
         void CancelBallGesture()
         {
@@ -262,10 +296,11 @@ namespace Raid.UI
             }
         }
 
-        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed)
+        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed,bool skillPurchase=false)
         {
             UiInputGate.PointerReserved=false;
             aimedPad=null;
+            AimedCargoDispatch=false;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
             if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.HasGoshaBall(player)))CancelBallGesture();
@@ -281,6 +316,13 @@ namespace Raid.UI
             {
                 UiInputGate.PointerReserved=true;
                 return false;
+            }
+            if(Page==UiPage.None && CargoDispatch.Aimed(player,cam)!=null)
+            {
+                AimedCargoDispatch=true;
+                UiInputGate.PointerReserved=true;
+                if(clicked && allowed)Send(WorldAction.Hoist);
+                return clicked;
             }
             var station=ShipConsole.ResolveSight(player,cam);
             if(station!=dismissedConsole)dismissedConsole=null;
@@ -302,7 +344,16 @@ namespace Raid.UI
                 if(clicked && allowed){UseConsole(station);return true;}
                 return false;
             }
-            if(!computerSurface && confirmAction==null && allowed)UseConsole(station);
+            if(!computerSurface && confirmAction==null && allowed)
+            {
+                if(station.kind==ShipConsoleKind.SkillTree)
+                {
+                    if(!clicked)return false;
+                    UseConsole(station);
+                    return computerSurface;
+                }
+                UseConsole(station);
+            }
             if(!computerSurface)return false;
             var screenCenter=cam.pixelRect.center;
             if(RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect,screenCenter,cam,out var point))
@@ -312,11 +363,12 @@ namespace Raid.UI
                 boardPointer.gameObject.SetActive(true);
             }
             if(clicked && allowed)player.TouchTerminal(station.kind);
-            return boardInput.Update(screenCenter,clicked&&allowed,released,allowed?scroll:0);
+            return boardInput.Update(screenCenter,clicked&&allowed,released,allowed?scroll:0,skillPurchase&&allowed);
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        public bool QaClickReticle() => UpdatePhysicalPointer(true,true,0,!UiInputGate.Modal);
-        public bool QaScrollReticle(float steps) => UpdatePhysicalPointer(false,false,steps,!UiInputGate.Modal);
+        public bool QaClickReticle() => UpdatePhysicalPointer(true,true,0,!UiInputGate.Modal || UiInputGate.SkillMonitorLook);
+        public bool QaBuyReticle() => UpdatePhysicalPointer(false,false,0,UiInputGate.SkillMonitorLook,true);
+        public bool QaScrollReticle(float steps) => UpdatePhysicalPointer(false,false,steps,!UiInputGate.Modal || UiInputGate.SkillMonitorLook);
         public string ReticleControl => computerSurface?boardInput.ControlName:"";
 #endif
         string lastSaveMessage="";
@@ -329,6 +381,7 @@ namespace Raid.UI
                     if(ShipConsole.Stations.Count==0)UseConsole(null);
                     break;
                 case UiInteraction.Cargo:
+                    if(Nereid.NereidVessel.Active!=null)break;
                     if(Context.View.hoistPhase!=HoistPhase.Loading)Toast(UiText.CargoLocked);
                     else if(Context.HasCargo && Context.View.CargoUsed+Context.CarriedSize<=Context.View.Capacity(Context.Tuning))Send(WorldAction.LoadCargo);
                     ShowPage(UiPage.Cargo);break;
@@ -341,6 +394,14 @@ namespace Raid.UI
         public void UseConsole(ShipConsole station)
         {
             if(!Context.Connected || Context.Player.IsHelpless || CommandPending || confirmAction!=null || Context.World.TravelRemaining>0)return;
+            if(station?.kind==ShipConsoleKind.SkillTree)
+            {
+                if(!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
+                Context.SelectedConsole=station;
+                skills.Open(false);
+                ShowPage(UiPage.SkillTree);
+                return;
+            }
             if(station!=null&&!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
             if(station==null&&ShipConsole.Stations.Count>0)return;
             Context.SelectedConsole=station;
@@ -362,6 +423,7 @@ namespace Raid.UI
                 if(route.stopping){Toast("Подача закрыта. Рыба в трубе завершает путь");return;}
                 Send(feeding?WorldAction.StopFeeding:WorldAction.StopProcessing,route.sequence);return;
             }
+            if(Nereid.NereidVessel.Active!=null){Toast("Выберите рыбу на экране резервуара");return;}
             var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
             long quoted=FishRouteQuote.Compute(fish,Context.FoodRequired);
             Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
@@ -434,7 +496,7 @@ namespace Raid.UI
         void OnDestroy()
         {
             if(Instance!=this)return;if(subscribedWorld!=null)subscribedWorld.CommandResponded-=OnCommandReply;
-            Settings?.Save();UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
+            skills?.Close();Settings?.Save();UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
         }
     }
 }
