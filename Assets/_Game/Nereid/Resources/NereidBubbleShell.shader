@@ -49,7 +49,9 @@ Shader "RAID/Nereid Bubble Shell"
                 half beam=saturate(NereidBeam(i.world)*.5)*_NereidTurbidity;
                 half dryGlow=.56+.52*reflection+.46*edge;
                 half3 tint=_BaseColor.rgb*i.color.rgb*dryGlow;
-                half fog=ComputeFogIntensity(i.fog);
+                // URP returns zero fog intensity when fog is disabled. Dry-deck
+                // reservoir bubbles still need their full visibility.
+                half fog=lerp(1,ComputeFogIntensity(i.fog),_NereidTurbidity);
                 half alpha=_BaseColor.a*i.color.a*saturate(.04+edge*.66+reflection*.85+beam*(reflection+edge)*.39);
                 return half4(MixFog(tint,i.fog),alpha*fog);
             }
