@@ -280,7 +280,7 @@ namespace Raid.UI
             if(r.action!="snapshot")throw new InvalidOperationException("Unsupported UI-only QA action");
         }
         // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
-        static void CapturePeerCamera(string path)
+        internal static void CapturePeerCamera(string path)
         {
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)
                 throw new InvalidOperationException("A graphics device is required for a peer camera capture");

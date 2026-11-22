@@ -25,6 +25,8 @@ namespace Raid
         static readonly int WaterTintShader=Shader.PropertyToID("_NereidWaterTint");
         static readonly int ReefClarityShader=Shader.PropertyToID("_NereidReefClarity");
         public float WaterBlend=>wetBlend;
+        internal Camera DiverCamera => camera;
+        internal bool EyeSubmerged => IsEyeUnderwater();
 
         void SaveOceanSettings()
         {

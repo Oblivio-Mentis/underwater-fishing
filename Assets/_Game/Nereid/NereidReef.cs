@@ -53,6 +53,7 @@ namespace Raid.Nereid
             var ground=Publish("Basalt arch and tidal sand",land,rock,true);
             Physics.SyncTransforms();
             NereidSalvage.Place(ground.GetComponent<MeshCollider>(),rock,owned);
+            gameObject.AddComponent<NereidWaterLife>().Build(ground.GetComponent<MeshCollider>());
             WaterBackground();
 
             var life=new ReefGeometry();
