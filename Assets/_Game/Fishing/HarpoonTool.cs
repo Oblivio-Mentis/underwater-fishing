@@ -291,17 +291,22 @@ namespace Raid
             return true;
         }
 
+        // A batch Editor has no focused Game view. Synthetic owner requests still respect modal menus.
+        private static bool QaMenuBlocked => UI.UiInputGate.Active &&
+            (UI.UiInputGate.Modal || Time.unscaledTime < UI.UiInputGate.ResumeAt ||
+             (!Application.isBatchMode && !Application.isFocused));
+
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
         internal bool QaFireOwned()
         {
             if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null
-                || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
+                || QaMenuBlocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
             FireServer(); return true;
         }
 
         internal bool QaReleaseOwned()
         {
-            if (!IsClientInitialized || !IsOwner || (UI.UiInputGate.Blocked && !IsPulled)
+            if (!IsClientInitialized || !IsOwner || (QaMenuBlocked && !IsPulled)
                 || (_fish == null && FishInSlot(ActiveSlot) == null && AssistTarget == null && !TetherActive)) return false;
             ReleaseServer(); return true;
         }

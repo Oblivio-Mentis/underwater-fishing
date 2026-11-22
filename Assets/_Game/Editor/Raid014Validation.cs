@@ -186,7 +186,8 @@ namespace Raid.Editor
                 d.LookAtConsole(aimPoint);
                 await Awaitable.WaitForSecondsAsync(.3f);
                 int seq=tool.ShotSequence;
-                Check((bool)fire.Invoke(tool,null),"Owner dispatched shot");
+                if (!(bool)fire.Invoke(tool,null))
+                    throw new InvalidOperationException($"Owner shot blocked: HUD={UI.UiInputGate.Modal}, pad={UI.UiInputGate.PointerReserved}, slot={tool.ActiveSlot}, helpless={d.IsHelpless}");
                 await Until(()=>tool.ShotSequence!=seq,"server accepts shot");
             }
             float hp=t.WaveHealth;
