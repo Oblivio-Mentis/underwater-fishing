@@ -7,6 +7,8 @@ namespace Raid.Nereid
     {
         [Tooltip("World X, Z, half length and half width in metres. Each grove has an open central channel.")]
         public Vector4[] groves;
+        [Tooltip("Sparse holdfasts on the banks of the second fishing ground.")]
+        public Vector4[] deepGroves=System.Array.Empty<Vector4>();
         [Range(3,24)] public int holdfastsPerBank = 10;
         public Vector2 bladeHeight = new(3.2f,6.8f);
         [Min(.5f)] public float passageHalfWidth = 1.3f;

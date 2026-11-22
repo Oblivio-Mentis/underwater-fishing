@@ -9,7 +9,7 @@ namespace Raid.Nereid
     public sealed class NereidWaterLife : MonoBehaviour
     {
         readonly List<Object> owned = new();
-        readonly List<MeshRenderer> groves = new();
+        readonly List<MeshRenderer>[] groves = {new(),new()};
         readonly MeshRenderer[] clouds = new MeshRenderer[4];
         readonly Vector4[] swimmers = new Vector4[5];
         readonly System.Random random = new(14029);
@@ -21,7 +21,7 @@ namespace Raid.Nereid
 
         float Sample(float low, float high) => Mathf.Lerp(low, high, (float)random.NextDouble());
 
-        internal void Build(MeshCollider bottom)
+        internal void Build(MeshCollider shallowBed,MeshCollider deepBed)
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) { enabled = false; return; }
             tuning = Resources.Load<NereidWaterTuning>("NereidWaterTuning");
@@ -30,7 +30,8 @@ namespace Raid.Nereid
             if (!tuning || !kelp || !specks) { enabled = false; return; }
             kelp.SetFloat("_BendRadius", tuning.bendRadius);
             kelp.SetFloat("_BendMetres", tuning.bendMetres);
-            foreach (var zone in tuning.groves) Plant(zone, bottom);
+            foreach (var zone in tuning.groves) Plant(zone,shallowBed,false);
+            foreach (var zone in tuning.deepGroves) Plant(zone,deepBed,true);
 
             var nearMesh = FlakeMesh(tuning.localFlakes, tuning.localExtent);
             clouds[0] = Draw("Drifting organic fines around mask", nearMesh, specks, Vector3.zero);
@@ -63,29 +64,30 @@ namespace Raid.Nereid
             return renderer;
         }
 
-        void Plant(Vector4 zone, MeshCollider bottom)
+        void Plant(Vector4 zone,MeshCollider bottom,bool deep)
         {
             var centre = new Vector3(zone.x, 0, zone.y);
             var geometry = new ReefGeometry();
             var midribs = new List<Vector3>();
             int plants = 0;
+            int count=deep?Mathf.Max(3,tuning.holdfastsPerBank/3):tuning.holdfastsPerBank;
             for (int side = -1; side <= 1; side += 2)
-            for (int i = 0; i < tuning.holdfastsPerBank; i++)
+            for (int i = 0; i < count; i++)
             {
                 // Two broken banks leave a sightline along the grove rather than a solid wall.
                 float x = zone.x + Sample(tuning.passageHalfWidth, zone.w)*side;
-                float z = zone.y + zone.z*(2*(i+Sample(.05f,.95f))/tuning.holdfastsPerBank-1);
+                float z = zone.y + zone.z*(2*(i+Sample(.05f,.95f))/count-1);
                 if (NereidSalvage.Reserved(x,z) ||
                     !bottom.Raycast(new Ray(new Vector3(x,16,z), Vector3.down), out var hit, 60) ||
                     hit.normal.y < .72f) continue;
-                if (groves.Count == 0 && plants == 0) FirstHoldfast = hit.point;
+                if (!deep && FirstHoldfast == Vector3.zero) FirstHoldfast = hit.point;
                 plants++;
                 var root = hit.point-centre;
-                float height = Sample(tuning.bladeHeight.x,tuning.bladeHeight.y);
+                float height = deep?Sample(1.6f,3.65f):Sample(tuning.bladeHeight.x,tuning.bladeHeight.y);
                 float angle = Sample(0,6.283f);
                 float warm = Sample(0,1);
-                for (int j=0; j<3; j++)
-                    Blade(geometry, midribs, root, height*(j==0?1:Sample(.65f,.92f)), angle+j*2.1f, warm);
+                for (int j=0; j<(deep?2:3); j++)
+                    Blade(geometry,midribs,root,height*(j==0?1:Sample(.63f,.91f)),angle+j*2.1f,warm,deep);
             }
             if (plants == 0) return;
             var mesh = geometry.Mesh("Ribbed laminaria bank");
@@ -94,30 +96,33 @@ namespace Raid.Nereid
             bounds.Expand(2*(tuning.bendMetres+.5f));
             mesh.bounds = bounds;
             owned.Add(mesh);
-            groves.Add(Draw("Tall laminaria grove", mesh, kelp, centre));
+            groves[deep?1:0].Add(Draw(deep?"Sporadic rift holdfasts":"Tall laminaria grove",mesh,kelp,centre));
         }
 
-        void Blade(ReefGeometry g, List<Vector3> midribs, Vector3 root, float height, float angle, float warm)
+        void Blade(ReefGeometry g,List<Vector3> midribs,Vector3 root,float height,float angle,float warm,bool deep)
         {
             var heading = new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
-            float wide = Sample(.18f,.30f);
-            var shade = Color.Lerp(new Color(.041f,.15f,.086f),new Color(.16f,.19f,.061f),warm);
+            float wide = deep?Sample(.095f,.18f):Sample(.21f,.39f);
+            var shade = deep?Color.Lerp(new Color(.046f,.131f,.139f),new Color(.109f,.139f,.125f),warm):
+                Color.Lerp(new Color(.048f,.195f,.102f),new Color(.225f,.208f,.064f),warm);
             const int segments = 17;
             for (int row=0; row<=segments; row++)
             {
                 float h = row/(float)segments;
                 float blade = Mathf.SmoothStep(0, 1, (h-.12f)*5);
-                float breadth = wide*(.045f+blade*Mathf.Sin(h*Mathf.PI)*(1+.15f*Mathf.Sin(h*33+angle)));
+                float shoulder=Mathf.Sin(h*Mathf.PI)*(1+.19f*Mathf.Sin(h*31+angle));
+                float rip=(deep?.26f:.11f)*Mathf.Pow(Mathf.Max(0,Mathf.Sin(h*24+angle)),4);
+                float breadth = wide*(.037f+blade*shoulder*(1-rip));
                 var across = Quaternion.AngleAxis(46*Mathf.Sin(6*h+angle),Vector3.up)*Vector3.Cross(Vector3.up,heading);
                 var mid = root+Vector3.up*height*(h-.14f*h*h*h)+heading*height*(.07f*h+.30f*h*h*h);
                 mid += across*(height*.078f*Mathf.Sin(h*8+angle)*h);
-                var col = Color.Lerp(shade*.40f,shade,h);
+                var col = Color.Lerp(shade*.41f,shade,h)*Mathf.Lerp(.84f,1.09f,.5f+.5f*Mathf.Sin(h*43+angle*.4f));
                 col.a = h; // Bend weight; the holdfast stays attached to its rock.
-                var rib = col; rib.r *= 1.42f; rib.g *= 1.24f;
-                float ripple = .055f*blade*Mathf.Sin(h*42+angle);
-                int a = g.Add(mid-across*breadth+heading*ripple, col);
-                g.Add(mid+heading*breadth*.34f, rib);
-                g.Add(mid+across*breadth*(1+.12f*Mathf.Sin(row+angle))-heading*ripple,col);
+                var rib = col; rib.r *= 1.45f; rib.g *= 1.29f;
+                float ripple = .069f*blade*Mathf.Sin(h*44+angle);
+                int a = g.Add(mid-across*breadth+heading*ripple,col);
+                g.Add(mid+heading*breadth*.34f,rib);
+                g.Add(mid+across*breadth*(1+.19f*Mathf.Sin(row+angle))-heading*ripple,col);
                 for (int i=0; i<3; i++) midribs.Add(mid);
                 if (row == 0) continue;
                 g.Quad(a-3,a,a+1,a-2);
@@ -155,12 +160,14 @@ namespace Raid.Nereid
             var look = UnderwaterLook.Instance;
             var eye = look != null ? look.DiverCamera : null;
             bool wet = eye != null && eye.isActiveAndEnabled && look.EyeSubmerged;
+            bool deep=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
             VisibleGroves = 0;
-            foreach (var r in groves)
+            for(int region=0;region<groves.Length;region++)
+            foreach(var r in groves[region])
             {
-                r.enabled = eye != null && Vector3.SqrMagnitude(r.bounds.ClosestPoint(eye.transform.position)-eye.transform.position)
-                    < tuning.kelpVisibility*tuning.kelpVisibility;
-                if (r.enabled) VisibleGroves++;
+                float range=deep?tuning.kelpVisibility*.72f:tuning.kelpVisibility;
+                r.enabled=wet && region==(deep?1:0) && Vector3.SqrMagnitude(r.bounds.ClosestPoint(eye.transform.position)-eye.transform.position)<range*range;
+                if(r.enabled)VisibleGroves++;
             }
             for (int i=0; i<clouds.Length; i++)
             {
@@ -170,8 +177,8 @@ namespace Raid.Nereid
             if (wet)
             {
                 clouds[0].transform.position = eye.transform.position;
-                specks.SetFloat("_Density",RaidWorld.Instance != null && RaidWorld.Instance.CurrentDepth>=2
-                    ? tuning.deepDensity : tuning.shallowDensity);
+                specks.SetFloat("_Density",deep?tuning.deepDensity:tuning.shallowDensity);
+                specks.SetFloat("_DeepWater",deep?1:0);
                 var lockRoom = NereidAirlock.Active;
                 specks.SetFloat("_Waterline", lockRoom != null && lockRoom.Contains(eye.transform.position)
                     ? lockRoom.WaterHeight : 10000f);
@@ -195,7 +202,9 @@ namespace Raid.Nereid
 
         void OnDisable()
         {
-            foreach (var r in groves) if (r) r.enabled = false;
+            foreach(var region in groves)
+            foreach(var r in region)
+                if(r)r.enabled=false;
             foreach (var r in clouds) if (r) r.enabled = false;
             VisibleGroves = 0;
         }

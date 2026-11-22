@@ -27,7 +27,10 @@ Shader "RAID/Tall laminaria"
                 float3 center = TransformObjectToWorld(v.midrib);
                 float phase=dot(center.xz,float2(.35,.24))+center.y*.54;
                 float t=_Time.y*.79;
-                float2 current=float2(.22*sin(t+phase),.11*sin(t*.74-phase))*h;
+                float seaState=saturate((_NereidReefClarity.x-.00136)*171);
+                float frond=smoothstep(0,.65,h);
+                float2 current=(float2(.18*sin(t+phase),.12*sin(t*.74-phase))+
+                    float2(.16,.064)*sin(t*.54+dot(center.xz,float2(.31,.51))))*frond*(1+seaState*.34);
                 p.xz+=current; center.xz+=current;
                 float2 push=0;
                 [unroll] for(int i=0;i<5;i++)
@@ -48,7 +51,8 @@ Shader "RAID/Tall laminaria"
             {
                 float3 ray=i.pos-GetCameraPositionWS();
                 float d=max(.001,length(ray));
-                float3 close=i.color*(.81+.47*NereidBeam(i.pos));
+                float glint=NereidBeam(i.pos);
+                float3 close=i.color*(.83+.53*glint)+glint*half3(.013,.022,.009);
                 float transmission=exp2(-d*d*lerp(.00136,_NereidReefClarity.x,_NereidTurbidity));
                 return half4(lerp(WaterColumnColor(ray/d),close,transmission),1);
             }

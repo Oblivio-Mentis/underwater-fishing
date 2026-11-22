@@ -15,7 +15,7 @@ Shader "RAID/Suspended water fines"
             #include "NereidDiveLamp.hlsl"
             float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
             CBUFFER_START(UnityPerMaterial)
-                float _Waterline, _Density;
+                float _Waterline, _Density, _DeepWater;
             CBUFFER_END
             struct Input { float3 seed:POSITION; float2 corner:TEXCOORD0; float2 size:TEXCOORD1; };
             struct Vary { float4 clip:SV_POSITION; float2 corner:TEXCOORD0; half4 light:COLOR; };
@@ -23,7 +23,8 @@ Shader "RAID/Suspended water fines"
             {
                 float t = _Time.y;
                 float phase = dot(v.seed,float3(13.2,29.3,17.7));
-                float3 drift = float3(.046+.053*sin(phase), -.022+.047*cos(phase), .033*cos(phase*2.9));
+                float3 drift = float3(.046+.053*sin(phase),-.031+.043*cos(phase),.033*cos(phase*2.9));
+                drift+=_DeepWater*float3(.026,-.015,.017);
                 float3 origin = TransformObjectToWorld(float3(0,0,0));
                 float extent = max(1.,v.size.y);
                 // Wrap a world-stationary field around the moving mask; specks do not follow camera turns.
@@ -32,7 +33,8 @@ Shader "RAID/Suspended water fines"
                 float dist = distance(GetCameraPositionWS(),p);
                 float weight = 1-smoothstep(.38,.5,max(max(abs(q.x),abs(q.y)),abs(q.z)));
                 weight *= smoothstep(.28,.75,dist)*(1-smoothstep(14.,24.,dist))*step(p.y,_Waterline)*step(v.seed.z,_Density);
-                float3 light = float3(.18,.27,.26) + NereidBeam(p)*float3(.15,.19,.18);
+                float3 light = lerp(float3(.157,.233,.224),float3(.096,.159,.179),_DeepWater);
+                light+=NereidBeam(p)*lerp(float3(.23,.28,.19),float3(.24,.39,.48),_DeepWater);
                 [unroll] for(int j=0;j<3;j++)
                 {
                     float4 source = _NereidWorkLightPositions[j], axis = _NereidWorkLightDirections[j], lamp = _NereidWorkLightRadiance[j];
@@ -44,9 +46,12 @@ Shader "RAID/Suspended water fines"
                 float3 view = TransformWorldToView(p);
                 // Keep distant lit debris subpixel with a faint, anti-aliased footprint.
                 float radius = max(v.size.x,dist/_ScreenParams.y*.78);
-                view.xy += v.corner*float2(1.0,.78)*radius;
+                float angle=phase*.72+t*.21;
+                float2 flake=v.corner*float2(1,lerp(.50,1.1,v.seed.y));
+                float2 turn=float2(cos(angle),sin(angle));
+                view.xy += float2(dot(flake,float2(turn.x,-turn.y)),dot(flake,turn.yx))*radius;
                 Vary o; o.clip = mul(UNITY_MATRIX_P,float4(view,1));
-                o.corner=v.corner; o.light=half4(min(light,2.0),weight*(.27+.21*v.seed.y)); return o;
+                o.corner=v.corner; o.light=half4(min(light,2.0),weight*(.25+.23*v.seed.y)); return o;
             }
             half4 frag(Vary i):SV_Target
             {
