@@ -44,7 +44,7 @@ namespace Raid.Nereid
                     if(task.Current is IEnumerator child){stack.Push(child);continue;}
                     next=task.Current;
                 }
-                catch(Exception e){result.status="failed";result.error=e.Message;break;}
+                catch(Exception e){result.status="failed";result.error=e.ToString();break;}
                 yield return next;
             }
             if(result.status=="running")result.status="passed";
@@ -103,7 +103,7 @@ namespace Raid.Nereid
         void HostShot(string leaf)=>UiQaProbe.CapturePeerCamera(Path.Combine(folder,leaf));
         IEnumerator Run()
         {
-            yield return Wait("Distinct host and Windows peer ready",()=>RaidWorld.Instance!=null&&RaidWorld.Instance.IsServerInitialized&&
+            yield return Wait("Distinct host and Windows peer ready",()=>RaidWorld.Instance!=null&&RaidWorld.Instance.NetworkObject!=null&&RaidWorld.Instance.IsServerInitialized&&
                 DiverMotor.ServerDivers.Count==2&&Remote()?.players==2,150);
             world=RaidWorld.Instance;host=DiverMotor.ServerDivers.Single(d=>d.IsOwner);peer=DiverMotor.ServerDivers.Single(d=>!d.IsOwner);
             chamber=NereidAirlock.Active;
