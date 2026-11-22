@@ -209,7 +209,8 @@ namespace Raid
             bool outside=here==PetZone.Sea;
             var entrance=LockPoint(outside?11.2f:-1.8f);
             var local=chamber.transform.InverseTransformPoint(pet.Position);
-            bool aligned=Mathf.Abs(local.z)<.74f && (outside?local.x<11.95f:local.x>-2.5f);
+            bool aligned=Mathf.Abs(local.z)<.74f &&
+                (outside?local.x>8.5f && local.x<11.95f && Mathf.Abs(local.y-1)<.7f:local.x>-2.5f);
             if(!aligned)
             {
                 if(outside)SwimTo(entrance,dt,true);
