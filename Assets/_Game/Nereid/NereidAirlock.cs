@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 namespace Raid.Nereid
 {
-    public sealed class NereidAirlock : MonoBehaviour
+    public sealed partial class NereidAirlock : MonoBehaviour
     {
         public static NereidAirlock Active {get;private set;}
         const float OuterX=8.65f, HalfDoor=1.48f, Height=4.15f;
@@ -44,6 +44,7 @@ namespace Raid.Nereid
             BuildPad(1,false,.39f,1.92f,1);
             BuildPad(2,true,OuterX-.39f,-1.92f,-1);
             BuildPad(3,true,OuterX+.39f,1.92f,1);
+            BuildMarineCollar();
             BuildWater();
             if(surface!=null)transfer=PressureTransferFlow.Install(transform,surface.GetComponent<MeshRenderer>(),steel,charcoal,trim);
             ApplyDoors(AirlockSnapshot.Dry);
@@ -87,12 +88,15 @@ namespace Raid.Nereid
 
         void BuildChamber()
         {
-            Box("Pressure ceiling",new Vector3(OuterX*.5f,Height+.12f,0),new Vector3(OuterX+.32f,.26f,6.52f),steel,true);
-            Box("Slotted deck",new Vector3(OuterX*.5f,-.055f,0),new Vector3(OuterX+.16f,.14f,6.4f),charcoal,true);
+            Lining("Pressure ceiling",new(OuterX*.5f,Height+.12f,0),new(OuterX+.32f,.26f,6.52f),steel,
+                Vector3.down,Vector3.right,Vector3.forward);
+            Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),charcoal,
+                Vector3.up,Vector3.right,Vector3.back);
             for(int i=0;i<15;i++)Box("Floor traction strip",new Vector3(.25f+i*.58f,.025f,0),new Vector3(.09f,.025f,5.95f),trim);
             for(int side=-1;side<=1;side+=2)
             {
-                Box("Pressure chamber flank",new Vector3(OuterX*.5f,Height*.5f,side*3.2f),new Vector3(OuterX+.32f,Height,.22f),steel,true);
+                Lining("Pressure chamber flank",new(OuterX*.5f,Height*.5f,side*3.2f),new(OuterX+.32f,Height,.22f),
+                    steel,Vector3.back*side,Vector3.left*side,Vector3.up);
                 Box("Waist rail",new Vector3(OuterX*.5f,1.06f,side*2.97f),new Vector3(OuterX-.48f,.08f,.10f),paint);
                 for(int i=0;i<4;i++)
                 {
@@ -125,10 +129,16 @@ namespace Raid.Nereid
             float x=outer?OuterX:0;int gate=outer?1:0;
             for(int s=-1;s<=1;s+=2)
             {
-                Box("Pressure bulkhead",new Vector3(x,Height*.5f,s*2.37f),new Vector3(.32f,Height,1.8f),steel,true);
+                var point=new Vector3(x,Height*.5f,s*2.37f);
+                var size=new Vector3(.32f,Height,1.8f);
+                if(outer)Lining("Pressure bulkhead",point,size,steel,Vector3.left,Vector3.forward,Vector3.up);
+                else Box("Pressure bulkhead",point,size,steel,true);
                 Box("Door track",new Vector3(x,1.65f,s*1.55f),new Vector3(.4f,3.3f,.14f),charcoal);
             }
-            Box("Sealed header",new Vector3(x,(Height+3.22f)*.5f,0),new Vector3(.34f,Height-3.22f,3.12f),steel,true);
+            var header=new Vector3(x,(Height+3.22f)*.5f,0);
+            var span=new Vector3(.34f,Height-3.22f,3.12f);
+            if(outer)Lining("Sealed header",header,span,steel,Vector3.left,Vector3.forward,Vector3.up);
+            else Box("Sealed header",header,span,steel,true);
             if(!outer)Box("Hatch crown seal",new Vector3(x,5.18f,0),new Vector3(.36f,2.1f,6.56f),steel,true);
             for(int side=0;side<2;side++)
             {
@@ -232,6 +242,7 @@ namespace Raid.Nereid
         {
             if(Active==this)Active=null;
             foreach(var mat in owned)if(mat!=null)Destroy(mat);
+            foreach(var mesh in fairingMeshes)if(mesh!=null)Destroy(mesh);
         }
     }
 }

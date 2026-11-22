@@ -229,10 +229,10 @@ namespace Raid.Nereid
             archive=Node(transform,"05 / Panoramic bridge",Vector3.zero);
             batch=new PanelBatch(archive,owned);
             float center=(BridgeFront+BridgeBack)*.5f,length=BridgeFront-BridgeBack;
-            Panel("Bridge / deck collision",new(0,UpperDeck-.16f,center),new(8.67f,.32f,length+.04f),gunmetal,true);
-            Panel("Bridge / pressure crown",new(0,UpperDeck+2.14f,center),new(8.93f,.29f,length+.23f),coating,true);
-            Panel("Bridge / hull keel band",new(0,UpperDeck-.32f,center),new(8.87f,.22f,length+.18f),coating);
-            Panel("Bridge / raised weatherproof cap",new(0,UpperDeck+2.38f,center-.19f),new(7.85f,.22f,length-.20f),enamel);
+            Collision(archive,"Bridge / deck collision",new(0,UpperDeck-.16f,center),new(8.67f,.32f,length+.04f),Quaternion.identity);
+            Collision(archive,"Bridge / pressure crown",new(0,UpperDeck+2.14f,center),new(8.93f,.29f,length+.23f),Quaternion.identity);
+            Panel("Bridge deck plate",new(0,UpperDeck-.055f,center),new(8.57f,.105f,length+.04f),gunmetal);
+            Panel("Interior crown lining",new(0,UpperDeck+2.02f,center),new(8.48f,.105f,length+.026f),enamel);
             Panel("Bridge / marine equipment trunk",new(.72f,UpperDeck+2.62f,center-.83f),new(4.36f,.36f,2.70f),coating);
             Panel("Bridge / radio mast",new(.66f,UpperDeck+3.11f,center-.84f),new(.13f,1.39f,.17f),steel);
             Panel("Bridge / mast sweep",new(.66f,UpperDeck+3.72f,center-.84f),new(1.77f,.10f,.14f),steel);
@@ -264,6 +264,7 @@ namespace Raid.Nereid
                 Lamp(new(0,UpperDeck+1.86f,z),new(1,.69f,.40f),6.4f,137);
             }
             BridgeFinishes();
+            BuildBridgePressureFairing();
             batch.Build();
         }
 
