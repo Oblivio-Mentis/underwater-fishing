@@ -362,6 +362,7 @@ namespace Raid
             yield return Wait(()=>Vector3.Dot(host.Motor.AimDirection,fishingAim)>.999f,4,"Fishing aim did not restore after the monitor.");
             var departingKey=world.ProgressKey(helper.Motor);
             var balanceBeforeReconnect=world.Team.Treasury;
+            var retainedCatchIds=world.Team.tank.Select(item=>item.id).OrderBy(id=>id).ToArray();
             yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,100,"Heavy shoal did not return.");
             yield return Hook(heavy);
             yield return HookPeer(heavy);
@@ -377,8 +378,11 @@ namespace Raid
             yield return Wait(()=>previousPeer==null && host.HookedFish==heavy && heavy.HookCount==1,8,"Disconnect left a second line.");
             yield return Wait(()=>DiverMotor.ServerDivers.Any(d=>d!=null && !d.IsOwner && d.IsServerInitialized),15,"Remote failed to reconnect.");
             helper=DiverMotor.ServerDivers.Single(d=>d!=null && !d.IsOwner && d.IsServerInitialized).GetComponent<HarpoonTool>();
-            Require(helper.HookedFish==null && helper.CatchCount==0 && world.Team.tank.Count(x=>caughtIds.Contains(x.id))==2 && caughtIds.All(id=>world.Team.deliveredIds.Contains(id)),
-                "Reconnection restored another player's line or duplicated cargo.");
+            Require(helper.HookedFish==null && helper.CatchCount==0,
+                "Reconnection restored another player's line or pockets.");
+            Require(world.Team.tank.Select(item=>item.id).OrderBy(id=>id).SequenceEqual(retainedCatchIds) &&
+                caughtIds.All(id=>world.Team.deliveredIds.Count(delivered=>delivered==id)==1),
+                "Reconnection changed the fish left in the tank or duplicated a delivered catch.");
             yield return Wait(()=>world.ProgressKey(helper.Motor)==departingKey,4,"Remote did not restore its campaign identity.");
             Require(world.Team.Treasury.Equals(balanceBeforeReconnect),"The shared balance changed on reconnect.");
             host.QaReleaseOwned();
