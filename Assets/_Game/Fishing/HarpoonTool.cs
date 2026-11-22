@@ -61,7 +61,7 @@ namespace Raid
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
-        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
+        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.IsHoldingGosha(Motor)??false) && !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);

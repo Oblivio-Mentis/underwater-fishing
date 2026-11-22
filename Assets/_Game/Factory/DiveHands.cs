@@ -127,8 +127,8 @@ namespace Raid
                 else if(cuddling)
                 {
                     float stroke=.5f+.5f*Mathf.Sin(Time.time*5.6f);
-                    wrist=new Vector3(-.19f,-.30f,.60f);
-                    if(s>0)wrist=Vector3.Lerp(new Vector3(.18f,-.19f,.58f),new Vector3(.075f,-.14f,.71f),stroke);
+                    wrist=new Vector3(-.19f,-.28f,.76f);
+                    if(s>0)wrist=Vector3.Lerp(new Vector3(.18f,-.16f,.73f),new Vector3(.065f,-.055f,.81f),stroke);
                     angles=new Vector3(s>0?16:-20,-s*25,-s*52);
                 }
                 else if(caught!=null)

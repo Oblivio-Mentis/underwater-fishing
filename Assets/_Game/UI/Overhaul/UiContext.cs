@@ -51,15 +51,16 @@ namespace Raid.UI
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
             if(World!=null && World.TryAimDrop(Player,out var drop)){AimedDrop=drop;Interaction=UiInteraction.DroppedItem;return;}
-            var petUse=World?.GoshaContext(Player,Player.transform.position+Vector3.up*.6f,Player.transform.forward);
+            var camera=Player.GetComponentInChildren<Camera>();
+            var petUse=camera==null?null:World?.GoshaContext(Player,camera.transform.position,camera.transform.forward);
             if(petUse.HasValue){Interaction=petUse==GoshaAction.Pet?UiInteraction.PetGosha:UiInteraction.PickUpBall;return;}
-            var camera=Camera.main;RaycastHit hit;
+            RaycastHit hit;
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
             {
                 AimedLoot=hit.collider.GetComponentInParent<LootActor>();AimedFish=hit.collider.GetComponentInParent<FishActor>();
                 if(AimedLoot!=null && hit.distance<=3 && AimedLoot.CarrierOwnerId<0 && !Loot.Any(l=>l!=null&&l.CarrierOwnerId==Player.OwnerId)){Interaction=UiInteraction.Loot;return;}
             }
-            AimedConsole=ShipConsole.ResolveSight(Player,Player.GetComponentInChildren<Camera>());
+            AimedConsole=ShipConsole.ResolveSight(Player,camera);
             if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}
             if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
             foreach(var other in Players)
