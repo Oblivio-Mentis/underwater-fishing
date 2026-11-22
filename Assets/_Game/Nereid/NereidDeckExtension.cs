@@ -8,7 +8,7 @@ namespace Raid.Nereid
 {
     // Coordinates are metres in the original 2x vessel rig. Network peers build
     // identical bulkheads and stairs without changing the baked hull's origin.
-    internal sealed class NereidDeckExtension : MonoBehaviour
+    internal sealed partial class NereidDeckExtension : MonoBehaviour
     {
         const float StairX=-2.58f, StairWidth=1.88f, StairStart=-16.95f, StairEnd=-24.85f, UpperDeck=4.85f;
         const float BridgeFront=-24.78f, BridgeBack=-30.42f, BridgeHalfWidth=4.32f;
@@ -79,6 +79,7 @@ namespace Raid.Nereid
             cold=Finish(lit,"Ice-blue guides",new Color(.28f,.80f,.84f),.06f,.42f,1.42f);
             screen=Finish(lit,"Terminal pressure glass",new Color(.012f,.039f,.048f),.02f,.26f,.35f);
             coating=Finish(Resources.Load<Shader>("NereidHullCoating")??lit,"NEREID / saddle plate",new Color(.23f,.36f,.38f),.21f,.39f);
+            CreateFinishes(lit);
             var originalGlass=FindMaterial(hull,"Nereid_Window");
             glass=originalGlass!=null?originalGlass:Finish(lit,"Window fallback",new Color(.18f,.37f,.41f),.08f,.49f);
         }
@@ -121,7 +122,6 @@ namespace Raid.Nereid
                 Panel("Stern frame cheek outboard",new(side*4.49f,1.56f,-16.015f),new(2.84f,3.12f,.24f),enamel,true);
                 Panel("Pressure-room side",new(side*4.22f,1.57f,-20.28f),new(.18f,3.15f,8.87f),enamel,true);
                 Panel("Painted utility chase",new(side*4.04f,2.34f,-20.35f),new(.23f,.37f,8.55f),gunmetal);
-                Panel("Upper fluid pipe",new(side*3.99f,2.64f,-20.32f),new(.22f,.19f,8.63f),ochre);
                 for(int i=0;i<5;i++)
                 {
                     float z=-16.43f-i*1.76f;
@@ -154,10 +154,15 @@ namespace Raid.Nereid
                 Lamp(new(.3f,2.70f,z),i==0?new(.51f,.88f,.98f):new(1,.73f,.46f),7.7f,170);
             }
             PanelsOfExchange();
+            MachineryFinishes();
             batch.Build();
             SetProp("Prop_AccessPoint",new(3.72f,1.06f,-23.66f),new(.38f,1.62f,.83f),Quaternion.Euler(0,90,0),steel);
             SetProp("Prop_Crate4",new(-1.25f,.37f,-23.66f),new(.83f,.72f,.84f),Quaternion.Euler(0,12,0),ochre);
             SetProp("Door_Frame_SquareTall",new(0,1.19f,-16.10f),new(3.64f,2.44f,.31f),Quaternion.identity,enamel,false);
+            SetProp("Prop_Vent_Wide",new(3.99f,2.24f,-17.24f),new(1.06f,.12f,.38f),Quaternion.Euler(90,0,90),
+                brushedRib,false,Fittings+"Models/");
+            SetProp("TopCables_Straight",new(2.50f,3.02f,-21.71f),new(.51f,.19f,3.87f),Quaternion.identity,
+                gunmetal,false,Fittings+"Models/");
         }
 
         void PanelsOfExchange()
@@ -256,8 +261,9 @@ namespace Raid.Nereid
                 float z=BridgeFront-.85f-i*1.73f;
                 Panel("Amber command-ring lamp",new(0,UpperDeck+1.99f,z),new(3.48f,.092f,.22f),gunmetal);
                 Panel("Amber command-ring lens",new(0,UpperDeck+1.931f,z),new(2.98f,.038f,.082f),warm);
-                Lamp(new(0,UpperDeck+1.86f,z),new(1,.69f,.40f),6.4f,118);
+                Lamp(new(0,UpperDeck+1.86f,z),new(1,.69f,.40f),6.4f,137);
             }
+            BridgeFinishes();
             batch.Build();
         }
 
@@ -345,9 +351,9 @@ namespace Raid.Nereid
             Collision(console,"Console lower support",new Vector3(0,.38f,.12f),new Vector3(1.18f,.72f,.62f),Quaternion.identity);
         }
 
-        void SetProp(string id,Vector3 position,Vector3 size,Quaternion rotation,Material material,bool solid=true)
+        void SetProp(string id,Vector3 position,Vector3 size,Quaternion rotation,Material material,bool solid=true,string path=PropFolder)
         {
-            var asset=Resources.Load<GameObject>(PropFolder+id);
+            var asset=Resources.Load<GameObject>(path+id);
             if(asset==null)return;
             var seat=Node(archive,id,position);
             var copy=Instantiate(asset,seat);
@@ -453,7 +459,12 @@ namespace Raid.Nereid
 
         sealed class PanelBatch
         {
-            readonly Dictionary<Material,ReefGeometry> groups=new();
+            sealed class Surface
+            {
+                internal readonly ReefGeometry Geometry=new();
+                internal readonly List<Vector2> UVs=new();
+            }
+            readonly Dictionary<Material,Surface> groups=new();
             readonly Transform parent;
             readonly List<Object> owned;
 
@@ -463,26 +474,46 @@ namespace Raid.Nereid
                 this.owned=owned;
             }
 
-            internal void Box(Vector3 point,Vector3 size,Material material,Quaternion rotation=default)
+            Surface For(Material material)
             {
-                if(rotation==default)rotation=Quaternion.identity;
-                if(!groups.TryGetValue(material,out var mesh))groups.Add(material,mesh=new ReefGeometry());
-                Face(mesh,point,size,rotation,Vector3.forward,Vector3.right,Vector3.up);
-                Face(mesh,point,size,rotation,Vector3.back,Vector3.left,Vector3.up);
-                Face(mesh,point,size,rotation,Vector3.right,Vector3.back,Vector3.up);
-                Face(mesh,point,size,rotation,Vector3.left,Vector3.forward,Vector3.up);
-                Face(mesh,point,size,rotation,Vector3.up,Vector3.right,Vector3.back);
-                Face(mesh,point,size,rotation,Vector3.down,Vector3.right,Vector3.forward);
+                if(!groups.TryGetValue(material,out var surface))groups.Add(material,surface=new Surface());
+                return surface;
             }
 
-            static void Face(ReefGeometry mesh,Vector3 center,Vector3 size,Quaternion rotation,Vector3 normal,Vector3 right,Vector3 up)
+            internal void Box(Vector3 point,Vector3 size,Material material,Quaternion rotation=default,Rect atlas=default)
+            {
+                if(rotation==default)rotation=Quaternion.identity;
+                if(atlas.width<=0)atlas=new Rect(0,0,1,1);
+                var surface=For(material);
+                Face(surface,point,size,rotation,Vector3.forward,Vector3.right,Vector3.up,atlas);
+                Face(surface,point,size,rotation,Vector3.back,Vector3.left,Vector3.up,atlas);
+                Face(surface,point,size,rotation,Vector3.right,Vector3.back,Vector3.up,atlas);
+                Face(surface,point,size,rotation,Vector3.left,Vector3.forward,Vector3.up,atlas);
+                Face(surface,point,size,rotation,Vector3.up,Vector3.right,Vector3.back,atlas);
+                Face(surface,point,size,rotation,Vector3.down,Vector3.right,Vector3.forward,atlas);
+            }
+
+            internal void Tube(Vector3[] path,float radius,Material material)
+            {
+                var surface=For(material);
+                var widths=new float[path.Length];
+                for(int i=0;i<widths.Length;i++)widths[i]=radius;
+                surface.Geometry.Tube(path,widths,Color.white,10);
+                while(surface.UVs.Count<surface.Geometry.VertexCount)surface.UVs.Add(Vector2.zero);
+            }
+
+            static void Face(Surface surface,Vector3 center,Vector3 size,Quaternion rotation,Vector3 normal,Vector3 right,Vector3 up,Rect atlas)
             {
                 var c=center+rotation*Vector3.Scale(size*.5f,normal);
                 var x=rotation*Vector3.Scale(size*.5f,right);
                 var y=rotation*Vector3.Scale(size*.5f,up);
-                var tint=Color.white;
-                int a=mesh.Add(c-x-y,tint),b=mesh.Add(c+x-y,tint),d=mesh.Add(c+x+y,tint),e=mesh.Add(c-x+y,tint);
+                var mesh=surface.Geometry;
+                int a=mesh.Add(c-x-y,Color.white),b=mesh.Add(c+x-y,Color.white),d=mesh.Add(c+x+y,Color.white),e=mesh.Add(c-x+y,Color.white);
                 mesh.Quad(a,b,d,e);
+                surface.UVs.Add(atlas.min);
+                surface.UVs.Add(new Vector2(atlas.xMax,atlas.yMin));
+                surface.UVs.Add(atlas.max);
+                surface.UVs.Add(new Vector2(atlas.xMin,atlas.yMax));
             }
 
             internal void Build()
@@ -490,7 +521,8 @@ namespace Raid.Nereid
                 foreach(var group in groups)
                 {
                     var part=Node(parent,group.Key.name,Vector3.zero);
-                    var mesh=group.Value.Mesh(group.Key.name);
+                    var mesh=group.Value.Geometry.Mesh(group.Key.name);
+                    mesh.SetUVs(0,group.Value.UVs);
                     owned.Add(mesh);
                     part.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
                     var renderer=part.gameObject.AddComponent<MeshRenderer>();

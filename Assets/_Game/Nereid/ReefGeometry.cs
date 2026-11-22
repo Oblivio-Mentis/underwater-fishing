@@ -9,6 +9,7 @@ namespace Raid.Nereid
         readonly List<Vector3> points=new();
         readonly List<Color> colours=new();
         readonly List<int> indices=new();
+        internal int VertexCount => points.Count;
         public int Add(Vector3 point, Color colour)
         {
             points.Add(point);colours.Add(colour);return points.Count-1;
