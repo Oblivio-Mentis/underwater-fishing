@@ -74,15 +74,16 @@ namespace Raid.Nereid
         }
         IEnumerator PressPad(int index)
         {
-            // Exercise the production interlock and moving doors. Start the pump on the
-            // host fixture; its panel raycast is covered by the separate airlock QA.
             var pad=chamber.GetPad(index);
-            Stage(host,pad.transform.position+(index==1?Vector3.right:Vector3.left)*1.3f-Vector3.up*.58f);
-            var field=typeof(RaidWorld).GetField("airlock",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance);
-            var replicated=(FishNet.Object.Synchronizing.SyncVar<AirlockSnapshot>)field.GetValue(world);
-            var lockState=replicated.Value;
-            Check("Production pressure lock accepts cycle "+index,lockState.Request(pad.Sea));replicated.Value=lockState;
-            yield return Wait("Pressure cycle "+index+" started",()=>world.Airlock.Busy);
+            var facing=index==1?Vector3.right:Vector3.left;
+            Stage(host,pad.transform.position+facing*1.25f-Vector3.up*.6f);
+            host.LookAtConsole(pad.transform.position);
+            yield return new WaitForSeconds(.32f);
+            var direction=(pad.transform.position-host.transform.position-Vector3.up*.6f).normalized;
+            Check("Reach and server sightline at pad "+index,chamber.ValidatePress(host,(byte)index,direction,out _));
+            Check("Requested direction accepted at pad "+index,world.Airlock.CanRequest(pad.Sea));
+            world.RequestAirlockPad((byte)index,direction);
+            yield return Wait("Pressure pad "+index+" starts its cycle",()=>world.Airlock.Busy);
         }
         UiQaProbe.Snapshot Remote()
         {
@@ -115,7 +116,7 @@ namespace Raid.Nereid
                 yield return Wait("Exactly one model and deck pet replicated to returning crew",()=>FindObjectsByType<GoshaView>().Length==1 && world.Gosha.Mode!=GoshaMode.Waiting && Remote()?.gosha.Active==true && Remote()?.gosha.Mode==world.Gosha.Mode);
                 yield break;
             }
-            yield return PressPad(1);
+            yield return PressPad(2);
             yield return Wait("Outer gate open",()=>world.Airlock.Phase==AirlockPhase.OuterOpen,30);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(10.5f,1,0)));
             yield return Wait("Gosha rides the first expedition diver",()=>world.Gosha.Mode==GoshaMode.Riding && world.Gosha.Rider==host.OwnerId,24);
@@ -124,7 +125,7 @@ namespace Raid.Nereid
             Stage(peer,NereidVessel.Active.transform.TransformPoint(new Vector3(4,.55f,-14)));
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(7,1,0)));
             Check("Shoulder occupied in flooded pressure lock",chamber.Contains(host.transform.position)&&world.Gosha.Mode==GoshaMode.Riding);
-            yield return PressPad(2);
+            yield return PressPad(1);
             yield return Wait("Inner gate open after draining",()=>world.Airlock.Phase==AirlockPhase.InnerOpen,30);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(-1.25f,1,0)));
             yield return Wait("Pet returned through inner door and persisted to checksum save",()=>world.Team.goshaTamed&&TeamSave.Load(save).goshaTamed);
