@@ -65,8 +65,10 @@ Shader "RAID/Nereid Decorative Shoal"
                 half sheen=pow(saturate(dot(n,normalize(overhead+v))),22);
                 half edge=1-saturate(abs(dot(n,v)));
                 half3 body=i.pigment*(.50+sky*.53);
-                body+=half3(.25,.36,.36)*(sheen*.3+edge*.13);
-                body+=i.pigment*NereidBeam(i.world)*.34;
+                body+=half3(.25,.36,.36)*(sheen*.46+edge*.18);
+                half crossing=saturate(dot(n,normalize(overhead-v)));
+                body+=half3(.12,.18,.17)*crossing*crossing*.35;
+                body+=i.pigment*NereidBeam(i.world)*.48;
                 return half4(MixFog(body,i.fog),1);
             }
             ENDHLSL

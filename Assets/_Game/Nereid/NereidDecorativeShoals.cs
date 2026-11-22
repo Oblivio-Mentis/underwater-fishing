@@ -90,21 +90,31 @@ namespace Raid.Nereid
             return prefab!=null?prefab.GetComponentInChildren<MeshFilter>()?.sharedMesh:null;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        void OnEnable()=>ArtPassTrial.PrepareShoalStill+=ShoalStill;
+        void OnDisable()=>ArtPassTrial.PrepareShoalStill-=ShoalStill;
+        void ShoalStill(Camera camera)=>Draw(camera,Time.time,true);
+#endif
+
         void LateUpdate()
         {
             var world=RaidWorld.Instance;
             var look=UnderwaterLook.Instance;
-            if(world==null || !world.IsClientInitialized || look==null || !look.EyeSubmerged || look.DiverCamera==null)return;
+            if(world==null || world.NetworkObject==null || !world.IsClientInitialized || look==null ||
+                !look.EyeSubmerged || look.DiverCamera==null)return;
+            Draw(look.DiverCamera,Time.time,false);
+        }
 
-            float time=Time.time;
-            var camera=look.DiverCamera;
+        void Draw(Camera camera,float time,bool still)
+        {
+            var world=RaidWorld.Instance;
             Vector3 eye=camera.transform.position;
             foreach(var school in schools)
             {
                 if(school.tier!=world.CurrentDepth || school.mesh==null || school.mesh.subMeshCount!=1 ||
                     (eye-school.center).sqrMagnitude>school.visibleRange*school.visibleRange)continue;
 
-                float angle=time*school.speed+school.phase;
+                float angle=still?Mathf.PI*.5f:time*school.speed+school.phase;
                 Vector3 center=school.OnPath(angle);
                 Vector3 heading=(school.OnPath(angle+school.speed*.045f)-center).normalized;
                 var formation=Quaternion.LookRotation(heading);
@@ -129,6 +139,9 @@ namespace Raid.Nereid
                     lightProbeUsage=LightProbeUsage.Off
                 };
                 Graphics.RenderMeshInstanced(parameters,school.mesh,0,instances,count);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if(still)Debug.Log($"[RAID016 school] {school.tier} {school.mesh.name} x{count} at {center}");
+#endif
             }
         }
 

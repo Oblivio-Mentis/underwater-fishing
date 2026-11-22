@@ -38,6 +38,7 @@ namespace Raid.Nereid
             public List<Sample> views=new();
         }
 
+        internal static event Action<Camera> PrepareShoalStill;
         readonly Result result=new();
         readonly FrameTiming[] timingBuffer=new FrameTiming[10];
         string folder,marksFile;
@@ -133,7 +134,10 @@ namespace Raid.Nereid
             var hull=NereidVessel.Active.transform;
             Vector3 feet=mark.shipLocal?hull.TransformPoint(mark.feet):mark.feet;
             Vector3 look=mark.shipLocal?hull.TransformPoint(mark.look):mark.look;
+            var inventory=owner.GetComponent<HarpoonTool>();
+            if(inventory.ActiveSlot!=0)inventory.SelectSlot(0);
             ShipConsole station=null;
+            FishActor featured=null;
             if(!string.IsNullOrEmpty(mark.station))
             {
                 station=ShipConsole.Stations.Single(s=>s.IsMonitor && s.kind.ToString()==mark.station);
@@ -151,8 +155,7 @@ namespace Raid.Nereid
             if(mark.prop=="ball")world.StageBallTrial(feet+Vector3.forward*.85f);
             if(mark.prop=="large")
             {
-                var fish=FindObjectsByType<FishActor>().First(f=>f.depthTier==mark.depth && f.RequiresPartner);
-                fish.SetArtMark(look,Quaternion.Euler(0,105,0));
+                featured=FindObjectsByType<FishActor>().Single(f=>f.depthTier==mark.depth && f.SpeciesId=="Sailray");
             }
             yield return null;
             owner.LookAtConsole(look);
@@ -170,11 +173,28 @@ namespace Raid.Nereid
                 yield return Await("Own the physical ball",()=>world.HasGoshaBall(owner),5);
                 yield return new WaitForSecondsRealtime(.25f);
             }
-            UiQaProbe.CapturePeerCamera(Path.Combine(folder,mark.name+".png"));
+            if(featured!=null)
+            {
+                featured.SetArtMark(look,Quaternion.Euler(0,6,0));
+                Physics.SyncTransforms();
+                if(!Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,20,Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore) || hit.collider.GetComponentInParent<FishActor>()!=featured)
+                    throw new InvalidOperationException("The featured fish is not the first hit. Hit "+hit.collider?.name);
+                if(!inventory.QaFireOwned())throw new InvalidOperationException("The owned harpoon could not fire at the featured fish.");
+                yield return Await("Physical hunt connects to the ray",()=>inventory.HookedFish==featured,3);
+                yield return new WaitForSecondsRealtime(.18f);
+            }
+            CaptureImage(mark);
             var sample=new Sample{name=mark.name,depth=mark.depth,eye=eye.transform.position,direction=eye.transform.forward,inside=owner.IsInside};
             if(mark.benchmark && Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-timing")>=0)
                 yield return Measure(sample);
             result.views.Add(sample);Write();
+        }
+
+        void CaptureImage(Mark mark)
+        {
+            if(mark.prop=="shoal")PrepareShoalStill?.Invoke(eye);
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,mark.name+".png"));
         }
 
         IEnumerator Measure(Sample sample)
@@ -242,6 +262,9 @@ namespace Raid
             team.tank.Add(new CatchItem(1101,4,0,2,1,1,species:"Needlefish"));
             team.tank.Add(new CatchItem(1102,6,1,3,2,1,species:"Sailray"));
             team.tank.Add(new CatchItem(1103,0,0,0,1,1,3,2));
+            foreach(var item in team.tank)
+                if(!team.deliveredIds.Contains(item.id))team.deliveredIds.Add(item.id);
+            team.Validate();
             Publish();
         }
     }
@@ -252,6 +275,10 @@ namespace Raid
         {
             _origin=center;
             transform.SetPositionAndRotation(center,rotation);
+            var pose=_snapshot.Value;
+            pose.Position=center;
+            pose.Rotation=rotation;
+            _snapshot.Value=pose;
         }
     }
 }

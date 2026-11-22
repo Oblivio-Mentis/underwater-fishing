@@ -34,17 +34,25 @@ namespace Raid.Editor
         {
             var path = Arg("-raid-exe");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            bool timing=PlayerSettings.enableFrameTimingStats;
+            bool timing=PlayerSettings.enableFrameTimingStats, jobs=PlayerSettings.graphicsJobs;
             BuildReport report;
             try
             {
-                if(Arg("-raid-frame-timing")=="on")PlayerSettings.enableFrameTimingStats=true;
+                if(Arg("-raid-frame-timing")=="on")
+                {
+                    PlayerSettings.enableFrameTimingStats=true;
+                    PlayerSettings.graphicsJobs=false;
+                }
                 report=BuildPipeline.BuildPlayer(new BuildPlayerOptions {
                     scenes = new[] { Scene }, target = BuildTarget.StandaloneWindows64,
                     locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
                 });
             }
-            finally { if(PlayerSettings.enableFrameTimingStats!=timing)PlayerSettings.enableFrameTimingStats=timing; }
+            finally
+            {
+                if(PlayerSettings.enableFrameTimingStats!=timing)PlayerSettings.enableFrameTimingStats=timing;
+                if(PlayerSettings.graphicsJobs!=jobs)PlayerSettings.graphicsJobs=jobs;
+            }
             var s = report.summary;
             Debug.Log($"RAID014_BUILD {s.result} errors={s.totalErrors} warnings={s.totalWarnings} bytes={s.totalSize}");
             EditorApplication.Exit(s.result == BuildResult.Succeeded ? 0 : 1);

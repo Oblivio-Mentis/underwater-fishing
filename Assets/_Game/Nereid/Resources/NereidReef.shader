@@ -127,6 +127,16 @@ Shader "RAID/Nereid Reef"
                 half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
                 half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
                 if(_Rift<.5)rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool;
+                else
+                {
+                    // Local colour near the deep fissures. Their surroundings still recede into fog.
+                    float2 first=i.pos.xz-float2(41,-46.2);
+                    float2 second=i.pos.xz-float2(45.5,-58);
+                    float2 third=i.pos.xz-float2(52,-52.2);
+                    float distanceToVent=min(dot(first,first),min(dot(second,second),dot(third,third)));
+                    half vent=exp2(-distanceToVent*.23)*saturate((-i.pos.y-12.5)*.25);
+                    rgb+=half3(.013,.086,.079)*vent*(.45+.55*abs(n.y));
+                }
                 rgb+=half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
                 // Wavelength-dependent extinction gives both cliff layers an underwater silhouette.
                 float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
