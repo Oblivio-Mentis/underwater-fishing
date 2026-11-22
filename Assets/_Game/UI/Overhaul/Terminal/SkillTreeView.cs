@@ -59,7 +59,8 @@ namespace Raid.UI
             var heading = Image(surface,"Header",Vector2.up,new(14,-12),new(1148,95),Panel);
             Label(heading.transform,"Section title",Vector2.up,new(13,-7),new(708,32),
                 "СНАРЯЖЕНИЕ ЭКИПАЖА",30,Cyan);
-            playerLabel = Label(heading.transform,"Viewing diver",Vector2.up,new(14,-44),new(620,20),"",17,UiTheme.Muted);
+            playerLabel = Label(heading.transform,"Viewing diver",Vector2.up,new(14,-40),new(620,25),"",17,UiTheme.Muted);
+            playerLabel.overflowMode = TextOverflowModes.Overflow;
             teamBalance = Label(heading.transform,"Ship treasury",Vector2.up,new(14,-66),new(1090,23),"",19,Gold);
             Key(heading.transform,"ResetSkillView","Сбросить вид",new(948,-10),186,Reset);
 
