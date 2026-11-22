@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -48,27 +49,58 @@ namespace Raid
             }
             viewed=player!=null && player.Spectating!=null?player.Spectating:player;
             bool wet=IsEyeUnderwater();
-            if(bubbles!=null){var emission=bubbles.emission;emission.rateOverTime=wet&&root.Page==UI.UiPage.None?4:0;}
+            if(bubbles!=null)
+            {
+                var tool=root?.Context.Harpoon;
+                bool reeling=tool!=null && tool.Reeling && (tool.HookedFish!=null || tool.HasBallLine);
+                var emission=bubbles.emission;
+                emission.rateOverTime=wet && root?.Page==UI.UiPage.None?(reeling?7.5f:3.2f):0;
+            }
         }
         void CreateBubbles(Transform parent)
         {
             if(bubbles!=null)Destroy(bubbles.gameObject);
             var go=new GameObject("Local exhaust microbubbles");go.transform.SetParent(parent,false);go.transform.localPosition=new Vector3(.35f,-.45f,.8f);
             bubbles=go.AddComponent<ParticleSystem>();bubbles.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
-            var main=bubbles.main;main.startLifetime=1.7f;main.startSpeed=.32f;main.startSize=new ParticleSystem.MinMaxCurve(.008f,.028f);main.maxParticles=24;main.simulationSpace=ParticleSystemSimulationSpace.World;main.startColor=new Color(.4f,.8f,.85f,.25f);
-            var shape=bubbles.shape;shape.shapeType=ParticleSystemShapeType.Cone;shape.angle=12;shape.radius=.16f;
-            var velocity=bubbles.velocityOverLifetime;velocity.enabled=true;velocity.y=.35f;
+            var main=bubbles.main;main.startLifetime=new ParticleSystem.MinMaxCurve(1.15f,1.78f);
+            main.startSpeed=.29f;main.startSize=new ParticleSystem.MinMaxCurve(.012f,.041f);
+            main.maxParticles=24;main.simulationSpace=ParticleSystemSimulationSpace.World;
+            main.startColor=new ParticleSystem.MinMaxGradient(new Color(.63f,.78f,.8f,.34f),new Color(.82f,.92f,.95f,.66f));
+            var shape=bubbles.shape;shape.shapeType=ParticleSystemShapeType.Cone;shape.angle=13;shape.radius=.05f;
+            var velocity=bubbles.velocityOverLifetime;velocity.enabled=true;velocity.y=.43f;
+            var fade=new Gradient();
+            fade.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(Color.white,1)},
+                new[]{new GradientAlphaKey(0,0),new GradientAlphaKey(1,.13f),new GradientAlphaKey(.72f,.62f),new GradientAlphaKey(0,1)});
+            var lifetime=bubbles.colorOverLifetime;lifetime.enabled=true;lifetime.color=fade;
             var emission=bubbles.emission;emission.rateOverTime=0;
             if(bubbleMaterial==null)
             {
                 var source=Resources.Load<Material>("NereidBubbles");
-                bubbleMaterial=source!=null?new Material(source):new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
-                bubbleMaterial.SetColor("_BaseColor",new Color(.35f,.85f,.9f,.22f));bubbleMaterial.SetFloat("_Surface",1);bubbleMaterial.SetFloat("_Blend",0);
-                bubbleMaterial.SetFloat("_SrcBlend",5);bubbleMaterial.SetFloat("_DstBlend",10);bubbleMaterial.SetFloat("_ZWrite",0);bubbleMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");bubbleMaterial.renderQueue=3000;
+                if(source!=null)
+                {
+                    bubbleMaterial=new Material(source);
+                    bubbleMaterial.SetFloat("_ParticleTint",1);
+                }
+                else
+                {
+                    bubbleMaterial=new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+                    bubbleMaterial.SetColor("_BaseColor",new Color(.35f,.85f,.9f,.22f));
+                    bubbleMaterial.SetFloat("_Surface",1);bubbleMaterial.SetFloat("_Blend",0);
+                    bubbleMaterial.SetFloat("_SrcBlend",5);bubbleMaterial.SetFloat("_DstBlend",10);
+                    bubbleMaterial.SetFloat("_ZWrite",0);
+                    bubbleMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");bubbleMaterial.renderQueue=3000;
+                }
             }
             var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=bubbleMaterial;
             var factory=Object.FindAnyObjectByType<Factory.FactoryVisuals>();
-            if(factory!=null&&factory.bubbleMesh!=null){renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=factory.bubbleMesh;}
+            if(factory!=null&&factory.bubbleMesh!=null)
+            {
+                renderer.renderMode=ParticleSystemRenderMode.Mesh;
+                renderer.mesh=factory.bubbleMesh;
+            }
+            renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,
+                ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Color,ParticleSystemVertexStream.UV});
+            renderer.sortMode=ParticleSystemSortMode.Distance;
             bubbles.Play();
         }
         void OnDestroy()
