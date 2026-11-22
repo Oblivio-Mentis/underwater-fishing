@@ -272,6 +272,7 @@ namespace Raid.UI
             if(r.action=="key")
             {
                 Key key;if(!Enum.TryParse(r.value,true,out key))throw new ArgumentException("Unknown key");
+                if (key==Key.F) UiRoot.Instance.Context.Rescue?.QaPressF(r.number);
                 var keyboard=Keyboard.current;if(keyboard==null)keyboard=InputSystem.AddDevice<Keyboard>();
                 InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));releaseKeyboard=true;keyboardReleaseAt=Time.unscaledTime+Mathf.Clamp(r.number,.05f,10);return;
             }

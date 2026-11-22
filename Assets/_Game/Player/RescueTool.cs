@@ -20,11 +20,24 @@ namespace Raid
             if(!IsOwner) return;
             rescue=new InputAction("Rescue",InputActionType.Button,"<Keyboard>/f"); rescue.Enable();
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        float qaKeyUntil;
+        internal void QaPressF(float seconds)
+        {
+            if (Application.isBatchMode && IsOwner && !UI.UiInputGate.Modal)
+                qaKeyUntil = Time.unscaledTime + Mathf.Clamp(seconds, 0, 10);
+        }
+#endif
         private void Update()
         {
             if(!IsOwner || rescue==null || Time.unscaledTime<nextSend) return;
             nextSend=Time.unscaledTime+.1f;
-            HoldRescue(Application.isFocused && Cursor.lockState==CursorLockMode.Locked && !UI.UiInputGate.Blocked && rescue.IsPressed());
+            bool held = Application.isFocused && Cursor.lockState==CursorLockMode.Locked && !UI.UiInputGate.Blocked && rescue.IsPressed();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // In batch mode Unity cannot lock a desktop cursor. The probe supplies the duration of its F press.
+            held |= Time.unscaledTime < qaKeyUntil && !UI.UiInputGate.Modal;
+#endif
+            HoldRescue(held);
         }
         [ServerRpc] private void HoldRescue(bool held) { heldAt=held?Time.unscaledTime:float.NegativeInfinity; }
         private void FixedUpdate()
