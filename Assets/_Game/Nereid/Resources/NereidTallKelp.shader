@@ -18,19 +18,21 @@ Shader "RAID/Tall laminaria"
                 float4 _KelpSwimmers[5];
             CBUFFER_END
             float3 _NereidReefClarity;
-            struct Input {float3 pos:POSITION; float3 normal:NORMAL; half4 color:COLOR;};
+            struct Input {float3 pos:POSITION; float3 normal:NORMAL; float3 midrib:TEXCOORD1; half4 color:COLOR;};
             struct Vary {float4 clip:SV_POSITION; float3 pos:TEXCOORD0; half3 color:COLOR;};
             Vary vert(Input v)
             {
                 float3 p=TransformObjectToWorld(v.pos);
                 float h=v.color.a;
-                float phase=dot(p.xz,float2(.35,.24))+p.y*.54;
+                float3 center = TransformObjectToWorld(v.midrib);
+                float phase=dot(center.xz,float2(.35,.24))+center.y*.54;
                 float t=_Time.y*.79;
-                p.xz+=float2(.22*sin(t+phase),.11*sin(t*.74-phase))*h;
+                float2 current=float2(.22*sin(t+phase),.11*sin(t*.74-phase))*h;
+                p.xz+=current; center.xz+=current;
                 float2 push=0;
                 [unroll] for(int i=0;i<5;i++)
                 {
-                    float3 offset=p-_KelpSwimmers[i].xyz;
+                    float3 offset=center-_KelpSwimmers[i].xyz;
                     // A diver-length capsule opens the near side of the bank, tip by tip.
                     offset.y-=clamp(offset.y,-.45,.6);
                     float bend=1-smoothstep(.15,_BendRadius,length(offset));

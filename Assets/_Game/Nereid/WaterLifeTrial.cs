@@ -23,6 +23,7 @@ namespace Raid.Nereid
         [Serializable] sealed class Report
         {
             public string status="waiting for host and peer", gpu, api, quality, pipeline, error;
+            public string timing="Completed offscreen URP camera stacks per real second, including a synchronous one-pixel GPU readback per frame. Screen overlay HUD excluded.";
             public int width, height, depth, msaa, vsync, targetFps;
             public float scale, nearestPassMetres;
             public bool drySuppressed, wetVisible;
@@ -35,6 +36,24 @@ namespace Raid.Nereid
         Vector3 entryHost,entryPeer;
         int initialVsync, initialCap;
         bool staged;
+        RenderTexture frameTarget;
+        Texture2D syncPixel;
+        readonly RenderPipeline.StandardRequest render = new();
+
+        void RenderCompletedFrame(Camera cam)
+        {
+            var oldTarget = cam.targetTexture;
+            var oldActive = RenderTexture.active;
+            try
+            {
+                cam.targetTexture = frameTarget;
+                RenderPipeline.SubmitRenderRequest(cam,render);
+                RenderTexture.active = frameTarget;
+                // ReadPixels waits for the graphics device, including when Windows occludes the player.
+                syncPixel.ReadPixels(new Rect(frameTarget.width/2,frameTarget.height/2,1,1),0,0,false);
+            }
+            finally { cam.targetTexture=oldTarget; RenderTexture.active=oldActive; }
+        }
         ThreatDirector threats;
         bool threatsWereActive;
 
@@ -113,16 +132,22 @@ namespace Raid.Nereid
             yield return new WaitForSecondsRealtime(1.5f);
             report.wetVisible=!host.IsInside && water.ShowingSuspension && water.VisibleGroves>0;
             if(!report.wetVisible)throw new InvalidOperationException("Wet observer did not see kelp and the local suspension volume.");
+            frameTarget=RenderTexture.GetTemporary(report.width,report.height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            syncPixel=new Texture2D(1,1,TextureFormat.RGB24,false);
+            render.destination=frameTarget;
+            if(!RenderPipeline.SupportsRenderRequest(cam,render))throw new InvalidOperationException("Camera-stack render requests unavailable.");
             report.status="measuring A/B/B/A"; Write();
             foreach(bool show in new[]{false,true,true,false})
             {
                 water.enabled=show;
-                yield return new WaitForSecondsRealtime(1);
+                double warmUntil=Time.realtimeSinceStartupAsDouble+1;
+                do { yield return null; RenderCompletedFrame(cam); } while(Time.realtimeSinceStartupAsDouble<warmUntil);
                 double sampleStart=Time.realtimeSinceStartupAsDouble, previous=sampleStart;
                 var times=new List<float>(2048);
                 var eye=cam.transform.position; var angles=cam.transform.eulerAngles;
                 do {
                     yield return null;
+                    RenderCompletedFrame(cam);
                     double now=Time.realtimeSinceStartupAsDouble;
                     times.Add((float)((now-previous)*1000)); previous=now;
                 } while(previous-sampleStart<4.0);
@@ -161,6 +186,8 @@ namespace Raid.Nereid
         void Restore()
         {
             if(!staged)return;
+            if(frameTarget)RenderTexture.ReleaseTemporary(frameTarget);
+            if(syncPixel)Destroy(syncPixel);
             staged=false; QualitySettings.vSyncCount=initialVsync; Application.targetFrameRate=initialCap;
             if(water)water.enabled=true;
             if(threats)threats.enabled=threatsWereActive;

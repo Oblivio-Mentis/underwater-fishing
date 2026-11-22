@@ -67,6 +67,7 @@ namespace Raid.Nereid
         {
             var centre = new Vector3(zone.x, 0, zone.y);
             var geometry = new ReefGeometry();
+            var midribs = new List<Vector3>();
             int plants = 0;
             for (int side = -1; side <= 1; side += 2)
             for (int i = 0; i < tuning.holdfastsPerBank; i++)
@@ -84,10 +85,11 @@ namespace Raid.Nereid
                 float angle = Sample(0,6.283f);
                 float warm = Sample(0,1);
                 for (int j=0; j<3; j++)
-                    Blade(geometry, root, height*(j==0?1:Sample(.65f,.92f)), angle+j*2.1f, warm);
+                    Blade(geometry, midribs, root, height*(j==0?1:Sample(.65f,.92f)), angle+j*2.1f, warm);
             }
             if (plants == 0) return;
             var mesh = geometry.Mesh("Ribbed laminaria bank");
+            mesh.SetUVs(1, midribs);
             var bounds = mesh.bounds;
             bounds.Expand(2*(tuning.bendMetres+.5f));
             mesh.bounds = bounds;
@@ -95,25 +97,28 @@ namespace Raid.Nereid
             groves.Add(Draw("Tall laminaria grove", mesh, kelp, centre));
         }
 
-        void Blade(ReefGeometry g, Vector3 root, float height, float angle, float warm)
+        void Blade(ReefGeometry g, List<Vector3> midribs, Vector3 root, float height, float angle, float warm)
         {
             var heading = new Vector3(Mathf.Cos(angle),0,Mathf.Sin(angle));
-            float wide = Sample(.16f,.28f);
-            var shade = Color.Lerp(new Color(.065f,.23f,.102f),new Color(.26f,.29f,.084f),warm);
-            const int segments = 11;
+            float wide = Sample(.18f,.30f);
+            var shade = Color.Lerp(new Color(.041f,.15f,.086f),new Color(.16f,.19f,.061f),warm);
+            const int segments = 17;
             for (int row=0; row<=segments; row++)
             {
                 float h = row/(float)segments;
-                float breadth = wide*(.065f+Mathf.Sin(h*Mathf.PI)*Mathf.SmoothStep(0,1,h*7));
-                var across = Quaternion.AngleAxis(25*Mathf.Sin(4*h+angle),Vector3.up)*Vector3.Cross(Vector3.up,heading);
-                var mid = root+Vector3.up*height*h+heading*height*(.18f*h+.12f*h*h);
-                mid += across*(height*.052f*Mathf.Sin(h*5+angle)*h);
+                float blade = Mathf.SmoothStep(0, 1, (h-.12f)*5);
+                float breadth = wide*(.045f+blade*Mathf.Sin(h*Mathf.PI)*(1+.15f*Mathf.Sin(h*33+angle)));
+                var across = Quaternion.AngleAxis(46*Mathf.Sin(6*h+angle),Vector3.up)*Vector3.Cross(Vector3.up,heading);
+                var mid = root+Vector3.up*height*(h-.14f*h*h*h)+heading*height*(.07f*h+.30f*h*h*h);
+                mid += across*(height*.078f*Mathf.Sin(h*8+angle)*h);
                 var col = Color.Lerp(shade*.40f,shade,h);
                 col.a = h; // Bend weight; the holdfast stays attached to its rock.
                 var rib = col; rib.r *= 1.42f; rib.g *= 1.24f;
-                int a = g.Add(mid-across*breadth, col);
+                float ripple = .055f*blade*Mathf.Sin(h*42+angle);
+                int a = g.Add(mid-across*breadth+heading*ripple, col);
                 g.Add(mid+heading*breadth*.34f, rib);
-                g.Add(mid+across*breadth*(1+.12f*Mathf.Sin(row+angle)),col);
+                g.Add(mid+across*breadth*(1+.12f*Mathf.Sin(row+angle))-heading*ripple,col);
+                for (int i=0; i<3; i++) midribs.Add(mid);
                 if (row == 0) continue;
                 g.Quad(a-3,a,a+1,a-2);
                 g.Quad(a-2,a+1,a+2,a-1);
