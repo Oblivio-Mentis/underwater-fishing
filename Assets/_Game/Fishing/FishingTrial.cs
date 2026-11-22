@@ -331,7 +331,7 @@ namespace Raid
                 "A pocket catch lost its single owner.");
             Check("The exact Q deposits retained all personal ownership across the real hoist.");
             yield return ChooseReservoirRoutes(caughtIds);
-            ui.ShowPage(UiPage.None);
+            ui.ClosePanel();
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after closing the aquarium monitor.");
 
             yield return Pause(.3f);

@@ -235,6 +235,23 @@ namespace Raid.UI
             yield return Send("reticle_aim",station.name);
             yield return new WaitForSecondsRealtime(.25f);
             yield return Send("capture","skill-peer-1080.png");
+
+            var viewport=Ui.GetComponentInChildren<SkillGraphPan>().transform as RectTransform;
+            var layout=viewport.Find("Skill tree geometry") as RectTransform;
+            Vector2 anchor=viewport.rect.center;
+            host.LookAtConsole(viewport.TransformPoint(anchor+new Vector2(122,-116)));
+            yield return new WaitForSecondsRealtime(.32f);
+            Ui.QaScrollReticle(1);
+            yield return new WaitForSecondsRealtime(.35f);
+            var initial=layout.anchoredPosition;
+            var selectedSkills=a.skills.Count;
+            var retainedBalance=world.Team.Treasury;
+            Ui.QaDragReticle(true,false);
+            host.LookAtConsole(viewport.TransformPoint(anchor+new Vector2(257,-116)));
+            yield return new WaitForSecondsRealtime(.34f);
+            Ui.QaDragReticle(false,true);
+            yield return Wait("Empty-field LMB drag moved the same radial graph",()=>Vector2.Distance(layout.anchoredPosition,initial)>20);
+            Check("Panning neither spends anything nor changes personal skills",world.Team.Treasury.Equals(retainedBalance) && a.skills.Count==selectedSkills);
         }
     }
 }

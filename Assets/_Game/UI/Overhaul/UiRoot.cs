@@ -353,6 +353,7 @@ namespace Raid.UI
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool QaClickReticle() => UpdatePhysicalPointer(true,true,0,!UiInputGate.Modal || UiInputGate.SkillMonitorLook);
+        public void QaDragReticle(bool down,bool up) => UpdatePhysicalPointer(down,up,0,UiInputGate.SkillMonitorLook);
         public bool QaBuyReticle() => UpdatePhysicalPointer(false,false,0,UiInputGate.SkillMonitorLook,true);
         public bool QaScrollReticle(float steps) => UpdatePhysicalPointer(false,false,steps,!UiInputGate.Modal || UiInputGate.SkillMonitorLook);
         public string ReticleControl => computerSurface?boardInput.ControlName:"";
