@@ -1,0 +1,96 @@
+{
+    "status": "complete",
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "api": "Direct3D11",
+    "quality": "PC",
+    "pipeline": "PC_RPAsset",
+    "error": "",
+    "timing": "Completed offscreen URP camera stacks per real second, including a synchronous one-pixel GPU readback per frame. Screen overlay HUD excluded.",
+    "width": 1920,
+    "height": 1080,
+    "depth": 1,
+    "msaa": 1,
+    "vsync": 0,
+    "targetFps": -1,
+    "scale": 1.0,
+    "nearestPassMetres": 0.007997512817382813,
+    "drySuppressed": true,
+    "wetVisible": true,
+    "wetChamberVisible": true,
+    "deepWaterVisible": true,
+    "chamberFill": 0.9720011949539185,
+    "samples": [
+        {
+            "effects": false,
+            "frames": 1299,
+            "seconds": 4.001239776611328,
+            "fps": 324.6493835449219,
+            "medianMs": 3.0302999019622804,
+            "p95Ms": 3.52620005607605,
+            "eye": {
+                "x": 24.771146774291993,
+                "y": -14.354652404785157,
+                "z": -29.531600952148439
+            },
+            "angles": {
+                "x": 8.921311378479004,
+                "y": 17.622304916381837,
+                "z": -2.160571881404394e-7
+            }
+        },
+        {
+            "effects": true,
+            "frames": 1323,
+            "seconds": 4.002556800842285,
+            "fps": 330.5387268066406,
+            "medianMs": 2.968100070953369,
+            "p95Ms": 3.4727001190185549,
+            "eye": {
+                "x": 24.771146774291993,
+                "y": -14.354652404785157,
+                "z": -29.531600952148439
+            },
+            "angles": {
+                "x": 8.921311378479004,
+                "y": 17.622304916381837,
+                "z": -2.160571881404394e-7
+            }
+        },
+        {
+            "effects": true,
+            "frames": 1282,
+            "seconds": 4.003138542175293,
+            "fps": 320.24871826171877,
+            "medianMs": 3.059499979019165,
+            "p95Ms": 3.634200096130371,
+            "eye": {
+                "x": 24.771146774291993,
+                "y": -14.354652404785157,
+                "z": -29.531600952148439
+            },
+            "angles": {
+                "x": 8.921311378479004,
+                "y": 17.622304916381837,
+                "z": -2.160571881404394e-7
+            }
+        },
+        {
+            "effects": false,
+            "frames": 1298,
+            "seconds": 4.000052452087402,
+            "fps": 324.4957580566406,
+            "medianMs": 3.0376999378204347,
+            "p95Ms": 3.5494000911712648,
+            "eye": {
+                "x": 24.771146774291993,
+                "y": -14.354652404785157,
+                "z": -29.531600952148439
+            },
+            "angles": {
+                "x": 8.921311378479004,
+                "y": 17.622304916381837,
+                "z": -2.160571881404394e-7
+            }
+        }
+    ]
+}
