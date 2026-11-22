@@ -4,14 +4,14 @@
       "name": "00-nereid-profile",
       "depth": 1,
       "feet": {
-        "x": -29,
-        "y": 8,
-        "z": -15
+        "x": 26,
+        "y": 2,
+        "z": -49
       },
       "look": {
         "x": 0,
-        "y": 3,
-        "z": -18
+        "y": 6,
+        "z": -47
       },
       "shipLocal": false,
       "benchmark": true,
