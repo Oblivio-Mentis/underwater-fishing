@@ -102,6 +102,19 @@ namespace Raid.Nereid
             Request("view","",angles.y,Mathf.DeltaAngle(0,angles.x));yield return new WaitForSeconds(.45f);
             Request("capture",leaf);yield return Wait("Remote camera captured "+leaf,()=>File.Exists(Path.Combine(remote,leaf)),12);
         }
+        static long StockTrialPocket(HarpoonTool inventory)
+        {
+            // The fishing acceptance run verifies obtaining this cargo. Here the fixture
+            // starts the tackle with an occupied pocket so losing a real ID is observable.
+            var fish=FindObjectsByType<FishActor>().First(f=>f.IsServerInitialized && !f.RequiresPartner);
+            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            var field=typeof(HarpoonTool).GetField("_pocketA",flags);
+            var pocket=(FishNet.Object.Synchronizing.SyncVar<HarpoonTool.PocketCatch>)field.GetValue(inventory);
+            if(pocket.Value.id!=0)return pocket.Value.id;
+            long id=DateTime.UtcNow.Ticks;
+            pocket.Value=new HarpoonTool.PocketCatch {species=fish.NetworkObject,id=id};
+            return id;
+        }
         void HostShot(string leaf)=>UiQaProbe.CapturePeerCamera(Path.Combine(folder,leaf));
         IEnumerator Run()
         {
@@ -160,7 +173,10 @@ namespace Raid.Nereid
             host.LookAtConsole(peer.transform.position);
             yield return new WaitForSeconds(.35f);
             float hp=peer.Health,oxygen=peer.Oxygen;
-            int pockets=peer.GetComponent<HarpoonTool>().CatchCount;
+            var inventory=peer.GetComponent<HarpoonTool>();
+            long pocketId=StockTrialPocket(inventory);
+            int pockets=inventory.CatchCount;
+            Check("Occupied fish pocket before the tackle (fixture)",pockets>0 && inventory.CatchIdInSlot(2)==pocketId);
             world.RequestGosha(GoshaAction.Throw);
             yield return Wait("Direct server physics hit transfers ball to the other player",()=>world.HasGoshaBall(peer));
             host.LookAtConsole(peer.transform.position);
@@ -168,7 +184,7 @@ namespace Raid.Nereid
             yield return new WaitForSeconds(.22f);HostShot("gosha-robbery.png");
             Check("Pet is escaping with the single ball",world.Gosha.Mode==GoshaMode.Escaping&&world.Gosha.Ball==GoshaBallMode.Carried);
             yield return Wait("Movement lock released",()=>!world.GoshaKnocked(peer),3);
-            Check("Player survived with unchanged health and cargo, oxygen intact",!peer.IsDead && hp==peer.Health && peer.Oxygen>=oxygen-.1f && pockets==peer.GetComponent<HarpoonTool>().CatchCount);
+            Check("Player survived with unchanged health and cargo, oxygen intact",!peer.IsDead && hp==peer.Health && peer.Oxygen>=oxygen-.1f && pockets==inventory.CatchCount && inventory.CatchIdInSlot(2)==pocketId);
             yield return Wait("Pet drops ball in a safe deck area",()=>world.Gosha.Ball==GoshaBallMode.Deck,15);
         }
     }
