@@ -116,8 +116,10 @@ namespace Raid.UI
         {
             var view=diver.GetComponentInChildren<Camera>();
             var ray=view.ViewportPointToRay(new Vector3(.5f,.5f,0));
-            string surface=Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore)?hit.collider.name:"nothing";
-            return $"page {Ui.Page}; reticle {Ui.ReticleControl}; first hit {surface}; eye {ray.origin}; direction {ray.direction}";
+            string surface=Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore)?
+                hit.collider.name+"/"+hit.collider.GetComponentInParent<ShipConsole>()?.kind : "nothing";
+            var aimed=ShipConsole.ResolveSight(diver,view);
+            return $"page {Ui.Page}; reticle {Ui.ReticleControl}; first hit {surface}; client {aimed?.kind}; server {ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree)}; eye {ray.origin}; direction {ray.direction}";
         }
 
         IEnumerator ClickHost(string control,bool buy=false)

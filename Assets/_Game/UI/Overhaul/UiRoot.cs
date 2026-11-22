@@ -249,7 +249,7 @@ namespace Raid.UI
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {
-                    if((Page==UiPage.Terminal && !Context.NearTerminal)||(Page==UiPage.Cargo && !Context.NearCargo))ShowPage(UiPage.None);
+                    if(((Page==UiPage.Terminal || Page==UiPage.SkillTree) && !Context.NearTerminal)||(Page==UiPage.Cargo && !Context.NearCargo))ShowPage(UiPage.None);
                     bool pulled=Context.Harpoon!=null&&Context.Harpoon.IsPulled;
                     if(pulled&&!wasPulled&&Page!=UiPage.None)Toast("Напарник тянет вас к себе. R — отцепиться");
                     wasPulled=pulled;
@@ -330,6 +330,14 @@ namespace Raid.UI
             if(station!=dismissedConsole)dismissedConsole=null;
             if(computerSurface && station!=Context.SelectedConsole)
             {
+                if(Page==UiPage.SkillTree)
+                {
+                    // Looking across an edge or past a moving crewmate must not collapse the active graph.
+                    UiInputGate.PointerReserved=true;
+                    boardPointer.gameObject.SetActive(false);
+                    boardInput.Clear();
+                    return false;
+                }
                 if(confirmAction!=null)CancelConfirmation();
                 ShowPage(UiPage.None);
             }
