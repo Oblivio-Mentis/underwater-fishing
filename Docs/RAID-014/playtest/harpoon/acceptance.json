@@ -31,5 +31,17 @@
   "camera": [
     "ball-hook-deck.png",
     "ball-hook-water.png"
-  ]
+  ],
+  "finalRepeat": {
+    "revision": "7ed44178835a1be83d92d0ff8c5963fbfa037d1b",
+    "player": "RAID014-Items-Final",
+    "status": "passed",
+    "checksPassed": 10,
+    "host": 0,
+    "client": 1,
+    "deckTravelMetres": 6.83,
+    "underwaterTravelMetres": 3.0,
+    "assemblyCSharpSha256": "7e2198cd53d09ce7cea6932ca5cc1937e21e41ab1db21baf0e41b6366848e67b",
+    "resultSha256": "d661bfcf4f5f8c6cf7b26fa50c76822e41ea7fc756a6378b209feb0b5ad3f8fd"
+  }
 }
