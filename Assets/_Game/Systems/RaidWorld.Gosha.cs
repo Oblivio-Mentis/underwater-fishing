@@ -36,6 +36,16 @@ namespace Raid
         float idleAtSea;
         float ballWindStarted;
         public GoshaSnapshot Gosha=>gosha.Value;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public uint QaMouthReturns {get;private set;}
+        public bool QaBallRelocated=>relocatedThrow;
+        // Reproduce the reported resting places without depending on an exact bounce.
+        internal void QaStageLooseThrow(DiverMotor thrower,Vector3 origin,Vector3 velocity)
+        {
+            if(!IsServerInitialized || !HasGoshaBall(thrower))throw new System.InvalidOperationException("Thrower must own the single ball");
+            relocatedThrow=false;DropBall(origin,velocity,true);pet.Thrower=thrower.OwnerId;gosha.Value=pet;
+        }
+#endif
 
         void StartGosha()
         {
@@ -259,7 +269,7 @@ namespace Raid
         }
         bool RecoverFetch()
         {
-            if(relocatedThrow || !team.goshaTamed || !OnDeck(CrewMember(pet.Thrower)))return false;
+            if(pet.Mode==GoshaMode.Cradled || relocatedThrow || !team.goshaTamed || !OnDeck(CrewMember(pet.Thrower)))return false;
             int thrower=pet.Thrower;
             DropBall(deck.RecoveryMark(pet.BallPosition)+Vector3.up*.12f,Vector3.zero,false);
             relocatedThrow=true;pet.Thrower=thrower;SetMode(GoshaMode.Fetching,tuning.fetchTimeout);
@@ -304,6 +314,9 @@ namespace Raid
             pet.BallPosition=ballBody.Position;
             if(deck.Mouth(pet.BallPosition))
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                QaMouthReturns++;
+#endif
                 // The beast spits the same physical ball from its lips back into the main aisle.
                 var hull=NereidVessel.Active.transform;
                 var p=hull.InverseTransformPoint(pet.BallPosition);

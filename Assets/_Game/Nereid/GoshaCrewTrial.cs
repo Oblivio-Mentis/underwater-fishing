@@ -120,6 +120,28 @@ namespace Raid.Nereid
             return id;
         }
         void HostShot(string leaf)=>UiQaProbe.CapturePeerCamera(Path.Combine(folder,leaf));
+        IEnumerator ThrowWithPointer()
+        {
+            UiRoot.Instance.HandleBallPointer(true,false);
+            yield return new WaitForSeconds(.52f);
+            UiRoot.Instance.HandleBallPointer(false,true);
+        }
+        IEnumerator RecoverStairBall(Vector3 local,string label)
+        {
+            var hull=NereidVessel.Active.transform;
+            var at=hull.TransformPoint(local);
+            var observer=local.y>1?new Vector3(-4.7f,2.02f,1):new Vector3(-2.8f,.52f,local.z+(local.z>0?-.45f:.45f));
+            Stage(peer,hull.TransformPoint(observer));
+            world.QaStageLooseThrow(host,at+Vector3.up*.23f,Vector3.down*.22f);
+            yield return Wait(label+" ball settles",()=>world.Gosha.Ball==GoshaBallMode.Deck,6);
+            var rest=world.Gosha.BallPosition;
+            var leaf=local.y>1?"gallery":local.z>0?"stairs-forward":"stairs-aft";
+            yield return PeerShot(leaf+"-ball.png",rest);
+            yield return Wait(label+" picked up at the real stair",()=>world.Gosha.Ball==GoshaBallMode.Carried,35);
+            Request("capture",leaf+"-fetch.png");
+            Check(label+" reachable without relocation",!world.QaBallRelocated && Vector3.Distance(rest,world.Gosha.Position)<1.25f);
+            yield return Wait(label+" returned on foot",()=>world.HasGoshaBall(host),35);
+        }
         IEnumerator Run()
         {
             yield return Wait("Distinct host and Windows peer ready",()=>RaidWorld.Instance!=null&&RaidWorld.Instance.NetworkObject!=null&&RaidWorld.Instance.IsServerInitialized&&
@@ -156,25 +178,38 @@ namespace Raid.Nereid
             yield return PeerShot("gosha-deck-1080.png",world.Gosha.Position);
             Stage(peer,world.Gosha.Position+Vector3.back*.95f+Vector3.up*.7f);
             Request("gosha_pet");
-            yield return Wait("Remote owner's server-validated petting gesture",()=>world.Gosha.Pats>0 && world.Gosha.Mode==GoshaMode.Petted);
+            yield return Wait("Remote owner's server-validated petting gesture",()=>world.Gosha.Pats>0 && world.Gosha.Mode==GoshaMode.Cradled && world.Gosha.Rider==peer.OwnerId);
             Stage(host,world.Gosha.Position+new Vector3(1.30f,.73f,-.65f));
             host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.1f);HostShot("gosha-pet.png");
             Request("capture","gosha-pet-peer.png");
             yield return Wait("Petting captured from the stroking diver's camera",()=>File.Exists(Path.Combine(remote,"gosha-pet-peer.png")));
-            yield return Wait("Pet reaction replicated on second process",()=>Remote()?.gosha.Pats>0);
+            yield return Wait("Diver sees Gosha in their arms",()=>Remote()?.gosha.Mode==GoshaMode.Cradled && Remote()?.gosha.Rider==peer.OwnerId);
+            Check("Single carrier owns the pat",world.IsHoldingGosha(peer)&&!world.IsHoldingGosha(host));
+            yield return new WaitForSeconds(world.tuning.patCooldown+.1f);
+            Request("gosha_pet");
+            yield return Wait("Second E sets Gosha on the deck and frees both hands",()=>!world.IsHoldingGosha(peer));
             var ball=world.Gosha.BallPosition;
             Stage(host,ball+Vector3.back*.92f+Vector3.up*.75f);
             host.LookAtConsole(ball);yield return new WaitForSeconds(.3f);
             world.RequestGosha(GoshaAction.PickUp);
             yield return Wait("Separate ball slot is held by host",()=>world.HasGoshaBall(host));
+            yield return GoshaGripTrial.Verify(world,host,Check,HostShot);
             host.LookAtConsole(host.transform.position+Vector3.forward*2-Vector3.up);
             yield return new WaitForSeconds(.3f);
-            world.RequestGosha(GoshaAction.Throw);
+            yield return ThrowWithPointer();
             yield return Wait("Thrown rubber ball in physical flight",()=>world.Gosha.Ball==GoshaBallMode.Flying);
             yield return Wait("Pet fetches the physical ball",()=>world.Gosha.Ball==GoshaBallMode.Carried,65);
             yield return Wait("Pet approaches the thrower carrying the ball",()=>world.Gosha.Ball==GoshaBallMode.Carried && Vector3.Distance(host.transform.position,world.Gosha.Position)<2.45f);
             host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.08f);HostShot("gosha-fetch.png");
             yield return Wait("Returned to the diver who threw it",()=>world.HasGoshaBall(host),35);
+            var hull=NereidVessel.Active.transform;
+            yield return RecoverStairBall(new Vector3(-3.98f,.09f,5.88f),"Forward left stair cheek");
+            yield return RecoverStairBall(new Vector3(-3.98f,.09f,-7.39f),"Aft left stair cheek");
+            yield return RecoverStairBall(new Vector3(-4.7f,1.58f,-.7f),"Raised observation deck");
+            var spits=world.QaMouthReturns;
+            world.QaStageLooseThrow(host,hull.TransformPoint(new Vector3(0,.85f,6.1f)),hull.forward*8);
+            yield return Wait("Real physical ball reaches the creature and is spat out",()=>world.QaMouthReturns>spits);
+            yield return Wait("Same ball recovered after entering the mouth",()=>world.HasGoshaBall(host),30);
             Stage(peer,host.transform.position+Vector3.right*3);
             host.LookAtConsole(peer.transform.position);
             yield return new WaitForSeconds(.35f);
@@ -183,7 +218,7 @@ namespace Raid.Nereid
             long pocketId=StockTrialPocket(inventory);
             int pockets=inventory.CatchCount;
             Check("Occupied fish pocket before the tackle (fixture)",pockets>0 && inventory.CatchIdInSlot(2)==pocketId);
-            world.RequestGosha(GoshaAction.Throw);
+            yield return ThrowWithPointer();
             yield return Wait("Direct server physics hit transfers ball to the other player",()=>world.HasGoshaBall(peer));
             host.LookAtConsole(peer.transform.position);
             yield return Wait("Pet catches and briefly knocks down that specific diver",()=>world.GoshaKnocked(peer),20);
