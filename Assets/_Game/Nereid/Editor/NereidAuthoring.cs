@@ -18,6 +18,12 @@ namespace Raid.Nereid.Editor
         static Transform root;
         static Dictionary<string,Material> mats;
 
+        public static void RebuildExpedition()
+        {
+            EditorSceneManager.OpenScene(Scene);
+            Install();
+        }
+
         [MenuItem("RAID/011/Rebuild NEREID vessel")]
         public static void Install()
         {
@@ -48,9 +54,9 @@ namespace Raid.Nereid.Editor
             foreach(var text in factory.GetComponentsInChildren<TMPro.TMP_Text>(true))
                 if(text.name.StartsWith("Label 01 /",StringComparison.Ordinal)||text.name.StartsWith("Label 02 /",StringComparison.Ordinal)||text.name.StartsWith("Label ПАСТЬ /",StringComparison.Ordinal))text.gameObject.SetActive(false);
             var menu=Object.FindAnyObjectByType<RaidSession>().menuCamera;
-            menu.transform.position=new Vector3(-53,15,51);menu.transform.LookAt(new Vector3(0,3,-8));menu.fieldOfView=62;
+            menu.transform.position=new Vector3(-38,17,-52);menu.transform.LookAt(new Vector3(1,5,-27));menu.fieldOfView=60;
             EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene());AssetDatabase.SaveAssets();
-            Debug.Log("[NEREID REBUILD] Imported pressure hull and structural interior; aft room and real starboard stern exit, isolated scene tuning.");
+            Debug.Log("[NEREID REBUILD] Installed the expedition hull, pressure compartments and physical vessel systems.");
         }
 
         static void HideOldArchitecture()
@@ -162,12 +168,12 @@ namespace Raid.Nereid.Editor
             foreach(float z in new[]{-6.6f,-1,4.6f})foreach(int side in new[]{-1,1})
             {
                 var lamp=new GameObject("Caged luminaire downlight");lamp.transform.SetParent(root,false);lamp.transform.localPosition=new Vector3(side*2.7f,3.58f,z);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
-                var spot=lamp.AddComponent<Light>();spot.type=LightType.Spot;spot.color=new Color(1,.76f,.49f);spot.intensity=70;spot.range=7.5f;spot.spotAngle=112;spot.innerSpotAngle=78;spot.shadows=LightShadows.Soft;spot.shadowBias=.025f;spot.shadowNormalBias=.15f;
-                Light("Cold pressure window bounce",new Vector3(side*5.1f,2.6f,z),new Color(.16f,.48f,.62f),5,4.8f,false);
+                var spot=lamp.AddComponent<Light>();spot.type=LightType.Spot;spot.color=new Color(1,.76f,.49f);spot.intensity=z<0?77:66;spot.range=7.8f;spot.spotAngle=105;spot.innerSpotAngle=65;spot.shadows=z==-1?LightShadows.Soft:LightShadows.None;spot.shadowBias=.025f;spot.shadowNormalBias=.15f;
+                Light("Cold pressure window bounce",new Vector3(side*5.1f,2.6f,z),new Color(.27f,.53f,.68f),7,5.4f,false);
             }
-            foreach(float z in new[]{-5.5f,1.5f})foreach(int side in new[]{-1,1})Light("Warm reflected working-plane fill",new Vector3(side*2.7f,2.2f,z),new Color(1,.76f,.52f),12,5,false);
-            Light("Aft loading room",new Vector3(0,3.05f,-12),new Color(1,.65f,.34f),24,7,true);
-            Light("Reservoir reflected water",new Vector3(0,2.9f,-3),new Color(.18f,.7f,.8f),7,4.3f,false);
+            foreach(float z in new[]{-5.5f,1.5f})foreach(int side in new[]{-1,1})Light("Warm reflected working-plane fill",new Vector3(side*2.7f,2.2f,z),new Color(1,.789f,.61f),13,5,false);
+            Light("Aft loading room",new Vector3(0,3.05f,-12),new Color(1,.679f,.386f),24,7,true);
+            Light("Reservoir reflected water",new Vector3(0,2.9f,-3),new Color(.28f,.72f,.84f),10,5.2f,false);
             Light("Workshop task light",new Vector3(-2.5f,2.65f,-11.5f),new Color(1,.74f,.46f),20,5.5f,true);
             Light("Living mouth inspection",new Vector3(-1.7f,2.9f,5.8f),new Color(.4f,.65f,.72f),6,5,false);
             foreach(int side in new[]{-1,1})
@@ -448,14 +454,14 @@ namespace Raid.Nereid.Editor
         static void SetupMaterials()
         {
             mats=new Dictionary<string,Material>();
-            Mat("Nereid_Hull",new Color(.12f,.23f,.27f),.55f,.35f);
-            Mat("Nereid_Steel",new Color(.21f,.28f,.29f),.58f,.33f);
-            Mat("Nereid_Dark",new Color(.065f,.085f,.09f),.3f,.27f);
-            Mat("Nereid_Trim",new Color(.37f,.42f,.4f),.68f,.38f);
+            Mat("Nereid_Hull",new Color(.125f,.211f,.225f),.31f,.39f);
+            Mat("Nereid_Steel",new Color(.244f,.305f,.307f),.48f,.37f);
+            Mat("Nereid_Dark",new Color(.067f,.086f,.095f),.29f,.32f);
+            Mat("Nereid_Trim",new Color(.52f,.576f,.553f),.24f,.48f);
             Mat("Nereid_Ochre",new Color(.61f,.37f,.105f),.3f,.32f);
-            Mat("Nereid_Grate",new Color(.105f,.13f,.14f),.65f,.3f);
+            Mat("Nereid_Grate",new Color(.101f,.123f,.127f),.42f,.40f);
             Mat("Nereid_Rubber",new Color(.025f,.034f,.038f),.05f,.2f);
-            Mat("Nereid_Lamp",new Color(1,.77f,.47f),.05f,.4f,3);
+            Mat("Nereid_Lamp",new Color(1,.77f,.50f),.05f,.4f,2.45f);
             Mat("Nereid_CreatureSkin",new Color(.14f,.17f,.23f),.05f,.43f);
             Mat("Nereid_CreatureDark",new Color(.055f,.08f,.135f),.05f,.36f);
             Mat("Nereid_CreatureGill",new Color(.21f,.09f,.145f),.02f,.48f);
