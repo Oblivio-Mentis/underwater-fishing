@@ -352,7 +352,13 @@ namespace Raid
         {
             if(!IsServerInitialized || pet.Ball!=GoshaBallMode.Flying || target.OwnerId==pet.Thrower)return;
             if(!OnDeck(target)||!CanHold(target)||pet.Knocked==target.OwnerId||IsHoldingGosha(target))
-            {DropBall(deck.Interior(pet.BallPosition)?deck.Ground(pet.BallPosition):deck.Mark(7),Vector3.zero,false);return;}
+            {
+                // Let the actual collision leave the ball beside an unavailable receiver.
+                // The deck recovery and buoyancy rules continue to govern this same loose ball.
+                pet.Ball=GoshaBallMode.Deck;
+                BeginBallRecovery();
+                return;
+            }
             GiveBall(target);
             if(team.goshaTamed && pet.Mode!=GoshaMode.Cradled)SetMode(GoshaMode.Chasing,20);
         }
