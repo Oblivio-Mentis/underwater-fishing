@@ -117,6 +117,8 @@ namespace Raid.Nereid
                     Profile(structure,corners,.081f,6);
                     Box(structure,new(shellX,2.995f,z),new(.184f,.246f,1.84f));
                     Box(structure,new(side*6.880f,.288f,z),new(.31f,.127f,2.62f));
+                    Box(safety,new(side*6.925f,.257f,z),new(.238f,.101f,2.05f));
+                    Box(lenses,new(side*7.022f,2.854f,z),new(.106f,.091f,1.59f));
                     for(int dir=-1;dir<=1;dir+=2)
                     {
                         Box(safety,new(side*7.005f,2.911f,z+dir*.892f),new(.074f,.125f,.095f),Quaternion.Euler(dir*16,0,0));
@@ -130,7 +132,8 @@ namespace Raid.Nereid
                 }
 
                 foreach(float z in new[]{-5.85f,.6f,5.38f})
-                    ExteriorWash(new(side*7.167f,2.917f,z),new(side*6.925f,1.01f,z-.30f),new(1,.62f,.34f),6.65f,74);
+                    ExteriorWash(new(side*7.167f,2.917f,z),new(side*6.925f,1.01f,z-.30f),new(1,.56f,.27f),6.65f,120);
+                ExteriorWash(new(side*4.12f,6.57f,-27.2f),new(side*2.3f,5.42f,-26.6f),new(1f,.63f,.36f),5.8f,67);
 
                 // Colour-coded boarding shoulder. Keep the actual button and hatch face unobstructed.
                 foreach(float z in new[]{-16.37f,-15.95f,-12.12f,-11.71f})
