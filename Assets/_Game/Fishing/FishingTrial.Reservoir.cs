@@ -49,8 +49,12 @@ namespace Raid
             ui.Send(WorldAction.SendFish,obsoleteQuote);
             yield return Wait(()=>!ui.CommandPending,5,"Stale send quote was not acknowledged.");
             Require(!ui.LastCommandSucceeded && ui.LastCommandReason=="changed" && !world.FishRoute.active,"Stale batch was accepted.");
-            var send=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name=="SendFish");
-            Require(send!=null && send.interactable,"No enabled send button on the aquarium monitor.");
+            Button send=null;
+            yield return Wait(()=>
+            {
+                send=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name=="SendFish");
+                return send!=null && send.interactable;
+            },5,"No enabled send button on the aquarium monitor.");
             host.Motor.LookAtConsole(send.transform.TransformPoint(((RectTransform)send.transform).rect.center));
             yield return Pause(.4f);
             Require(ui.QaClickReticle(),"The physical send button could not be clicked.");
