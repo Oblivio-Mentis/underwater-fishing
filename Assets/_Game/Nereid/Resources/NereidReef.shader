@@ -1,6 +1,6 @@
 Shader "RAID/Nereid Reef"
 {
-    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 _BasaltLayers("Basalt layers",Range(0,1))=0 }
+    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 _BasaltLayers("Basalt layers",Range(0,1))=0 _PigmentLightCap("Matte pigment light cap",Float)=0 }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry"}
@@ -16,7 +16,7 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide, _BasaltLayers;
+            float _Glow, _Hide, _BasaltLayers, _PigmentLightCap;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
@@ -118,7 +118,10 @@ Shader "RAID/Nereid Reef"
                 half3 murk=lerp(WaterColumnColor(toSurface/d),closeColor,clarity);
                 half3 workLight=base*HullIrradiance(i.pos,n)*(.86+.18*grain);
                 half3 workTransmission=lerp(transmit,exp2(-d*_NereidReefClarity.z*half3(.14,.114,.10)),_NereidTurbidity);
-                return half4(lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission,1);
+                half3 result=lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission;
+                // A close mask lamp should still reveal the companion's shell markings.
+                if (_PigmentLightCap>0) result=min(result,base*_PigmentLightCap+.022);
+                return half4(result,1);
             }
             ENDHLSL
         }

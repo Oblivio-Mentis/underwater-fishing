@@ -25,6 +25,7 @@ namespace Raid.Nereid
         void Awake()
         {
             shell=new Material(Resources.Load<Shader>("NereidReef")){name="Gosha lacquer and woven ball"};
+            shell.SetFloat("_PigmentLightCap",1.18f);
             creature=Node(transform,"Гоша",Vector3.zero);
             body=Node(creature,"Shieldback",Vector3.zero);body.localScale=Vector3.one*.24f;
             var g=new ReefGeometry();

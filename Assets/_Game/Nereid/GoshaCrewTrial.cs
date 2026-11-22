@@ -141,6 +141,8 @@ namespace Raid.Nereid
             Request("gosha_pet");
             yield return Wait("Remote owner's server-validated petting gesture",()=>world.Gosha.Pats>0 && world.Gosha.Mode==GoshaMode.Petted);
             host.LookAtConsole(world.Gosha.Position);HostShot("gosha-pet.png");
+            Request("capture","gosha-pet-peer.png");
+            yield return Wait("Petting captured from the stroking diver's camera",()=>File.Exists(Path.Combine(remote,"gosha-pet-peer.png")));
             yield return Wait("Pet reaction replicated on second process",()=>Remote()?.gosha.Pats>0);
             var ball=world.Gosha.BallPosition;
             Stage(host,ball+Vector3.back*.92f+Vector3.up*.75f);
