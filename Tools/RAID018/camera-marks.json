@@ -323,6 +323,96 @@
       "benchmark": true,
       "prop": "",
       "station": ""
+    },
+    {
+      "name": "18-lock-interior",
+      "depth": 1,
+      "feet": {
+        "x": 14.3,
+        "y": 0.32,
+        "z": -27.0
+      },
+      "look": {
+        "x": 19.4,
+        "y": 1.94,
+        "z": -28.81
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "19-port-shelf",
+      "depth": 1,
+      "feet": {
+        "x": -17,
+        "y": -9,
+        "z": -23
+      },
+      "look": {
+        "x": -31,
+        "y": -12,
+        "z": -35
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "20-bow-garden",
+      "depth": 1,
+      "feet": {
+        "x": 2,
+        "y": -9,
+        "z": 22
+      },
+      "look": {
+        "x": -12,
+        "y": -12,
+        "z": 34
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "21-deep-port",
+      "depth": 2,
+      "feet": {
+        "x": -17,
+        "y": -13,
+        "z": -25
+      },
+      "look": {
+        "x": -31,
+        "y": -21,
+        "z": -37
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "22-deep-bow",
+      "depth": 2,
+      "feet": {
+        "x": 8,
+        "y": -11,
+        "z": 19
+      },
+      "look": {
+        "x": 20,
+        "y": -18,
+        "z": 34
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
     }
   ]
 }
