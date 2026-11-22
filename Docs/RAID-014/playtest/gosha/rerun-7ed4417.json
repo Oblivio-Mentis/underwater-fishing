@@ -1,0 +1,24 @@
+{
+  "sourceCommit": "7ed44178835a1be83d92d0ff8c5963fbfa037d1b",
+  "build": "Windows x64 Development",
+  "assemblyCSharpSha256": "7e2198cd53d09ce7cea6932ca5cc1937e21e41ab1db21baf0e41b6366848e67b",
+  "transport": "FishNet local, separate Windows host and client",
+  "camera": "1920x1080",
+  "results": {
+    "newTeam": {
+      "status": "passed",
+      "checks": 68,
+      "sameChecksAs": "windows-pair.json",
+      "completedUtc": "2026-11-22T13:48:08Z",
+      "resultSha256": "21b74758f2aab4b3e377439e1040c79013733cbf644f2bc9939d741d706ff22a"
+    },
+    "restartedTeam": {
+      "status": "passed",
+      "checks": 4,
+      "sameChecksAs": "restart.json",
+      "completedUtc": "2026-11-22T13:48:17Z",
+      "resultSha256": "0475ea0295af05bad2ffd2a0b21a4bc94629ea17189e8cab6343c5c3c3ccfdcc"
+    }
+  },
+  "cameraCheck": "Camera turned 46,1 deg: held ball drift 0,00000 m, rotation 0,000 deg"
+}
