@@ -78,9 +78,11 @@ namespace Raid.Nereid
             schools=new[]
             {
                 new School(1,silverMesh,silver,ShallowShoal,new Vector3(4f,.42f,2.8f),.39f,1.2f,38,30,.31f),
-                new School(1,slateMesh,slate,new Vector3(47,-2.9f,-55),new Vector3(4.6f,.52f,2.7f),-.31f,3.8f,39,19,.28f),
+                new School(1,slateMesh,slate,new Vector3(47,-2.7f,-55),new Vector3(4.1f,.52f,2.7f),-.31f,3.8f,39,19,.28f),
+                new School(1,silverMesh,silver,new Vector3(48,-10,-64),new Vector3(4.2f,.94f,3.4f),.33f,2.3f,35,21,.29f),
                 new School(2,slateMesh,slate,DeepShoal,new Vector3(2f,.65f,3.35f),.38f,2.9f,22,22,.35f),
                 new School(2,silverMesh,silver,new Vector3(45.3f,-8.8f,-50.1f),new Vector3(1.5f,.52f,2.2f),-.35f,2.1f,21,13,.26f),
+                new School(2,slateMesh,slate,new Vector3(51,-24.2f,-79),new Vector3(2.9f,1.03f,4.9f),.33f,1.3f,24,19,.32f),
             };
         }
 

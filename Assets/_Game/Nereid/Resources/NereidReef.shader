@@ -136,6 +136,13 @@ Shader "RAID/Nereid Reef"
                     float distanceToVent=min(dot(first,first),min(dot(second,second),dot(third,third)));
                     half vent=exp2(-distanceToVent*.23)*saturate((-i.pos.y-12.5)*.25);
                     rgb+=half3(.013,.086,.079)*vent*(.45+.55*abs(n.y));
+                    float2 lower=i.pos.xz-float2(43,-86),fault=i.pos.xz-float2(48.4,-88.5);
+                    float2 crown=i.pos.xz-float2(51,-80),terminal=i.pos.xz-float2(47,-95);
+                    float2 gate=i.pos.xz-float2(41.5,-77);
+                    half blueGlow=exp2(-min(dot(lower,lower),min(dot(crown,crown),dot(gate,gate)))*.135);
+                    half violetGlow=exp2(-min(dot(fault,fault),dot(terminal,terminal))*.21);
+                    rgb+=(blueGlow*half3(.011,.049,.110)+violetGlow*half3(.072,.020,.093))*
+                        saturate((-i.pos.y-21.)*.12)*(.50+.50*abs(n.y));
                 }
                 rgb+=half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
                 // Wavelength-dependent extinction gives both cliff layers an underwater silhouette.

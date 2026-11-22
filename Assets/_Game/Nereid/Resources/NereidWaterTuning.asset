@@ -17,16 +17,21 @@ MonoBehaviour:
   - {x: 39, y: -36, z: 5, w: 3.1}
   - {x: 47, y: -58, z: 6, w: 3.8}
   - {x: 29, y: -50, z: 5, w: 3.6}
+  - {x: 43, y: -57, z: 6.6, w: 3.7}
+  - {x: 57, y: -70, z: 8.2, w: 4.9}
+  - {x: 39, y: -68, z: 5.7, w: 3.6}
   deepGroves:
   - {x: 34, y: -23, z: 3.8, w: 3}
   - {x: 40, y: -43, z: 4.35, w: 3.4}
   - {x: 53, y: -52, z: 5.4, w: 3.9}
+  - {x: 45, y: -66, z: 5.1, w: 2.9}
+  - {x: 55, y: -78, z: 4.6, w: 3.6}
   holdfastsPerBank: 11
-  bladeHeight: {x: 3.4, y: 7.1}
+  bladeHeight: {x: 4.2, y: 9.3}
   passageHalfWidth: 1.5
   bendRadius: 2.1
   bendMetres: 1.15
-  kelpVisibility: 42
+  kelpVisibility: 46
   localFlakes: 480
   lampFlakes: 100
   localExtent: 9

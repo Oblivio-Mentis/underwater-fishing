@@ -19,15 +19,17 @@ namespace Raid
         public static readonly Route[] Shelf =
         {
             new("Survey Wreck", new(36,-6.5f,-12),new(31,-7,-19),new(25,-8,-19),new(27,-6,-14)),
-            new("Kelp Arch", new(42,-5,-35),new(37,-5,-33),new(34,-6,-38),new(40,-5.5f,-41)),
-            new("Outer Ridge", new(56,-7,-58),new(52,-6,-49),new(46,-6.8f,-46),new(43,-7,-50))
+            new("Kelp Gate", new(42,-5,-35),new(37,-5,-33),new(36,-6,-38),new(40,-6.5f,-43),new(43,-9.2f,-46)),
+            new("Wreck Basin", new(53,-9,-60),new(48,-12,-67),new(46,-12.5f,-72),new(43,-12,-65),new(45,-10.5f,-56)),
+            new("Far Ridge", new(58,-10,-79),new(54,-13,-84),new(50,-14,-80),new(50,-10,-74),new(55,-9,-72))
         };
 
         public static readonly Route[] Rift =
         {
             new("Rift Lip", new(49,-7,-30),new(44,-7,-36),new(40,-8,-38),new(37,-7,-35)),
             new("Upper Needles", new(50,-7.5f,-43),new(44,-7.9f,-44.7f),new(41,-8.5f,-48),new(43.5f,-7,-53)),
-            new("Outer Seam", new(59,-8,-64),new(54,-9,-57),new(49,-9,-54),new(45,-10,-52))
+            new("Outer Seam", new(57,-12,-64),new(55,-15,-67),new(51,-21,-75),new(48,-22,-79),new(47,-20,-70),new(50,-15,-62)),
+            new("Lantern Fault", new(44,-24,-82),new(47,-29,-88),new(48,-31,-94),new(45,-29,-91),new(43,-26,-86))
         };
 
         public static bool InShelter(Vector3 point) =>
