@@ -165,14 +165,15 @@ namespace Raid.Nereid.Editor
             var probe=new SphericalHarmonicsL2();probe.AddAmbientLight(new Color(.18f,.23f,.26f));RenderSettings.ambientProbe=probe;
             RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;RenderSettings.fogColor=new Color(.075f,.23f,.29f);RenderSettings.fogDensity=.022f/VesselScale;
             var sun=GameObject.Find("Directional Light").GetComponent<Light>();sun.intensity=.65f;sun.color=new Color(.3f,.61f,.76f);sun.shadows=LightShadows.Soft;
-            foreach(float z in new[]{-6.6f,-1,4.6f})foreach(int side in new[]{-1,1})
+            foreach(float z in new[]{-7.48f,-1.97f,3.91f})foreach(int side in new[]{-1,1})
             {
-                var lamp=new GameObject("Caged luminaire downlight");lamp.transform.SetParent(root,false);lamp.transform.localPosition=new Vector3(side*2.7f,3.58f,z);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
-                var spot=lamp.AddComponent<Light>();spot.type=LightType.Spot;spot.color=new Color(1,.76f,.49f);spot.intensity=z<0?77:66;spot.range=7.8f;spot.spotAngle=105;spot.innerSpotAngle=65;spot.shadows=z==-1?LightShadows.Soft:LightShadows.None;spot.shadowBias=.025f;spot.shadowNormalBias=.15f;
+                var lamp=new GameObject("Caged luminaire downlight");lamp.transform.SetParent(root,false);lamp.transform.localPosition=new Vector3(side*3.89f,3.53f,z);lamp.transform.localRotation=Quaternion.Euler(90,0,0);
+                var spot=lamp.AddComponent<Light>();spot.type=LightType.Spot;spot.color=new Color(1,.76f,.49f);spot.intensity=z<0?77:66;spot.range=7.8f;spot.spotAngle=105;spot.innerSpotAngle=65;spot.shadows=z==-1.97f?LightShadows.Soft:LightShadows.None;spot.shadowBias=.025f;spot.shadowNormalBias=.15f;
                 Light("Cold pressure window bounce",new Vector3(side*5.1f,2.6f,z),new Color(.27f,.53f,.68f),7,5.4f,false);
             }
             foreach(float z in new[]{-5.5f,1.5f})foreach(int side in new[]{-1,1})Light("Warm reflected working-plane fill",new Vector3(side*2.7f,2.2f,z),new Color(1,.789f,.61f),13,5,false);
-            Light("Aft loading room",new Vector3(0,3.05f,-12),new Color(1,.679f,.386f),24,7,true);
+            Light("Aft loading room",new Vector3(0,2.84f,-12.25f),new Color(1,.679f,.386f),19,7,true);
+            Light("Aft loading work light",new Vector3(1.97f,2.82f,-14.72f),new Color(1,.749f,.452f),10,4.8f,false);
             Light("Reservoir reflected water",new Vector3(0,2.9f,-3),new Color(.28f,.72f,.84f),10,5.2f,false);
             Light("Workshop task light",new Vector3(-2.5f,2.65f,-11.5f),new Color(1,.74f,.46f),20,5.5f,true);
             Light("Living mouth inspection",new Vector3(-1.7f,2.9f,5.8f),new Color(.4f,.65f,.72f),6,5,false);
