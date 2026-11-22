@@ -47,7 +47,7 @@ namespace Raid.Nereid
             foreach(Transform part in transform)part.gameObject.SetActive(false);
             var legacy=world.container.GetComponent<Collider>();if(legacy!=null)legacy.enabled=false;
             ochre=Finish("Recovery cage · enamel",new Color(.78f,.36f,.09f),.38f,false);
-            var instrumentShader=Shader.Find("Universal Render Pipeline/Unlit");
+            var instrumentShader=Resources.Load<Shader>("CargoInstrument");
             signal=new Material(instrumentShader){name="Recovery cage illuminated indicator"};
             fascia=new Material(instrumentShader){name="Recovery cage matte instrument face"};
             fascia.SetColor(BaseColor,new Color(.016f,.032f,.048f));
