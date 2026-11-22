@@ -14,7 +14,7 @@ namespace Raid
         }
 
         internal static Vector3 CameraCenter(float wind) =>
-            Vector3.Lerp(new Vector3(.12f,-.20f,.49f),new Vector3(.30f,-.095f,.31f),Mathf.SmoothStep(0,1,wind));
+            Vector3.Lerp(new Vector3(.12f,-.20f,.49f),new Vector3(.30f,-.085f,.42f),Mathf.SmoothStep(0,1,wind));
 
         internal static Vector3 ObserverCenter(float wind) =>
             Vector3.Lerp(new Vector3(.17f,.25f,.43f),new Vector3(.34f,.46f,-.08f),Mathf.SmoothStep(0,1,wind));
@@ -22,7 +22,7 @@ namespace Raid
         internal static Vector3 GloveOffset(int side,float wind)
         {
             if(side>0)return new Vector3(.066f,-.060f,-.068f);
-            return Vector3.Lerp(new Vector3(-.10f,-.073f,-.018f),new Vector3(-.46f,-.13f,.22f),wind);
+            return Vector3.Lerp(new Vector3(-.10f,-.073f,-.018f),new Vector3(-.46f,-.13f,.11f),wind);
         }
     }
 }
