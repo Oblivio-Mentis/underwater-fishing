@@ -12,8 +12,14 @@ namespace Raid
         readonly GoshaSwimRoute meetingRoute=new();
         MeetingStage meetingStage;
         float meetingTime;
-        Vector3 circleStart;
+        Vector3 circleStart,previousDiverPosition;
         float circleTurn;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal bool QaMeetingCircles => meetingStage==MeetingStage.Circle && pet.Mode==GoshaMode.Swimming;
+        internal bool QaMeetingPerches => meetingStage==MeetingStage.Perch && pet.Mode==GoshaMode.Swimming;
+        internal Vector3 QaMeetingCenter(DiverMotor diver) => CircleCenter(diver,NereidAirlock.Active);
+#endif
 
         void ResetMeeting()
         {
@@ -43,6 +49,7 @@ namespace Raid
                     if(Outside(candidate,lockRoom)){diver=candidate;break;}
                 if(diver==null)return;
                 pet.Rider=diver.OwnerId;
+                previousDiverPosition=diver.transform.position;
             }
 
             if(pet.Mode==GoshaMode.Riding)
@@ -53,6 +60,8 @@ namespace Raid
 
             meetingTime+=dt;
             var center=CircleCenter(diver,lockRoom);
+            var diverMotion=Vector3.ClampMagnitude(diver.transform.position-previousDiverPosition,tuning.petCatchUpSpeed*dt);
+            previousDiverPosition=diver.transform.position;
             var old=pet.Position;
             switch(meetingStage)
             {
@@ -93,6 +102,9 @@ namespace Raid
                     break;
                 case MeetingStage.Perch:
                     var perch=Shoulder(diver);
+                    // While settling, match the diver's translation before closing the remaining gap.
+                    // Otherwise the slower landing animation would trail a swimming diver indefinitely.
+                    if(meetingRoute.Clear(pet.Position,pet.Position+diverMotion))pet.Position+=diverMotion;
                     float remaining=Vector3.Distance(pet.Position,perch);
                     float speed=Mathf.Min(tuning.petCatchUpSpeed,.65f+remaining*3.8f);
                     SwimForMeeting(perch,speed,dt,false);
@@ -169,6 +181,7 @@ namespace Raid
                             Vector3.Distance(other.transform.position,pet.Position)>=9 ||
                             !meetingRoute.Clear(pet.Position,Shoulder(other)))continue;
                         pet.Rider=other.OwnerId;
+                        previousDiverPosition=other.transform.position;
                         meetingStage=MeetingStage.Behind;
                         meetingTime=0;
                         meetingRoute.Reset();

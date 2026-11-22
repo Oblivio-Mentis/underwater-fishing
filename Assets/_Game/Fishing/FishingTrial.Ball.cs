@@ -93,6 +93,9 @@ namespace Raid
             Check("The deck ball travelled down the line into the shooter's numbered inventory.");
 
             Phase("Reel the single physical ball in open water");
+            Require(host.SelectSlot(0),"Could not stow the deck ball and equip the harpoon.");
+            yield return Wait(()=>host.HarpoonInHands && world.HasGoshaBall(host.Motor),3,
+                "Stowing the ball did not restore the harpoon.");
             // The vessel has a twofold scale; use world coordinates in the open cargo pool.
             var water=new Vector3(24,-6,-27);
             host.Motor.Teleport(water);

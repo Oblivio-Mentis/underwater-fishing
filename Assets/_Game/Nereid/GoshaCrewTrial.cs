@@ -149,16 +149,23 @@ namespace Raid.Nereid
             yield return Wait("Gosha first appears in open water",()=>world.Gosha.Mode==GoshaMode.Swimming,8);
             Vector3 previous=world.Gosha.Position, radial=Vector3.ProjectOnPlane(previous-host.transform.position,Vector3.up);
             Check("First visible position is at least 12 m from the diver",radial.magnitude>=12);
-            float sweep=0,nearest=float.PositiveInfinity,maxStep=0;
-            bool captured=false;
+            float sweep=0,nearest=float.PositiveInfinity,maxSpeed=0,lastTime=Time.fixedTime;
+            bool captured=false,wasCircling=false,swamDuringLanding=false;
             float until=Time.realtimeSinceStartup+22;
             while(world.Gosha.Mode==GoshaMode.Swimming)
             {
                 if(Time.realtimeSinceStartup>until)throw new TimeoutException("Gosha could not finish the swim: "+world.Gosha.Position);
                 var at=world.Gosha.Position;
-                var next=Vector3.ProjectOnPlane(at-host.transform.position,Vector3.up);
-                if(radial.magnitude>1.7f && next.magnitude>1.7f)sweep+=Vector3.SignedAngle(radial,next,Vector3.up);
-                maxStep=Mathf.Max(maxStep,Vector3.Distance(at,previous));
+                var next=Vector3.ProjectOnPlane(at-world.QaMeetingCenter(host),Vector3.up);
+                bool circling=world.QaMeetingCircles;
+                if(wasCircling && circling)sweep+=Vector3.SignedAngle(radial,next,Vector3.up);
+                float stepTime=Time.fixedTime-lastTime;
+                if(stepTime>0)maxSpeed=Mathf.Max(maxSpeed,Vector3.Distance(at,previous)/stepTime);
+                if(world.QaMeetingPerches)
+                {
+                    host.ApplyExternalMotion(left*3.6f*Time.fixedDeltaTime);
+                    swamDuringLanding=true;
+                }
                 if(view.PetVisible)
                 {
                     nearest=Mathf.Min(nearest,Vector3.Distance(view.PetCenter,camera.transform.position));
@@ -166,11 +173,12 @@ namespace Raid.Nereid
                     if(!captured && screen.z>3 && screen.z<8 && screen.x>.14f && screen.x<.86f && screen.y>.2f && screen.y<.8f)
                     {HostShot("gosha-first-approach.png");captured=true;}
                 }
-                previous=at;radial=next;
-                yield return null;
+                previous=at;radial=next;wasCircling=circling;lastTime=Time.fixedTime;
+                yield return new WaitForFixedUpdate();
             }
-            Check($"Underwater arc covered {Mathf.Abs(sweep):F0} degrees, largest sampled step {maxStep:F2} m",
-                Mathf.Abs(sweep)>180 && maxStep<1.25f);
+            Check($"Underwater arc covered {Mathf.Abs(sweep):F0} degrees at speeds up to {maxSpeed:F2} m/s",
+                Mathf.Abs(sweep)>210 && maxSpeed<12);
+            Check("Soft landing caught up with a moving diver",swamDuringLanding);
             Check($"Gosha came into view, nearest visible distance {nearest:F2} m",captured && nearest>1.35f);
             Check("Gosha reached the intended diver's shoulder",world.Gosha.Mode==GoshaMode.Riding && world.Gosha.Rider==host.OwnerId);
             foreach(float angle in new[]{0f,90f,180f,270f})
