@@ -22,6 +22,7 @@ namespace Raid
         }
 
         string folder;
+        bool motion;
         string ReportPath=>Path.Combine(folder,"cargo-trial.json");
         readonly Report report=new();
 
@@ -33,6 +34,7 @@ namespace Raid
             if(caseIndex<0 || caseIndex+1>=args.Length || Array.IndexOf(args,"-raid-save")<0)return;
             var go=new GameObject("Cage QA").AddComponent<CargoPresentationTrial>();
             go.folder=Path.GetFullPath(args[caseIndex+1]);
+            go.motion=Array.IndexOf(args,"-raid-cargo-motion")>=0;
             Directory.CreateDirectory(go.folder);
             go.Run();
         }
@@ -113,8 +115,10 @@ namespace Raid
                 ShootFrame("04-physical-button.png");
                 Check(UiRoot.Instance.QaClickReticle(),"The owned world pointer dispatches the button click.");
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Raising,"Physical console starts hoist");
-                await Awaitable.WaitForSecondsAsync(.72f);
-                host.LookAtConsole(center+Vector3.up*.75f);
+                if(motion)
+                    await Track(host,()=>world.container.position+Vector3.up*.40f,"closing",17,.15f);
+                else await Awaitable.WaitForSecondsAsync(.72f);
+                host.LookAtConsole(world.container.position+Vector3.up*.50f);
                 ShootFrame("05-closing-lid.png");
                 await Until(()=>world.container.position.y>center.y+1,"Ascending cage");
                 host.Teleport(new Vector3(27,-12.35f,-23.7f));
@@ -127,7 +131,9 @@ namespace Raid
                 host.LookAtConsole(vessel.transform.TransformPoint(new Vector3(0,3.1f,-3)));
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Unloading,"Cage reaches the reservoir hopper",30);
                 float duration=world.progression.unloadingSeconds/Mathf.Max(1,1+world.Team.winchLevel*world.progression.winchSpeedPerLevel);
-                await Until(()=>world.Team.hoistRemaining<duration*.28f,"Cage trapdoor opens and water descends");
+                if(motion)
+                    await Track(host,()=>vessel.transform.TransformPoint(new Vector3(0,2.70f,-3)),"discharge",20,.125f);
+                else await Until(()=>world.Team.hoistRemaining<duration*.28f,"Cage trapdoor opens and water descends");
                 ShootFrame("07-discharge.png");
                 await Until(()=>world.Team.cargo.Count==0 && cage.TankCount==stock.Length,"Original IDs reach reservoir");
                 await Awaitable.WaitForSecondsAsync(.33f);
@@ -147,6 +153,18 @@ namespace Raid
                 report.Status="failed";report.Error=ex.ToString();Debug.LogException(ex);
             }
             finally { Write(); }
+        }
+
+        async Awaitable Track(DiverMotor diver,Func<Vector3> point,string stage,int frames,float interval)
+        {
+            for(int i=0;i<frames;i++)
+            {
+                diver.LookAtConsole(point());
+                await Awaitable.NextFrameAsync();
+                await Awaitable.NextFrameAsync();
+                ShootFrame($"{stage}-{i:D2}.png");
+                await Awaitable.WaitForSecondsAsync(interval);
+            }
         }
 
         static async Awaitable KeyPress(Key key)
