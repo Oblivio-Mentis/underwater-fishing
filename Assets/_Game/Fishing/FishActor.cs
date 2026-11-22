@@ -46,7 +46,7 @@ namespace Raid
         public float Tension => _snapshot.Value.Tension;
         public float Stamina => _snapshot.Value.Stamina;
         public FishMode DesiredState { get; private set; } = FishMode.Roam;
-        public HarpoonTool Hooker => _carrier != null ? _carrier : lines.Count > 0 ? lines[0].Tool : null;
+        public HarpoonTool Hooker => _carrier != null ? _carrier : lines.Count > 0 ? lines.At(0).Tool : null;
         public int HookCount => _snapshot.Value.HookCount;
         public bool Coordinated => _snapshot.Value.Coordinated;
         public bool SurgeWarning => _snapshot.Value.SurgeWarning;

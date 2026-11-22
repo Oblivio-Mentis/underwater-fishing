@@ -4,6 +4,25 @@ namespace Raid.Tests
 {
     public class FishingLineTests
     {
+        sealed class LineOwner { public int Id; }
+        sealed class Hooks : FishingHooks<LineOwner>
+        {
+            protected override int GetKeyForItem(LineOwner line) => line.Id;
+        }
+
+        [Test] public void DistinctConnectionsShareOneFishUpToTheCrewLimit()
+        {
+            var lines=new Hooks();
+            for(int i=0;i<5;i++) Assert.That(lines.Attach(new LineOwner {Id=i+40}),Is.True);
+            Assert.That(lines.Attach(new LineOwner {Id=50}),Is.False);
+            lines.RemoveAt(0);
+            Assert.That(lines.At(0).Id,Is.EqualTo(41));
+            Assert.That(lines.Attach(new LineOwner {Id=41}),Is.False);
+            Assert.That(lines.Attach(new LineOwner {Id=50}),Is.True);
+            lines.Clear();
+            Assert.That(lines.Attach(new LineOwner {Id=41}),Is.True);
+        }
+
         [Test] public void SwimmingToTheHookCannotWindOrLandIt()
         {
             var line = new FishingLine(5);

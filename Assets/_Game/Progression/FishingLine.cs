@@ -1,7 +1,21 @@
+using System.Collections.ObjectModel;
 using UnityEngine;
 
 namespace Raid
 {
+    // Preserve attachment order for the landing diver, while enforcing distinct connection owners.
+    public abstract class FishingHooks<T> : KeyedCollection<int,T> where T : class
+    {
+        public T At(int position) => Items[position];
+
+        public bool Attach(T line)
+        {
+            if (line == null || Count >= 5 || Contains(GetKeyForItem(line))) return false;
+            Add(line);
+            return true;
+        }
+    }
+
     // One server-side spool per confirmed impact. Slack is taken up by the fish swimming out.
     public sealed class FishingLine
     {

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Raid
@@ -7,6 +6,7 @@ namespace Raid
     {
         sealed class HookLine
         {
+            public int OwnerId;
             public HarpoonTool Tool;
             public HarpoonContact Contact;
             public FishingLine Spool;
@@ -15,7 +15,12 @@ namespace Raid
             public bool Working, Paired;
         }
 
-        readonly List<HookLine> lines = new(5);
+        sealed class CrewHooks : FishingHooks<HookLine>
+        {
+            protected override int GetKeyForItem(HookLine line) => line.OwnerId;
+        }
+
+        readonly CrewHooks lines = new();
         HarpoonTool landingTool;
         float fightClock;
 
@@ -26,10 +31,10 @@ namespace Raid
                 || contact.target != NetworkObject || !contact.Resolve(out _, out var point, out _, out _)) return false;
             bool first = lines.Count == 0;
             if (first && (Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt)) return false;
-            if (!first && (!RequiresPartner || lines.Count >= 5 || DesiredState < FishMode.Hooked || DesiredState > FishMode.Tired)) return false;
-            foreach (var line in lines) if (line.Tool.OwnerId == tool.OwnerId) return false;
+            if (!first && (!RequiresPartner || DesiredState < FishMode.Hooked || DesiredState > FishMode.Tired)) return false;
             float length = Vector3.Distance(tool.HandAnchor, point);
-            lines.Add(new HookLine { Tool = tool, Contact = contact, Spool = new FishingLine(length), Tension = .1f });
+            if (!lines.Attach(new HookLine { OwnerId = tool.OwnerId, Tool = tool, Contact = contact,
+                Spool = new FishingLine(length), Tension = .1f })) return false;
             tool.UpdateFishingLine(length, .1f);
             var state = _snapshot.Value;
             if (first)
@@ -66,7 +71,7 @@ namespace Raid
             }
             for (int i = 0; i < lines.Count; i++)
             {
-                if (lines[i].Tool != tool) continue;
+                if (lines.At(i).Tool != tool) continue;
                 RemoveLine(i);
                 var state = _snapshot.Value;
                 state.HookCount = lines.Count;
@@ -78,7 +83,7 @@ namespace Raid
 
         void RemoveLine(int index)
         {
-            var tool = lines[index].Tool;
+            var tool = lines.At(index).Tool;
             lines.RemoveAt(index);
             if (tool != null) tool.NotifyFishLost(this);
             if (landingTool != null)
@@ -95,7 +100,7 @@ namespace Raid
         {
             for (int i = lines.Count - 1; i >= 0; i--)
             {
-                var line = lines[i];
+                var line = lines.At(i);
                 var tool = line.Tool;
                 if (tool == null || !tool.IsServerInitialized || tool.Owner == null || !tool.Owner.IsActive
                     || tool.Motor.IsHelpless || tool.ActiveSlot != 0 || tool.HookedFish != this
@@ -113,10 +118,10 @@ namespace Raid
             }
             for (int i = 0; i < lines.Count; i++)
             {
-                if (!lines[i].Working) continue;
+                if (!lines.At(i).Working) continue;
                 for (int j = i+1; j < lines.Count; j++)
-                    if (lines[j].Working && Vector3.Dot(lines[i].PullDirection, lines[j].PullDirection) >= tuning.pullDirectionDot)
-                        lines[i].Paired = lines[j].Paired = true;
+                    if (lines.At(j).Working && Vector3.Dot(lines.At(i).PullDirection, lines.At(j).PullDirection) >= tuning.pullDirectionDot)
+                        lines.At(i).Paired = lines.At(j).Paired = true;
             }
         }
 
@@ -156,7 +161,13 @@ namespace Raid
                     ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * (line.Paired ? .24f : 1)) : 0;
                 line.TugSpeed = Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt);
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
-                    line.Tool.Motor.ApplyExternalMotion(-line.TowardHand.normalized * line.TugSpeed * dt);
+                {
+                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt;
+                    float verticalLimit = Mathf.Max(0, line.Tool.Motor.tuning.verticalSpeed) * dt;
+                    tugMotion.y = Mathf.Clamp(tugMotion.y, -verticalLimit, verticalLimit);
+                    // Sweep the controller while exempting forced ascent from the swimmer's own ascent penalty.
+                    line.Tool.Motor.ApplyTetherMotion(tugMotion);
+                }
             }
 
             if (leader != null)
@@ -183,7 +194,7 @@ namespace Raid
             }
             else
             {
-                var lead = lines[0];
+                var lead = lines.At(0);
                 float escape = tuning.escapeSpeed * power * (state.Surging ? 2 : tired ? .3f : 1);
                 Vector3 away = -lead.PullDirection;
                 if (away.sqrMagnitude < .01f) away = transform.forward;
