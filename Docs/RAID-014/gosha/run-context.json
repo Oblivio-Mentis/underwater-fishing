@@ -1,0 +1,44 @@
+{
+  "gameplay_scene": "Assets/_Game/Scenes/InterfaceVerticalSlice.unity",
+  "transport": "FishNet Tugboat, 127.0.0.1:17845, two separate processes on one PC",
+  "steam_internet_test": false,
+  "windows_pair": {
+    "revision": "bd5f95e",
+    "executable": "Builds/RAID014-Acceptance/UnderwaterFishing.exe",
+    "managed_assembly_sha256": "F1B7294EADBF84877510716DB90A21E2E08E620F868AB68A1B47F2489B1DB537",
+    "resolution": [
+      1920,
+      1080
+    ],
+    "host": 0,
+    "client": 1,
+    "result": "windows-pair.json",
+    "screenshots": {
+      "host": [
+        "gosha-fetch.png",
+        "gosha-robbery.png"
+      ],
+      "client": [
+        "gosha-shoulder.png",
+        "gosha-deck-1080.png",
+        "gosha-pet-peer.png"
+      ]
+    },
+    "save_restart": "Both original processes stopped; fresh host/client processes loaded the same host save (restart.json)."
+  },
+  "stocked_pocket": {
+    "host": "Unity Editor Play Mode",
+    "client": "separate development Windows player",
+    "result": "stocked-pocket.json",
+    "setup": "One occupied pocket was staged on the host before the player was hit. Assertion compares the entire immutable catch ID before and after knockdown.",
+    "client_owner": 1,
+    "client_final_pockets": [
+      "Needlefish",
+      "",
+      ""
+    ],
+    "client_final_health": 100.0,
+    "client_final_oxygen": 240.0
+  },
+  "staging": "QA places diver starting positions, selects camera angles and sends normal owned RPCs. Door crossings use CharacterController motion and the real two-door cycle. No fabricated frame, direct pet animation command, ball assignment or collision is used to complete a scenario."
+}

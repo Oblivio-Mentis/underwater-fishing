@@ -98,8 +98,12 @@ namespace Raid.Nereid
         }
         IEnumerator PeerShot(string leaf,Vector3 target)
         {
+            yield return Wait("Observer reached framing mark for "+leaf,()=>{
+                var r=Remote();return r!=null&&Vector3.Distance(peer.transform.position,new Vector3(r.x,r.y,r.z))<.24f;},6);
             var angles=Quaternion.LookRotation(target-peer.transform.position-Vector3.up*.6f).eulerAngles;
-            Request("view","",angles.y,Mathf.DeltaAngle(0,angles.x));yield return new WaitForSeconds(.45f);
+            Request("view","",angles.y,Mathf.DeltaAngle(0,angles.x));
+            yield return Wait("Observer aimed at "+leaf,()=>{
+                var r=Remote();return r!=null && Mathf.Abs(Mathf.DeltaAngle(r.aimYaw,angles.y))<3 && Mathf.Abs(Mathf.DeltaAngle(r.aimPitch,angles.x))<3;},6);
             Request("capture",leaf);yield return Wait("Remote camera captured "+leaf,()=>File.Exists(Path.Combine(remote,leaf)),12);
         }
         static long StockTrialPocket(HarpoonTool inventory)
@@ -153,7 +157,8 @@ namespace Raid.Nereid
             Stage(peer,world.Gosha.Position+Vector3.back*.95f+Vector3.up*.7f);
             Request("gosha_pet");
             yield return Wait("Remote owner's server-validated petting gesture",()=>world.Gosha.Pats>0 && world.Gosha.Mode==GoshaMode.Petted);
-            host.LookAtConsole(world.Gosha.Position);HostShot("gosha-pet.png");
+            Stage(host,world.Gosha.Position+new Vector3(1.30f,.73f,-.65f));
+            host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.1f);HostShot("gosha-pet.png");
             Request("capture","gosha-pet-peer.png");
             yield return Wait("Petting captured from the stroking diver's camera",()=>File.Exists(Path.Combine(remote,"gosha-pet-peer.png")));
             yield return Wait("Pet reaction replicated on second process",()=>Remote()?.gosha.Pats>0);
@@ -167,7 +172,8 @@ namespace Raid.Nereid
             world.RequestGosha(GoshaAction.Throw);
             yield return Wait("Thrown rubber ball in physical flight",()=>world.Gosha.Ball==GoshaBallMode.Flying);
             yield return Wait("Pet fetches the physical ball",()=>world.Gosha.Ball==GoshaBallMode.Carried,65);
-            host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.1f);HostShot("gosha-fetch.png");
+            yield return Wait("Pet approaches the thrower carrying the ball",()=>world.Gosha.Ball==GoshaBallMode.Carried && Vector3.Distance(host.transform.position,world.Gosha.Position)<2.45f);
+            host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.08f);HostShot("gosha-fetch.png");
             yield return Wait("Returned to the diver who threw it",()=>world.HasGoshaBall(host),35);
             Stage(peer,host.transform.position+Vector3.right*3);
             host.LookAtConsole(peer.transform.position);
