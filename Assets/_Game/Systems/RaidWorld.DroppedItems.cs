@@ -82,7 +82,7 @@ namespace Raid
 
         internal bool PutDownHeldBall(DiverMotor diver, Vector3 at)
         {
-            if (!IsServerInitialized || !pet.Active || pet.Ball != GoshaBallMode.Held || pet.Holder != diver.OwnerId) return false;
+            if (!IsServerInitialized || !GoshaBallInHands(diver) || pet.Holder != diver.OwnerId) return false;
             BeginBallRecovery();
             DropBall(at, Vector3.zero, false);
             gosha.Value = pet;

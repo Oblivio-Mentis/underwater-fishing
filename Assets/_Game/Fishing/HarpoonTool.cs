@@ -36,6 +36,8 @@ namespace Raid
             public NetworkObject species;
             public long id;
         }
+        // Real catches have positive IDs. The single physical ball occupies an ordinary pocket.
+        const long BallPocketId=-1;
         private readonly SyncVar<PocketCatch> _pocketA = new(), _pocketB = new(), _pocketC = new();
         private readonly SyncVar<int> _slot = new(), _shotSequence = new();
         private InputAction[] _select;
@@ -61,14 +63,14 @@ namespace Raid
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
-        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.IsHoldingGosha(Motor)??false) && !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
+        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.IsHoldingGosha(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
         public bool HandsFull => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
         public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value.id > 0 ? 1 : 0)
             + (_pocketB.Value.id > 0 ? 1 : 0) + (_pocketC.Value.id > 0 ? 1 : 0);
-        public bool HasFullCreel => _pocketA.Value.id > 0 && _pocketB.Value.id > 0 && _pocketC.Value.id > 0;
+        public bool HasFullCreel => FreePocket()<0;
         public int SmallestCatchSize => _pocketA.Value.id > 0 || _pocketB.Value.id > 0 || _pocketC.Value.id > 0
             ? 1 : HandsFull ? HeavySpecies.cargoSize : 0;
         public FishActor CarriedFish => HandsFull ? HeavySpecies : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
@@ -82,7 +84,30 @@ namespace Raid
             return species == null ? null : species.GetComponent<FishActor>();
         }
 
-        public long CatchIdInSlot(int slot) => Pocket(slot)?.Value.id ?? 0;
+        long ItemIdInSlot(int slot) => Pocket(slot)?.Value.id ?? 0;
+        public long CatchIdInSlot(int slot) => System.Math.Max(0,ItemIdInSlot(slot));
+        public bool HasBallInSlot(int slot) => ItemIdInSlot(slot)==BallPocketId;
+
+        internal bool StoreBall()
+        {
+            int slot=FreePocket();
+            if(!IsServerInitialized || slot<0)return false;
+            Pocket(slot).Value=new PocketCatch{id=BallPocketId};
+            EquipSlot(slot);
+            return true;
+        }
+
+        internal void RemoveBall()
+        {
+            for(int slot=2;slot<5;slot++)
+                if(HasBallInSlot(slot)){Pocket(slot).Value=default;return;}
+        }
+
+        void EquipSlot(int slot)
+        {
+            if(slot!=ActiveSlot && HasBallInSlot(ActiveSlot))RaidWorld.Instance?.CancelBallWind(Motor);
+            _slot.Value=slot;
+        }
 
         public bool SelectSlot(int slot)
         {
@@ -100,7 +125,7 @@ namespace Raid
             if (!CanSelect(slot) || slot == ActiveSlot) return;
             ReleaseBallLineOnServer();
             if (_fish != null) _fish.ReleaseHook(this);
-            _slot.Value = slot;
+            EquipSlot(slot);
         }
         public bool HasBallLine => _impact.Value.ball && _impact.Value.target!=null;
         internal void ReleaseBallLineOnServer()
@@ -187,10 +212,10 @@ namespace Raid
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
             if (Application.isFocused && !UI.UiInputGate.Blocked && Keyboard.current?.qKey.wasPressedThisFrame == true)
                 RequestDropSelected();
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved;
-            // A pulled player can always refuse with R while focused, including from a local menu.
-            // All firing/reeling/assisting remains behind the shared gameplay-input gate.
-            if (controlling && !Motor.IsHelpless)
+            bool gameplay=Application.isFocused && !UI.UiInputGate.Blocked;
+            bool controlling=gameplay && Cursor.lockState==CursorLockMode.Locked && !UI.UiInputGate.PointerReserved;
+            bool maySelect=gameplay && (!UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
+            if (maySelect && !Motor.IsHelpless)
             {
                 for (int i = 0; i < _select.Length; i++)
                     if (_select[i].WasPressedThisFrame()) SelectSlot(i);
@@ -218,7 +243,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
-            if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.HasGoshaBall(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
+            if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
             if (!OwnsHarpoon || HandsFull || tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
@@ -364,7 +389,7 @@ namespace Raid
         private bool EmptyPocket(int slot, bool showEscape)
         {
             var pocket = Pocket(slot);
-            if (pocket == null || pocket.Value.id == 0) return false;
+            if (pocket == null || pocket.Value.id <= 0) return false;
             var fish = FishInSlot(slot);
             pocket.Value = default;
             if (showEscape && fish != null && !Motor.IsInside)

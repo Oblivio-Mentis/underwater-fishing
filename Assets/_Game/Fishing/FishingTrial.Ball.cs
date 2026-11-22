@@ -75,9 +75,11 @@ namespace Raid
             Require(host.HasBallLine && !helper.HasBallLine && world.Gosha.Holder==host.OwnerId,"Second shooter stole the reserved ball.");
             Check("A second owner's shot at the reserved physical ball did not reassign it.");
             yield return ReelBall();
-            Check("The deck ball travelled down the line into the shooter's temporary hand slot.");
+            Check("The deck ball travelled down the line into the shooter's numbered pocket.");
 
             Phase("Reel the single physical ball in open water");
+            Require(host.SelectSlot(0),"Stowing the ball did not select the harpoon.");
+            yield return Wait(()=>host.HarpoonInHands && world.HasGoshaBall(host.Motor),3,"Stowing the ball lost the ball or kept the harpoon disabled.");
             // The vessel has a twofold scale; use world coordinates in the open cargo pool.
             var water=new Vector3(24,-6,-27);
             host.Motor.Teleport(water);
@@ -93,15 +95,19 @@ namespace Raid
             yield return Shot("ball-hook-water.png");
             yield return ReelBall();
             yield return Pause(.65f);
-            Require(world.HasGoshaBall(host.Motor) && host.CatchCount==0,"Water retrieval interfered with pockets or dropped the ball.");
-            Check("Submerged owner retrieved the same loose ball, and retained it underwater without using a fish pocket.");
+            Require(world.GoshaBallInHands(host.Motor) && host.HasBallInSlot(2) && host.ActiveSlot==2 && host.CatchCount==0,
+                "Water retrieval did not occupy the first ordinary pocket.");
+            Check("Submerged owner retained the same physical ball in numbered slot 3.");
 
             Phase("Drop the held ball, then drop a loaded harpoon");
             long gunId=host.HarpoonId;
             Require(gunId>0 && host.RequestDropSelected(),"Q did not accept the selected hand-held ball.");
             yield return Wait(()=>world.Gosha.Ball==GoshaBallMode.Deck && ReadClient()?.gosha.Ball==GoshaBallMode.Deck,
                 3,"Q did not release the held ball on both peers.");
-            Require(host.HarpoonId==gunId && world.DroppedCount==0 && !host.HasBallLine,"Dropping the ball also removed the gun.");
+            Require(host.HarpoonId==gunId && world.DroppedCount==0 && !host.HasBallLine && !host.HasBallInSlot(2) &&
+                world.Gosha.Thrower<0,"Dropping the ball retained the pocket, started fetch, or removed the gun.");
+            Require(host.SelectSlot(0),"Could not select the retained harpoon.");
+            yield return Wait(()=>host.HarpoonInHands,3,"The harpoon failed to equip.");
             host.Motor.Teleport(world.Gosha.BallPosition-Vector3.forward*3.4f-Vector3.up*.6f);
             yield return ShootBall();
             Require(host.RequestDropSelected(),"Q did not accept the gun with an active ball line.");

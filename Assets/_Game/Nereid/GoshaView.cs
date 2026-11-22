@@ -122,7 +122,13 @@ namespace Raid.Nereid
             var ballAt=s.BallPosition;
             var owner=ui?.Context.Player;
             var viewed=owner!=null && owner.IsDead?owner.Spectating:owner;
-            bool inView=s.Ball==GoshaBallMode.Held && viewed!=null && viewed.OwnerId==s.Holder;
+            var holder=default(DiverMotor);
+            if(s.Ball==GoshaBallMode.Held && ui!=null)
+                foreach(var diver in ui.Context.Players)
+                    if(diver!=null && diver.OwnerId==s.Holder){holder=diver;break;}
+
+            bool equipped=RaidWorld.Instance.GoshaBallInHands(holder);
+            bool inView=equipped && viewed==holder;
             if(inView)
             {
                 var camera=owner.GetComponentInChildren<Camera>();
@@ -140,16 +146,11 @@ namespace Raid.Nereid
                 else inView=false;
             }
             if(handBall!=null)handBall.gameObject.SetActive(inView && !UI.UiInputGate.Modal);
-            worldBall.enabled=!inView;
-            if(s.Ball==GoshaBallMode.Held && ui!=null)
+            worldBall.enabled=s.Ball!=GoshaBallMode.Held || equipped&&!inView;
+            if(equipped)
             {
-                foreach(var holder in ui.Context.Players)
-                {
-                    if(holder==null || holder.OwnerId!=s.Holder)continue;
-                    ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(GoshaBallGrip.Charge(holder)));
-                    ball.rotation=holder.transform.rotation;
-                    break;
-                }
+                ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(GoshaBallGrip.Charge(holder)));
+                ball.rotation=holder.transform.rotation;
             }
             if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(JawSocket);
             ball.position=s.Ball==GoshaBallMode.Held||s.Ball==GoshaBallMode.Carried?ballAt:Vector3.Lerp(ball.position,ballAt,blend);

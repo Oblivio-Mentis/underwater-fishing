@@ -192,7 +192,9 @@ namespace Raid.Nereid
             Stage(host,ball+Vector3.back*.92f+Vector3.up*.75f);
             host.LookAtConsole(ball);yield return new WaitForSeconds(.3f);
             world.RequestGosha(GoshaAction.PickUp);
-            yield return Wait("Separate ball slot is held by host",()=>world.HasGoshaBall(host));
+            var hostTool=host.GetComponent<HarpoonTool>();
+            yield return Wait("The ball enters the first free numbered pocket",()=>world.GoshaBallInHands(host) &&
+                hostTool.ActiveSlot==2 && hostTool.HasBallInSlot(2));
             yield return GoshaGripTrial.Verify(world,host,Check,HostShot);
             host.LookAtConsole(host.transform.position+Vector3.forward*2-Vector3.up);
             yield return new WaitForSeconds(.3f);

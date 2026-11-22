@@ -15,8 +15,10 @@ namespace Raid.Nereid
             var initialAim=camera.forward;
             yield return new WaitForSeconds(.22f);
             var ball=camera.Find("Ball in diving gloves");
-            check("Held ball and temporary orange item icon visible",
-                ball!=null && ball.gameObject.activeInHierarchy && System.Array.Exists(ui.GetComponentsInChildren<UnityEngine.UI.Image>(),image=>image.sprite==DiveInstruments.Art(DiveInstruments.Mark.Ball)));
+            var icon=System.Array.Find(ui.GetComponentsInChildren<UnityEngine.UI.Image>(),image=>
+                image.enabled && image.sprite==DiveInstruments.Art(DiveInstruments.Mark.Ball));
+            check("The atlas ball glyph is visible in numbered slot 3",
+                ball!=null && ball.gameObject.activeInHierarchy && icon!=null && icon.transform.parent.parent.name=="Slot 3");
             var position=ball.localPosition;
             var rotation=ball.localRotation;
             float maxDistance=0,maxAngle=0,turned=0;
@@ -33,7 +35,9 @@ namespace Raid.Nereid
                 turned>45 && maxDistance<.001f && maxAngle<.1f);
             capture("ball-in-hand.png");
             ui.HandleBallPointer(true,false);
-            yield return new WaitForSeconds(world.tuning.ballWindSeconds+.15f);
+            float until=Time.realtimeSinceStartup+world.tuning.ballWindSeconds+2;
+            while((world.Gosha.BallWind<=240 || (ball.localPosition-position).magnitude<=.18f) &&
+                Time.realtimeSinceStartup<until)yield return null;
             check("Holding LMB keeps the single ball in the hand and visibly winds the arm",
                 world.HasGoshaBall(holder) && world.Gosha.BallWind>240 && (ball.localPosition-position).magnitude>.18f);
             capture("ball-windup.png");

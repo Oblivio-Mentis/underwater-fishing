@@ -78,7 +78,7 @@ namespace Raid
             float stow=Mathf.Sin(Mathf.Clamp01(switchTime/.34f)*Mathf.PI);
             float push=Mathf.Pow(Mathf.Max(0,Mathf.Sin(press/.46f*Mathf.PI)),.7f);
             bool grip=equipment.AssistTarget!=null;
-            bool ball=RaidWorld.Instance?.HasGoshaBall(actor)??false;
+            bool ball=RaidWorld.Instance?.GoshaBallInHands(actor)??false;
             if(hadBall && !ball && RaidWorld.Instance!=null && RaidWorld.Instance.Gosha.Ball==GoshaBallMode.Flying &&
                 RaidWorld.Instance.Gosha.Thrower==actor.OwnerId)releaseStroke=.23f;
             hadBall=ball;
