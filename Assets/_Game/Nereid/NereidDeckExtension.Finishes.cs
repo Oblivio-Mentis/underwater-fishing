@@ -15,8 +15,9 @@ namespace Raid.Nereid
         void CreateFinishes(Shader lit)
         {
             deckTexture=CoatedPanel(lit,"Rolled and scratched deck steel",new(.83f,.87f,.85f),"T_Trim_01_BaseColor",.22f,.34f);
-            centerDeckTexture=CoatedPanel(lit,"Warm bridge walkway",new(.95f,.83f,.60f),"T_Trim_01_BaseColor",.22f,.34f);
             pressedEnamel=CoatedPanel(lit,"Inset service walls",new(.87f,.92f,.91f),"T_Trim_01_BaseColor",.18f,.34f);
+            centerDeckTexture=Finish(lit,"Raised non-slip bridge walkway",new(.41f,.39f,.31f),.20f,.32f);
+            NereidSurfaceFinish.Apply(centerDeckTexture,NereidSurfaceFinish.Surface.Deck);
             brushedRib=CoatedPanel(lit,"Longitudinal armour and seam tape",new(.70f,.72f,.68f),"T_Trim_02_BaseColor",.48f,.36f);
             windowBrass=Finish(lit,"Brass window trim",new(.59f,.36f,.16f),.48f,.44f);
         }
@@ -47,7 +48,14 @@ namespace Raid.Nereid
                 Beam("Chamfered pressure knee",new(4.08f,2.41f,z-.73f),new(3.69f,2.98f,z-.73f),.15f,.20f,ceramic);
                 Panel("Knee band in the machinery crown",new(1.90f,2.99f,z-.73f),new(3.61f,.15f,.20f),ceramic);
                 Panel("Caged task strip",new(.86f,2.86f,z-.73f),new(1.17f,.055f,.092f),i<2?warm:cold);
-                if(i%2==0)Lamp(new(.92f,2.80f,z-.73f),i<2?AmberFill:WaterFill,7.8f,170);
+                if(i%2==0)
+                {
+                    const float lightX=-2.42f;
+                    Lamp(new(.92f,2.80f,z-.73f),i<2?AmberFill:WaterFill,7.8f,170);
+                    Panel("Port wall inspection light",new(lightX,2.91f,z),new(.094f,.055f,1.10f),warm);
+                    Wash(new(lightX,2.83f,z),new(-4.09f,.95f,z-.40f),AmberFill,7.5f,190);
+                }
+                TiledPanel(new(-4.087f,1.22f,z),new(1.43f,1.51f,.075f),Quaternion.Euler(0,90,0),pressedEnamel,PressedPanelUv);
             }
 
             Tube(new[]{new Vector3(3.87f,2.50f,-16.27f),new Vector3(3.87f,2.50f,-23.51f),

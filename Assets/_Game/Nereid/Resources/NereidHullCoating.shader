@@ -10,6 +10,7 @@ Shader "RAID/Nereid Hull Coating"
         _SurfaceTiling("Repeats per metre", Vector)=(1,1,0,0)
         _SurfaceDetail("Average, contrast, relief, enabled", Vector)=(1,0,0,0)
         _Marine("Exterior marine light", Range(0,1))=1
+        _DeckTread("Raised deck flutes", Range(0,1))=0
     }
     SubShader
     {
@@ -32,7 +33,7 @@ Shader "RAID/Nereid Hull Coating"
 
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
-            half _Metallic, _Smoothness, _Marine;
+            half _Metallic, _Smoothness, _Marine, _DeckTread;
             float4 _SurfaceRegion, _SurfaceTiling, _SurfaceDetail;
             CBUFFER_END
             TEXTURE2D(_SurfaceAtlas);
@@ -133,6 +134,16 @@ Shader "RAID/Nereid Hull Coating"
                     SamplePanel(i.panelPosition.xy)*alignment.z);
             }
 
+            half DeckFlutes(float2 metres)
+            {
+                float2 spacing=metres*float2(9.,9.);
+                float2 cell=frac(spacing+.5)-.5;
+                float angle=fmod(abs(floor(spacing.x+.5)+floor(spacing.y+.5)),2.)*2.-1.;
+                float rib=length(float2((cell.x+angle*cell.y)*.52,(cell.x-angle*cell.y)*2.6));
+                float aa=clamp(max(fwidth(spacing.x),fwidth(spacing.y)),.01,.15);
+                return 1.-smoothstep(.23-aa,.26+aa,rib);
+            }
+
             float3 ReliefNormal(float3 position,float3 normal,float height)
             {
                 float3 dx=ddx(position),dy=ddy(position);
@@ -149,6 +160,8 @@ Shader "RAID/Nereid Hull Coating"
                 if(_SurfaceDetail.w>.5)
                 {
                     plate=clamp(PanelHeight(i),.45,2.32);
+                    if(_DeckTread>.5 && i.panelNormal.y>.85)
+                        plate=lerp(plate,plate*1.30,DeckFlutes(i.panelPosition.xz));
                     n=ReliefNormal(i.position,n,plate*_SurfaceDetail.z);
                 }
                 InputData lighting=(InputData)0;

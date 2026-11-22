@@ -204,6 +204,9 @@ namespace Raid.Nereid
                 {
                     var seat=new Vector3(column*(crownPanelWidth+.055f),UpperDeck+crownHeight,BridgeFront-(row+.5f)*crownPanelLength);
                     TiledPanel(seat,new(crownPanelWidth,.045f,crownPanelLength-.056f),Quaternion.identity,pressedEnamel,PressedPanelUv);
+                    Panel("Crown service access welt",seat+Vector3.down*.033f,new(1.91f,.035f,.96f),enamel);
+                    TiledPanel(seat+Vector3.down*.057f,new(1.78f,.026f,.83f),Quaternion.identity,pressedEnamel,PressedPanelUv);
+                    Panel("Crown access pull",seat+new Vector3(0,-.084f,.303f),new(.35f,.036f,.031f),steel);
                 }
             Panel("Bridge / marine equipment trunk",new(.72f,UpperDeck+2.62f,center-.83f),new(4.36f,.36f,2.70f),coating);
             Panel("Bridge / radio mast",new(.66f,UpperDeck+3.11f,center-.84f),new(.13f,1.39f,.17f),steel);
@@ -227,8 +230,8 @@ namespace Raid.Nereid
             }
             float rearSpan=(BridgeHalfWidth*2)/5;
             for(int i=0;i<4;i++)
-                TiledPanel(new(0,UpperDeck+.023f,BridgeFront-(i+.5f)*crownPanelLength),
-                    new(1.46f,.027f,crownPanelLength-.037f),Quaternion.identity,centerDeckTexture,DeckPlateUv);
+                Panel("Non-slip bridge walkway",new(0,UpperDeck+.023f,BridgeFront-(i+.5f)*crownPanelLength),
+                    new(1.46f,.027f,crownPanelLength-.037f),centerDeckTexture);
             for(int i=0;i<5;i++)Window(new(-BridgeHalfWidth+(i+.5f)*rearSpan,UpperDeck,BridgeBack),rearSpan,Quaternion.identity);
             Window(new(1.20f,UpperDeck,BridgeFront),6.2f,Quaternion.identity);
             Panel("Port portal wall",new(-3.95f,UpperDeck+1.06f,BridgeFront),new(.71f,2.12f,.24f),enamel,true);

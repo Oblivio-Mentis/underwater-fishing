@@ -15,6 +15,7 @@ namespace Raid.Nereid
         static readonly int Tiling = Shader.PropertyToID("_SurfaceTiling");
         static readonly int Detail = Shader.PropertyToID("_SurfaceDetail");
         static readonly int Marine = Shader.PropertyToID("_Marine");
+        static readonly int Tread = Shader.PropertyToID("_DeckTread");
         static Shader coating;
         static Texture2D panels, doors;
 
@@ -66,6 +67,7 @@ namespace Raid.Nereid
             material.SetVector(Tiling, new Vector4(1 / tile.x, 1 / tile.y, 0, 0));
             material.SetVector(Detail, detail);
             material.SetFloat(Marine, exterior ? 1 : 0);
+            material.SetFloat(Tread, surface == Surface.Deck ? 1 : 0);
         }
 
         internal static void Clad(Transform root, Transform exterior, Dictionary<Material, Material> finishes)
