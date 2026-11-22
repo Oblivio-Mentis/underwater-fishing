@@ -265,6 +265,9 @@ namespace Raid.Editor
 
         static async Awaitable CheckExpeditionDecks(DiverMotor diver)
         {
+            await Until(()=>UI.UiRoot.Instance?.Context.Connected==true,"connected physical HUD",8);
+            var ui=UI.UiRoot.Instance;
+            ui.ShowPage(UI.UiPage.None);
             var vessel=Raid.Nereid.NereidVessel.Active;
             var hull=vessel.transform;
             var landings=new[]
@@ -295,8 +298,8 @@ namespace Raid.Editor
                     diver.LookAtConsole(panel.position);
                     return ShipConsole.ResolveSight(diver,camera)==station && ShipConsole.CanUseKind(diver,station.kind);
                 },"sightline to "+station.kind,6);
-                var ui=UI.UiRoot.Instance;
-                Check(ui.QaPointAtMonitor() && ui.Context.SelectedConsole==station,"Physical display appears on sight "+station.kind);
+                Check(ui.QaPointAtMonitor() && ui.Context.SelectedConsole==station,
+                    "Physical display appears on sight "+station.kind+" (page "+ui.Page+")");
                 await Awaitable.WaitForSecondsAsync(.3f);
                 Check(Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.35f,"Unchanged field of view at "+station.kind);
             }

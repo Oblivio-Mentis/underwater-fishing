@@ -268,9 +268,7 @@ namespace Raid
             Send("slot",0);yield return Wait(()=>helper.ActiveSlot==0,4,"Partner could not re-equip harpoon.");
             yield return HookPeer(heavy);
             Phase("Cooperative pull and heavy carry");
-            axis=(host.HandAnchor-heavy.transform.position).normalized;
-            helper.Motor.Teleport(host.transform.position+axis*2.2f+host.transform.right*2.0f);
-            Physics.SyncTransforms();
+            StageCooperativePull(heavy);
             remoteReeling=true;
             nextRemoteReel=0;
             yield return Reel(heavy);
@@ -453,6 +451,31 @@ namespace Raid
             }
         }
 
+        private void StageCooperativePull(FishActor fish)
+        {
+            // Find a clear water lane for the pair. Cliff-side hooks stay attached but
+            // can require swimmers to reposition before both reels can close in.
+            Vector3 center=fish.transform.position;
+            Vector3 current=Vector3.ProjectOnPlane(host.HandAnchor-center,Vector3.up).normalized;
+            if(current.sqrMagnitude<.1f)current=Vector3.back;
+            int mask=Physics.DefaultRaycastLayers;
+            foreach(float yaw in new[]{0f,45f,-45f,90f,-90f,135f,-135f,180f})
+            {
+                var outward=(Quaternion.AngleAxis(yaw,Vector3.up)*current+Vector3.up*.48f).normalized;
+                var lateral=Vector3.Cross(Vector3.up,outward).normalized;
+                Vector3 lead=center+outward*3.9f,support=center+outward*6.2f+lateral*.65f;
+                if(Physics.CheckSphere(lead,.85f,mask,QueryTriggerInteraction.Ignore) ||
+                    Physics.CheckSphere(support,.85f,mask,QueryTriggerInteraction.Ignore) ||
+                    Physics.Linecast(lead,center,mask,QueryTriggerInteraction.Ignore) ||
+                    Physics.Linecast(support,center,mask,QueryTriggerInteraction.Ignore))continue;
+                host.Motor.Teleport(lead-Vector3.up*.6f);
+                helper.Motor.Teleport(support-Vector3.up*.6f);
+                Physics.SyncTransforms();
+                return;
+            }
+            Require(false,"No clear cooperative fishing lane near "+fish.HabitatName);
+        }
+
         private IEnumerator Reel(FishActor fish)
         {
             bool pulling = true;
@@ -462,7 +485,8 @@ namespace Raid
                 host.CatchIdInSlot(2) != capturedId && host.CatchIdInSlot(3) != capturedId && host.CatchIdInSlot(4) != capturedId)
             {
                 Require(Time.unscaledTime < deadline && host.HookedFish == fish && !host.Motor.IsHelpless,
-                    "Line lost or expired: " + fish.SpeciesId + " / " + fish.Mode + " / stamina " + fish.Stamina.ToString("F2"));
+                    $"Landing lost or expired at {fish.HabitatName}: {fish.SpeciesId} / {fish.Mode}, stamina {fish.Stamina:F2}, "+
+                    $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.HandAnchor,fish.transform.position):F2} m.");
                 if (fish.Tension >= .58f) pulling = false;
                 else if (fish.Tension < .24f) pulling = true;
                 host.QaHoldOwned(false, pulling ? .6f : 0);
