@@ -5,6 +5,7 @@ namespace Raid.Nereid
 {
     // The original Clicker's ring-built carapace, pale claws and eight walking legs.
     // Geometry is client-side, with articulated limbs on the same body in sea and on deck.
+    [DefaultExecutionOrder(310)]
     internal sealed class GoshaView : MonoBehaviour
     {
         readonly List<Mesh> meshes=new();
@@ -75,7 +76,13 @@ namespace Raid.Nereid
             MeshPart(ball,ropeBall);
             worldBall=ball.GetComponent<MeshRenderer>();
         }
-        public void Show(GoshaSnapshot s)
+        void LateUpdate()
+        {
+            var world=RaidWorld.Instance;
+            if(world!=null && world.IsClientInitialized && world.Gosha.Active)Show(world.Gosha);
+        }
+
+        void Show(GoshaSnapshot s)
         {
             float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
             creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);

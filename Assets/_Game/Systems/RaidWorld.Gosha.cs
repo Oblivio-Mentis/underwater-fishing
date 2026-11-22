@@ -74,7 +74,6 @@ namespace Raid
         {
             if(!IsClientInitialized||!gosha.Value.Active)return;
             if(goshaView==null){var go=new GameObject("Гоша и мяч");go.transform.SetParent(transform,true);goshaView=go.AddComponent<GoshaView>();}
-            goshaView.Show(gosha.Value);
         }
         void HideGosha(){if(goshaView!=null){Destroy(goshaView.gameObject);goshaView=null;}}
         public bool HasGoshaBall(DiverMotor d)=>d!=null&&Gosha.Active&&Gosha.Ball==GoshaBallMode.Held&&Gosha.Holder==d.OwnerId;
