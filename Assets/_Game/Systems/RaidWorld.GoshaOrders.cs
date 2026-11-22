@@ -37,6 +37,10 @@ namespace Raid
             return LocalProgress.skills.Contains(SkillId.G2)?"G — ко мне  ·  H — принести рыбку":"G — Гоша, ко мне";
         }
 
+        internal float OrderCooldown(DiverMotor diver) => tuning.petOrderCooldown*(1-Mathf.Clamp(SkillValue(diver,SkillId.G4),0,99)*.01f);
+        internal float OrderRadius(DiverMotor diver) => tuning.petSearchRadius*(HasSkill(diver,SkillId.G4)?1.2f:1);
+        internal float OrderRemaining(DiverMotor diver) => Mathf.Max(0,lastOrderAt+OrderCooldown(diver)-Time.time);
+
         [ServerRpc(RequireOwnership=false)]
         public void RequestGoshaOrder(GoshaOrder order,NetworkConnection sender=null)
         {
@@ -52,9 +56,7 @@ namespace Raid
             if((!RestingPet(pet.Mode) && pet.Mode!=GoshaMode.GoingHome) || pet.Ball==GoshaBallMode.Carried ||
                 (pet.Ball==GoshaBallMode.Flying && pet.Thrower>=0))
             {OrderReply(sender,"Гоша занят");return;}
-            bool expert=HasSkill(diver,SkillId.G4);
-            float cooldown=tuning.petOrderCooldown*(expert?1-Mathf.Clamp(progression.Skill(SkillId.G4).Magnitude,0,99)*.01f:1);
-            float remaining=lastOrderAt+cooldown-Time.time;
+            float remaining=OrderRemaining(diver);
             if(remaining>0){OrderReply(sender,"Гоша отдыхает · ещё "+Mathf.CeilToInt(remaining)+" с");return;}
             var tool=diver.GetComponent<HarpoonTool>();
             if(catchFish && (tool==null || tool.HasFullCreel))
@@ -63,7 +65,7 @@ namespace Raid
             if(catchFish)
             {
                 var origin=SwimZone(diver.transform.position)==PetZone.Sea?diver.transform.position:LockPoint(11.2f);
-                orderFish=ClosestFish(origin,tuning.petSearchRadius*(expert?1.2f:1),careful);
+                orderFish=ClosestFish(origin,OrderRadius(diver),careful);
                 if(orderFish==null || !orderFish.TryReserveForGosha())
                 {orderFish=null;OrderReply(sender,"Поблизости нет доступной малой рыбы");return;}
                 orderFishId=orderFish.CargoId;fishWaterPosition=orderFish.transform.position;
@@ -97,6 +99,14 @@ namespace Raid
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public string LastGoshaOrderReply {get;private set;}
+        internal FishActor TrialReservedFish=>orderFish;
+        internal void PreparePetOrderTrial(DiverMotor host,DiverMotor guest)
+        {
+            team.goshaMet=team.goshaTamed=true;ResetGosha();
+            team.Player(ProgressKey(host)).skills.Add(SkillId.G1);
+            team.Player(ProgressKey(guest)).skills.AddRange(new[]{SkillId.G1,SkillId.G2,SkillId.G3,SkillId.G4});
+            PublishProfiles();Publish();
+        }
 #endif
         void ReleaseOrder()
         {

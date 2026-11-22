@@ -83,7 +83,7 @@ namespace Raid.Nereid
             Show(world.Gosha);
             var ui=UI.UiRoot.Instance;
             var keyboard=UnityEngine.InputSystem.Keyboard.current;
-            if(keyboard==null || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Blocked ||
+            if(keyboard==null || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Modal || Time.unscaledTime<UI.UiInputGate.ResumeAt || (!Application.isFocused&&!Application.isBatchMode) ||
                 ui.Context.Player==null || ui.Context.Player.IsHelpless || ui.Context.Player.IsTrapped)return;
             if(keyboard.gKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Come);
             else if(keyboard.hKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.CatchFish);
