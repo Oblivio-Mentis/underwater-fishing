@@ -1,0 +1,28 @@
+{
+  "release": {
+    "game": "Underwater Fishing",
+    "scene": "InterfaceVerticalSlice",
+    "unity": "6000.5.6f1",
+    "source": "bd5f95e9a687a69f6469bae7d170dd6354887296",
+    "steamProtocol": "nereid-submarine-expedition-v3",
+    "displayMode": "FullScreenWindow",
+    "target": "Windows x64 Release",
+    "assemblySha256": "21ef480a1891b83728c58afa79cdd4c7ec0570a6e6164ce7ecea7b7e93e7dd83"
+  },
+  "archive": "UnderwaterFishing-RAID014-Playable.zip",
+  "bytes": 49633942,
+  "files": 215,
+  "sha256": "5bdf196ecc6b2599162f288f0f5128866814a71c319ecc2e9c7e11dba82e22c5",
+  "archiveCheck": "All member CRCs valid. Every extracted byte matched the tested Windows folder. No debug files or profiles.",
+  "buildReport": {
+    "result": "Succeeded",
+    "errors": 0,
+    "warnings": 0,
+    "bytes": 134944382,
+    "unityLog": "RAID014_BUILD Succeeded errors=0 warnings=0 bytes=134944382"
+  },
+  "target": "StandaloneWindows64",
+  "buildOptions": "None",
+  "packageDirectoryBytes": 134980862,
+  "executableSha256": "e0f2357d8e9db65fc9f144e51124e3b366089de2d8496979070510e2282c8596"
+}

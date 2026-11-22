@@ -1,0 +1,48 @@
+{
+  "source": "bd5f95e9a687a69f6469bae7d170dd6354887296",
+  "scene": "Assets/_Game/Scenes/InterfaceVerticalSlice.unity",
+  "sceneCheck": "Single scene included by Raid014Validation.Build",
+  "scope": "Windows Release network handshake on Tugboat localhost with separate D3D11 processes; five seconds of connected runtime",
+  "development": false,
+  "stampUtc": "2026-11-22T13:11:03.6085497Z",
+  "port": 7784,
+  "graphics": "Direct3D11",
+  "hostResolution": "1280x720",
+  "peerResolution": "1920x1080",
+  "releaseDll": "21EF480A1891B83728C58AFA79CDD4C7EC0570A6E6164CE7ECEA7B7E93E7DD83",
+  "connected": [
+    {
+      "role": "host",
+      "pid": 52940,
+      "status": "В сессии",
+      "elapsedSeconds": 7.2835652
+    },
+    {
+      "role": "client",
+      "pid": 11892,
+      "status": "В сессии",
+      "elapsedSeconds": 3.6305392999999997
+    }
+  ],
+  "errors": [],
+  "fail": null,
+  "status": "passed",
+  "logs": [
+    {
+      "name": "host.log",
+      "sha256": "2C8ED2FB95D684D14268CC2ECF30E7263A14E2763C46525B28FC187DE3F3A773",
+      "sessionMessages": [
+        "[RAID Session] Запускается локальный хост…",
+        "[RAID Session] В сессии. Esc — курсор и меню"
+      ]
+    },
+    {
+      "name": "peer.log",
+      "sha256": "B2381DF27F2EB611C31084C50037EBF306EE792D5B6257A019B3128A02C5BD73",
+      "sessionMessages": [
+        "[RAID Session] Подключение к 127.0.0.1",
+        "[RAID Session] В сессии. Esc — курсор и меню"
+      ]
+    }
+  ]
+}
