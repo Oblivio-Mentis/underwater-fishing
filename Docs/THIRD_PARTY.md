@@ -36,8 +36,15 @@ The custom URP shaders include the already installed Unity shader libraries; tho
 | Component | Use | License |
 |---|---|---|
 | [Quaternius Ultimate Modular Sci-Fi](https://quaternius.com/packs/ultimatemodularscifi.html) | Processor vent, workshop service plate and airlock ceiling pipes | CC0 1.0, notice in Docs/Licenses |
-| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.com/packs/modularscifimegakit.html) | Ship fittings, access point, crate and tall bulkhead doorway | CC0 1.0, notice in Docs/Licenses |
+| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.com/packs/modularscifimegakit.html) | Six selected fittings for NEREID, adapted to the ship palette | CC0 1.0, notice in Docs/Licenses |
 | [Kenney Nature Kit 2.1](https://kenney.nl/assets/nature-kit) | rock_largeC, rock_smallFlatB and rock_tallH in the shallow reef and deep rift | CC0 1.0, notice in Docs/Licenses |
 | [Quaternius Animated Fish](https://opengameart.org/content/animated-fish) | Fish1 and Fish2 in decorative shoals | CC0 1.0, notice in Docs/Licenses |
 
 The new instrument glyphs, terrain, coral, kelp settings and the adapted bubble surfaces were authored in this project.
+
+## RAID-018 expedition
+
+| Component | Use | License |
+|---|---|---|
+| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.itch.io/modular-sci-fi-megakit) | Access point, cargo crate and tall bulkhead frame | CC0 1.0, notice in Docs/Licenses |
+| [Low Poly Underwater Pack](https://reodesuxz.itch.io/low-poly-underwater-pack) | Optional locally imported coral fan, table coral, anemone and anchor | reodesuxz project-use license, notice in Docs/Licenses |
