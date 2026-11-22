@@ -8,7 +8,7 @@ namespace Raid.Nereid
     public sealed partial class NereidReef : MonoBehaviour
     {
         readonly List<Object> owned=new();
-        readonly List<GameObject> retiredFloors=new();
+        readonly List<GameObject> retiredGround=new();
         readonly System.Random random=new(17291);
         Material rock, bedMaterial, basalt, bioluminescence, lightColumns;
         GameObject shoal, abyss;
@@ -34,12 +34,14 @@ namespace Raid.Nereid
             abyss=Region("02 / The Needle Rift");
             var shallowBed=BuildShoal();
             var deepBed=BuildRift();
+            PopulateFlanks(false);
+            PopulateFlanks(true);
             Physics.SyncTransforms();
             // The berth masks in RiftHeight keep salvage at the same physical elevations on both maps.
             NereidSalvage.Place(shallowBed,rock,owned);
             gameObject.AddComponent<NereidWaterLife>().Build(shallowBed,deepBed);
             WaterBackground();
-            RetireFlatFloors();
+            RetireLegacyGround();
             ShowDepth(1);
         }
 
@@ -57,15 +59,20 @@ namespace Raid.Nereid
             return region;
         }
 
-        void RetireFlatFloors()
+        void RetireLegacyGround()
         {
             // NereidAuthoring still supplies an emergency deck-wide bed. Its flat visual
             // and collider must not bridge the new recessed rift when this component builds.
             var authoredBed=transform.parent.Find("Industrial fishing seabed");
-            if(authoredBed!=null && authoredBed.gameObject.activeSelf)retiredFloors.Add(authoredBed.gameObject);
+            if(authoredBed!=null && authoredBed.gameObject.activeSelf)retiredGround.Add(authoredBed.gameObject);
             foreach(var root in gameObject.scene.GetRootGameObjects())
-                if(root.name=="Seabed" && root.activeSelf)retiredFloors.Add(root);
-            foreach(var floor in retiredFloors)floor.SetActive(false);
+            {
+                if(root.name=="Seabed" && root.activeSelf)retiredGround.Add(root);
+                if(root.name!="RAID010 Visuals")continue;
+                var backdrop=root.transform.Find("DepthOneEnvironment");
+                if(backdrop!=null && backdrop.gameObject.activeSelf)retiredGround.Add(backdrop.gameObject);
+            }
+            foreach(var floor in retiredGround)floor.SetActive(false);
         }
 
         void Update()
@@ -312,7 +319,7 @@ namespace Raid.Nereid
 
         void OnDestroy()
         {
-            foreach(var floor in retiredFloors)if(floor!=null)floor.SetActive(true);
+            foreach(var floor in retiredGround)if(floor!=null)floor.SetActive(true);
             foreach(var asset in owned)if(asset!=null)Destroy(asset);
         }
     }

@@ -78,7 +78,7 @@ namespace Raid.Nereid
             float cove=1-IslandMask(x,z,35,-38,18,36);
             float lane=Mathf.PerlinNoise(x*.065f+5,z*.082f+21);
             float dune=.38f*Mathf.Sin(x*.34f+z*.25f+lane*3.1f)+.74f*(lane-.55f);
-            return BedHeight(x,z)+(dune*cove+ExpeditionShelf(x,z))*FishingFloorMask(x,z);
+            return BedHeight(x,z)+(dune*cove+ExpeditionShelf(x,z)+FlankRelief(x,z,false))*FishingFloorMask(x,z);
         }
 
         static float RiftAxis(float z)=>43.6f-(z+48)*.22f+1.7f*Mathf.Sin((z+46)*.10f);
@@ -92,25 +92,27 @@ namespace Raid.Nereid
             float jagged=.62f+.38f*Mathf.PerlinNoise(x*.38f+6,z*.31f+14);
             // A real recessed bed replaces the shallows collider. Stay at the original height under gameplay fixtures.
             float bay=8.8f+2.4f*Mathf.Sin(z*.17f+4.9f);
-            return BedHeight(x,z)+(ExpeditionRift(x,z)-extent*ravine*jagged*bay)*FishingFloorMask(x,z);
+            return BedHeight(x,z)+(ExpeditionRift(x,z)+FlankRelief(x,z,true)-extent*ravine*jagged*bay)*FishingFloorMask(x,z);
         }
 
         static float TerrainX(int i)
         {
-            // Finer sampling through the coast and trench, with an inexpensive far horizon.
-            if(i<18)return -141+i*(147f/18);
-            if(i<=85)return 6+(i-18)*1.25f;
-            return 89.75f+(i-85)*7.9f;
+            // Preserve the existing eastern grid and match the flanks' resolution.
+            if(i<11)return -141+i*(89f/11);
+            if(i<47)return -52+(i-11)*(58f/36);
+            if(i<=114)return 6+(i-47)*1.25f;
+            return 89.75f+(i-114)*7.9f;
         }
 
         static float TerrainZ(int i)
         {
             if(i<12)return -194.4f+i*7.2f;
             if(i<=100)return -108+(i-12)*1.20f;
-            return -2.4f+(i-100)*7.2f;
+            if(i<=135)return -2.4f+(i-100)*1.40f;
+            return 46.6f+(i-135)*7.2f;
         }
 
-        const int Columns=103,Rows=125;
+        const int Columns=132,Rows=154;
 
         // Analytic and interpolated heights diverge on steep banks. Root scenery
         // at the exact vertices and diagonal used by Terrain's collision mesh.

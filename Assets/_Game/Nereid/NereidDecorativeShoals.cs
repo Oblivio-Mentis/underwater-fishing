@@ -84,6 +84,11 @@ namespace Raid.Nereid
                 new School(2,slateMesh,slate,DeepShoal,new Vector3(2f,.65f,3.35f),.38f,2.9f,22,22,.35f),
                 new School(2,silverMesh,silver,new Vector3(45.3f,-8.8f,-50.1f),new Vector3(1.5f,.52f,2.2f),-.35f,2.1f,21,13,.26f),
                 new School(2,lanternMesh,slate,new Vector3(51,-24.2f,-79),new Vector3(2.9f,1.03f,4.9f),.33f,1.3f,24,19,.32f),
+                new School(1,slateMesh,slate,new Vector3(-23,-9.35f,-28),new Vector3(3.7f,.91f,4.5f),.26f,3.8f,36,23,.29f),
+                new School(1,silverMesh,silver,new Vector3(-9,-7.8f,29),new Vector3(3.65f,.82f,3.0f),-.32f,2.7f,29,26,.30f),
+                new School(1,silverMesh,silver,new Vector3(25,-7.95f,11),new Vector3(4.2f,.84f,3.2f),.27f,4.4f,30,20,.28f),
+                new School(2,slateMesh,slate,new Vector3(-25,-18.3f,-34),new Vector3(3.2f,.74f,3.4f),.32f,2.1f,23,20,.33f),
+                new School(2,silverMesh,silver,new Vector3(16,-17.7f,30),new Vector3(2.8f,.92f,3.4f),-.24f,4.7f,23,22,.32f),
             };
         }
 
