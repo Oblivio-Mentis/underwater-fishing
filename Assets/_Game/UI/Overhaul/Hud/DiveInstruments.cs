@@ -150,6 +150,7 @@ namespace Raid.UI
             if(tool!=null)
             {
                 int slots=tool.SlotCount;
+                bool carryingSalvage=tool.CarriedSalvage!=null;
                 hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,slots*74-8);
                 for(int i=0;i<slotRim.Length;i++)
                 {
@@ -159,11 +160,12 @@ namespace Raid.UI
                     if(!available)continue;
                     var fish=i>=2?tool.FishInSlot(i):null;
                     bool ball=tool.HasBallInSlot(i);
-                    bool selected=i==tool.ActiveSlot&&!tool.HandsFull;
+                    bool holdingSalvage=carryingSalvage && i==1;
+                    bool selected=holdingSalvage || i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;
                     slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null||ball;
-                    slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?Mark.Glove:ball?Mark.Ball:CatchMark(fish?.SpeciesId))];
-                    slotArt[i].color=tool.HandsFull?new Color(.68f,.73f,.73f):Ivory;
+                    slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?(holdingSalvage?Mark.Crate:Mark.Glove):ball?Mark.Ball:CatchMark(fish?.SpeciesId))];
+                    slotArt[i].color=tool.HandsFull&&!holdingSalvage?new Color(.68f,.73f,.73f):Ivory;
                 }
             }
             bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead;

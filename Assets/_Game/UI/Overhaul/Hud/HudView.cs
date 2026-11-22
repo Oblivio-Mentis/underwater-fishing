@@ -109,7 +109,8 @@ namespace Raid.UI
             }
             harpoonState.color=UiTheme.Cyan;harpoonTip.color=UiTheme.Muted;harpoonTip.fontSizeMax=16;
             UiKit.Size(harpoonTip,32);harpoonPanel.sizeDelta=new Vector2(352,92);
-            UiKit.Set(harpoonState,ReelReadout.Species(tool.CarriedFish?.SpeciesId)+" · обе руки заняты");
+            string load=tool.CarriedSalvage!=null?tool.CarriedSalvage.DisplayName:ReelReadout.Species(tool.CarriedFish?.SpeciesId);
+            UiKit.Set(harpoonState,load+" · обе руки заняты");
             UiKit.Set(harpoonTip,"К клети за кормой   ·   Q — положить");
 
         }
@@ -164,8 +165,9 @@ namespace Raid.UI
             else if(context.Harpoon!=null && CargoDispatch.CanLoad(context.World,player) &&
                     context.Harpoon.SelectedItem(out _) is DroppedKind.Catch or DroppedKind.Salvage)
             {
-                bool room=view.hoistPhase==HoistPhase.Loading && view.CargoUsed<view.Capacity(context.Tuning);
-                prompt=room?"Q — выпустить выбранный улов в контейнер":"Контейнер сейчас недоступен";
+                bool room=view.hoistPhase==HoistPhase.Loading && view.CargoUsed+context.CarriedSize<=view.Capacity(context.Tuning);
+                string load=context.Harpoon.CarriedSalvage!=null?"Q — положить груз в контейнер":"Q — выпустить улов в контейнер";
+                prompt=room?load:"Контейнер сейчас недоступен";
                 detail=view.CargoUsed+" / "+view.Capacity(context.Tuning);
             }
             else if(UiRoot.Instance!=null && UiRoot.Instance.AimedPad!=null)
@@ -214,8 +216,9 @@ namespace Raid.UI
                         ?"E — Обменять гарпун":"E — Поднять "+context.AimedDrop.Label;
                     break;
                 case UiInteraction.Loot:
-                    bool carryingLoot=false;foreach(var loot in context.Loot)if(loot!=null && loot.CarrierOwnerId==player.OwnerId){carryingLoot=true;break;}
-                    prompt=carryingLoot?UiText.HudLootOccupied:UiText.HudLootPrompt;color=carryingLoot?UiTheme.Amber:UiTheme.Text;break;
+                    prompt="E — поднять · "+context.AimedLoot.DisplayName;
+                    detail="Обе руки";
+                    break;
                 case UiInteraction.Assist:
                     if(reel.Visible)break;
                     prompt=context.Harpoon.ActiveSlot==1?"ЛКМ — держать напарника":UiText.HudAssistPrompt;break;

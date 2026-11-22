@@ -25,7 +25,7 @@ namespace Raid.UI
         public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.cargoPosition)<World.tuning.interactionRange;
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
-        public bool HasCargo => Harpoon!=null && Harpoon.CarriedFish!=null || Player!=null && Loot.Any(l=>l!=null && l.CarrierOwnerId==Player.OwnerId);
+        public bool HasCargo => Harpoon!=null && (Harpoon.CarriedFish!=null || Harpoon.CarriedSalvage!=null);
         public int CarriedSize => Harpoon!=null&&Harpoon.CarriedFish!=null ? Harpoon.SmallestCatchSize:HasCargo?1:0;
         public DiverMotor RescueTarget {get;private set;}
         public HarpoonTool AssistTarget {get;private set;}
@@ -44,7 +44,7 @@ namespace Raid.UI
                 Loot.Clear();Loot.AddRange(Object.FindObjectsByType<LootActor>());
             }
             Player=Players.FirstOrDefault(p=>p.IsOwner);Harpoon=Player==null?null:Player.GetComponent<HarpoonTool>();Rescue=Player==null?null:Player.GetComponent<RescueTool>();
-            RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;AimedConsole=null;Interaction=UiInteraction.None;
+            RescueTarget=null;AssistTarget=null;AimedLoot=null;AimedFish=null;AimedConsole=null;AimedDrop=default;Interaction=UiInteraction.None;
             if(!Connected)return;
             float range=2.5f;
             foreach(var other in Players)if(other!=Player && other.CanBeRescued)
@@ -58,7 +58,7 @@ namespace Raid.UI
             if(camera!=null && Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,Harpoon.tuning.maxRange,Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
             {
                 AimedLoot=hit.collider.GetComponentInParent<LootActor>();AimedFish=hit.collider.GetComponentInParent<FishActor>();
-                if(AimedLoot!=null && hit.distance<=3 && AimedLoot.CarrierOwnerId<0 && !Loot.Any(l=>l!=null&&l.CarrierOwnerId==Player.OwnerId)){Interaction=UiInteraction.Loot;return;}
+                if(hit.distance<=3 && AimedLoot?.CanPickUp(Harpoon)==true){Interaction=UiInteraction.Loot;return;}
             }
             AimedConsole=ShipConsole.ResolveSight(Player,camera);
             if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}

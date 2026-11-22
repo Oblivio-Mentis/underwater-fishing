@@ -140,8 +140,8 @@ namespace Raid
 
         static bool CanRoute(CatchItem item,CatchDestination destination) => destination switch
         {
-            CatchDestination.Feed=>item.offering>0,
-            CatchDestination.Process=>item.biomass>0 || item.chitin>0 || item.scrap>0 || item.electronics>0,
+            CatchDestination.Feed=>!item.IsSalvage && item.offering>0,
+            CatchDestination.Process=>!item.IsSalvage && (item.biomass>0 || item.chitin>0 || item.scrap>0 || item.electronics>0),
             _=>true
         };
 
