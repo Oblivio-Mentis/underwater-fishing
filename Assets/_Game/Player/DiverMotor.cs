@@ -273,10 +273,11 @@ namespace Raid
                 if(state.Stress>=tuning.stressDanger) speed*=.5f;
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
-                float acceleration=Personal(SkillId.F2);
-                if(acceleration>0)
+                var swimTuning=RaidWorld.Instance?.progression;
+                if(swimTuning!=null && !IsTrapped && !IsHelpless)
                 {
-                    float rate=velocity.sqrMagnitude>.002f?22*(1+acceleration):28;
+                    float rate=velocity.sqrMagnitude>.002f
+                        ? swimTuning.swimStartAcceleration*(1+Personal(SkillId.F2)):swimTuning.swimBrakingAcceleration;
                     swimVelocity=Vector3.MoveTowards(swimVelocity,velocity,rate*Time.fixedDeltaTime);
                 }
                 else swimVelocity=velocity;

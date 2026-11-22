@@ -263,6 +263,7 @@ namespace Raid.UI
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");
             }
             terminal.UpdateReceipt();
+            hud.UpdateScan();
             if(saveSettingsAt>=0 && Time.unscaledTime>=saveSettingsAt){saveSettingsAt=-1;Settings.Save();}
         }
         public Nereid.AirlockPad AimedPad => aimedPad;

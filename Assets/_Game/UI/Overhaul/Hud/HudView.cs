@@ -11,7 +11,7 @@ namespace Raid.UI
         readonly TMP_Text harpoonState,tetherDistance,harpoonTip;
         readonly TMP_Text cargoCount,cargoPhase;
         readonly TMP_Text promptLabel,promptDetail,rescueLabel;
-        readonly TMP_Text noticeTitle,noticeDetail;
+        readonly TMP_Text noticeTitle,noticeDetail,scanMarker;
         readonly AimReticle reticle;
         readonly DiveInstruments instruments;
         readonly Image cargoBar,rescueBar;
@@ -45,6 +45,11 @@ namespace Raid.UI
 
             var reticleRoot=UiKit.Node(Root,"Harpoon Reticle");UiKit.Place(reticleRoot,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(64,64));
             reticle=reticleRoot.gameObject.AddComponent<AimReticle>();reticle.Initialize(app);
+            scanMarker=UiKit.Label(Root,"Detected signal","",20,UiTheme.Cyan);
+            scanMarker.alignment=TextAlignmentOptions.Center;
+            scanMarker.raycastTarget=false;
+            UiKit.Place(scanMarker.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(260,30));
+            scanMarker.gameObject.SetActive(false);
             promptPanel=Instrument(Root,"HUD Context",new Vector2(.5f,0),new Vector2(.5f,0),new Vector2(0,125),new Vector2(580,82),out content);
             promptLabel=Line(content,"Context Action","",20,UiTheme.Text,26);promptLabel.alignment=TextAlignmentOptions.Center;
             promptDetail=Line(content,"Context Reason","",16,UiTheme.Muted,22);promptDetail.alignment=TextAlignmentOptions.Center;
@@ -125,10 +130,25 @@ namespace Raid.UI
             cargoPhase.color=full?UiTheme.Amber:UiTheme.Muted;
         }
 
+        public void UpdateScan()
+        {
+            var diver=app.Context.Player;
+            bool active=diver!=null && diver.MarkerActive && !diver.IsDead;
+            scanMarker.gameObject.SetActive(active);
+            if(!active)return;
+            var camera=diver.GetComponentInChildren<Camera>();
+            if(camera==null)return;
+            var at=camera.WorldToViewportPoint(diver.MarkerPosition);
+            var anchor=new Vector2(at.z<.2f?.5f:Mathf.Clamp(at.x,.20f,.80f),at.z<.2f?.63f:Mathf.Clamp(at.y,.24f,.76f));
+            scanMarker.rectTransform.anchorMin=scanMarker.rectTransform.anchorMax=anchor;
+            scanMarker.rectTransform.anchoredPosition=new Vector2(0,22);
+            UiKit.Set(scanMarker,diver.ScanLabel);
+        }
+
         void RefreshContext(UiContext context)
         {
             var player=context.Player;var view=context.View;
-            string prompt="",detail=player.MarkerActive?player.ScanLabel:"";Color color=UiTheme.Text;
+            string prompt="",detail="";Color color=UiTheme.Text;
             if(player.IsHelpless)prompt=UiText.HudWaitForRescue;
             else if(context.World.HasGoshaBall(player))prompt=context.World.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing?"Гоша догоняет вас!":UiRoot.Instance.WindingBall?"Отпустите ЛКМ — бросить мяч":"Удерживайте ЛКМ — замах · Q — выложить мяч";
             else if(context.World.IsHoldingGosha(player))prompt="E — опустить Гошу на палубу";
