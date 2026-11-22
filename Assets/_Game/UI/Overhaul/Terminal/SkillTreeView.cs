@@ -42,6 +42,7 @@ namespace Raid.UI
         readonly TMP_Text[] transferAmount = new TMP_Text[4], transferBalance = new TMP_Text[4];
         readonly int[] transfer = new int[4];
         readonly RectTransform graph, graphArea, info, treasury;
+        readonly Button reset;
         readonly Button focus, deposit, depositAll, treasuryOpen;
         readonly SkillWires wires;
         RaidWorld subscribed;
@@ -67,7 +68,7 @@ namespace Raid.UI
             playerBalance = Label(heading.transform,"Personal resources",Vector2.up,new(14,-43),new(1100,21),"",18);
             teamBalance = Label(heading.transform,"Ship treasury",Vector2.up,new(14,-66),new(1090,21),"",17,UiTheme.Muted);
             treasuryOpen = Key(heading.transform,"Treasury","Казна",new(797,-10),142,app.OpenTreasury);
-            Key(heading.transform,"ResetSkillView","Сбросить вид",new(948,-10),186,Reset);
+            reset=Key(heading.transform,"ResetSkillView","Сбросить вид",new(948,-10),186,Reset);
 
             graphArea = Image(surface,"Skill graph viewport",Vector2.up,new(14,-114),new(1148,531),Glass,true).rectTransform;
             graphArea.gameObject.AddComponent<RectMask2D>();
@@ -179,7 +180,8 @@ namespace Raid.UI
             treasury.gameObject.SetActive(show);
             graphArea.gameObject.SetActive(!treasuryOnly && !show);
             info.gameObject.SetActive(!treasuryOnly && !show);
-            treasuryOpen.gameObject.SetActive(!treasuryOnly);
+            treasuryOpen.gameObject.SetActive(!treasuryOnly && !show);
+            reset.gameObject.SetActive(!treasuryOnly && !show);
             if (!show) Array.Clear(transfer,0,transfer.Length);
             UpdateTransfers();
         }
@@ -230,11 +232,17 @@ namespace Raid.UI
         {
             if(!Root.gameObject.activeInHierarchy || treasuryVisible)return;
             float blend=1-Mathf.Exp(-dt*15);
-            zoom=Mathf.Lerp(zoom,targetZoom,blend);
-            pan=Vector2.Lerp(pan,targetPan,blend);
-            graph.localScale=Vector3.one*zoom;
-            graph.anchoredPosition=pan;
-            foreach(var card in cards)card.Root.localScale=Vector3.one/zoom;
+            if(Mathf.Abs(zoom-targetZoom)>.0001f || lastLod<0)
+            {
+                zoom=Mathf.Abs(zoom-targetZoom)<.002f?targetZoom:Mathf.Lerp(zoom,targetZoom,blend);
+                graph.localScale=Vector3.one*zoom;
+                foreach(var card in cards)card.Root.localScale=Vector3.one/zoom;
+            }
+            if((pan-targetPan).sqrMagnitude>.001f)
+            {
+                pan=(pan-targetPan).sqrMagnitude<.025f?targetPan:Vector2.Lerp(pan,targetPan,blend);
+                graph.anchoredPosition=pan;
+            }
             float lod=zoom<2.04f?0:1;
             if(lod==lastLod)return;
             lastLod=lod;
@@ -290,7 +298,7 @@ namespace Raid.UI
             bool unlocked=SkillTreeDefinition.IsAvailable(selected,owner);
             bool funded=Afford(app.Context.World?.LocalProgress?.wallet ?? default,node.Cost);
             UiKit.Set(detailTitle,node.Name+" · "+(node.Team?"Для всей команды":"Личное"));
-            UiKit.Set(detailBody,node.Effect+EffectAmount(node));
+            UiKit.Set(detailBody,(bought?"Действует · ":"После покупки · ")+node.Effect+EffectAmount(node));
             UiKit.Set(detailCost,"Цена из личного кошелька: "+Compact(node.Cost)+
                 (conditions.Count==0?"":"    ·    Нужен "+string.Join(" или ",conditions)));
             detailState.color=bought?Cyan:unlocked&&funded?UiTheme.Green:Gold;
@@ -313,8 +321,8 @@ namespace Raid.UI
         SkillNode Node(SkillId id) => app.Context.Tuning?.Skill(id) ?? SkillTreeDefinition.Get(id);
         IReadOnlyCollection<SkillId> Owned(SkillNode node)
         {
-            return (IReadOnlyCollection<SkillId>)(node.Team
-                ? app.Context.View?.teamSkills : app.Context.World?.LocalProgress?.skills) ?? Empty;
+            IReadOnlyCollection<SkillId> owned=node.Team?app.Context.View?.teamSkills:app.Context.World?.LocalProgress?.skills;
+            return owned ?? Empty;
         }
 
         void Select(SkillId id)
@@ -547,4 +555,3 @@ namespace Raid.UI
         }
     }
 }
-
