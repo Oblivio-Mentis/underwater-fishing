@@ -55,6 +55,10 @@ namespace Raid
             System.IO.File.WriteAllText(temp,JsonUtility.ToJson(req));
             System.IO.File.Replace(temp,requestFile,null);
             yield return Wait(()=>ReadClient()?.request==req.id && Vector3.Angle(helper.Motor.AimDirection,target-peerEye)<2,4,"Second owner did not aim at ball.");
+            Physics.SyncTransforms();
+            Require(Physics.Raycast(peerEye,helper.Motor.AimDirection,out var raceHit,helper.tuning.maxRange,
+                helper.tuning.hitMask,QueryTriggerInteraction.Ignore) && raceHit.collider.TryGetComponent<GoshaBallBody>(out _),
+                "Competing owner did not have the physical sphere as their first hit.");
             int peerShots=helper.ShotSequence;
             Send("fire",0);
             yield return Wait(()=>helper.ShotSequence>peerShots,3,"No second server shot.");
@@ -64,7 +68,8 @@ namespace Raid
             Check("The deck ball travelled down the line into the shooter's temporary hand slot.");
 
             Phase("Reel the single physical ball in open water");
-            var water=ship.TransformPoint(new Vector3(27,-4,-25));
+            // The vessel has a twofold scale; use world coordinates in the open cargo pool.
+            var water=new Vector3(24,-6,-27);
             host.Motor.Teleport(water);
             helper.Motor.Teleport(water+Vector3.right*3);
             // Stage only the starting loose object and diver poses. All shots and reeling use normal RPCs.
