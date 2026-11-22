@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory)][string]$Player,
     [Parameter(Mandatory)][string]$Output,
-    [ValidateRange(1,65535)][int]$Port = 17844
+    [ValidateRange(1,65535)][int]$Port = 17844,
+    [switch]$Ball
 )
 $ErrorActionPreference = 'Stop'
 $playerPath = (Resolve-Path -LiteralPath $Player).Path
@@ -21,7 +22,9 @@ function Start-Peer($roleFlag, $dir, $width, $height, $extra) {
 
 $resultPath = Join-Path $runPath 'result.json'
 try {
-    $hostProcess = Start-Peer '-raid-host' $hostDir 1280 720 @('-raid-fishing-peer',$peerDir,'-raid-fishing-report',$resultPath)
+    $trialArgs = @('-raid-fishing-peer',$peerDir,'-raid-fishing-report',$resultPath)
+    if ($Ball) { $trialArgs += '-raid-ball-harpoon' }
+    $hostProcess = Start-Peer '-raid-host' $hostDir 1280 720 $trialArgs
     $until = (Get-Date).AddSeconds(70)
     do {
         Start-Sleep -Milliseconds 300

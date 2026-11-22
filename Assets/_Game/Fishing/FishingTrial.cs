@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Raid
 {
     /// <summary>Explicit editor-host verification against an independent development player using its local UI probe.</summary>
-    public sealed class FishingTrial : MonoBehaviour
+    public sealed partial class FishingTrial : MonoBehaviour
     {
         [Serializable]
         private sealed class Result
@@ -114,6 +114,8 @@ namespace Raid
             Require(!UiInputGate.Blocked && !host.Motor.IsHelpless && !helper.Motor.IsHelpless, "Both peers must be alive with gameplay controls.");
             Require(host.CatchCount == 0 && host.HookedFish == null && !host.TetherActive, "Host must start with free hands and empty catch pockets.");
             Check("Distinct connected owners " + host.OwnerId + " and " + helper.OwnerId);
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-raid-ball-harpoon") >= 0)
+            { yield return RunBallHarpoon(); yield break; }
 
             if (world.CurrentDepth != 1)
             {
