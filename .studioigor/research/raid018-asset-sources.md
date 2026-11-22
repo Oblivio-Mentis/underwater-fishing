@@ -15,7 +15,7 @@
 | [Fish — PolyPack](https://assetstore.unity.com/packages/3d/characters/animals/fish/fish-polypack-202232) | Бесплатно через My Assets, совместим с URP. |
 | [Pixit3D — Fish Free Pack](https://assetstore.unity.com/packages/3d/characters/animals/fish/pixit3d-fish-free-pack-397878) | Бесплатно через My Assets, совместим с URP. |
 | [Fish Alive — FREE Samples](https://assetstore.unity.com/packages/3d/characters/animals/fish/fish-alive-free-samples-362806) | Бесплатно через My Assets, совместим с URP. |
-| [Simple Boids](https://assetstore.unity.com/packages/3d/characters/animals/simple-boids-flocks-of-birds-fish-and-insects-164188) | Бесплатно через My Assets. [Публичный исходник автора](https://github.com/nvjob/nvjob-boids) также доступен под MIT. |
+| [Simple Boids](https://assetstore.unity.com/packages/3d/characters/animals/simple-boids-flocks-of-birds-fish-and-insects-164188) | Бесплатно через My Assets. [Публичный исходник автора](https://github.com/nvjob/nvjob-boids) также доступен под MIT. Модель Fish 1 адаптирована для дальней стаи с существующим шейдером. |
 | [Splash of Color — Unique Photogrammetry Plants](https://assetstore.unity.com/packages/3d/vegetation/plants/splash-of-color-unique-photogrammetry-plants-211137) | Бесплатно через My Assets. Набор весит 291 МБ и ориентирован на наземные растения. |
 | [Fish Shader Animation](https://assetstore.unity.com/packages/vfx/shaders/fish-shader-animation-400006) | Бесплатно через My Assets, совместим с URP. В игре есть собственная анимация рыбы. |
 | [Stylized Low Poly Rocks](https://assetstore.unity.com/packages/3d/environments/landscapes/stylized-low-poly-rocks-271334) | Бесплатно через My Assets. В проекте остаются доступные геометрические формы Kenney и собственный рельеф. |
