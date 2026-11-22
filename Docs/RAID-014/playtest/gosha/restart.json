@@ -1,0 +1,11 @@
+{
+    "status": "passed",
+    "phase": "Exactly one model and deck pet replicated to returning crew",
+    "error": "",
+    "checks": [
+        "Distinct host and Windows peer ready",
+        "Host world and local camera ready",
+        "Loaded team save retains pet",
+        "Exactly one model and deck pet replicated to returning crew"
+    ]
+}
