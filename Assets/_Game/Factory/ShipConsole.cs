@@ -12,6 +12,17 @@ namespace Raid
         public Transform screenAnchor;
         public float range=3.2f;
         public float screenScale=.0018f;
+        [Tooltip("Visible display width and height in world metres.")]
+        public Vector2 screenSize;
+        public Vector2 DisplaySize
+        {
+            get
+            {
+                if(screenSize.x>0 && screenSize.y>0)return screenSize;
+                if(kind==ShipConsoleKind.SkillTree)return new Vector2(2.15f,1.46f);
+                return new Vector2(2.64f,1.94f)*(screenScale/.0018f);
+            }
+        }
         public static readonly List<ShipConsole> Stations=new List<ShipConsole>();
         public string Caption => kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
         void OnEnable() { if(!Stations.Contains(this))Stations.Add(this); }
@@ -38,7 +49,8 @@ namespace Raid
             var plane=new Plane(anchor.forward,anchor.position);
             if(!plane.Raycast(ray,out var distance) || Mathf.Abs(distance-hit.distance)>.22f)return null;
             var point=Quaternion.Inverse(anchor.rotation)*(ray.GetPoint(distance)-anchor.position);
-            return Mathf.Abs(point.x)<=station.screenScale*610 && Mathf.Abs(point.y)<=station.screenScale*426 ? station : null;
+            Vector2 half=station.DisplaySize*.5f;
+            return Mathf.Abs(point.x)<=half.x && Mathf.Abs(point.y)<=half.y ? station : null;
         }
         public static bool CanUseKind(DiverMotor diver, ShipConsoleKind kind)
         {
@@ -50,8 +62,8 @@ namespace Raid
 
         public bool Supports(WorldAction action)
         {
-            if(action==WorldAction.ProcessAll||action==WorldAction.StopProcessing)return kind==ShipConsoleKind.Process;
-            if(action==WorldAction.FeedAll||action==WorldAction.StopFeeding)return kind==ShipConsoleKind.Feed;
+            if(action is WorldAction.ProcessAll or WorldAction.StopProcessing or WorldAction.SendProcessingDraft)return kind==ShipConsoleKind.Process;
+            if(action is WorldAction.FeedAll or WorldAction.StopFeeding or WorldAction.SendFeedingDraft)return kind==ShipConsoleKind.Feed;
             if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades;
             if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo)return kind==ShipConsoleKind.Depths;
             return kind==ShipConsoleKind.Reservoir;

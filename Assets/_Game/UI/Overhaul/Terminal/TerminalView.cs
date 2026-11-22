@@ -110,8 +110,8 @@ namespace Raid.UI
                 sendFish.interactable=false;
                 return;
             }
-            int process=view.tank.Count(item=>item.destination==CatchDestination.Process);
-            int feed=view.tank.Count(item=>item.destination==CatchDestination.Feed);
+            int process=view.tank.Count(item=>FishRouteQuote.IsDraft(item,CatchDestination.Process));
+            int feed=view.tank.Count(item=>FishRouteQuote.IsDraft(item,CatchDestination.Feed));
             dispatchSummary.color=UiTheme.Muted;
             UiKit.Set(dispatchSummary,process+feed==0?"Выберите назначение для рыб":$"Переработка {process}   ·   Кормление {feed}");
             sendFish.interactable=process+feed>0;

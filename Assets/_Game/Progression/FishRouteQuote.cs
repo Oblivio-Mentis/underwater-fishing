@@ -10,9 +10,13 @@ namespace Raid
         public static long Compute(IEnumerable<CatchItem> stock,int requiredFood) =>
             HashStock(stock.Where(x=>x.offering>0),requiredFood,false);
 
-        public static long ComputeDraft(IEnumerable<CatchItem> stock)
+        public static bool IsDraft(CatchItem item,CatchDestination? destination=null) =>
+            !item.IsSalvage && !item.dispatchCommitted && item.destination!=CatchDestination.Hold &&
+            (!destination.HasValue || item.destination==destination.Value);
+
+        public static long ComputeDraft(IEnumerable<CatchItem> stock,CatchDestination? destination=null)
         {
-            var selected=stock.Where(item=>item.destination!=CatchDestination.Hold && !item.dispatchCommitted).ToArray();
+            var selected=stock.Where(item=>IsDraft(item,destination)).ToArray();
             return selected.Length==0?0:HashStock(selected,-1,true);
         }
 

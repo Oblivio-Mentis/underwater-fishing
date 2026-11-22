@@ -16,7 +16,7 @@ namespace Raid.Nereid
             var initialAim=camera.forward;
             yield return new WaitForSeconds(.22f);
             var ball=camera.Find("Ball in diving gloves");
-            var icon=Array.Find(ui.GetComponentsInChildren<UnityEngine.UI.Image>(),image=>
+            var icon=Array.Find(ui.QaHudRoot.GetComponentsInChildren<UnityEngine.UI.Image>(),image=>
                 image.enabled && image.sprite==DiveInstruments.Art(DiveInstruments.Mark.Ball));
             var tool=holder.GetComponent<HarpoonTool>();
             check("Held ball icon appears inside the selected numbered pocket",

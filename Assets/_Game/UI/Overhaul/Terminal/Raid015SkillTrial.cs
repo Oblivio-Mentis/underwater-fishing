@@ -173,13 +173,17 @@ namespace Raid.UI
             yield return new WaitForSecondsRealtime(.5f);
 
             yield return AimHost(screen);
-            Check("LMB opens physical graph on host",Ui.QaClickReticle() && Ui.Page==UiPage.SkillTree);
+            Check("The graph appears on the physical display by entering the sightline",Ui.QaPointAtMonitor() && Ui.Page==UiPage.SkillTree);
             yield return Send("reticle_aim",station.name);
             yield return new WaitForSecondsRealtime(.25f);
-            yield return Send("reticle_click");
+            yield return Send("reticle_hover");
             yield return Wait("Both clients see all 36 purchasable nodes",()=>Remote()?.page=="SkillTree" &&
                 Remote()?.skillTreeNodes==36 && Ui.GetComponentsInChildren<SkillPurchaseButton>().Length==36);
-            Check("Monitor reserves normal gameplay",UiInputGate.Blocked && UiInputGate.MonitorLook && Remote()?.inputBlocked==true);
+            Check("Monitor reserves the reticle with walking still available",!UiInputGate.Blocked && UiInputGate.MonitorLook &&
+                UiInputGate.PointerReserved && Remote()?.inputBlocked==false);
+            Check("Monitor focus leaves the gameplay FOV unchanged",
+                Mathf.Abs(host.GetComponentInChildren<Camera>().fieldOfView-Ui.Settings.fov)<.3f &&
+                Mathf.Abs(Remote().actualFov-Remote().fov)<.3f);
             yield return Wait("Server confirms both real eye rays",()=>ShipConsole.CanUseKind(host,ShipConsoleKind.SkillTree) &&
                 ShipConsole.CanUseKind(peer,ShipConsoleKind.SkillTree));
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"skill-host-720.png"));

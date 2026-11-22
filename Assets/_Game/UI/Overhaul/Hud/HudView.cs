@@ -1,3 +1,4 @@
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -193,8 +194,13 @@ namespace Raid.UI
                         {
                             var route=context.World.FishRoute;
                             bool matching=route.feeding==(console.kind==ShipConsoleKind.Feed);
-                            prompt=route.active&&matching&&!route.stopping?"ЛКМ — остановить подачу":"Выбор рыбы на мониторе резервуара";
-                            detail=route.active?(route.stopping?"Клапан закрыт · рыба в трубе завершает путь":matching?"Повторное нажатие сохранит оставшуюся рыбу":"Другая линия занята"):"Выбранная рыба отправляется по одной";
+                            var destination=console.kind==ShipConsoleKind.Feed?CatchDestination.Feed:CatchDestination.Process;
+                            int selected=view?.tank.Count(item=>FishRouteQuote.IsDraft(item,destination))??0;
+                            prompt=route.active && matching && !route.stopping?"ЛКМ — остановить подачу":
+                                !route.active && selected>0?"ЛКМ — отправить выбранную рыбу":console.Caption;
+                            detail=route.active
+                                ? route.stopping?"Клапан закрыт · рыба завершает путь":matching?"В трубе "+(route.total-route.completed):"Другая линия занята"
+                                : selected>0?"Назначено рыб  "+selected:"Назначьте рыбу на экране резервуара";
                         }
                     }
                     else {prompt=UiText.HudTerminalPrompt;detail=UiText.HudTerminalHint;}
@@ -255,7 +261,7 @@ namespace Raid.UI
                 if(prompt.Length==0)prompt=training;
                 else detail=training;
             }
-            promptPanel.gameObject.SetActive(prompt.Length>0&&!UiInputGate.Modal);reticle.gameObject.SetActive(!UiInputGate.Modal && (UiInputGate.PointerReserved || context.Harpoon!=null && context.Harpoon.HarpoonInHands));
+            promptPanel.gameObject.SetActive(prompt.Length>0&&!UiInputGate.Modal&&!UiInputGate.MonitorLook);reticle.gameObject.SetActive(!UiInputGate.Modal && !UiInputGate.MonitorLook && (UiInputGate.PointerReserved || context.Harpoon!=null && context.Harpoon.HarpoonInHands));
             UiKit.Set(promptLabel,prompt);promptLabel.color=color;
             UiKit.Set(promptDetail,detail);promptDetail.gameObject.SetActive(detail.Length>0);
             rescueBar.transform.parent.gameObject.SetActive(rescuing);rescueLabel.gameObject.SetActive(rescuing);

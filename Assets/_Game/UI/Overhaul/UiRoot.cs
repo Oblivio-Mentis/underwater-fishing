@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 namespace Raid.UI
 {
@@ -18,7 +19,10 @@ namespace Raid.UI
         public bool CommandPending {get;private set;}
         public string LastCommandReason {get;private set;}="";
         public bool LastCommandSucceeded {get;private set;}
-        CanvasScaler scaler;
+        static readonly Vector2 BoardSize=new(1180,810);
+        CanvasScaler scaler,hudScaler;
+        GameObject hudOverlay;
+        ShipConsole dismissedMonitor;
         Canvas canvas;
         bool computerSurface;
         Camera viewCamera;
@@ -86,7 +90,15 @@ namespace Raid.UI
             inputModule=events.GetComponent<InputSystemUIInputModule>();if(inputModule==null)inputModule=events.gameObject.AddComponent<InputSystemUIInputModule>();
             events.sendNavigationEvents=true;
             boardInput=new ReticleBoardInput(GetComponent<GraphicRaycaster>(),events);
-            hud=new HudView(transform,this);
+            hudOverlay=new GameObject("Expedition HUD",typeof(Canvas),typeof(CanvasScaler));
+            SceneManager.MoveGameObjectToScene(hudOverlay,gameObject.scene);
+            var hudCanvas=hudOverlay.GetComponent<Canvas>();
+            hudCanvas.renderMode=RenderMode.ScreenSpaceOverlay;
+            hudCanvas.sortingOrder=95;
+            hudScaler=hudOverlay.GetComponent<CanvasScaler>();
+            hudScaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            hudScaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
+            hud=new HudView(hudOverlay.transform,this);
             processingReceipt=new ProcessingReceiptHud(gameObject.scene);
             var dim=UiKit.Panel(transform,"Menu shade",new Color(.012f,.027f,.031f,.62f),true);shade=dim.rectTransform;UiKit.Fill(shade);
             menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);skills=new SkillTreeView(transform,this);
@@ -132,21 +144,21 @@ namespace Raid.UI
             if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
             if(value!=UiPage.None)CancelBallGesture();
+            bool wasMonitor=computerSurface;
             Page=value;
             if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
             if(value!=UiPage.Terminal && value!=UiPage.SkillTree)Context.SelectedConsole=null;
             if(value!=UiPage.SkillTree)skills.Close();
             boardInput.Clear();
             ConfigureSurface(value);
-            float boardMargin=computerSurface?(canvasRect.rect.height-
-                (value==UiPage.SkillTree?skills.Root.rect.height:terminal.Root.rect.height))*.5f:0;
-            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,value==UiPage.None?-270:-4-boardMargin),new Vector2(value==UiPage.None?760:1080,38));
-            if(pendingText!=null)pendingText.rectTransform.anchoredPosition=new Vector2(0,22+boardMargin);
+            if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),
+                new Vector2(0,value==UiPage.None?-270:0),new Vector2(value==UiPage.None?760:1080,38));
             bool menuPage=value==UiPage.Main||value==UiPage.Connection||value==UiPage.Crew||value==UiPage.Pause||value==UiPage.Settings;
             menu.Root.gameObject.SetActive(menuPage);if(menuPage)menu.Open(value);
             terminal.Root.gameObject.SetActive(value==UiPage.Terminal);cargo.Root.gameObject.SetActive(value==UiPage.Cargo);skills.Root.gameObject.SetActive(value==UiPage.SkillTree);
-            shade.gameObject.SetActive(value!=UiPage.None&&!computerSurface);hud.Root.gameObject.SetActive(Context.Connected && value==UiPage.None);
-            if(!computerSurface)UiInputGate.ResumeAt=Time.unscaledTime+.15f;
+            shade.gameObject.SetActive(value!=UiPage.None&&!computerSurface);
+            hud.Root.gameObject.SetActive(Context.Connected && (value==UiPage.None || computerSurface));
+            if(!computerSurface && !(wasMonitor && value==UiPage.None))UiInputGate.ResumeAt=Time.unscaledTime+.15f;
             SetCursor();EventSystem.current?.SetSelectedGameObject(null);
             if(Context.Connected && value==UiPage.Terminal)terminal.Refresh();if(Context.Connected&&value==UiPage.Cargo)cargo.Refresh();
             if(value==UiPage.SkillTree)skills.Refresh();
@@ -159,10 +171,11 @@ namespace Raid.UI
             if(computerSurface)
             {
                 canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=Context.Player.GetComponentInChildren<Camera>();
-                canvasRect.sizeDelta=new Vector2(1920,1080);
-                canvasRect.position=station.screenAnchor.position;canvasRect.rotation=station.screenAnchor.rotation;
-                canvasRect.localScale=Vector3.one*station.screenScale;
-
+                var face=station.screenAnchor;
+                var size=station.DisplaySize;
+                canvasRect.sizeDelta=BoardSize;
+                canvasRect.SetPositionAndRotation(face.position-face.forward*.006f,face.rotation);
+                canvasRect.localScale=new Vector3(size.x/BoardSize.x,size.y/BoardSize.y,station.screenScale);
             }
             else
             {
@@ -173,6 +186,7 @@ namespace Raid.UI
         public void ClosePanel()
         {
             if(confirmation.gameObject.activeSelf){CancelConfirmation();return;}
+            if(computerSurface)dismissedMonitor=Context.SelectedConsole;
             ShowPage(Page==UiPage.Settings?settingsBack:Page==UiPage.Crew?crewBack:Context.Connected?UiPage.None:UiPage.Main);
         }
         void SetCursor()
@@ -185,7 +199,7 @@ namespace Raid.UI
             }
             if(EventSystem.current!=null)EventSystem.current.sendNavigationEvents=!computerSurface;
             UiInputGate.MonitorLook=computerSurface && !overlay;
-            UiInputGate.Modal=UiInputGate.MonitorLook || (!computerSurface && (Page!=UiPage.None||confirmation.gameObject.activeSelf))||overlay;
+            UiInputGate.Modal=(!computerSurface && Page!=UiPage.None) || confirmation.gameObject.activeSelf || overlay;
             bool locked=Context.Connected && (!UiInputGate.Modal || UiInputGate.MonitorLook) && Application.isFocused;
             Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;
         }
@@ -205,7 +219,7 @@ namespace Raid.UI
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
             bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true;
             bool consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
-                mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase,interact);
+                mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
             skills.Animate(Time.unscaledDeltaTime);
             if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None)Interact();
             if(Time.unscaledTime>=nextRefresh)
@@ -280,7 +294,7 @@ namespace Raid.UI
             }
         }
 
-        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed,bool skillPurchase=false,bool openMonitor=false)
+        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed,bool skillPurchase=false)
         {
             UiInputGate.PointerReserved=false;
             aimedPad=null;
@@ -290,15 +304,12 @@ namespace Raid.UI
             if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.GoshaBallInHands(player)))CancelBallGesture();
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
-            if(computerSurface)
+            var station=ShipConsole.ResolveSight(player,cam);
+            if(station!=dismissedMonitor)dismissedMonitor=null;
+            if(computerSurface && (station!=Context.SelectedConsole || player.IsHelpless))
             {
-                UiInputGate.PointerReserved=true;
-                var selected=Context.SelectedConsole;
-                if(ShipConsole.ResolveSight(player,cam)==selected && selected!=null)
-                    return UpdateMonitorReticle(player,cam,selected,clicked,released,scroll,allowed,skillPurchase);
-                boardPointer.gameObject.SetActive(false);
-                boardInput.Clear();
-                return false;
+                if(confirmAction!=null)CancelConfirmation();
+                ShowPage(UiPage.None);
             }
             if(Context.World!=null && Context.World.GoshaBallInHands(player))
             {
@@ -318,7 +329,6 @@ namespace Raid.UI
                 if(clicked && allowed)Send(WorldAction.Hoist);
                 return clicked;
             }
-            var station=ShipConsole.ResolveSight(player,cam);
             aimedPad=Nereid.AirlockPad.Aimed(player,cam);
             UiInputGate.PointerReserved=station!=null || aimedPad!=null;
             if(aimedPad!=null)
@@ -326,7 +336,13 @@ namespace Raid.UI
                 if(clicked && allowed && !player.IsHelpless && aimedPad.CanRequest){aimedPad.Press(player);return true;}
                 return false;
             }
-            if(station==null || !allowed || player.IsHelpless || (!clicked && !(openMonitor && station.IsMonitor)))return false;
+            if(station==null || !allowed || player.IsHelpless || station==dismissedMonitor)return false;
+            if(station.IsMonitor)
+            {
+                if(!computerSurface)UseConsole(station);
+                return computerSurface && UpdateMonitorReticle(player,cam,station,clicked,released,scroll,allowed,skillPurchase);
+            }
+            if(!clicked)return false;
             UseConsole(station);
             return true;
         }
@@ -345,11 +361,13 @@ namespace Raid.UI
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public bool QaClickReticle() => UpdatePhysicalPointer(true,true,0,!UiInputGate.Modal || UiInputGate.MonitorLook);
+        public bool QaPointAtMonitor() { UpdatePhysicalPointer(false,false,0,true);return computerSurface; }
         public void QaDragReticle(bool down,bool up) => UpdatePhysicalPointer(down,up,0,UiInputGate.MonitorLook);
         public bool QaBuyReticle() => UpdatePhysicalPointer(false,false,0,UiInputGate.MonitorLook,true);
         public bool QaScrollReticle(float steps) => UpdatePhysicalPointer(false,false,steps,!UiInputGate.Modal || UiInputGate.MonitorLook);
         public string ReticleControl => computerSurface?boardInput.ControlName:"";
         public bool ProcessingReceiptVisible => processingReceipt?.Visible==true;
+        internal RectTransform QaHudRoot => hud.Root;
 #endif
         string lastSaveMessage="";
         void Interact()
@@ -373,7 +391,8 @@ namespace Raid.UI
         }
         public void UseConsole(ShipConsole station)
         {
-            if(!Context.Connected || Context.Player.IsHelpless || CommandPending || confirmAction!=null || Context.World.TravelRemaining>0)return;
+            if(!Context.Connected || Context.Player.IsHelpless || confirmAction!=null)return;
+            if(station?.IsMonitor!=true && (CommandPending || Context.World.TravelRemaining>0))return;
             if(station?.kind==ShipConsoleKind.SkillTree)
             {
                 if(!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
@@ -384,14 +403,14 @@ namespace Raid.UI
             }
             if(station!=null&&!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
             if(station==null&&ShipConsole.Stations.Count>0)return;
-            Context.SelectedConsole=station;
-            if(station!=null && (station.kind==ShipConsoleKind.Process || station.kind==ShipConsoleKind.Feed))ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
-            else
+            if(station!=null && !station.IsMonitor)
             {
-
-                ShowPage(UiPage.Terminal);
-                terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
+                ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
+                return;
             }
+            Context.SelectedConsole=station;
+            ShowPage(UiPage.Terminal);
+            terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
         }
         void ToggleFishRoute(bool feeding)
         {
@@ -403,9 +422,14 @@ namespace Raid.UI
                 if(route.stopping){Toast("Подача закрыта. Рыба в трубе завершает путь");return;}
                 Send(feeding?WorldAction.StopFeeding:WorldAction.StopProcessing,route.sequence);return;
             }
-            if(Nereid.NereidVessel.Active!=null){Toast("Выберите рыбу на экране резервуара");return;}
-            Toast("Выберите рыбу и её назначение на мониторе резервуара");
-            Context.SelectedConsole=null;
+            var destination=feeding?CatchDestination.Feed:CatchDestination.Process;
+            long quote=FishRouteQuote.ComputeDraft(view.tank,destination);
+            if(quote==0)
+            {
+                Toast(feeding?"На кормление ничего не назначено":"На переработку ничего не назначено");
+                return;
+            }
+            Send(feeding?WorldAction.SendFeedingDraft:WorldAction.SendProcessingDraft,quote);
         }
         public void Send(WorldAction action,long id=0)
         {
@@ -422,7 +446,7 @@ namespace Raid.UI
                 return v.tank.Find(x=>x.id==pendingId)?.destination.ToString() ?? "gone";
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();
             if(pendingAction==WorldAction.Collect)return Context.Loot.FindAll(x=>Context.Player!=null&&x.CarrierOwnerId==Context.Player.OwnerId).Count.ToString();
-            if(pendingAction is WorldAction.ProcessAll or WorldAction.FeedAll or WorldAction.SendFish)return Context.World.FishRoute.sequence.ToString();
+            if(pendingAction is WorldAction.ProcessAll or WorldAction.FeedAll or WorldAction.SendFish or WorldAction.SendProcessingDraft or WorldAction.SendFeedingDraft)return Context.World.FishRoute.sequence.ToString();
             if(pendingAction==WorldAction.StopProcessing||pendingAction==WorldAction.StopFeeding)return Context.World.FishRoute.sequence+"/"+Context.World.FishRoute.stopping+"/"+Context.World.FishRoute.active;
             return Context.World.CurrentDepth+"/"+(Context.World.TravelRemaining>0);
         }
@@ -444,6 +468,7 @@ namespace Raid.UI
         public void ApplySettings()
         {
             scaler.referenceResolution=new Vector2(1920,1080)/Settings.scale;
+            hudScaler.referenceResolution=scaler.referenceResolution;
             ApplyCameraSettings();saveSettingsAt=Time.unscaledTime+.4f;
         }
         void ApplyCameraSettings()
@@ -466,17 +491,8 @@ namespace Raid.UI
                     viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov) + fightZoom;
                 else
                 {
-                    float fov=desiredFov+fightZoom;
-                    if(computerSurface && Context.SelectedConsole!=null)
-                    {
-                        var station=Context.SelectedConsole;
-                        var face=station.screenAnchor;
-                        float distance=Vector3.Dot(face.position-viewCamera.transform.position,face.forward);
-                        float height=(Page==UiPage.SkillTree?skills.Root.rect.height:terminal.Root.rect.height)*station.screenScale;
-                        float readingFov=2f*Mathf.Atan2(height*.5f,Mathf.Max(.15f,distance)*.76f)*Mathf.Rad2Deg;
-                        fov=Mathf.Clamp(readingFov,30f,desiredFov);
-                    }
-                    viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,fov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+                    viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov+fightZoom,
+                        1-Mathf.Exp(-Time.unscaledDeltaTime*18));
                 }
             }
         }
@@ -489,6 +505,7 @@ namespace Raid.UI
         void OnDestroy()
         {
             if(Instance!=this)return;if(subscribedWorld!=null)subscribedWorld.CommandResponded-=OnCommandReply;
+            if(hudOverlay!=null)Destroy(hudOverlay);
             processingReceipt?.Dispose();skills?.Close();Settings?.Save();UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
         }
     }

@@ -11,7 +11,8 @@ namespace Raid.Nereid
         float next;
         void Update()
         {
-            if(Time.unscaledTime<next)return;next=Time.unscaledTime+.25f;
+            bool updateLabels=Time.unscaledTime>=next;
+            if(updateLabels)next=Time.unscaledTime+.25f;
             var w=RaidWorld.Instance;
             if(w==null||w.NetworkObject==null||!w.IsClientInitialized)return;
             var team=w.View;if(team==null)return;
@@ -20,19 +21,21 @@ namespace Raid.Nereid
             {
                 var station=stations[i];var text=screens[i];if(station==null||text==null)continue;
                 bool interactive=ui!=null&&ui.Page==UI.UiPage.Terminal&&ui.Context.SelectedConsole==station;
-                text.gameObject.SetActive(!interactive);if(interactive)continue;
+                bool changed=text.gameObject.activeSelf==interactive;
+                if(changed)text.gameObject.SetActive(!interactive);
+                if(interactive || (!changed && !updateLabels))continue;
                 string status;
                 if(station.kind==ShipConsoleKind.Upgrades)
-                    status="ОБОРУДОВАНИЕ ЭКИПАЖА\n\nБИОМАССА  "+team.biomass+"   ХИТИН  "+team.chitin+"\nМЕТАЛЛ  "+team.scrap+"   ЭЛЕКТРОНИКА  "+team.electronics+"\n\nКАТУШКА "+team.reelLevel+"  /  КОРПУС "+team.hullLevel+"\nЛАСТЫ "+team.finsLevel+"  /  БАЛЛОН "+team.tankLevel+"\nЛЕБЁДКА "+team.winchLevel+"\n\nE / ЛКМ · ОТКРЫТЬ";
+                    status="ОБОРУДОВАНИЕ ЭКИПАЖА\n\nБИОМАССА  "+team.biomass+"   ХИТИН  "+team.chitin+"\nМЕТАЛЛ  "+team.scrap+"   ЭЛЕКТРОНИКА  "+team.electronics+"\n\nКАТУШКА "+team.reelLevel+"  /  КОРПУС "+team.hullLevel+"\nЛАСТЫ "+team.finsLevel+"  /  БАЛЛОН "+team.tankLevel+"\nЛЕБЁДКА "+team.winchLevel+"\n\nНАВЕДИТЕ ПРИЦЕЛ";
                 else if(station.kind==ShipConsoleKind.Depths)
-                    status="НАВИГАЦИЯ NEREID\n\nГЛУБИНА "+w.CurrentDepth+"\n\nПЕРВАЯ ГЛУБИНА · ДОСТУПНА\nВТОРАЯ ГЛУБИНА · "+(team.CanVisitDepth(2)?"ДОСТУПНА":"НУЖЕН КОРПУС")+"\n\n"+(w.TravelRemaining>0?"ПЕРЕХОД · "+Mathf.CeilToInt(w.TravelRemaining)+" С":"E / ЛКМ · ВЫБОР КУРСА");
+                    status="НАВИГАЦИЯ NEREID\n\nГЛУБИНА "+w.CurrentDepth+"\n\nПЕРВАЯ ГЛУБИНА · ДОСТУПНА\nВТОРАЯ ГЛУБИНА · "+(team.CanVisitDepth(2)?"ДОСТУПНА":"НУЖЕН КОРПУС")+"\n\n"+(w.TravelRemaining>0?"ПЕРЕХОД · "+Mathf.CeilToInt(w.TravelRemaining)+" С":"НАВЕДИТЕ ПРИЦЕЛ · КУРС");
                 else
                 {
                     string route=w.FishRoute.active
                         ? (w.FishRoute.feeding?"КОРМЛЕНИЕ ":"ПЕРЕРАБОТКА ")+w.FishRoute.completed+" / "+w.FishRoute.total
                         : "ЛИНИИ СВОБОДНЫ";
                     status="РЕЗЕРВУАР\n\nРЫБА  "+team.tank.Count+"\nНАСЫЩЕНИЕ  "+TeamProgress.FoodText(team.offeringPoints)+
-                        "\n\n"+route+"\n\nE / ЛКМ · ВЫБОР УЛОВА";
+                        "\n\n"+route+"\n\nНАВЕДИТЕ ПРИЦЕЛ · УЛОВ";
                 }
                 if(text.text!=status)text.SetText(status);
             }

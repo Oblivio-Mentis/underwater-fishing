@@ -21,6 +21,10 @@ namespace Raid.Tests
             var b=new CatchItem(12,6,1,4,1,2){destination=CatchDestination.Feed};
             var held=new CatchItem(13,3,0,2,1,1);
             long quote=FishRouteQuote.ComputeDraft(new[]{a,b,held});
+            long processOnly=FishRouteQuote.ComputeDraft(new[]{a,b,held},CatchDestination.Process);
+            Assert.AreEqual(processOnly,FishRouteQuote.ComputeDraft(new[]{a},CatchDestination.Process));
+            Assert.AreNotEqual(quote,processOnly);
+            Assert.AreEqual(0,FishRouteQuote.ComputeDraft(new[]{a,held},CatchDestination.Feed));
             Assert.AreEqual(quote,FishRouteQuote.ComputeDraft(new[]{b,a}));
             b.destination=CatchDestination.Process;
             Assert.AreNotEqual(quote,FishRouteQuote.ComputeDraft(new[]{a,b,held}));

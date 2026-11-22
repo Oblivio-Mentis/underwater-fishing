@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Raid
 {
     // Command IDs are used on the wire. Value 2 belonged to a retired navigation command.
-    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding, HoldFish, SendFish }
+    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding, HoldFish, SendFish, SendProcessingDraft, SendFeedingDraft }
 
     public sealed partial class RaidWorld : NetworkBehaviour
     {
@@ -204,10 +204,17 @@ namespace Raid
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
             if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
+            bool dispatch=action is WorldAction.SendFish or WorldAction.SendProcessingDraft or WorldAction.SendFeedingDraft;
+            CatchDestination? dispatchDestination=action switch
+            {
+                WorldAction.SendProcessingDraft=>CatchDestination.Process,
+                WorldAction.SendFeedingDraft=>CatchDestination.Feed,
+                _=>null
+            };
             if((FishRoute.active || HasCommittedDispatch) &&
-                (action is WorldAction.ProcessAll or WorldAction.FeedAll or WorldAction.SendFish or WorldAction.DiveOne or WorldAction.DiveTwo))
+                (dispatch || action is WorldAction.ProcessAll or WorldAction.FeedAll or WorldAction.DiveOne or WorldAction.DiveTwo))
             {Respond(sender,requestId,false,"route_busy");return;}
-            if(action==WorldAction.SendFish && (!factory || id==0 || id!=FishRouteQuote.ComputeDraft(team.tank)))
+            if(dispatch && (!factory || id==0 || id!=FishRouteQuote.ComputeDraft(team.tank,dispatchDestination)))
             {Respond(sender,requestId,false,"changed");return;}
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
             {Respond(sender,requestId,false,"changed");return;}
@@ -223,7 +230,10 @@ namespace Raid
                 case WorldAction.Process: success=factory?ChooseFishRoute(id,CatchDestination.Process):ProcessDeliveredFish(id); break;
                 case WorldAction.Feed: success=factory?ChooseFishRoute(id,CatchDestination.Feed):team.Feed(id,progression); break;
                 case WorldAction.HoldFish: success=ChooseFishRoute(id,CatchDestination.Hold);break;
-                case WorldAction.SendFish: success=CommitFishDispatch();break;
+                case WorldAction.SendFish:
+                case WorldAction.SendProcessingDraft:
+                case WorldAction.SendFeedingDraft:
+                    success=CommitFishDispatch(dispatchDestination);break;
                 case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
                 case WorldAction.FeedAll: success=BeginFishRoute(true); break;
                 case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;

@@ -44,19 +44,19 @@ namespace Raid
             return selected!=null && BeginFishRoute(selected.destination==CatchDestination.Feed,true);
         }
 
-        bool CommitFishDispatch()
+        bool CommitFishDispatch(CatchDestination? destination)
         {
             if(fishRoute.Value.active || HasCommittedDispatch)return false;
             bool any=false;
             foreach(var item in team.tank)
             {
-                if(item.destination==CatchDestination.Hold)continue;
+                if(!FishRouteQuote.IsDraft(item,destination))continue;
                 if(!CanRoute(item,item.destination))return false;
                 any=true;
             }
             if(!any)return false;
             foreach(var item in team.tank)
-                item.dispatchCommitted=item.destination!=CatchDestination.Hold;
+                item.dispatchCommitted=FishRouteQuote.IsDraft(item,destination);
             return LaunchCommittedFish();
         }
 

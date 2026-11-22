@@ -216,7 +216,7 @@ namespace Raid.UI
                 }
                 return;
             }
-            if(r.action=="reticle_hover"){UiRoot.Instance.QaScrollReticle(0);return;}
+            if(r.action=="reticle_hover"){UiRoot.Instance.QaPointAtMonitor();return;}
             if(r.action=="reticle_click")
             {
                 if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("No available control under the physical reticle");
