@@ -459,6 +459,9 @@ namespace Raid
             Vector3 current=Vector3.ProjectOnPlane(host.HandAnchor-center,Vector3.up).normalized;
             if(current.sqrMagnitude<.1f)current=Vector3.back;
             int mask=Physics.DefaultRaycastLayers;
+            bool SeesFish(Vector3 eye)
+                => !Physics.Linecast(eye,center,out var hit,mask,QueryTriggerInteraction.Ignore) ||
+                   hit.collider.GetComponentInParent<FishActor>()==fish;
             foreach(float yaw in new[]{0f,45f,-45f,90f,-90f,135f,-135f,180f})
             {
                 var outward=(Quaternion.AngleAxis(yaw,Vector3.up)*current+Vector3.up*.48f).normalized;
@@ -466,8 +469,7 @@ namespace Raid
                 Vector3 lead=center+outward*3.9f,support=center+outward*6.2f+lateral*.65f;
                 if(Physics.CheckSphere(lead,.85f,mask,QueryTriggerInteraction.Ignore) ||
                     Physics.CheckSphere(support,.85f,mask,QueryTriggerInteraction.Ignore) ||
-                    Physics.Linecast(lead,center,mask,QueryTriggerInteraction.Ignore) ||
-                    Physics.Linecast(support,center,mask,QueryTriggerInteraction.Ignore))continue;
+                    !SeesFish(lead) || !SeesFish(support))continue;
                 host.Motor.Teleport(lead-Vector3.up*.6f);
                 helper.Motor.Teleport(support-Vector3.up*.6f);
                 Physics.SyncTransforms();
