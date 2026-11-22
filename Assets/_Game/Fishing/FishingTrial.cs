@@ -202,17 +202,7 @@ namespace Raid
             Check("Solo surge displaced the shooter "+Vector3.Distance(beforeTug,host.transform.position).ToString("F2")+" m.");
 
             Phase("Two independent impacts");
-            var peerAim=helper.Motor.AimDirection;
-            // Place the second diver on its current replicated sightline until the independent owner's shot arrives.
-            Send("fire",0);
-            float timeout=Time.unscaledTime+4;
-            while(helper.HookedFish!=heavy)
-            {
-                Require(Time.unscaledTime<timeout,"Second owner's harpoon missed: "+ReadClient()?.error);
-                helper.Motor.Teleport(heavy.transform.position-peerAim*2.7f-Vector3.up*.6f);
-                Physics.SyncTransforms();
-                yield return null;
-            }
+            yield return HookPeer(heavy);
             yield return Wait(()=>ReadClient()?.activeBoltOwners?.Distinct().Count()==2,6,"Independent view did not render both attachments.");
             // Opposed handles stay loaded and aim away from one another.
             var axis=(host.HandAnchor-heavy.transform.position).normalized;
@@ -234,13 +224,7 @@ namespace Raid
             yield return Wait(()=>helper.ActiveSlot==1 && helper.HookedFish==null && heavy.HookCount==1 && host.HookedFish==heavy,
                 4,"Switching the partner's tool failed to remove only their line.");
             Send("slot",0);yield return Wait(()=>helper.ActiveSlot==0,4,"Partner could not re-equip harpoon.");
-            Send("fire",0); timeout=Time.unscaledTime+4;
-            while(helper.HookedFish!=heavy)
-            {
-                Require(Time.unscaledTime<timeout,"Partner failed to rehook.");
-                helper.Motor.Teleport(heavy.transform.position-peerAim*2.7f-Vector3.up*.6f);
-                Physics.SyncTransforms();yield return null;
-            }
+            yield return HookPeer(heavy);
             Phase("Cooperative pull and heavy carry");
             axis=(host.HandAnchor-heavy.transform.position).normalized;
             helper.Motor.Teleport(host.transform.position+axis*2.5f+host.transform.right*.65f);
@@ -280,6 +264,29 @@ namespace Raid
             yield return Wait(() => world.Team.hoistPhase == HoistPhase.Loading && caughtIds.All(id => world.Team.tank.Exists(item => item.id == id))
                 && cage.Count == 0 && ClientReceivedDelivery(caughtIds), 45, "Host and client did not return to Loading with the same four delivered identities.");
             Check("Winch delivered each original ID to the reservoir and both cages emptied.");
+            yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after landing.");
+
+            Phase("Owner death and reconnect with two active lines");
+            yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,100,"Heavy shoal did not return.");
+            yield return Hook(heavy);
+            yield return HookPeer(heavy);
+            // Exercise the normal death transition without forcing a diver to suffocate for minutes.
+            helper.Motor.SendMessage("BeginDeath",false,SendMessageOptions.RequireReceiver);
+            yield return Wait(()=>helper.Motor.IsDead && helper.HookedFish==null && host.HookedFish==heavy && heavy.HookCount==1,
+                3,"Death left stale line ownership.");
+            helper.Motor.Rescue();
+            yield return Wait(()=>!helper.Motor.IsDead,3,"Real rescue did not restore helper.");
+            yield return HookPeer(heavy);
+            var previousPeer=helper;
+            Send("rejoin_local",0);
+            yield return Wait(()=>previousPeer==null && host.HookedFish==heavy && heavy.HookCount==1,8,"Disconnect left a second line.");
+            yield return Wait(()=>DiverMotor.ServerDivers.Any(d=>d!=null && !d.IsOwner && d.IsServerInitialized),15,"Remote failed to reconnect.");
+            helper=DiverMotor.ServerDivers.Single(d=>d!=null && !d.IsOwner && d.IsServerInitialized).GetComponent<HarpoonTool>();
+            Require(helper.HookedFish==null && helper.CatchCount==0 && world.Team.tank.Count(x=>caughtIds.Contains(x.id))==4,
+                "Reconnection restored another player's line or duplicated cargo.");
+            host.QaReleaseOwned();
+            yield return Wait(()=>heavy.HookCount==0 && host.HookedFish==null,3,"Last hook failed to release.");
+            Check("Partner death and connection teardown each removed only its own harpoon. Rejoined owner had free hands, and all four delivered IDs remained unique.");
         }
 
         private IEnumerator RefillOnDeck()
@@ -329,6 +336,25 @@ namespace Raid
                 "Fixture ray blocked before " + fish.SpeciesId + ": " + (hit.collider == null ? "miss" : hit.collider.name));
             Require(host.QaFireOwned(), "Host owned fire request rejected.");
             yield return Wait(() => host.HookedFish == fish, 3, "Normal harpoon RPC missed " + fish.SpeciesId + ".");
+        }
+
+        private IEnumerator HookPeer(FishActor fish)
+        {
+            // Stage only the pose. The second process fires the normal owned RPC.
+            Vector3 aim=helper.Motor.AimDirection;
+            float until=Time.unscaledTime+5, retry=0;
+            while(helper.HookedFish!=fish)
+            {
+                Require(Time.unscaledTime<until,"Independent owner failed to hit "+fish.SpeciesId+": "+ReadClient()?.error);
+                helper.Motor.Teleport(fish.transform.position-aim*2.7f-Vector3.up*.6f);
+                Physics.SyncTransforms();
+                if(Time.unscaledTime>=retry)
+                {
+                    Send("fire",0);
+                    retry=Time.unscaledTime+1;
+                }
+                yield return null;
+            }
         }
 
         private IEnumerator Reel(FishActor fish)

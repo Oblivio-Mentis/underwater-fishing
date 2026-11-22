@@ -226,6 +226,14 @@ namespace Raid.UI
                 if (!accepted) throw new InvalidOperationException("Owned fishing controls are currently unavailable");
                 return;
             }
+            if(r.action=="rejoin_local")
+            {
+                var session=UiRoot.Instance.Context.Session;
+                if(session==null || session.SteamMode || !session.Connected || session.manager.IsServerStarted)
+                    throw new InvalidOperationException("A connected non-host LAN peer is required.");
+                StartCoroutine(RejoinLocal(session));
+                return;
+            }
             if(r.action=="fire"||r.action=="harpoon_release")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;
@@ -288,6 +296,14 @@ namespace Raid.UI
             }
             if(r.action!="snapshot")throw new InvalidOperationException("Unsupported UI-only QA action");
         }
+        static System.Collections.IEnumerator RejoinLocal(RaidSession session)
+        {
+            session.Disconnect();
+            float until=Time.unscaledTime+8;
+            while(!session.manager.IsOffline && Time.unscaledTime<until)yield return null;
+            if(session.manager.IsOffline)session.JoinLocal();
+        }
+
         // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
         public static void CapturePeerCamera(string path)
         {
