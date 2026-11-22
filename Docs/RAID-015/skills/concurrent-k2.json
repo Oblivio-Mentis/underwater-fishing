@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "revision": "b93d759",
+  "shared_revision_before": 3,
+  "shared_revision_after": 4,
+  "mode": "Both Windows peers pointed at the same available K2 node and issued independent reticle RMB gestures from the same displayed team revision.",
+  "queue_interval_ms": 0.5237999139353633,
+  "cost_applied": {
+    "biomass": 16,
+    "chitin": 4,
+    "scrap": 10,
+    "electronics": 0
+  },
+  "purchased_node": "K2",
+  "owned_count": 1
+}

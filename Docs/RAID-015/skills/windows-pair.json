@@ -1,18 +1,68 @@
 {
-    "status": "passed",
-    "phase": "peer capture skill-peer-1080.png",
-    "error": "",
-    "checks": [
-        "Two distinct profile bindings",
-        "LMB opens physical graph on host",
-        "Monitor reserves normal gameplay",
-        "Host reticle LMB H1",
-        "LMB only selects H1",
-        "Host reticle RMB H1",
-        "Stale request for unlocked H2 cannot debit the shared balance",
-        "H1 and S1 affect separate private skill lists and debit one common treasury",
-        "Host reticle RMB K1",
-        "One shared purchase moved the revision once and charged the common balance once",
-        "Host reticle LMB H1"
-    ]
+  "revision": "e96bc51",
+  "unity": "6000.5.6f1",
+  "transport": "Independent Windows players over local Tugboat",
+  "build_assembly_sha256": "df9cfe50f4e910c72c42715edf552a68d8788bb7fa47cbc8851a884ca0b53160",
+  "players": {
+    "host": {
+      "resolution": [
+        1280,
+        720
+      ],
+      "private_skills": [
+        1
+      ],
+      "treasury": [
+        36,
+        64,
+        58,
+        64
+      ],
+      "shared_skills": [
+        25
+      ],
+      "public_profile_count": 0
+    },
+    "peer": {
+      "resolution": [
+        1920,
+        1080
+      ],
+      "private_skills": [
+        5
+      ],
+      "treasury": [
+        36,
+        64,
+        58,
+        64
+      ],
+      "shared_skills": [
+        25
+      ],
+      "public_profile_count": 0
+    }
+  },
+  "verified_server_effects": {
+    "host_reel_multiplier_delta": 0.12,
+    "peer_reel_multiplier_delta": 0,
+    "host_oxygen_multiplier_delta": 0,
+    "peer_oxygen_multiplier_delta": 0.2
+  },
+  "status": "passed",
+  "phase": "peer capture skill-peer-1080.png",
+  "error": "",
+  "checks": [
+    "Two distinct profile bindings",
+    "LMB opens physical graph on host",
+    "Monitor reserves normal gameplay",
+    "Host reticle LMB H1",
+    "LMB only selects H1",
+    "Host reticle RMB H1",
+    "Stale request for unlocked H2 cannot debit the shared balance",
+    "H1 and S1 affect separate private skill lists and debit one common treasury",
+    "Host reticle RMB K1",
+    "One shared purchase moved the revision once and charged the common balance once",
+    "Host reticle LMB H1"
+  ]
 }
