@@ -90,6 +90,8 @@ namespace Raid.Nereid.Editor
             yield return Wait("Startled fish actually moves away",()=>Vector3.Distance(diver.transform.position,scout.transform.position)>2.5f);
             Place(new Vector3(1,1.1f,1));
             yield return Wait("Three fish arrive over separate release windows",()=>school.Count(f=>f.InHabitat)==3,18);
+            if(school.Where(f=>f.InHabitat).Select(f=>f.HabitatName).Distinct().Count()<2)
+                throw new InvalidOperationException("Staggered fish did not occupy separate habitats.");
             yield return Pause(6.6f);
             if(school.Count(f=>f.InHabitat)>3)throw new InvalidOperationException("A fourth wild fish exceeded the cap.");
             foreach(bool breakLine in new[]{false,true})
@@ -114,16 +116,23 @@ namespace Raid.Nereid.Editor
             }
             yield return Wait("Dry deck restores authored visibility",()=>UnderwaterLook.Instance.WaterBlend<.015f && RenderSettings.fogDensity<.03f);
             yield return Wait("Depth one active",()=>threats.Reef.Active&&!threats.Reef.Deep);
-            var angler=threats.tuning.predatorSpawn;
-            Place(angler+new Vector3(0,.3f,7.5f));
+            Place(AnglerWater(7.5f));
             yield return Wait("Nearby passive angler watches the diver in murky water",()=>
                 threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
                 UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.03f && RenderSettings.fogDensity<.05f);
             float health=diver.Oxygen;
-            Place(angler+new Vector3(0,.1f,3.6f));
+            Place(AnglerWater(3.6f));
             yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
             yield return Wait("Angler pursues after its warning",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
             yield return Wait("Angler ambush removes oxygen",()=>diver.Oxygen<=health-10 && threats.Message.Contains("Фонарник"));
+            Place(new Vector3(1,1.1f,1));
+            yield return Wait("Angler withdraws before it can attack again",()=>threats.AnglerStage==ThreatDirector.HuntStage.Watching,6);
+            Place(AnglerWater(3.8f));
+            yield return Wait("Patrolling angler starts a second display",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
+            yield return Wait("Lunge is committed before dodging",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
+            health=diver.Oxygen;
+            Place(AnglerWater(7.8f,diver.transform.position-threats.AnglerPosition));
+            yield return Wait("A sideways dodge avoids the committed lunge",()=>threats.AnglerStage==ThreatDirector.HuntStage.Recovery && diver.Oxygen>health-8);
             Place(ThreatDirector.ClamBed+Vector3.up*.21f);
             yield return Wait("Bottom trap closes and holds",()=>diver.IsTrapped&&threats.Reef.ClamClosed);
             diver.Rescue();
@@ -133,7 +142,7 @@ namespace Raid.Nereid.Editor
             yield return Wait("Depth two active",()=>threats.Reef.Active&&threats.Reef.Deep);
             FillCreel();Place(threats.Reef.Eel+Vector3.forward*1.2f);
             yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.10f);
-            yield return Wait("Eel warns with three occupied pockets",()=>threats.Reef.EelPhase==1&&tool.HasFullCreel);
+            yield return Wait("Eel warns with three pocket fish",()=>threats.Reef.EelPhase==1&&tool.CatchCount==3);
             if(!tool.DropOneCatch())throw new InvalidOperationException("Could not drop the selected catch.");
             yield return Wait("Dropped fish diverts eel",()=>threats.Reef.EelPhase==3&&tool.CatchCount==2);
             Place(new Vector3(0,1.5f,0));
@@ -159,6 +168,24 @@ namespace Raid.Nereid.Editor
             health=diver.Oxygen;Vector3 locked=threats.Reef.Sweep;
             Place(locked+Vector3.forward*7.3f);
             yield return Wait("Swimming out of the locked area avoids hit",()=>threats.Reef.KrakenPhase==2&&Vector3.Distance(locked,threats.Reef.Sweep)<.1f&&diver.Oxygen>health-8,4);
+        }
+
+        static Vector3 AnglerWater(float distance, Vector3 awayFromAim=default)
+        {
+            var at=threats.AnglerPosition;
+            var forward=awayFromAim.sqrMagnitude>.1f ? Vector3.Cross(awayFromAim,Vector3.up).normalized : Vector3.forward;
+            for(int i=0;i<8;i++)
+            {
+                var direction=Quaternion.AngleAxis(i*45,Vector3.up)*forward;
+                if(awayFromAim.sqrMagnitude>.1f && Mathf.Abs(Vector3.Dot(direction,awayFromAim.normalized))>.38f)continue;
+                var point=at+direction*distance+Vector3.up*.1f;
+                if(NereidVessel.Active.ContainsSealed(point) || NereidAirlock.Active?.Contains(point)==true)continue;
+                if(Physics.CheckSphere(point,.48f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
+                if(!Physics.Linecast(at,point,out var hit,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) ||
+                    hit.collider.GetComponentInParent<DiverMotor>()!=null)
+                    return point;
+            }
+            throw new InvalidOperationException("No open water for the angler encounter fixture.");
         }
 
         static void Stage(int tier)

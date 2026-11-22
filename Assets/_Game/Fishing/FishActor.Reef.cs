@@ -10,6 +10,11 @@ namespace Raid
         bool arrivalPending,staggered;
         float arrivalAt,departureAt,fleeRemaining,swimSpeed,senseAt,hookAvailableAt,avoidUntil;
         Vector3 alarmPoint,avoidDirection;
+        ReefHabitats.Route habitat;
+        int station, nextHabitat;
+        float bank,stationUntil;
+        bool leaving;
+        public string HabitatName => habitat?.Name ?? "";
         public bool InHabitat => _snapshot.Value.Active;
         public bool Startled => _snapshot.Value.Startled;
 
@@ -31,35 +36,58 @@ namespace Raid
         void TryArrive()
         {
             if(Time.time<arrivalAt)return;
-            int occupying=0;
-            foreach(var other in ServerSchool)
-                if(other!=this && other.depthTier==depthTier && other._depthActive &&
-                    other.Mode!=FishMode.Captured && other.Mode!=FishMode.Transported)occupying++;
-            if(occupying>=3){arrivalAt=Time.time+1.3f;return;}
+            var routes = depthTier > 1 ? ReefHabitats.Rift : ReefHabitats.Shelf;
+            int budget = 0;
+            foreach (var other in ServerSchool)
+                if (other != this && other.depthTier == depthTier && other.IsWildInHabitat) budget++;
+            if (budget >= 3) { arrivalAt = Time.time + 2; return; }
 
-            // Swim in beyond the diver's immediate field of interaction.
-            Vector3 entry=_origin;
-            bool clear=false;
-            for(int i=0;i<16;i++)
+            int preference = SpeciesId switch { "Needlefish" => 0, "Lanternfish" => 1, "Bristlefish" => 2, _ => 2 };
+            float visibility = depthTier > 1 ? 14 : 22;
+            for (int i = 0; i < routes.Length; i++)
             {
-                float angle=i*Mathf.PI*.25f+_clock;
-                // A diver waiting at the shoal centre covers the entire inner entry ring.
-                float radius=i<8?6.5f:10.5f;
-                entry=_origin+new Vector3(Mathf.Cos(angle)*radius,.35f,Mathf.Sin(angle)*radius);
-                if(NearestSwimmer(entry,7)!=null || Physics.CheckSphere(entry,.65f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
-                clear=true;break;
-            }
-            if(!clear){arrivalAt=Time.time+1.5f;return;}
+                var route = routes[(preference + nextHabitat + i) % routes.Length];
+                int localCount = 0;
+                foreach (var other in ServerSchool)
+                    if (other != this && other.IsWildInHabitat && other.habitat == route) localCount++;
+                if (localCount >= 2) continue;
 
-            SetDepthActive(true);
-            transform.SetPositionAndRotation(entry,Quaternion.LookRotation(_origin-entry));
-            departureAt=Time.time+52+power*8;
-            senseAt=Time.time;
-            swimSpeed=tuning.roamSpeed;
-            var state=_snapshot.Value;
-            state.Position=entry;
-            state.Rotation=transform.rotation;
-            _snapshot.Value=state;
+                int stride = route.Waypoints.Length;
+                for (int j = 0; j < stride; j++)
+                {
+                    int entry = (j + (RequiresPartner ? 2 : 0)) % stride;
+                    Vector3 point = RoutePoint(route, entry);
+                    int next = (entry + 1) % stride;
+                    Vector3 firstLeg = RoutePoint(route, next) - point;
+                    if (!ReefHabitats.CanArrive(point, 12, visibility) ||
+                        Physics.CheckSphere(point, BodyRadius + .17f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ||
+                        !SwimClear(point, point + firstLeg.normalized * Mathf.Min(2.8f, firstLeg.magnitude)))
+                        continue;
+                    SetDepthActive(true);
+                    habitat = route;
+                    station = next;
+                    stationUntil = Time.time + 14;
+                    transform.SetPositionAndRotation(point, Quaternion.LookRotation(firstLeg));
+                    departureAt = Time.time + (SpeciesId == "Bristlefish" ? 44 : 63) + power * 8;
+                    senseAt = Time.time + .6f;
+                    swimSpeed = Mathf.Max(.5f,tuning.roamSpeed);
+                    var state = _snapshot.Value;
+                    state.Position = point;
+                    state.Rotation = transform.rotation;
+                    _snapshot.Value = state;
+                    return;
+                }
+            }
+            arrivalAt = Time.time + 1.7f;
+        }
+
+        bool IsWildInHabitat => _depthActive && Mode != FishMode.Captured && Mode != FishMode.Transported;
+
+        Vector3 RoutePoint(ReefHabitats.Route route,int index)
+        {
+            // Different vertical lanes keep two species sharing a habitat readable.
+            float height = SpeciesId switch { "Needlefish" => .35f, "Lanternfish" => .15f, "Bristlefish" => -.6f, _ => .75f };
+            return route.Waypoints[index] + Vector3.up * height;
         }
 
         bool HasRoamingReplacement()
@@ -71,13 +99,26 @@ namespace Raid
             return false;
         }
 
+        bool TryMigrate()
+        {
+            if (!staggered || habitat == null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || lines.Count > 0)
+                return false;
+            if (Time.time <= departureAt || !HasRoamingReplacement()) return false;
+            leaving = NearestSwimmer(transform.position,19) == null &&
+                ReefHabitats.CanArrive(transform.position,19,depthTier > 1 ? 23 : 28);
+            if (!leaving || fleeRemaining > 0 || Vector3.Distance(transform.position, RoutePoint(habitat,0)) > 1.8f) return false;
+            nextHabitat++;
+            ScheduleAt(Time.time + 9 + power * 1.4f);
+            return true;
+        }
+
         static DiverMotor NearestSwimmer(Vector3 point,float radius)
         {
             DiverMotor closest=null;
             float best=radius*radius;
             foreach(var diver in DiverMotor.ServerDivers)
             {
-                if(diver==null || diver.IsDead || diver.IsInside)continue;
+                if(diver==null || diver.IsDead || diver.IsInside || ReefHabitats.InShelter(diver.transform.position))continue;
                 float squared=(diver.transform.position-point).sqrMagnitude;
                 if(squared<best){closest=diver;best=squared;}
             }
@@ -112,6 +153,24 @@ namespace Raid
             return false;
         }
 
+        float BodyRadius => RequiresPartner ? .36f : .19f;
+
+        bool SwimClear(Vector3 start, Vector3 end)
+        {
+            if (ReefHabitats.InShelter(end)) return false;
+            Vector3 path = end - start;
+            if (path.sqrMagnitude < .0001f) return true;
+            int count = Physics.SphereCastNonAlloc(start, BodyRadius, path.normalized, swimHits, path.magnitude,
+                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                var collider = swimHits[i].collider;
+                if (collider.GetComponentInParent<FishActor>() == null && collider.GetComponentInParent<DiverMotor>() == null)
+                    return false;
+            }
+            return true;
+        }
+
         void Frighten(Vector3 point,float duration)
         {
             alarmPoint=point;
@@ -127,19 +186,27 @@ namespace Raid
 
         Vector3 PatrolHeading(Vector3 pos)
         {
-            // A continuous lap across the fishing ground, with room to bank through
-            // its turns. Each species keeps a distinct cruising height and phase.
-            float phase=_clock*(RequiresPartner?.17f:.24f)+_origin.z;
-            float radius=Mathf.Max(2,tuning.swimRadius);
-            Vector3 point=_origin+radius*new Vector3(1.9f*Mathf.Cos(phase),
-                .46f*Mathf.Sin(phase*1.6f),1.4f*Mathf.Sin(phase));
-            return point-pos;
+            if (habitat != null)
+            {
+                if (leaving) return RoutePoint(habitat,0) - pos;
+                Vector3 next = RoutePoint(habitat,station);
+                if ((next - pos).sqrMagnitude < 3.8f || Time.time > stationUntil)
+                {
+                    station = (station + 1) % habitat.Waypoints.Length;
+                    stationUntil = Time.time + 14;
+                    next = RoutePoint(habitat,station);
+                }
+                return next - pos;
+            }
+            float phase = _clock * (RequiresPartner ? .17f : .24f) + _origin.z;
+            float radius = Mathf.Max(2,tuning.swimRadius);
+            return _origin + radius * new Vector3(1.9f*Mathf.Cos(phase),.46f*Mathf.Sin(phase*1.6f),1.4f*Mathf.Sin(phase)) - pos;
         }
 
         Vector3 ClearHeading(Vector3 pos,Vector3 desired,float distance)
         {
-            if(Time.time<avoidUntil && !SolidAhead(pos,pos+avoidDirection*distance))return avoidDirection;
-            if(!SolidAhead(pos,pos+desired*distance))return desired;
+            if(Time.time<avoidUntil && SwimClear(pos,pos+avoidDirection*distance))return avoidDirection;
+            if(SwimClear(pos,pos+desired*distance))return desired;
             // Commit to one open side for the duration of a turn instead of
             // alternating directions against the corner of a rock every tick.
             float side=Vector3.Dot(transform.right,desired)>=0?1f:-1f;
@@ -147,41 +214,63 @@ namespace Raid
             {
                 float angle=(38+42*(i/2))*(i%2==0?side:-side);
                 var candidate=Quaternion.AngleAxis(angle,Vector3.up)*desired;
-                if(SolidAhead(pos,pos+candidate*distance))continue;
+                if(!SwimClear(pos,pos+candidate*distance))continue;
                 avoidDirection=candidate;
                 avoidUntil=Time.time+.65f;
                 return candidate;
             }
-            return !SolidAhead(pos,pos+Vector3.up*distance)?Vector3.up:Vector3.down;
+            if (SwimClear(pos,pos+Vector3.up*distance)) return Vector3.up;
+            if (SwimClear(pos,pos+Vector3.down*distance)) return Vector3.down;
+            return -transform.forward;
         }
 
         void SwimReef(float dt,ref FishSnapshot state)
         {
-            Vector3 pos=transform.position;
-            if(Time.time>=senseAt && Time.time>=hookAvailableAt)
+            Vector3 position = transform.position;
+            if (Time.time >= senseAt && Time.time >= hookAvailableAt && fleeRemaining <= .25f)
             {
-                senseAt=Time.time+.18f;
-                var swimmer=NearestSwimmer(pos,RequiresPartner?2.45f:3.35f);
-                if(swimmer!=null && !SolidAhead(pos,swimmer.transform.position))Frighten(swimmer.transform.position,2.8f);
+                senseAt = Time.time + .18f;
+                var swimmer = NearestSwimmer(position,RequiresPartner ? 3f : 4.1f);
+                if (swimmer != null)
+                {
+                    Vector3 fromSwimmer = position - swimmer.transform.position;
+                    float close = RequiresPartner ? 1.9f : 2.5f;
+                    bool approachingFast = swimmer.IsSprinting && Vector3.Dot(swimmer.AimDirection,fromSwimmer.normalized) > .15f;
+                    if ((fromSwimmer.sqrMagnitude < close * close || approachingFast) && !SolidAhead(position,swimmer.transform.position))
+                        Frighten(swimmer.transform.position,2.6f);
+                }
             }
-            bool fleeing=fleeRemaining>0;
-            state.Startled=fleeing;
-            fleeRemaining=Mathf.Max(0,fleeRemaining-dt);
-            Vector3 target=fleeing?pos-alarmPoint:PatrolHeading(pos);
-            var direction=target.sqrMagnitude>.001f?target.normalized:transform.forward;
-            direction.y+=Mathf.Sin(_clock*1.35f)*.085f;
-            direction.y=Mathf.Clamp(direction.y,-.38f,.38f);
-            if(pos.y>_origin.y+2.4f)direction.y=-.44f;
-            if(pos.y<_origin.y-2.4f)direction.y=.44f;
-            if((pos-_origin).sqrMagnitude>155 && !fleeing)direction=(_origin-pos).normalized;
-            direction=ClearHeading(pos,direction.normalized,fleeing?2.6f:1.8f);
-            float speed=fleeing?Mathf.Lerp(2.8f,5.4f,Mathf.Clamp01(fleeRemaining/2f)):
-                Mathf.Max(.5f,tuning.roamSpeed)*(RequiresPartner?.9f:1.15f)*(1+.12f*Mathf.Sin(_clock*2.3f));
-            swimSpeed=Mathf.MoveTowards(swimSpeed,speed,(fleeing?14f:2f)*dt);
-            var heading=Vector3.RotateTowards(transform.forward,direction,dt*(fleeing?8f:2.3f),0);
-            transform.rotation=Quaternion.LookRotation(heading);
-            Vector3 next=pos+transform.forward*(swimSpeed*dt);
-            if(!SolidAhead(pos,pos+transform.forward*(swimSpeed*dt+.48f)))transform.position=next;
+            bool fleeing = fleeRemaining > 0;
+            state.Startled = fleeing;
+            float fleePower = Mathf.SmoothStep(0,1,Mathf.Clamp01((fleeRemaining - .45f) / 1.55f));
+            fleeRemaining = Mathf.Max(0,fleeRemaining - dt);
+            Vector3 target = fleeing ? (position - alarmPoint) : PatrolHeading(position);
+            Vector3 direction = target.sqrMagnitude > .001f ? target.normalized : transform.forward;
+            Vector3 lane = habitat != null ? RoutePoint(habitat,station) : _origin;
+            if (fleeing && (lane - position).sqrMagnitude > 154)
+                direction = Vector3.Slerp(direction,(lane - position).normalized,.72f);
+            direction.y += Mathf.Sin(_clock * 1.35f) * .075f;
+            direction.y = Mathf.Clamp(direction.y,-.45f,.45f);
+            if (position.y > lane.y + 2.6f) direction.y = -.32f;
+            if (position.y < lane.y - 2.6f) direction.y = .32f;
+            direction = ClearHeading(position,direction.normalized,fleeing ? 2.7f : 2.1f);
+            float speed = fleeing ? Mathf.Lerp(2.15f,RequiresPartner ? 5.35f : 5.9f,fleePower) :
+                Mathf.Max(.5f,tuning.roamSpeed) * (RequiresPartner ? .9f : 1.15f) * (1 + .11f * Mathf.Sin(_clock * 2.3f));
+            if (leaving && !fleeing) speed = 2.7f;
+            swimSpeed = Mathf.MoveTowards(swimSpeed,speed,(fleeing ? 10f : 2.6f) * dt);
+            FaceSwim(direction,dt,fleeing ? 5.4f : 2.8f);
+            Vector3 step = transform.forward * (swimSpeed * dt);
+            if (SwimClear(position,position + step + transform.forward * .20f)) transform.position += step;
+            else swimSpeed = Mathf.MoveTowards(swimSpeed,0,10 * dt);
+        }
+
+        void FaceSwim(Vector3 direction,float dt,float turnRate)
+        {
+            if (direction.sqrMagnitude < .0001f) return;
+            Vector3 heading = Vector3.RotateTowards(transform.forward,direction.normalized,dt * turnRate,0);
+            float turn = Vector3.Dot(Vector3.Cross(transform.forward,direction.normalized),Vector3.up);
+            bank = Mathf.MoveTowards(bank,-turn * (RequiresPartner ? 29 : 22),90 * dt);
+            transform.rotation = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(bank,Vector3.forward);
         }
     }
 }

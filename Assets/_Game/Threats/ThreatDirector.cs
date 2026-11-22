@@ -41,6 +41,7 @@ namespace Raid
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
         public HuntStage AnglerStage=>state.Value.AnglerStage;
+        public Vector3 AnglerPosition=>state.Value.PredatorPosition;
 
         private void Awake()
         {
@@ -78,7 +79,7 @@ namespace Raid
             primitiveHitbox.enabled = true;
             ResetReef();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
-            state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = tuning.predatorHealth };
+            state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = tuning.predatorHealth, AnglerHeading = Vector3.forward };
         }
 
         public override void OnStopClient() { if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
@@ -243,20 +244,20 @@ namespace Raid
             ThreatSnapshot snapshot = state.Value;
             bool nereid=Nereid.NereidVessel.Active!=null;
             if(nereid)ShowReef();
-            Show(predatorView, snapshot.PredatorPosition, snapshot.PredatorHealth > 0f && (!nereid || reefState.Value.Active));
-            if(nereid && snapshot.AnglerStage!=HuntStage.Watching && snapshot.AnglerHeading.sqrMagnitude>.01f)
-                predatorView.rotation=Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),Time.deltaTime*360);
+            Show(predatorView,snapshot.PredatorPosition,snapshot.PredatorHealth > 0f && (!nereid || reefState.Value.Active),!nereid);
+            if (nereid && snapshot.AnglerHeading.sqrMagnitude > .01f)
+                predatorView.rotation = Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),Time.deltaTime * 225);
             if (!IsServerInitialized) PlaceRaider(snapshot, true);
         }
 
-        private void Show(Transform visual, Vector3 position, bool visible)
+        private void Show(Transform visual, Vector3 position, bool visible, bool faceTravel)
         {
             bool wasVisible = visual.gameObject.activeSelf;
             visual.gameObject.SetActive(visible);
             if (!visible) return;
             Vector3 previous = visual.position;
             visual.position = wasVisible ? Vector3.Lerp(previous, position, 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(.02f, tuning.snapshotInterval))) : position;
-            if ((position - previous).sqrMagnitude > .001f) visual.rotation = Quaternion.LookRotation(position - previous);
+            if (faceTravel && (position - previous).sqrMagnitude > .001f) visual.rotation = Quaternion.LookRotation(position - previous);
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);

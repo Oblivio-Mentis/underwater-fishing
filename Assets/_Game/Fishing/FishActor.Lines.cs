@@ -196,6 +196,12 @@ namespace Raid
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
                 Vector3 motion = leader.TowardHand.normalized * Mathf.Min(excess, speed * dt);
                 if (!SolidAhead(transform.position, transform.position + motion)) transform.position += motion;
+                if (Nereid.NereidVessel.Active != null)
+                {
+                    Vector3 away = -leader.PullDirection;
+                    Vector3 lateral = Vector3.Cross(Vector3.up,away);
+                    FaceSwim(away + lateral * Mathf.Sin(fightClock * (state.Surging ? 8 : 4)) * (state.Surging ? .45f : .16f),dt,1.5f);
+                }
                 state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * dt * (leader.Paired ? 1 + tuning.assistBonus : 1));
                 bool partnerReady = !RequiresPartner;
                 foreach (var other in lines)
@@ -216,10 +222,15 @@ namespace Raid
                 float escape = tuning.escapeSpeed * power * (state.Surging ? 2 : tired ? .3f : 1);
                 Vector3 away = -lead.PullDirection;
                 if (away.sqrMagnitude < .01f) away = transform.forward;
-                Vector3 dir = ClearHeading(transform.position, away, 1);
+                if (Nereid.NereidVessel.Active != null)
+                {
+                    Vector3 lateral = Vector3.Cross(Vector3.up,away);
+                    away += lateral * Mathf.Sin(fightClock * 3.8f) * (state.Surging ? .48f : .17f);
+                }
+                Vector3 dir = ClearHeading(transform.position, away.normalized, 1);
                 Vector3 move = dir * (escape * dt);
                 if (!SolidAhead(transform.position, transform.position + move)) transform.position += move;
-                transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(dir), 100 * dt);
+                FaceSwim(dir,dt,1.75f);
                 if (!tired) state.Stamina = Mathf.Min(tuning.initialStamina * power, state.Stamina + tuning.staminaRecovery * dt);
             }
         }
