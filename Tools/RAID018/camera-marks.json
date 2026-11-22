@@ -287,6 +287,42 @@
       "benchmark": false,
       "prop": "",
       "station": ""
+    },
+    {
+      "name": "16-dorsal-profile",
+      "depth": 1,
+      "feet": {
+        "x": -23,
+        "y": 18,
+        "z": -41
+      },
+      "look": {
+        "x": 0,
+        "y": 5,
+        "z": -34
+      },
+      "shipLocal": false,
+      "benchmark": false,
+      "prop": "",
+      "station": ""
+    },
+    {
+      "name": "17-drive-section",
+      "depth": 1,
+      "feet": {
+        "x": -14,
+        "y": 6,
+        "z": -81
+      },
+      "look": {
+        "x": 0,
+        "y": 4,
+        "z": -63
+      },
+      "shipLocal": false,
+      "benchmark": true,
+      "prop": "",
+      "station": ""
     }
   ]
 }
