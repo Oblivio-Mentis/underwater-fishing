@@ -26,7 +26,8 @@ namespace Raid.Nereid
             public string timing="Completed offscreen URP camera stacks per real second, including a synchronous one-pixel GPU readback per frame. Screen overlay HUD excluded.";
             public int width, height, depth, msaa, vsync, targetFps;
             public float scale, nearestPassMetres;
-            public bool drySuppressed, wetVisible;
+            public bool drySuppressed, wetVisible, wetChamberVisible, deepWaterVisible;
+            public float chamberFill;
             public List<Sample> samples=new();
         }
         string folder;
@@ -164,6 +165,9 @@ namespace Raid.Nereid
             report.status="peer swimming through grove"; Write();
             peer.Teleport(blade+new Vector3(-3.7f,0,0)); yield return new WaitForSecondsRealtime(.4f);
             Capture("04-kelp-before");
+            var film=Path.Combine(folder,"traverse");
+            Directory.CreateDirectory(film);
+            int frame=0;
             float elapsed=0; report.nearestPassMetres=100;
             bool contact=false;
             while(elapsed<4.6f)
@@ -174,10 +178,51 @@ namespace Raid.Nereid
                 float range=Vector3.Distance(peer.transform.position,blade);
                 report.nearestPassMetres=Mathf.Min(range,report.nearestPassMetres);
                 if(!contact && range<.7f) { contact=true; yield return null; Capture("05-kelp-parting"); }
+                if(elapsed>=frame*.18f) { yield return null; Capture(Path.Combine("traverse","frame-"+frame.ToString("D3"))); frame++; }
             }
             if(!contact)throw new InvalidOperationException("Second diver did not cross holdfast.");
             yield return new WaitForSecondsRealtime(.6f);
             Capture("06-kelp-returned");
+
+            var world=RaidWorld.Instance;
+            var chamber=NereidAirlock.Active;
+            var pad=chamber.GetPad(2);
+            host.Teleport(pad.transform.position-chamber.transform.right*1.2f-Vector3.up*.6f);
+            yield return new WaitForSecondsRealtime(.25f);
+            host.LookAtConsole(pad.transform.position);
+            yield return new WaitForSecondsRealtime(.35f);
+            if(AirlockPad.Aimed(host,cam)!=pad)throw new InvalidOperationException("Could not aim at the sea-cycle pad.");
+            pad.Press(host);
+            double floodLimit=Time.realtimeSinceStartupAsDouble+12;
+            while(world.Airlock.Water<.97f && Time.realtimeSinceStartupAsDouble<floodLimit)yield return null;
+            report.chamberFill=world.Airlock.Water;
+            report.wetChamberVisible=report.chamberFill>.95f && chamber.Contains(cam.transform.position) &&
+                chamber.IsSubmerged(cam.transform.position) && water.ShowingSuspension;
+            if(!report.wetChamberVisible)throw new InvalidOperationException("Sea-cycle or flooded-chamber suspension failed.");
+            host.LookAtConsole(chamber.transform.TransformPoint(new Vector3(1,1.9f,0)));
+            yield return new WaitForSecondsRealtime(.25f);
+            Capture("07-flooded-chamber");
+            // Only test deep water when the supplied isolated team profile has already unlocked it.
+            if(world.Team.CanVisitDepth(2))
+            {
+                var chart=ShipConsole.Stations.First(x=>x.kind==ShipConsoleKind.Depths);
+                peer.Teleport(new Vector3(3,1.1f,3));
+                foreach(var axis in new[]{Vector3.forward,Vector3.back,Vector3.right,Vector3.left})
+                {
+                    host.Teleport(chart.transform.position+axis*1.45f+Vector3.up*.5f);
+                    Physics.SyncTransforms();
+                    if(host.IsInside && ShipConsole.CanUse(host,WorldAction.DiveTwo))break;
+                }
+                world.Command(WorldAction.DiveTwo,0);
+                double travelLimit=Time.realtimeSinceStartupAsDouble+12;
+                while(world.CurrentDepth!=2 && Time.realtimeSinceStartupAsDouble<travelLimit)yield return null;
+                if(world.CurrentDepth!=2)throw new InvalidOperationException("Chart refused the unlocked second fishing ground.");
+                host.Teleport(blade+new Vector3(-1.35f,.1f,-4.25f)); yield return null; host.LookAtConsole(blade);
+                yield return new WaitForSecondsRealtime(1);
+                report.deepWaterVisible=water.ShowingSuspension && water.VisibleGroves>0;
+                if(!report.deepWaterVisible)throw new InvalidOperationException("Deep-water suspension missing.");
+                Capture("08-deep-water");
+            }
         }
 
         void Capture(string name) => UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,name+".png"));
