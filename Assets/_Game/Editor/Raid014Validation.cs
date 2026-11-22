@@ -35,16 +35,25 @@ namespace Raid.Editor
             var path = Arg("-raid-exe");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             bool timing=PlayerSettings.enableFrameTimingStats, jobs=PlayerSettings.graphicsJobs;
+            bool profile=Arg("-raid-flavor")=="qa" && Arg("-raid-frame-timing")=="on";
+            const BuildTarget platform=BuildTarget.StandaloneWindows64;
+            var timer=AssetImporter.GetAtPath("Assets/Plugins/ArtTimingQA/Raid016Timing.dll") as PluginImporter;
+            bool timerCompatibility=timer!=null && timer.GetCompatibleWithPlatform(platform);
             BuildReport report;
             try
             {
-                if(Arg("-raid-frame-timing")=="on")
+                if(timer!=null && timerCompatibility!=profile)
+                {
+                    timer.SetCompatibleWithPlatform(platform,profile);
+                    timer.SaveAndReimport();
+                }
+                if(profile)
                 {
                     PlayerSettings.enableFrameTimingStats=true;
                     PlayerSettings.graphicsJobs=false;
                 }
                 report=BuildPipeline.BuildPlayer(new BuildPlayerOptions {
-                    scenes = new[] { Scene }, target = BuildTarget.StandaloneWindows64,
+                    scenes = new[] { Scene }, target = platform,
                     locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
                 });
             }
@@ -52,6 +61,11 @@ namespace Raid.Editor
             {
                 if(PlayerSettings.enableFrameTimingStats!=timing)PlayerSettings.enableFrameTimingStats=timing;
                 if(PlayerSettings.graphicsJobs!=jobs)PlayerSettings.graphicsJobs=jobs;
+                if(timer!=null && timerCompatibility!=profile)
+                {
+                    timer.SetCompatibleWithPlatform(platform,timerCompatibility);
+                    timer.SaveAndReimport();
+                }
             }
             var s = report.summary;
             Debug.Log($"RAID014_BUILD {s.result} errors={s.totalErrors} warnings={s.totalWarnings} bytes={s.totalSize}");
