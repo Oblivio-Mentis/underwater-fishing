@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 namespace Raid.Nereid
 {
     [DefaultExecutionOrder(520), DisallowMultipleComponent]
-    public sealed class NereidHullLighting : MonoBehaviour
+    public sealed partial class NereidHullLighting : MonoBehaviour
     {
         static readonly int Positions=Shader.PropertyToID("_NereidWorkLightPositions");
         static readonly int Directions=Shader.PropertyToID("_NereidWorkLightDirections");
@@ -55,6 +55,7 @@ namespace Raid.Nereid
                 new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
             for(int side=-1;side<=1;side+=2)
                 foreach(float z in new[]{-20f,2.8f})Marker(side,z);
+            BuildExteriorDetail();
             initialized=true;
         }
 
@@ -107,11 +108,11 @@ namespace Raid.Nereid
                         Color paint;float metal;
                         switch(source.name)
                         {
-                            case "Nereid_Hull":  paint=new Color(.31f,.45f,.48f);metal=.16f;break;
-                            case "Nereid_Steel": paint=new Color(.41f,.49f,.49f);metal=.36f;break;
-                            case "Nereid_Dark":  paint=new Color(.17f,.22f,.23f);metal=.24f;break;
+                            case "Nereid_Hull":  paint=new Color(.208f,.318f,.349f);metal=.16f;break;
+                            case "Nereid_Steel": paint=new Color(.36f,.432f,.435f);metal=.36f;break;
+                            case "Nereid_Dark":  paint=new Color(.125f,.179f,.19f);metal=.24f;break;
                             case "Nereid_Grate": paint=new Color(.24f,.30f,.30f);metal=.38f;break;
-                            case "Nereid_Trim":  paint=new Color(.43f,.52f,.51f);metal=.54f;break;
+                            case "Nereid_Trim":  paint=new Color(.387f,.472f,.464f);metal=.54f;break;
                             case "Nereid_Ochre": paint=new Color(.61f,.39f,.15f);metal=.15f;break;
                             default: continue;
                         }
@@ -300,6 +301,7 @@ namespace Raid.Nereid
                 directions[i]=new Vector4(axis.x,axis.y,axis.z,outer);
                 radiance[i]=new Vector4(tint.r*power,tint.g*power,tint.b*power,1/Mathf.Max(.001f,inner-outer));
             }
+            PresentExteriorLamps(camera,underwater!=null && underwater.WaterBlend>.25f);
             Shader.SetGlobalVectorArray(Positions,positions);
             Shader.SetGlobalVectorArray(Directions,directions);
             Shader.SetGlobalVectorArray(Radiance,radiance);
@@ -315,6 +317,7 @@ namespace Raid.Nereid
                 nearby[i]=false;
                 if(beams[i]!=null)beams[i].enabled=false;
             }
+            PresentExteriorLamps(null,false);
             System.Array.Clear(radiance,0,radiance.Length);
             Shader.SetGlobalVectorArray(Radiance,radiance);
         }
