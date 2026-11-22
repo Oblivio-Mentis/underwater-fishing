@@ -140,6 +140,29 @@ namespace Raid
             }
         }
 
+        bool CanTakeInHand(HookLine line, bool tired)
+        {
+            float reach = tuning.captureRange;
+            float winding = tuning.minimumWindingSeconds;
+            if (line.Spool.AtHand(line.Distance, reach, winding)) return true;
+            if (!tired || !RequiresPartner) return false;
+
+            // A diver alongside a tired large fish can grab its body even if the
+            // harpoon landed on the far flank. Count the cable running across the body.
+            Vector3 hand = line.Tool.HandAnchor;
+            Vector3 toFish = transform.position - hand;
+            if (toFish.sqrMagnitude < .0001f) return false;
+            Vector3 contact = hand - line.TowardHand;
+            var approach = new Ray(hand, toFish.normalized);
+            foreach (var surface in _colliders)
+            {
+                if (!surface.Raycast(approach, out var grip, reach) || SolidAhead(hand, grip.point)) continue;
+                float lengthAlongBody = Vector3.Distance(grip.point, contact);
+                if (line.Spool.AtHand(line.Distance, reach + lengthAlongBody, winding)) return true;
+            }
+            return false;
+        }
+
         void SimulateLine(ref FishSnapshot state, bool tired, float dt)
         {
             SampleLines(dt);
@@ -212,7 +235,7 @@ namespace Raid
                         && Vector3.Dot(other.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot)
                         partnerReady = true;
                 if (leader.Tension < 1 && partnerReady && (RequiresPartner || !leader.Tool.HasFullCreel)
-                    && leader.Spool.AtHand(leader.Distance, tuning.captureRange, tuning.minimumWindingSeconds))
+                    && CanTakeInHand(leader, tired))
                 {
                     landingTool = leader.Tool;
                     DesiredState = FishMode.Captured;
