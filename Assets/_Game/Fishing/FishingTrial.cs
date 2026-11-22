@@ -310,6 +310,7 @@ namespace Raid
             Check("Winch delivered each original ID to the reservoir and both cages emptied.");
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after landing.");
 
+            if (VerifyDropTransfers) yield return RearmAfterHandoffs();
             Phase("Owner death and reconnect with two active lines");
             yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,100,"Heavy shoal did not return.");
             yield return Hook(heavy);

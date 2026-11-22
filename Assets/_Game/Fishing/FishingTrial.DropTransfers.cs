@@ -80,6 +80,13 @@ namespace Raid
                 "Host did not receive the original catch "+id);
         }
 
+        IEnumerator RearmAfterHandoffs()
+        {
+            Require(host.SelectSlot(0),"Host could not re-equip after depositing the recovered heavy catch.");
+            Send("slot",0);
+            yield return Wait(()=>host.ActiveSlot==0 && helper.ActiveSlot==0,5,"Both owners must equip their guns for the line cleanup trial.");
+        }
+
         IEnumerator CatchHandoffs(long heavy)
         {
             Phase("Remote handoff of captured two-hand and selected pocket catches");
