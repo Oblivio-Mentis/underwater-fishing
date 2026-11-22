@@ -25,6 +25,7 @@ namespace Raid.UI
             public float health,hypoxia,airlockWater,innerDoor,outerDoor;
             public string airlockPhase,reticleControl;
             public GoshaSnapshot gosha;
+            public bool goshaModelVisible;
             public int watchedOwner=-1,depthTier;
             public string request,page,error,cursor,worldMessage,scene;
             public bool connected,pending,inputBlocked,lastSuccess,wave;
@@ -422,6 +423,7 @@ namespace Raid.UI
                     return new DropReadout {instance=item.id.ToString(),kind=item.kind.ToString(),species=item.Fish?.SpeciesId,position=item.position};
                 }).ToArray();
                 snapshot.fishRoute=world.FishRoute;snapshot.gosha=world.Gosha;
+                snapshot.goshaModelVisible=world.QaGoshaVisible;
                 var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
                 if(player!=null)
                 {

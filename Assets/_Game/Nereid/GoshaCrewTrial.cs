@@ -218,7 +218,9 @@ namespace Raid.Nereid
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(10.5f,1,0)));
             yield return WatchFirstMeeting();
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(14.5f,2.1f,-1.5f)));
-            Stage(peer,host.transform.position+new Vector3(1.15f,.15f,-1.35f));
+            Stage(peer,host.transform.position+host.transform.right*2.3f-host.transform.forward*1.85f+Vector3.up*.25f);
+            yield return Wait("Remote view renders the pet on the other diver's shoulder",
+                ()=>Remote()?.goshaModelVisible==true && Remote()?.gosha.Mode==GoshaMode.Riding);
             yield return PeerShot("gosha-shoulder.png",world.Gosha.Position);
             Stage(peer,NereidVessel.Active.transform.TransformPoint(new Vector3(4,.55f,-14)));
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(7,1,0)));

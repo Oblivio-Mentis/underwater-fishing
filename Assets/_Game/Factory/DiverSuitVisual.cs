@@ -17,6 +17,7 @@ namespace Raid
         DiverMotor diver;
         HarpoonTool tool;
         Transform body,head,gun,fishAnchor;
+        internal Transform GoshaPerch {get;private set;}
         GameObject fishModel;
         string fishSpecies;
         long visibleCatchId;
@@ -36,6 +37,7 @@ namespace Raid
             if(legacyVisor!=null)legacyVisor.enabled=false;if(legacyCapsule!=null)legacyCapsule.enabled=false;
             outfit=new DiveOutfit(source);
             body=DiveOutfit.Pivot(transform,"Expedition suit",Vector3.zero);
+            GoshaPerch=DiveOutfit.Pivot(body,"Gosha perch",RaidWorld.GoshaShoulderOffset);
             outfit.Bind(body);
             outfit.Oval(Rubber,V(0,.18f,-.005f),V(.42f,.62f,.315f));
             outfit.Oval(Fabric,V(0,.252f,.023f),V(.442f,.515f,.345f));

@@ -38,6 +38,7 @@ namespace Raid
         public GoshaSnapshot Gosha=>gosha.Value;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public uint QaMouthReturns {get;private set;}
+        internal bool QaGoshaVisible=>goshaView!=null && goshaView.PetVisible;
         public bool QaBallRelocated=>relocatedThrow;
         // Reproduce the reported resting places without depending on an exact bounce.
         internal void QaStageLooseThrow(DiverMotor thrower,Vector3 origin,Vector3 velocity)
@@ -97,7 +98,8 @@ namespace Raid
         }
         static bool Alive(DiverMotor d)=>d!=null && !d.IsDead && !d.IsHelpless;
         bool OnDeck(DiverMotor d)=>Alive(d)&&d.IsInside&&!d.IsTrapped&&deck.Interior(d.transform.position);
-        internal static Vector3 Shoulder(DiverMotor d)=>d.transform.TransformPoint(new Vector3(.26f,.42f,-.48f));
+        internal static readonly Vector3 GoshaShoulderOffset=new(.35f,.57f,-.40f);
+        internal static Vector3 Shoulder(DiverMotor d)=>d.transform.TransformPoint(GoshaShoulderOffset);
         static Vector3 Hand(DiverMotor d)=>d.transform.position+Vector3.up*.35f+d.transform.right*.23f+d.transform.forward*.42f;
         void SetMode(GoshaMode mode,float duration=0)
         {pet.Mode=mode;moodTime=duration;blockedTime=0;pathClock=0;}

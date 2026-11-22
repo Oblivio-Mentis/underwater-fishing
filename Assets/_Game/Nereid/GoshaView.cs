@@ -15,7 +15,7 @@ namespace Raid.Nereid
         Material shell;
         bool presented;
         GoshaMode previousMode;
-        float bank;
+        float bank,perchBlend;
         internal bool PetVisible => creature.gameObject.activeSelf;
         internal Vector3 PetCenter => creature.position;
         Vector3 lastBall,lastPet;
@@ -104,8 +104,23 @@ namespace Raid.Nereid
             Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;var visualUp=Vector3.up;
             var ui=UI.UiRoot.Instance;
             if(s.Mode==GoshaMode.Riding && ui!=null)
-                foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)
-                    {at=RaidWorld.Shoulder(d);dir=d.transform.forward;break;}
+            {
+                perchBlend=presented?Mathf.MoveTowards(perchBlend,1,dt*4.5f):1;
+                foreach(var diver in ui.Context.Players)
+                {
+                    if(diver==null || diver.OwnerId!=s.Rider)continue;
+                    at=RaidWorld.Shoulder(diver);
+                    dir=diver.transform.forward;
+                    if(diver.TryGetComponent<DiverSuitVisual>(out var suit) && suit.GoshaPerch!=null)
+                    {
+                        at=Vector3.Lerp(at,suit.GoshaPerch.position,perchBlend);
+                        dir=Vector3.Slerp(dir,suit.GoshaPerch.forward,perchBlend);
+                        visualUp=Vector3.Slerp(Vector3.up,suit.GoshaPerch.up,perchBlend);
+                    }
+                    break;
+                }
+            }
+            else perchBlend=0;
             if(s.Mode==GoshaMode.Cradled && ui!=null)
                 foreach(var keeper in ui.Context.Players)if(keeper!=null && keeper.OwnerId==s.Rider)
                 {
