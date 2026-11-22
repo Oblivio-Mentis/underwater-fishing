@@ -31,7 +31,7 @@ namespace Raid
         private readonly SyncVar<DiverState> _state = new();
         private CharacterController _controller;
         private InputActionMap _actions;
-        private InputAction _move, _rise, _sink, _sprint, _look, _release, _capture;
+        private InputAction _move, _rise, _sink, _sprint, _look, _release, _capture, _hydro, _scan;
         private Camera _camera;
         private Renderer[] _body;
         private Vector3 _serverInput;
@@ -68,6 +68,7 @@ namespace Raid
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
+            skillEquipment=GetComponent<HarpoonTool>();
             _controller.enabled = false;
             _body = GetComponentsInChildren<Renderer>();
             if (tuning == null)
@@ -82,6 +83,8 @@ namespace Raid
         {
             ServerDivers.Add(this);
             departureAir = default;
+            usedReserve=false;reserveSeconds=dashUntil=dashReadyAt=dryDuration=0;
+            rearmedAtDeck=false;swimVelocity=Vector3.zero;
             _controller.enabled = true;
             _previousPosition = transform.position;
             _serverYaw = transform.eulerAngles.y;
@@ -164,6 +167,8 @@ namespace Raid
             _sprint = _actions.AddAction("Sprint", InputActionType.Button, "<Keyboard>/leftShift");
             _look = _actions.AddAction("Look", InputActionType.Value, "<Mouse>/delta");
             _release = _actions.AddAction("ReleaseCursor", InputActionType.Button, "<Keyboard>/escape");
+            _scan=_actions.AddAction("ScanWater",InputActionType.Button,"<Keyboard>/v");
+            _hydro=_actions.AddAction("HydroDash",InputActionType.Button,RaidWorld.Instance?.progression.hydroBinding ?? "<Keyboard>/b");
             _capture = _actions.AddAction("CaptureCursor", InputActionType.Button, "<Mouse>/rightButton");
             _actions.Enable();
         }
@@ -186,6 +191,8 @@ namespace Raid
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);
                 _pitch = Mathf.Clamp(_pitch - look.y, -85f, 85f);
             }
+            if(controlling && _hydro.WasPressedThisFrame())StartHydroDash();
+            if(controlling && _scan.WasPressedThisFrame())ScanWater();
             bool walking=UsesIndoorWalking(transform.position);
             if(!controlling||!walking)_localJumpQueued=false;
             else if(_rise.WasPressedThisFrame())_localJumpQueued=true;
@@ -233,6 +240,7 @@ namespace Raid
             bool walking=UsesIndoorWalking(transform.position);
             if(walking)
             {
+                swimVelocity=Vector3.zero;
                 var vessel=Nereid.NereidVessel.Active;
                 if(!_wasWalking){_indoorVerticalVelocity=0;_serverJumpQueued=false;_serverJumpHeld=_serverInput.y>.5f;}
                 bool grounded=_controller.isGrounded;
@@ -243,6 +251,7 @@ namespace Raid
                 _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
                 Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
                 float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
+                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Personal(SkillId.C2));
                 if(state.Stress>=tuning.stressDanger)speed*=.5f;
                 var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
                 if((collision&CollisionFlags.Above)!=0&&_indoorVerticalVelocity>0)_indoorVerticalVelocity=0;
@@ -254,11 +263,23 @@ namespace Raid
                 // Previous scenes and open water retain their original pitch-driven swimming.
                 Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
                 direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-                float speed = Mathf.Max(0f, tuning.swimSpeed) * SpeedMultiplier * (_serverSprint ? Mathf.Max(1f, tuning.sprintMultiplier) : 1f);
+                float speed = Mathf.Max(0f,tuning.swimSpeed)*(SpeedMultiplier+Personal(SkillId.F1))*
+                    (_serverSprint?Mathf.Max(1f,tuning.sprintMultiplier):1);
+                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Personal(SkillId.C2)+Personal(SkillId.F3));
+                if(Time.time<dashUntil && Nereid.NereidAirlock.Active?.Contains(transform.position)!=true)
+                    speed*=1+Personal(SkillId.F4);
+                else if(Nereid.NereidAirlock.Active?.Contains(transform.position)==true)dashUntil=0;
                 if(state.Stress>=tuning.stressDanger) speed*=.5f;
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
-                _controller.Move(velocity * Time.fixedDeltaTime);
+                float acceleration=Personal(SkillId.F2);
+                if(acceleration>0)
+                {
+                    float rate=velocity.sqrMagnitude>.002f?22*(1+acceleration):28;
+                    swimVelocity=Vector3.MoveTowards(swimVelocity,velocity,rate*Time.fixedDeltaTime);
+                }
+                else swimVelocity=velocity;
+                _controller.Move(swimVelocity*Time.fixedDeltaTime);
             }
             _wasWalking=walking;
             transform.rotation = Quaternion.Euler(0f, _serverYaw, 0f);
@@ -270,6 +291,7 @@ namespace Raid
             state.Sprinting=_serverSprint && active && axes.sqrMagnitude>.04f && (state.Position-_previousPosition).sqrMagnitude>.000001f;
             state.Inside = IsSealedInterior(state.Position);
             state.Trapped = _trappedTime > 0;
+            TickExpeditionSkills(state.Inside,Time.fixedDeltaTime);
             var lockRoom = Nereid.NereidAirlock.Active;
             var world = RaidWorld.Instance;
             bool wetInLock = !state.Inside && lockRoom != null && world != null && lockRoom.Contains(state.Position);
@@ -287,7 +309,7 @@ namespace Raid
             var vesselHere=Nereid.NereidVessel.Active;
             if(vesselHere!=null)
             {
-                if(state.Oxygen<=0)
+                if(state.Oxygen<=0 && !ReserveBreath(state.Inside,state.Oxygen,Time.fixedDeltaTime))
                 {
                     state.HypoxicSeconds+=Time.fixedDeltaTime;
                     float damage=tuning.suffocationDamagePerSecond*Mathf.Lerp(1,1.55f,Mathf.Clamp01(state.HypoxicSeconds/15));
@@ -332,6 +354,7 @@ namespace Raid
             if (!IsServerInitialized || IsDead) return;
             _controller.enabled=false; transform.position=position; _controller.enabled=true;
             _previousPosition=position;
+            swimVelocity=Vector3.zero;dashUntil=0;
             ResetIndoorMovement();_wasWalking=UsesIndoorWalking(position);
             _serverInput=Vector3.zero;_lastInputTime=float.NegativeInfinity;
             var state=_state.Value; state.Position=position; state.Inside=IsSealedInterior(position); _state.Value=state;
@@ -340,7 +363,7 @@ namespace Raid
         public void DamageOxygen(float amount)
         {
             if (!IsServerInitialized || IsDead) return;
-            var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)); _state.Value=state;
+            var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)*(1-Personal(SkillId.S3))); _state.Value=state;
         }
 
         public void Trap() { if(IsServerInitialized && !IsDead) _trappedTime=tuning.trappedDuration; }

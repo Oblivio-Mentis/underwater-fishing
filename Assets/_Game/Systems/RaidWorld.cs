@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Raid
 {
     // Command IDs are used on the wire. Value 2 belonged to a retired navigation command.
-    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding }
+    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding, HoldFish }
 
     public sealed partial class RaidWorld : NetworkBehaviour
     {
@@ -51,6 +51,8 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            crewProfiles.Clear();
+            catchOwners.Clear();
             ResetFishRoute();
             ResetAirlock();
             message.Value="Depth 1: catch fish and deliver cargo";
@@ -63,7 +65,7 @@ namespace Raid
             string[] args=Environment.GetCommandLineArgs();
             int saveArg=Array.IndexOf(args,"-raid-save");
             if(saveArg>=0 && saveArg+1<args.Length) savePath=args[saveArg+1];
-            try { team=File.Exists(savePath)?TeamSave.Load(savePath):new TeamProgress(progression); }
+            try { team=File.Exists(savePath)?TeamSave.Load(savePath,progression):new TeamProgress(progression); }
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="SAVE ERROR: original preserved; progress is temporary"; Debug.LogError("[RAID Save] "+e.Message); }
             StartGosha();
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
@@ -83,7 +85,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; }
+        public override void OnStopClient() { StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -94,14 +96,17 @@ namespace Raid
         {
             if(localDiver==null || view==null) return;
             localDiver.SpeedMultiplier=1+view.finsLevel*progression.finsSpeedPerLevel;
-            localDiver.OxygenMultiplier=1+view.tankLevel*progression.oxygenPerTankLevel;
+            localDiver.OxygenMultiplier=1+Mathf.Min(1.2f,view.tankLevel*progression.oxygenPerTankLevel)+(LocalProgress?.skills.Contains(SkillId.S1)==true?progression.Skill(SkillId.S1).Magnitude*.01f:0);
             localDiver.DepthOffset=depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
         }
         private void Update()
         {
             if(!IsClientInitialized) return;
             if(localDiver==null && ClientManager.Connection.FirstObject!=null)
+            {
                 localDiver=ClientManager.Connection.FirstObject.GetComponent<DiverMotor>();
+                if(localDiver!=null)ConnectProfile();
+            }
             ApplyLocalTuning();
             if(!UI.UiInputGate.Active && localDiver!=null && interact!=null && interact.WasPressedThisFrame())
             {
@@ -125,7 +130,7 @@ namespace Raid
             if((threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
             {
                 var report=team.EvaluateHunger(progression);
-                message.Value="Feeding: "+report.outcome+" ("+report.paid+"/"+report.required+")";
+                message.Value="Feeding: "+report.outcome+" ("+TeamProgress.FoodText(report.paid)+"/"+TeamProgress.FoodText(report.required)+")";
                 if(report.Attack && threats!=null)
                 {
                     waveLossBudget=Mathf.Min(progression.maximumStockLossCount,Mathf.FloorToInt(team.tank.Count*progression.maximumStockLossFraction));
@@ -141,12 +146,12 @@ namespace Raid
             travelDisplay.Value=Mathf.Max(0,transitionRemaining);
             foreach(var diver in DiverMotor.ServerDivers)
             {
-                diver.SpeedMultiplier=1+team.finsLevel*progression.finsSpeedPerLevel;
-                diver.OxygenMultiplier=1+team.tankLevel*progression.oxygenPerTankLevel;
-                diver.SafeDepthBonus=team.hullLevel*tuning.deepDepth;
+                diver.SpeedMultiplier=1+Mathf.Min(.6f,team.finsLevel*progression.finsSpeedPerLevel);
+                diver.OxygenMultiplier=1+Mathf.Min(1.2f,team.tankLevel*progression.oxygenPerTankLevel)+SkillFactor(diver,SkillId.S1);
+                diver.SafeDepthBonus=team.hullLevel*tuning.deepDepth+SkillValue(diver,SkillId.S2);
                 diver.DepthOffset=depth.Value==2?tuning.deepDepth:tuning.shallowDepth;
                 var tool=diver.GetComponent<HarpoonTool>();
-                if(tool!=null) { tool.ReelMultiplier=1+team.reelLevel*progression.reelPowerPerLevel; if(diver.IsHelpless) tool.DropCargo(); }
+                if(tool!=null) { tool.ReelMultiplier=1+Mathf.Min(.9f,team.reelLevel*progression.reelPowerPerLevel)+SkillFactor(diver,SkillId.H1); tool.SetPocketCapacity(3+SkillValue(diver,SkillId.C1)+SkillValue(diver,SkillId.C4)); if(diver.IsHelpless) tool.DropCargo(); }
             }
             if(Time.unscaledTime>=nextSnapshot) { nextSnapshot=Time.unscaledTime+tuning.snapshotInterval; Publish(); }
             if(Time.unscaledTime>=nextSave) { nextSave=Time.unscaledTime+tuning.autoSaveInterval; Save(); }
@@ -182,9 +187,19 @@ namespace Raid
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.StopProcessing || action==WorldAction.StopFeeding) && ShipConsole.Stations.Count==0)
             {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
+            bool factory=Nereid.NereidVessel.Active!=null;
+            bool qaLegacy=false;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var args=Environment.GetCommandLineArgs();
+            qaLegacy=Array.IndexOf(args,"-raid-legacy-fixture")>=0;
+#endif
+            if(factory && !qaLegacy && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
+            {Respond(sender,requestId,false,"unavailable");return;}
+            if(factory && action==WorldAction.Hoist && !qaLegacy && !CargoDispatch.CanUse(diver))
+            {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
-            if(stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange) { Respond(sender,requestId,false,"range"); return; }
+            if(!(factory && action==WorldAction.Hoist && !qaLegacy) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
             if(stationCommand && (action==WorldAction.Process || action==WorldAction.Feed) && team.tank.Exists(x=>x.id==id&&x.offering>0))
             {Respond(sender,requestId,false,"use_route");return;}
             if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
@@ -200,8 +215,9 @@ namespace Raid
                     int chosen=action==WorldAction.DiveOne?1:2;
                     if(chosen==CurrentDepth || !team.CanVisitDepth(chosen) || !AllInside() || team.hoistPhase!=HoistPhase.Loading || team.cargo.Count>0) break;
                     pendingDepth=chosen; transitionRemaining=tuning.transitionSeconds; message.Value="Changing depth…"; success=true; break;
-                case WorldAction.Process: success=team.Process(id); break;
-                case WorldAction.Feed: success=team.Feed(id); break;
+                case WorldAction.Process: success=factory?ChooseFishRoute(id,CatchDestination.Process):ProcessDeliveredFish(id); break;
+                case WorldAction.Feed: success=factory?ChooseFishRoute(id,CatchDestination.Feed):team.Feed(id,progression); break;
+                case WorldAction.HoldFish: success=ChooseFishRoute(id,CatchDestination.Hold);break;
                 case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
                 case WorldAction.FeedAll: success=BeginFishRoute(true); break;
                 case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;
@@ -228,6 +244,27 @@ namespace Raid
             Respond(sender,requestId,success,success?"ok":"unavailable");
         }
         [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
+        internal bool LoadSelectedCargo(HarpoonTool tool,DroppedKind kind,long id)
+        {
+            if(!IsServerInitialized || transitionRemaining>0 || team.hoistPhase!=HoistPhase.Loading)return false;
+            if(kind==DroppedKind.Catch)
+            {
+                if(!tool.PlaceSelectedCatch(team,progression,id))return false;
+                catchOwners.Remove(id);
+            }
+            else
+            {
+                var loot=LootActor.HeldBy(tool.Motor);
+                if(loot==null || !loot.IsCarriedBy(tool.Motor))return false;
+                var item=new CatchItem(loot.itemId,0,0,0,1,loot.tier,loot.scrap,loot.electronics);
+                if(loot.Collector!=null)item.caughtBy=new[]{loot.Collector};
+                if(!team.LoadCargo(item,progression))return false;
+                loot.Consume();
+            }
+            Publish();
+            Save();
+            return true;
+        }
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
@@ -253,7 +290,7 @@ namespace Raid
                 waveLossBudget-=count;stockLossDisplay.Value+=count;Publish();Save();
             }
         }
-        private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team); }
+        private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team.PublicView()); }
         private void Save()
         {
             if(saveFailed || team==null || string.IsNullOrEmpty(savePath)) return;

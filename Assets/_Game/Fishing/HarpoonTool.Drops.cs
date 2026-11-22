@@ -61,6 +61,12 @@ namespace Raid
         {
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
+            if(Nereid.NereidVessel.Active!=null && (expectedKind==DroppedKind.Catch || expectedKind==DroppedKind.Salvage) &&
+                CargoDispatch.CanLoad(world,Motor))
+            {
+                if(world.LoadSelectedCargo(this,expectedKind,id))Motor.ConfirmInteraction();
+                return;
+            }
             var at = world.PlaceItem(Motor);
             bool placed = false;
             switch (expectedKind)
@@ -137,11 +143,12 @@ namespace Raid
             {
                 var fish = item.Fish;
                 if (fish == null) return;
-                var pocket = fish.RequiresPartner ? _liftedHeavy : Pocket(FreePocket());
-                if (pocket == null || pocket.Value.id != 0) return;
-                int slot = fish.RequiresPartner ? 1 : FreePocket();
+                int slot=fish.RequiresPartner?1:FreePocket();
+                if(slot<0 || fish.RequiresPartner && HandsFull)return;
                 world.RemoveDrop(id);
-                pocket.Value = new PocketCatch { species = item.species, id = id };
+                var carried=new PocketCatch {species=item.species,id=id};
+                if(fish.RequiresPartner)_liftedHeavy.Value=carried;
+                else SetPocket(slot,carried);
                 _slot.Value = slot;
             }
             Motor.ConfirmInteraction();
@@ -154,9 +161,40 @@ namespace Raid
             return item.kind == DroppedKind.Harpoon || item.Fish != null && (item.Fish.RequiresPartner || FreePocket() >= 0);
         }
 
+        internal bool PlaceSelectedCatch(TeamProgress team,ProgressionTuning tuning,long id)
+        {
+            bool heavy=HandsFull;
+            var fish=heavy?HeavySpecies:FishInSlot(ActiveSlot);
+            if(fish==null || !team.LoadCargo(RaidWorld.Instance.AttributeCatch(fish.ToCargo(id)),tuning))return false;
+            if(heavy?RemoveHeavy():EmptyPocket(ActiveSlot,false))return true;
+            team.cargo.RemoveAll(item=>item.id==id);
+            return false;
+        }
+
+        internal bool AcceptGoshaCatch(FishActor fish)
+        {
+            int slot=FreePocket();
+            if(!IsServerInitialized || slot<0 || Motor.IsHelpless || Motor.IsTrapped)return false;
+            SetPocket(slot,new PocketCatch { species=fish.NetworkObject,id=fish.CargoId });
+            return true;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void StagePocketForTrial(FishActor fish,long id) => SetPocket(2,new PocketCatch {species=fish.NetworkObject,id=id});
+#endif
+        bool pocketTheftShieldUsed;
+        internal void RearmPocketShield() => pocketTheftShieldUsed=false;
+        public bool ResistPocketTheft()
+        {
+            if(pocketTheftShieldUsed || PocketCount==0 ||
+               RaidWorld.Instance?.HasSkill(Motor,SkillId.C3)!=true)return false;
+            pocketTheftShieldUsed=true;
+            return true;
+        }
+
         int FreePocket()
         {
-            for (int slot = 2; slot < 5; slot++) if (CatchIdInSlot(slot) == 0) return slot;
+            for (int slot = 2; slot < SlotCount; slot++) if (CatchIdInSlot(slot) == 0) return slot;
             return -1;
         }
     }

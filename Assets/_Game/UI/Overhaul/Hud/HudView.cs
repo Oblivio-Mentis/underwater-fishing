@@ -64,7 +64,8 @@ namespace Raid.UI
             var context=app.Context;
             if(context==null || !context.Connected || context.Player.tuning==null)
             {observedPlayer=null;observedWorld=null;return;}
-            var player=context.Player;var view=context.View;var tuning=context.Tuning;
+            var player=context.Player;var view=context.View;
+            if(player.MarkerActive)detail=player.ScanLabel;var tuning=context.Tuning;
             float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*player.OxygenMultiplier);
             float oxygenFraction=Mathf.Clamp01(player.Oxygen/capacity);
             reel.Refresh(context);

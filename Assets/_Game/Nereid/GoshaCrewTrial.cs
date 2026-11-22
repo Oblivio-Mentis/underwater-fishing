@@ -111,12 +111,9 @@ namespace Raid.Nereid
             // The fishing acceptance run verifies obtaining this cargo. Here the fixture
             // starts the tackle with an occupied pocket so losing a real ID is observable.
             var fish=FindObjectsByType<FishActor>().First(f=>f.IsServerInitialized && !f.RequiresPartner);
-            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
-            var field=typeof(HarpoonTool).GetField("_pocketA",flags);
-            var pocket=(FishNet.Object.Synchronizing.SyncVar<HarpoonTool.PocketCatch>)field.GetValue(inventory);
-            if(pocket.Value.id!=0)return pocket.Value.id;
+            if(inventory.CatchIdInSlot(2)>0)return inventory.CatchIdInSlot(2);
             long id=DateTime.UtcNow.Ticks;
-            pocket.Value=new HarpoonTool.PocketCatch {species=fish.NetworkObject,id=id};
+            inventory.StagePocketForTrial(fish,id);
             return id;
         }
         void HostShot(string leaf)=>UiQaProbe.CapturePeerCamera(Path.Combine(folder,leaf));

@@ -3,16 +3,27 @@ using System.Collections.Generic;
 
 namespace Raid
 {
+    public enum CatchDestination : byte { Hold, Process, Feed }
+
     [Serializable]
     public sealed class CatchItem
     {
         public long id;
         public string species;
+        public string[] caughtBy;
+        public CatchDestination destination;
         public int biomass, chitin, offering, cargoSize, depthTier, scrap, electronics;
         public CatchItem(long id, int biomass, int chitin, int offering, int cargoSize, int depthTier, int scrap=0, int electronics=0, string species=null)
         { this.id = id; this.biomass = biomass; this.chitin = chitin; this.offering = offering; this.cargoSize = cargoSize; this.depthTier = depthTier; this.scrap=scrap; this.electronics=electronics; this.species=species; }
         public bool IsValid => id > 0 && biomass >= 0 && chitin >= 0 && scrap>=0 && electronics>=0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
-        public CatchItem Copy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier,scrap,electronics,species);
+        public CatchItem Copy()
+        {
+            var copy=PublicCopy();
+            copy.caughtBy=caughtBy==null?null:(string[])caughtBy.Clone();
+            return copy;
+        }
+        public CatchItem PublicCopy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier,scrap,electronics,species)
+            {destination=destination};
     }
 
     [Serializable]
@@ -26,16 +37,15 @@ namespace Raid
 
     /// <summary>Host-owned rules. Call from the server thread; serialized fields are save/snapshot data.</summary>
     [Serializable]
-    public sealed class TeamProgress
+    public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 1;
+        public const int CurrentSchema = 2;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
         public int reelLevel, finsLevel, tankLevel, hullLevel, winchLevel;
         public bool goshaMet,goshaTamed;
         public int highestDepth = 1;
-        public int offering;
         public float hungerRemaining = 180f;
         public List<CatchItem> tank = new List<CatchItem>();
         public List<CatchItem> cargo = new List<CatchItem>();
@@ -73,13 +83,13 @@ namespace Raid
         }
 
         private static int Price(int value, double scale) => checked((int)Math.Ceiling(Math.Round(value * scale, 6)));
-        public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + winchLevel * tuning.cargoCapacityPerWinch);
+        public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + legacyCargoCapacityBonus + Bonus(SkillId.K1,tuning) + Bonus(SkillId.K2,tuning) + Bonus(SkillId.K3,tuning) + Bonus(SkillId.K4,tuning));
         public bool CanVisitDepth(int depth) => depth >= 1 && depth <= highestDepth;
 
         public bool Buy(Upgrade upgrade, bool onBoard, ProgressionTuning tuning)
         {
             UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (!onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
+            if (upgrade<Upgrade.Hull || !onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
             if (upgrade == Upgrade.Hull && lifetimeCatch < tuning.depthTwoLifetimeCatch) return false;
             MaterialCost cost = Cost(upgrade, tuning);
             if (biomass < cost.biomass || chitin < cost.chitin || scrap < cost.scrap || electronics < cost.electronics) return false;
@@ -153,26 +163,15 @@ namespace Raid
             lifetimeCatch = total;
         }
 
-        public bool Process(long id)
-        {
-            int index = tank.FindIndex(item => item.id == id);
-            if (index < 0) return false;
-            CatchItem fish = tank[index];
-            int nextBiomass = checked(biomass + fish.biomass), nextChitin = checked(chitin + fish.chitin);
-            int nextScrap=checked(scrap+fish.scrap), nextElectronics=checked(electronics+fish.electronics);
-            tank.RemoveAt(index);
-            biomass = nextBiomass; chitin = nextChitin;
-            scrap=nextScrap; electronics=nextElectronics;
-            return true;
-        }
+        public bool Process(long id) => Distribute(id,null,out _);
 
-        public bool Feed(long id)
+        public bool Feed(long id, ProgressionTuning tuning=null)
         {
             int index = tank.FindIndex(item => item.id == id);
             if (index < 0 || tank[index].offering<=0) return false;
-            int next = checked(offering + tank[index].offering);
+            int next = checked(offeringPoints + FoodValue(tank[index],tuning));
             tank.RemoveAt(index);
-            offering = next;
+            offeringPoints = next;
             return true;
         }
 
@@ -185,12 +184,12 @@ namespace Raid
 
         public HungerReport EvaluateHunger(ProgressionTuning tuning)
         {
-            int required = Math.Max(1, checked(tuning.foodRequired + (highestDepth - 1) * tuning.foodPerDepth));
-            HungerReport report = new HungerReport { required = required, paid = offering,
-                deficit = Math.Max(0f, 1f - (float)offering / required),
-                outcome = offering == 0 ? FeedingOutcome.None : offering < required ? FeedingOutcome.Underfed :
-                    offering == required ? FeedingOutcome.Enough : FeedingOutcome.Overfed };
-            offering = Math.Min(Math.Max(0, tuning.maximumFoodCarry), Math.Max(0, offering - required));
+            int required=RequiredFood(tuning);
+            HungerReport report = new HungerReport { required = required, paid = offeringPoints,
+                deficit = Math.Max(0f, 1f - (float)offeringPoints / required),
+                outcome = offeringPoints == 0 ? FeedingOutcome.None : offeringPoints < required ? FeedingOutcome.Underfed :
+                    offeringPoints == required ? FeedingOutcome.Enough : FeedingOutcome.Overfed };
+            offeringPoints = Math.Min(checked(Math.Max(0,tuning.maximumFoodCarry)*FoodScale), Math.Max(0,offeringPoints-required));
             hungerRemaining = Math.Max(1f, tuning.hungerInterval);
             return report;
         }
@@ -207,13 +206,14 @@ namespace Raid
         public void Validate()
         {
             if (schemaVersion != CurrentSchema) throw new InvalidOperationException("Unsupported team save schema: " + schemaVersion);
-            if (biomass < 0 || chitin < 0 || scrap < 0 || electronics < 0 || lifetimeCatch < 0 || offering < 0 ||
+            if (biomass < 0 || chitin < 0 || scrap < 0 || electronics < 0 || lifetimeCatch < 0 || offeringPoints < 0 ||
                 reelLevel < 0 || finsLevel < 0 || tankLevel < 0 || hullLevel < 0 || winchLevel < 0 || highestDepth < 1 ||
                 (highestDepth >= 2 && hullLevel < 1) || !Enum.IsDefined(typeof(HoistPhase), hoistPhase) ||
                 float.IsNaN(hoistRemaining) || float.IsInfinity(hoistRemaining) || hoistRemaining < 0 ||
                 float.IsNaN(hungerRemaining) || float.IsInfinity(hungerRemaining) || hungerRemaining < 0 ||
                 tank == null || cargo == null || deliveredIds == null)
                 throw new InvalidOperationException("Invalid team progress data.");
+            ValidateSkills();
             HashSet<long> delivered = new HashSet<long>();
             foreach (long id in deliveredIds) if (id <= 0 || !delivered.Add(id)) throw new InvalidOperationException("Invalid delivery ledger.");
             HashSet<long> stock = new HashSet<long>();

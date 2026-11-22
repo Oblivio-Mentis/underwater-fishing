@@ -113,7 +113,8 @@ namespace Raid
             main.PredatorPosition=Swim(main.PredatorPosition,anglerTarget.transform.position,5.9f*dt,anglerTarget);
             if(Vector3.Distance(main.PredatorPosition,anglerTarget.transform.position)>1.35f)return;
             anglerTarget.DamageOxygen(tuning.attackDamage*Strength);
-            anglerTarget.GetComponent<HarpoonTool>()?.DropOneCatch();
+            var anglerInventory=anglerTarget.GetComponent<HarpoonTool>();
+            if(anglerInventory!=null && !anglerInventory.ResistPocketTheft())anglerInventory.DropOneCatch();
             predatorCooldown=Mathf.Max(3,tuning.attackInterval);anglerTarget=null;
             main.AnglerStage=HuntStage.Recovery;main.Message="Фонарник атаковал из засады.";
         }
@@ -167,7 +168,9 @@ namespace Raid
             reef.Eel=step;
             if(eelTarget!=null && reef.EelPhase==2 && Vector3.Distance(step,goal)<1.5f && ClearTo(step,eelTarget))
             {
-                eelTarget.GetComponent<HarpoonTool>().DropOneCatch();eelTarget.DamageOxygen(7);
+                var eelInventory=eelTarget.GetComponent<HarpoonTool>();
+                if(eelInventory!=null && !eelInventory.ResistPocketTheft())eelInventory.DropOneCatch();
+                eelTarget.DamageOxygen(7);
                 eelTarget=null;eelDecoy=goal;eelCooldown=7;reef.EelPhase=3;
                 main.Message="Сетевик сорвал рыбу и отвлёкся на добычу.";
             }

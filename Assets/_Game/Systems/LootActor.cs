@@ -7,7 +7,9 @@ namespace Raid
     {
         public int tier=1,scrap=2,electronics;
         public long itemId;
+        public string Collector { get; private set; }
         private static readonly System.Collections.Generic.List<LootActor> spawned = new();
+        internal static System.Collections.Generic.IReadOnlyList<LootActor> VisibleStock => spawned;
         private void OnEnable() => spawned.Add(this);
         private void OnDisable() => spawned.Remove(this);
         internal static LootActor HeldBy(DiverMotor diver)
@@ -41,13 +43,14 @@ namespace Raid
         {
             if(!IsServerInitialized) return;
             enabledAtDepth=depth==tier; carrier=null; carrierOwner.Value=-1; transform.position=spawn; position.Value=spawn; visible.Value=enabledAtDepth;
-            itemId=NewId();
+            itemId=NewId();Collector=null;
         }
         public bool Pickup(DiverMotor diver)
         {
             if(!IsServerInitialized || !enabledAtDepth || !visible.Value || carrier!=null || diver.IsHelpless || Vector3.Distance(diver.transform.position,transform.position)>3f) return false;
             var tool = diver.GetComponent<HarpoonTool>();
             if (HeldBy(diver) != null || tool == null || !tool.EquipSalvageHands()) return false;
+            if(Collector==null)Collector=RaidWorld.Instance?.ProgressKey(diver);
             carrier=diver; carrierOwner.Value=diver.OwnerId; return true;
         }
         internal bool PutDown(DiverMotor diver, Vector3 at)

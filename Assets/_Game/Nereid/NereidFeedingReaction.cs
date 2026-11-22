@@ -151,9 +151,9 @@ namespace Raid.Nereid
         void ObserveFood(RaidWorld world)
         {
             if(world==null||world.View==null||world.progression==null)return;
-            foodPeak=Mathf.Max(foodPeak,world.View.offering);
+            foodPeak=Mathf.Max(foodPeak,world.View.offeringPoints);
             long required=(long)world.progression.foodRequired+((long)world.View.highestDepth-1)*world.progression.foodPerDepth;
-            foodRequired=(int)System.Math.Max(1,System.Math.Min(int.MaxValue,required));
+            foodRequired=(int)System.Math.Max(1,System.Math.Min(int.MaxValue,required*TeamProgress.FoodScale));
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public void BeginBackgroundCameraQa(float seconds){if(cameraImpulse!=null)cameraImpulse.BeginBackgroundQa(seconds);}

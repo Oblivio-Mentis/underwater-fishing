@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace Raid
 {
@@ -27,7 +28,7 @@ namespace Raid
         internal bool TryHook(HarpoonTool tool, HarpoonContact contact)
         {
             if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || tool.Motor.IsHelpless
-                || tool.Owner == null || !tool.Owner.IsActive || tool.HookedFish != null || _carrier != null
+                || goshaReserved || tool.Owner == null || !tool.Owner.IsActive || tool.HookedFish != null || _carrier != null
                 || contact.target != NetworkObject || !contact.Resolve(out _, out var point, out _, out _)) return false;
             bool first = lines.Count == 0;
             if (first && (Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt)) return false;
@@ -47,6 +48,20 @@ namespace Raid
             state.HookCount = lines.Count;
             _snapshot.Value = state;
             return true;
+        }
+
+        IEnumerable<string> LandingOwners(HarpoonTool winner)
+        {
+            var world=RaidWorld.Instance;
+            yield return world.ProgressKey(winner.Motor);
+            if(!RequiresPartner)return;
+            HookLine primary=null;
+            foreach(var line in lines)if(line.Tool==winner){primary=line;break;}
+            if(primary==null)yield break;
+            foreach(var line in lines)
+                if(line!=primary && line.Working && line.Tension<1 && line.Spool.WindingTime>=tuning.minimumWindingSeconds &&
+                    Vector3.Dot(line.PullDirection,primary.PullDirection)>=tuning.pullDirectionDot)
+                    yield return world.ProgressKey(line.Tool.Motor);
         }
 
         void ClearFishing()
@@ -141,7 +156,10 @@ namespace Raid
             foreach (var line in lines)
             {
                 bool working = line.Working && (!RequiresPartner || line.Paired);
-                float reel = Mathf.Clamp(line.Tool.ReelMultiplier, .1f, 10);
+                var world=RaidWorld.Instance;
+                float teamTiming=line.Paired?(world?.SkillFactor(line.Tool.Motor,SkillId.H4)??0):0;
+                float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,10);
+                float lineStrength=1+(world?.SkillFactor(line.Tool.Motor,SkillId.H2)??0);
                 float resistance = state.Surging ? tuning.burstTensionMultiplier : 1;
                 if (working)
                 {
@@ -152,7 +170,7 @@ namespace Raid
                 else if (!line.Working || !line.Tool.Reeling) line.Spool.Slip(line.Distance);
                 bool strained = line.Working || (state.SurgeWarning && line.Spool.Loaded(line.Distance, tuning.slackAllowance));
                 if (strained)
-                    line.Tension += tuning.tensionRise * resistance * power * dt / (line.Paired ? 1 + tuning.assistBonus : 1);
+                    line.Tension += tuning.tensionRise * resistance * power * dt / (lineStrength*(line.Paired ? 1 + tuning.assistBonus : 1));
                 else line.Tension -= tuning.tensionRelease * dt;
                 line.Tension = Mathf.Clamp01(line.Tension);
                 state.Tension = Mathf.Max(state.Tension, line.Tension);
@@ -162,7 +180,7 @@ namespace Raid
                 line.TugSpeed = Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt);
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
                 {
-                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt;
+                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt * (1-(world?.SkillFactor(line.Tool.Motor,SkillId.H3)??0));
                     float verticalLimit = Mathf.Max(0, line.Tool.Motor.tuning.verticalSpeed) * dt;
                     tugMotion.y = Mathf.Clamp(tugMotion.y, -verticalLimit, verticalLimit);
                     // Sweep the controller while exempting forced ascent from the swimmer's own ascent penalty.
@@ -173,7 +191,7 @@ namespace Raid
             if (leader != null)
             {
                 float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier, .1f, 10)
-                    * (state.Surging ? .25f : 1) * (leader.Paired ? 1 + tuning.assistBonus : 1);
+                    * (state.Surging ? .25f : 1) * (leader.Paired ? 1 + tuning.assistBonus + (RaidWorld.Instance?.SkillFactor(leader.Tool.Motor,SkillId.H4)??0) : 1);
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
                 Vector3 motion = leader.TowardHand.normalized * Mathf.Min(excess, speed * dt);

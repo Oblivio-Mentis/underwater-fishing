@@ -16,8 +16,8 @@ namespace Raid.UI
         static readonly Color Gold=new Color(1f,.76f,.32f);
         static readonly Vector2 Center=new Vector2(.5f,.5f);
         static Sprite[] art;
-        readonly Image[] slotRim=new Image[5], slotArt=new Image[5], crewGauge=new Image[5], contacts=new Image[5];
-        readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[5];
+        readonly Image[] slotRim=new Image[7], slotArt=new Image[7], crewGauge=new Image[5], contacts=new Image[5];
+        readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[7];
         readonly RectTransform ballSlot;
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
@@ -73,7 +73,7 @@ namespace Raid.UI
             healthText=Caption(vitals,"Health",194,-73,74,40,17,TextAlignmentOptions.Left);
 
             hotbar=At(root,"HUD Equipment",new Vector2(.5f,0),new Vector2(.5f,0),0,15,362,104);
-            for(int i=0;i<5;i++)
+            for(int i=0;i<slotRim.Length;i++)
             {
                 float x=i*74;
                 slotRim[i]=Icon(hotbar,"Slot "+(i+1),Mark.SlotOutline,x,0,66,66,Rim);
@@ -137,7 +137,7 @@ namespace Raid.UI
             {
                 int n=0;foreach(var item in v.tank)if(item!=null&&(item.offering>0||item.biomass>0||item.chitin>0))n++;
                 UiKit.Set(stock,n.ToString());
-                UiKit.Set(food,v.offering+" / "+c.FoodRequired);
+                UiKit.Set(food,TeamProgress.FoodText(v.offeringPoints)+" / "+c.FoodRequired);
                 UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
                 timer.color=c.DefendingReservoir?UiTheme.Red:v.offering==0&&v.hungerRemaining<=30?Gold:Ivory;
                 food.color=v.offering>0?Green:Ivory;
@@ -159,9 +159,16 @@ namespace Raid.UI
             {
                 bool ball=c.World.HasGoshaBall(diver);
                 ballSlot.gameObject.SetActive(ball);
-                hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,ball?436:362);
-                for(int i=0;i<5;i++)
+                int slots=tool.SlotCount;
+                float width=slots*74;
+                ballSlot.anchoredPosition=new Vector2(width,ballSlot.anchoredPosition.y);
+                hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,width-8+(ball?74:0));
+                for(int i=0;i<slotRim.Length;i++)
                 {
+                    bool available=i<slots;
+                    slotRim[i].gameObject.SetActive(available);
+                    keys[i].gameObject.SetActive(available);
+                    if(!available)continue;
                     var fish=i>=2?tool.FishInSlot(i):null;
                     bool selected=!ball && i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;

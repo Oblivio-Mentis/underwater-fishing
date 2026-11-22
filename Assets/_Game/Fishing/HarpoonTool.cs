@@ -36,7 +36,16 @@ namespace Raid
             public NetworkObject species;
             public long id;
         }
-        private readonly SyncVar<PocketCatch> _pocketA = new(), _pocketB = new(), _pocketC = new();
+        private readonly SyncList<PocketCatch> pockets = new();
+        private readonly SyncVar<int> pocketCapacity = new(3);
+        public int PocketCapacity => pocketCapacity.Value;
+        public int SlotCount => PocketCapacity+2;
+        const int MaximumSlots=7;
+        internal void SetPocketCapacity(int value)
+        {
+            value=Mathf.Clamp(value,3,MaximumSlots-2);
+            if(pocketCapacity.Value!=value)pocketCapacity.Value=value;
+        }
         private readonly SyncVar<int> _slot = new(), _shotSequence = new();
         private InputAction[] _select;
         private InputAction _wheel;
@@ -66,23 +75,25 @@ namespace Raid
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
         public bool HandsFull => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
-        public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value.id > 0 ? 1 : 0)
-            + (_pocketB.Value.id > 0 ? 1 : 0) + (_pocketC.Value.id > 0 ? 1 : 0);
-        public bool HasFullCreel => _pocketA.Value.id > 0 && _pocketB.Value.id > 0 && _pocketC.Value.id > 0;
-        public int SmallestCatchSize => _pocketA.Value.id > 0 || _pocketB.Value.id > 0 || _pocketC.Value.id > 0
-            ? 1 : HandsFull ? HeavySpecies.cargoSize : 0;
-        public FishActor CarriedFish => HandsFull ? HeavySpecies : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
-
-        private SyncVar<PocketCatch> Pocket(int slot) => slot switch { 2 => _pocketA, 3 => _pocketB, 4 => _pocketC, _ => null };
-
-        public FishActor FishInSlot(int slot)
+        public int CatchCount => PocketCount+(HandsFull?1:0);
+        int PocketCount
         {
-            var pocket = Pocket(slot);
-            var species = pocket == null ? null : pocket.Value.species;
-            return species == null ? null : species.GetComponent<FishActor>();
+            get
+            {
+                int count=0;
+                for(int slot=2;slot<MaximumSlots;slot++)if(CatchIdInSlot(slot)>0)count++;
+                return count;
+            }
         }
 
-        public long CatchIdInSlot(int slot) => Pocket(slot)?.Value.id ?? 0;
+        public bool HasFullCreel => FreePocket()<0;
+        public int SmallestCatchSize => PocketCount>0?1:HandsFull?HeavySpecies.cargoSize:0;
+        public FishActor CarriedFish => HandsFull?HeavySpecies:FishInSlot(FirstOccupiedPocket());
+
+        PocketCatch Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
+        void SetPocket(int slot,PocketCatch item) => pockets[slot-2]=item;
+        public FishActor FishInSlot(int slot) => Pocket(slot).species?.GetComponent<FishActor>();
+        public long CatchIdInSlot(int slot) => Pocket(slot).id;
 
         public bool SelectSlot(int slot)
         {
@@ -91,7 +102,7 @@ namespace Raid
             return true;
         }
 
-        private bool CanSelect(int slot) => slot >= 0 && slot < 5 && !Motor.IsHelpless && !HandsFull
+        private bool CanSelect(int slot) => slot >= 0 && slot < SlotCount && !Motor.IsHelpless && !HandsFull
             && !TetherActive && AssistTarget == null;
 
         [ServerRpc(RequireOwnership = true)]
@@ -135,6 +146,10 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            pockets.Clear();
+            for(int slot=2;slot<MaximumSlots;slot++)pockets.Add(default);
+            SetPocketCapacity(3);
+            pocketTheftShieldUsed=false;
             _harpoonId.Value = NewToolId();
             if (!ServerTools.Contains(this)) ServerTools.Add(this);
             _friendTarget.Value = null; _friendSource.Value = null; _optOutRemaining.Value = 0;
@@ -168,7 +183,7 @@ namespace Raid
             _fire = _actions.AddAction("FireAndReel", InputActionType.Button, "<Mouse>/leftButton");
             _release = _actions.AddAction("Release", InputActionType.Button, "<Keyboard>/r");
             _assist = _actions.AddAction("Assist", InputActionType.Button, "<Keyboard>/e");
-            _select = new InputAction[5];
+            _select = new InputAction[MaximumSlots];
             for (int slot = 0; slot < _select.Length; slot++)
                 _select[slot] = _actions.AddAction("Slot" + (slot + 1), InputActionType.Button, "<Keyboard>/" + (slot + 1));
             _wheel = _actions.AddAction("Cycle", InputActionType.Value, "<Mouse>/scroll/y");
@@ -195,7 +210,7 @@ namespace Raid
                 for (int i = 0; i < _select.Length; i++)
                     if (_select[i].WasPressedThisFrame()) SelectSlot(i);
                 float wheel = _wheel.ReadValue<float>();
-                if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? 4 : 1)) % 5);
+                if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? SlotCount-1 : 1)) % SlotCount);
             }
             if (controlling && ActiveSlot == 0 && AssistTarget == null && _fire.WasPressedThisFrame() && _fish == null && !HasBallLine && !TetherActive) FireServer();
             if (Application.isFocused && _release.WasPressedThisFrame() && (controlling || IsPulled)) ReleaseServer();
@@ -342,7 +357,7 @@ namespace Raid
             DetachGrip();
             ToolOf(_assistant.Value)?.DetachGrip();
             if (_fish != null) _fish.ReleaseHook(this);
-            for (int slot = 2; slot < 5; slot++) EmptyPocket(slot, showDrops);
+            for (int slot = 2; slot < SlotCount; slot++) EmptyPocket(slot, showDrops);
         }
 
         public bool DropOneCatch()
@@ -356,17 +371,16 @@ namespace Raid
         private int FirstOccupiedPocket()
         {
             if (CatchIdInSlot(ActiveSlot) > 0) return ActiveSlot;
-            for (int slot = 2; slot < 5; slot++)
+            for (int slot = 2; slot < SlotCount; slot++)
                 if (CatchIdInSlot(slot) > 0) return slot;
             return -1;
         }
 
         private bool EmptyPocket(int slot, bool showEscape)
         {
-            var pocket = Pocket(slot);
-            if (pocket == null || pocket.Value.id == 0) return false;
-            var fish = FishInSlot(slot);
-            pocket.Value = default;
+            if(CatchIdInSlot(slot)==0)return false;
+            var fish=FishInSlot(slot);
+            SetPocket(slot,default);
             if (showEscape && fish != null && !Motor.IsInside)
                 FishReleasedObservers(fish.SpeciesId, transform.position, transform.rotation);
             return true;
@@ -395,7 +409,7 @@ namespace Raid
                     if (!loaded) team.cargo.RemoveAll(entry => entry.id == item.id);
                 }
             }
-            for (int slot = 2; slot < 5; slot++)
+            for (int slot = 2; slot < SlotCount; slot++)
             {
                 var species = FishInSlot(slot);
                 if (species == null || !team.LoadCargo(species.ToCargo(CatchIdInSlot(slot)), progression)) continue;
@@ -408,12 +422,11 @@ namespace Raid
         internal bool StowCapture(FishActor fish)
         {
             if (!IsServerInitialized || _fish != fish || fish.RequiresPartner) return false;
-            for (int slot = 2; slot < 5; slot++)
+            for (int slot = 2; slot < SlotCount; slot++)
             {
-                var pocket = Pocket(slot);
-                if (pocket.Value.id != 0) continue;
+                if (CatchIdInSlot(slot)!=0) continue;
                 // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
-                pocket.Value = new PocketCatch { species = fish.NetworkObject, id = fish.CargoId };
+                SetPocket(slot,new PocketCatch { species = fish.NetworkObject, id = fish.CargoId });
                 _fish = null;
                 _fishObject.Value = null;
                 FinishFishingLine();

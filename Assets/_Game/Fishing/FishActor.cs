@@ -146,6 +146,7 @@ namespace Raid
         public void SetDepthActive(bool active)
         {
             if (!IsServerInitialized) return;
+            goshaReserved=false;goshaRespawn=0;
             ClearFishing();
             arrivalPending=false;
             fleeRemaining=0;
@@ -180,6 +181,8 @@ namespace Raid
             {
                 // The collecting diver is chosen by the server when its own line reaches its hands.
                 _carrier = landingTool;
+                if(_carrier!=null && RaidWorld.Instance!=null)
+                    RaidWorld.Instance.RecordCatch(_cargoId,LandingOwners(_carrier));
                 state.CaptureId = _cargoId;
                 state.Holder = _carrier != null ? _carrier.OwnerId : -1;
                 state.Stowed = _carrier != null && _carrier.StowCapture(this);
@@ -215,6 +218,8 @@ namespace Raid
         private void FixedUpdate()
         {
             if (!IsServerInitialized || _runtime == null) return;
+            if(goshaReserved)return;
+            if(goshaRespawn>0 && Time.time>=goshaRespawn){SetDepthActive(true);return;}
             if(arrivalPending)TryArrive();
             if(!_depthActive)return;
             if(staggered && Mode==FishMode.Transported && _elapsed>=tuning.respawnSeconds)

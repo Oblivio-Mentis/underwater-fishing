@@ -32,7 +32,9 @@ namespace Raid
         }
 
         /// <summary>Missing/corrupt/unsupported saves throw; callers must explicitly choose recovery or a new team.</summary>
-        public static TeamProgress Load(string path)
+        [Serializable] private sealed class LegacyFood { public int offering=0; }
+
+        public static TeamProgress Load(string path, ProgressionTuning tuning=null)
         {
             string document = File.ReadAllText(path, Encoding.UTF8);
             try
@@ -43,6 +45,7 @@ namespace Raid
                     throw new InvalidDataException("Save format or checksum mismatch.");
                 TeamProgress progress = JsonUtility.FromJson<TeamProgress>(envelope.payload);
                 if (progress == null) throw new InvalidDataException("Missing team progress.");
+                progress.MigrateV1(JsonUtility.FromJson<LegacyFood>(envelope.payload).offering,tuning==null?4:tuning.cargoCapacityPerWinch);
                 progress.Validate();
                 return progress;
             }

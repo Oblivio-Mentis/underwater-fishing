@@ -7,15 +7,20 @@ namespace Raid
     public sealed partial class RaidWorld
     {
         readonly SyncVar<FishRouteState> fishRoute=new();
-        readonly List<long> routeIds=new();
+        readonly SyncList<long> routeIds=new();
+        public long ActiveRouteId(int index) => index>=0 && index<routeIds.Count?routeIds[index]:0;
+        public event System.Action<MaterialCost,MaterialCost,MaterialCost> ProcessingFinished;
         float nextRoutePublish;
         public FishRouteState FishRoute => fishRoute.Value;
         bool IsRouting(long id) => fishRoute.Value.active && routeIds.Contains(id);
         void ResetFishRoute() { routeIds.Clear();fishRoute.Value=default;nextRoutePublish=0;routeElapsed=0; }
-        bool BeginFishRoute(bool feeding)
+        bool BeginFishRoute(bool feeding,long selected=0)
         {
             if(fishRoute.Value.active)return false;
-            routeIds.Clear();routeIds.AddRange(team.tank.Where(x=>x.offering>0).Select(x=>x.id));
+            routeIds.Clear();
+            foreach(var item in team.tank)
+                if(selected>0?item.id==selected:feeding?item.offering>0:item.offering>0 || item.biomass+item.chitin+item.scrap+item.electronics>0)
+                    routeIds.Add(item.id);
             if(routeIds.Count==0)return false;
             routeElapsed=0;
             fishRoute.Value=new FishRouteState{sequence=fishRoute.Value.sequence+1,total=routeIds.Count,feeding=feeding,active=true};
@@ -28,7 +33,15 @@ namespace Raid
             if(!state.active||state.stopping||state.feeding!=feeding||state.sequence!=sequence)return false;
             state.elapsed=Mathf.Max(state.elapsed,routeElapsed);
             int entered=Mathf.Max(state.completed,FishFlow.EnteredPipe(state.elapsed,routeIds.Count));
-            if(entered<routeIds.Count)routeIds.RemoveRange(entered,routeIds.Count-entered);
+            for(int i=routeIds.Count-1;i>=entered;i--)
+            {
+                var item=team.tank.Find(fish=>fish.id==routeIds[i]);
+                if(item!=null)item.destination=CatchDestination.Hold;
+                routeIds.RemoveAt(i);
+            }
+            var cancelled=feeding?CatchDestination.Feed:CatchDestination.Process;
+            foreach(var item in team.tank)
+                if(item.destination==cancelled && !routeIds.Contains(item.id))item.destination=CatchDestination.Hold;
             state.total=entered;state.stopping=true;
             if(state.completed>=entered){state.active=false;routeIds.Clear();}
             fishRoute.Value=state;
@@ -39,18 +52,31 @@ namespace Raid
         void TickRouteClock()
         {
             var state=fishRoute.Value;
-            if(!state.active){routeElapsed=0;return;}
+            if(!state.active)
+            {
+                routeElapsed=0;
+                if(transitionRemaining>0)return;
+                var next=team.tank.Find(item=>item.destination!=CatchDestination.Hold);
+                if(next!=null)BeginFishRoute(next.destination==CatchDestination.Feed,next.id);
+                return;
+            }
             if(routeElapsed>state.elapsed)state.elapsed=routeElapsed;
             state.elapsed+=Time.fixedDeltaTime;
             routeElapsed=state.elapsed;
             bool changed=false;
-            while(state.completed<routeIds.Count && state.elapsed>=8f+state.completed*.18f)
+            while(state.completed<routeIds.Count && state.elapsed>=FishFlow.DeliverySeconds+state.completed*FishFlow.Interval)
             {
                 long id=routeIds[state.completed];
-                try {changed|=state.feeding?team.Feed(id):team.Process(id);state.completed++;}
+                try {changed|=state.feeding?team.Feed(id,progression):ProcessDeliveredFish(id);state.completed++;}
                 catch(System.OverflowException)
                 {
-                    state.active=false;state.failed=true;routeIds.Clear();changed=true;
+                    state.active=false;state.failed=true;
+                    foreach(long queued in routeIds)
+                    {
+                        var item=team.tank.Find(fish=>fish.id==queued);
+                        if(item!=null)item.destination=CatchDestination.Hold;
+                    }
+                    routeIds.Clear();changed=true;
                     message.Value="Подача остановлена: достигнут предел ресурса. Оставшаяся рыба сохранена";
                     break;
                 }
@@ -58,6 +84,44 @@ namespace Raid
             if(state.active && state.completed>=routeIds.Count){state.active=false;routeIds.Clear();message.Value=state.feeding?"Корм доставлен чудовищу":"Переработка завершена";changed=true;}
             if(changed){Publish();Save();}
             if(changed || Time.unscaledTime>=nextRoutePublish){nextRoutePublish=Time.unscaledTime+.1f;fishRoute.Value=state;}
+        }
+
+        bool ChooseFishRoute(long id,CatchDestination destination)
+        {
+            var item=team.tank.Find(fish=>fish.id==id);
+            if(item==null || IsRouting(id) || item.destination==destination)return false;
+            if(destination==CatchDestination.Feed && item.offering<=0)return false;
+            if(destination==CatchDestination.Process &&
+                item.biomass==0 && item.chitin==0 && item.scrap==0 && item.electronics==0)return false;
+            item.destination=destination;
+            return true;
+        }
+
+        bool ProcessDeliveredFish(long id)
+        {
+            var treasury=team.Treasury;
+            var before=new Dictionary<string,MaterialCost>();
+            foreach(var profile in team.players)before[profile.key]=profile.wallet;
+            if(!team.Distribute(id,progression,out var total))return false;
+            catchOwners.Remove(id);
+            foreach(var pair in crewProfiles)
+            {
+                if(!pair.Key.IsActive || pair.Key.FirstObject==null)continue;
+                var balance=team.Player(pair.Value).wallet;
+                var previous=before[pair.Value];
+                bool personal=!balance.Subtract(previous).IsEmpty;
+                SendProcessingReceipt(pair.Key,total,personal?previous:treasury,personal?balance:team.Treasury,personal);
+            }
+            PublishProfiles();
+            return true;
+        }
+
+        public bool ProcessingWasPersonal { get; private set; }
+        [FishNet.Object.TargetRpc]
+        void SendProcessingReceipt(FishNet.Connection.NetworkConnection connection,MaterialCost total,MaterialCost before,MaterialCost after,bool personal)
+        {
+            ProcessingWasPersonal=personal;
+            ProcessingFinished?.Invoke(total,before,after);
         }
     }
 }
