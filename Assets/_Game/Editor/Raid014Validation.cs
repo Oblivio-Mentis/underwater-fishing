@@ -252,7 +252,8 @@ namespace Raid.Editor
                 long id = feeding ? 1400202 : 1400201;
                 int before = feeding ? w.Team.offering : w.Team.biomass;
                 Check(w.Team.Deposit(new CatchItem(id, 2, 0, 1, 1, 1)), "Staged one fish in the reservoir");
-                w.Command(action, 0);
+                int required = Mathf.Max(1, w.progression.foodRequired + (w.Team.highestDepth-1)*w.progression.foodPerDepth);
+                w.Command(action, FishRouteQuote.Compute(w.Team.tank, required));
                 await Until(() => w.FishRoute.active, "start " + action);
                 await Until(() => !w.FishRoute.active, "complete " + action, 30);
                 int added = (feeding ? w.Team.offering : w.Team.biomass) - before;
