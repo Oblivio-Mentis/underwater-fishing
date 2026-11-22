@@ -256,7 +256,7 @@ namespace Raid.UI
         internal void HandleBallPointer(bool pressed,bool released)
         {
             var world=Context.World;
-            if(Page!=UiPage.None || UiInputGate.Modal || Time.unscaledTime<UiInputGate.ResumeAt || world==null || !world.HasGoshaBall(Context.Player) ||
+            if(Page!=UiPage.None || UiInputGate.Modal || Time.unscaledTime<UiInputGate.ResumeAt || world==null || !world.GoshaBallInHands(Context.Player) ||
                world.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing)
             {
                 CancelBallGesture();
@@ -281,10 +281,10 @@ namespace Raid.UI
             AimedCargoDispatch=false;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
-            if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.HasGoshaBall(player)))CancelBallGesture();
+            if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.GoshaBallInHands(player)))CancelBallGesture();
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
-            if(Context.World!=null && Context.World.HasGoshaBall(player))
+            if(Context.World!=null && Context.World.GoshaBallInHands(player))
             {
                 UiInputGate.PointerReserved=true;
                 if(allowed)HandleBallPointer(clicked,released);

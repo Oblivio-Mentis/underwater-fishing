@@ -139,6 +139,49 @@ namespace Raid.Nereid
             Check(label+" reachable without relocation",!world.QaBallRelocated && Vector3.Distance(rest,world.Gosha.Position)<1.25f);
             yield return Wait(label+" returned on foot",()=>world.HasGoshaBall(host),35);
         }
+        IEnumerator WatchFirstMeeting()
+        {
+            var camera=host.GetComponentInChildren<Camera>();
+            var view=FindAnyObjectByType<GoshaView>();
+            var left=chamber.transform.right;
+            host.LookAtConsole(camera.transform.position+left*10);
+            Check("First exit has a pause before the distant reveal",world.Gosha.Mode==GoshaMode.Waiting && !view.PetVisible);
+            yield return Wait("Gosha first appears in open water",()=>world.Gosha.Mode==GoshaMode.Swimming,8);
+            Vector3 previous=world.Gosha.Position, radial=Vector3.ProjectOnPlane(previous-host.transform.position,Vector3.up);
+            Check("First visible position is at least 12 m from the diver",radial.magnitude>=12);
+            float sweep=0,nearest=float.PositiveInfinity,maxStep=0;
+            bool captured=false;
+            float until=Time.realtimeSinceStartup+22;
+            while(world.Gosha.Mode==GoshaMode.Swimming)
+            {
+                if(Time.realtimeSinceStartup>until)throw new TimeoutException("Gosha could not finish the swim: "+world.Gosha.Position);
+                var at=world.Gosha.Position;
+                var next=Vector3.ProjectOnPlane(at-host.transform.position,Vector3.up);
+                if(radial.magnitude>1.7f && next.magnitude>1.7f)sweep+=Vector3.SignedAngle(radial,next,Vector3.up);
+                maxStep=Mathf.Max(maxStep,Vector3.Distance(at,previous));
+                if(view.PetVisible)
+                {
+                    nearest=Mathf.Min(nearest,Vector3.Distance(view.PetCenter,camera.transform.position));
+                    var screen=camera.WorldToViewportPoint(view.PetCenter);
+                    if(!captured && screen.z>3 && screen.z<8 && screen.x>.14f && screen.x<.86f && screen.y>.2f && screen.y<.8f)
+                    {HostShot("gosha-first-approach.png");captured=true;}
+                }
+                previous=at;radial=next;
+                yield return null;
+            }
+            Check($"Underwater arc covered {Mathf.Abs(sweep):F0} degrees, largest sampled step {maxStep:F2} m",
+                Mathf.Abs(sweep)>180 && maxStep<1.25f);
+            Check($"Gosha came into view, nearest visible distance {nearest:F2} m",captured && nearest>1.35f);
+            Check("Gosha reached the intended diver's shoulder",world.Gosha.Mode==GoshaMode.Riding && world.Gosha.Rider==host.OwnerId);
+            foreach(float angle in new[]{0f,90f,180f,270f})
+            {
+                host.LookAtConsole(camera.transform.position+Quaternion.AngleAxis(angle,Vector3.up)*left*8+Vector3.down*3);
+                yield return new WaitForSeconds(.15f);
+                Check("Rider camera stays clear while looking around at "+angle+" degrees",!view.PetVisible);
+            }
+            HostShot("gosha-rider-first-person.png");
+        }
+
         IEnumerator Run()
         {
             yield return Wait("Distinct host and Windows peer ready",()=>RaidWorld.Instance!=null&&RaidWorld.Instance.NetworkObject!=null&&RaidWorld.Instance.IsServerInitialized&&
@@ -155,7 +198,7 @@ namespace Raid.Nereid
             yield return PressPad(2);
             yield return Wait("Outer gate open",()=>world.Airlock.Phase==AirlockPhase.OuterOpen,30);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(10.5f,1,0)));
-            yield return Wait("Gosha rides the first expedition diver",()=>world.Gosha.Mode==GoshaMode.Riding && world.Gosha.Rider==host.OwnerId,24);
+            yield return WatchFirstMeeting();
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(14.5f,2.1f,-1.5f)));
             Stage(peer,host.transform.position+new Vector3(1.15f,.15f,-1.35f));
             yield return PeerShot("gosha-shoulder.png",world.Gosha.Position);
@@ -189,7 +232,22 @@ namespace Raid.Nereid
             Stage(host,ball+Vector3.back*.92f+Vector3.up*.75f);
             host.LookAtConsole(ball);yield return new WaitForSeconds(.3f);
             world.RequestGosha(GoshaAction.PickUp);
-            yield return Wait("Separate ball slot is held by host",()=>world.HasGoshaBall(host));
+            var hostInventory=host.GetComponent<HarpoonTool>();
+            yield return Wait("Ball occupies and selects ordinary slot 3",()=>world.HasGoshaBall(host) &&
+                hostInventory.ActiveSlot==2 && hostInventory.HasBallInSlot(2));
+            Check("Ball uses five-slot hotbar and adds no catch",hostInventory.SlotCount==5 && hostInventory.CatchCount==0);
+            var camera=host.GetComponentInChildren<Camera>().transform;
+            UiRoot.Instance.HandleBallPointer(true,false);
+            yield return Wait("LMB begins a wind-up with slot 3 selected",()=>world.Gosha.BallWind>0);
+            Check("The normal slot selector can stow the wound-up ball",hostInventory.SelectSlot(0));
+            yield return Wait("Stowed ball leaves the harpoon usable and clears the wind-up",()=>hostInventory.HarpoonInHands &&
+                world.HasGoshaBall(host) && world.Gosha.BallWind==0 && camera.Find("Ball in diving gloves")!=null &&
+                !camera.Find("Ball in diving gloves").gameObject.activeSelf);
+            UiRoot.Instance.HandleBallPointer(false,true);
+            Check("Releasing LMB after stowing did not throw the ball",world.HasGoshaBall(host));
+            Check("Normal slot 3 can equip the ball again",hostInventory.SelectSlot(2));
+            yield return Wait("Equipping the ordinary slot brings the ball back into both gloves",()=>world.GoshaBallInHands(host) &&
+                camera.Find("Ball in diving gloves").gameObject.activeSelf);
             yield return GoshaGripTrial.Verify(world,host,Check,HostShot);
             host.LookAtConsole(host.transform.position+Vector3.forward*2-Vector3.up);
             yield return new WaitForSeconds(.3f);
@@ -227,6 +285,8 @@ namespace Raid.Nereid
             Check("Occupied fish pocket before the tackle (fixture)",pockets>0 && inventory.CatchIdInSlot(2)==pocketId);
             yield return ThrowWithPointer();
             yield return Wait("Direct server physics hit transfers ball to the other player",()=>world.HasGoshaBall(peer));
+            Check("Catch stayed in slot 3 and shared ball entered the recipient's next normal pocket",
+                inventory.CatchIdInSlot(2)==pocketId && inventory.HasBallInSlot(3) && !hostInventory.HasBallInSlot(2));
             host.LookAtConsole(peer.transform.position);
             yield return Wait("Pet catches and briefly knocks down that specific diver",()=>world.GoshaKnocked(peer),20);
             yield return new WaitForSeconds(.22f);HostShot("gosha-robbery.png");
@@ -234,6 +294,7 @@ namespace Raid.Nereid
             yield return Wait("Movement lock released",()=>!world.GoshaKnocked(peer),3);
             Check("Player survived with unchanged health and cargo, oxygen intact",!peer.IsDead && hp==peer.Health && peer.Oxygen>=oxygen-.1f && pockets==inventory.CatchCount && inventory.CatchIdInSlot(2)==pocketId);
             yield return Wait("Pet drops ball in a safe deck area",()=>world.Gosha.Ball==GoshaBallMode.Deck,15);
+            Check("Tackle cleared the recipient's ball pocket",!inventory.HasBallInSlot(3));
         }
     }
 }

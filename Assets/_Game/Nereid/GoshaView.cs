@@ -14,6 +14,10 @@ namespace Raid.Nereid
         MeshRenderer worldBall;
         Material shell;
         bool presented;
+        GoshaMode previousMode;
+        float bank;
+        internal bool PetVisible => creature.gameObject.activeSelf;
+        internal Vector3 PetCenter => creature.position;
         Vector3 lastBall,lastPet;
         float gait;
         internal const float DeckOffset=.048f;
@@ -95,34 +99,52 @@ namespace Raid.Nereid
             var local=UI.UiRoot.Instance?.Context.Player;
             var eye=local!=null && local.IsDead?local.Spectating:local;
             bool onViewedShoulder=s.Mode==GoshaMode.Riding && eye!=null && s.Rider==eye.OwnerId;
-            creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting && !onViewedShoulder);
+            var camera=local!=null?local.GetComponentInChildren<Camera>():null;
             bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing && s.Mode!=GoshaMode.Cradled;
             Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;var visualUp=Vector3.up;
             var ui=UI.UiRoot.Instance;
             if(s.Mode==GoshaMode.Riding && ui!=null)
                 foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)
-                    {at=d.transform.TransformPoint(new Vector3(.25f,.37f,-.31f));dir=d.transform.forward;break;}
+                    {at=RaidWorld.Shoulder(d);dir=d.transform.forward;break;}
             if(s.Mode==GoshaMode.Cradled && ui!=null)
                 foreach(var keeper in ui.Context.Players)if(keeper!=null && keeper.OwnerId==s.Rider)
                 {
-                    var cam=keeper.IsOwner?keeper.GetComponentInChildren<Camera>():null;
+                    var cam=eye==keeper?camera:null;
                     var anchor=cam==null?keeper.transform:cam.transform;
                     at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.16f,.84f));
                     dir=anchor.rotation*Quaternion.Euler(0,cam==null?145:105,0)*Vector3.forward;
                     visualUp=anchor.up;
                     break;
                 }
-            var travel=presented?Vector3.Distance(lastPet,s.Position):0;
+            bool revealed=previousMode==GoshaMode.Waiting && s.Mode!=GoshaMode.Waiting;
+            var travel=presented&&!revealed?Vector3.Distance(lastPet,s.Position):0;
             lastPet=s.Position;
             gait+=(Mathf.Min(travel,.54f)*8.6f);
             bool held=s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Cradled;
-            creature.position=!presented||held?at:Vector3.Lerp(creature.position,at,blend);
-            if(dir.sqrMagnitude>.01f)creature.rotation=held?Quaternion.LookRotation(dir,visualUp):Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
+            creature.position=!presented||revealed||held?at:Vector3.Lerp(creature.position,at,blend);
+            if(dir.sqrMagnitude>.01f)
+            {
+                float turn=Vector3.SignedAngle(Vector3.ProjectOnPlane(creature.forward,Vector3.up),
+                    Vector3.ProjectOnPlane(dir,Vector3.up),Vector3.up);
+                var wanted=Quaternion.LookRotation(dir,visualUp);
+                creature.rotation=held||revealed?wanted:Quaternion.Slerp(creature.rotation,wanted,blend);
+                bank=Mathf.Lerp(bank,s.Mode==GoshaMode.Swimming&&!revealed?Mathf.Clamp(-turn*1.3f,-28,28):0,blend);
+            }
+
+            // Use the displayed position and the actual first-person camera, including when spectating.
+            // Explicitly holding Gosha remains a framed first-person animation.
+            bool cradledByViewer=s.Mode==GoshaMode.Cradled && eye!=null && s.Rider==eye.OwnerId;
+            float cameraClearance=.85f+RaidWorld.Instance.tuning.petScale*1.6f;
+            bool tooClose=camera!=null && !cradledByViewer &&
+                (s.Mode is GoshaMode.Swimming or GoshaMode.Riding) &&
+                (creature.position-camera.transform.position).sqrMagnitude<cameraClearance*cameraClearance;
+            creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting && !onViewedShoulder && !tooClose);
+            previousMode=s.Mode;
             bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming || (s.Mode>=GoshaMode.Coming && !NereidVessel.Active.ContainsWalkingDeck(s.Position));
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
             float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;
             body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
-            body.localRotation=Quaternion.Euler(happy?-12:swim?5*Mathf.Sin(phase*.6f):0,0,(happy?10:2)*Mathf.Sin(phase));
+            body.localRotation=Quaternion.Euler(happy?-12:swim?5*Mathf.Sin(phase*.6f):0,0,bank+(happy?10:2)*Mathf.Sin(phase));
             for(int i=0;i<legs.Length;i++)
             {
                 float cycle=Mathf.Sin(phase+i*1.72f);int sign=i<4?-1:1;
@@ -130,37 +152,35 @@ namespace Raid.Nereid
             }
             for(int j=0;j<2;j++)feelers[j].localRotation=Quaternion.Euler((happy?-26:0)+Mathf.Sin(phase*.73f+j)*8,(j==0?-1:1)*Mathf.Cos(phase*.7f)*8,0);
             var ballAt=s.BallPosition;
-            var owner=ui?.Context.Player;
-            var viewed=owner!=null && owner.IsDead?owner.Spectating:owner;
-            bool inView=s.Ball==GoshaBallMode.Held && viewed!=null && viewed.OwnerId==s.Holder;
-            if(inView)
-            {
-                var camera=owner.GetComponentInChildren<Camera>();
-                if(camera!=null)
-                {
-                    if(handBall==null || handBall.parent!=camera.transform)
-                    {
-                        if(handBall!=null)Destroy(handBall.gameObject);
-                        handBall=Node(camera.transform,"Ball in diving gloves",Vector3.zero);
-                        handBall.gameObject.AddComponent<MeshFilter>().sharedMesh=ball.GetComponent<MeshFilter>().sharedMesh;
-                        handBall.gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
-                    }
-                    handBall.localPosition=GoshaBallGrip.CameraCenter(GoshaBallGrip.Charge(viewed));
-                }
-                else inView=false;
-            }
-            if(handBall!=null)handBall.gameObject.SetActive(inView && !UI.UiInputGate.Modal);
-            worldBall.enabled=!inView;
+            bool displayHeldBall=false;
             if(s.Ball==GoshaBallMode.Held && ui!=null)
             {
                 foreach(var holder in ui.Context.Players)
                 {
                     if(holder==null || holder.OwnerId!=s.Holder)continue;
-                    ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(GoshaBallGrip.Charge(holder)));
-                    ball.rotation=holder.transform.rotation;
+                    displayHeldBall=RaidWorld.Instance.GoshaBallInHands(holder);
+                    if(displayHeldBall)
+                    {
+                        ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(GoshaBallGrip.Charge(holder)));
+                        ball.rotation=holder.transform.rotation;
+                    }
                     break;
                 }
             }
+            bool inView=displayHeldBall && eye!=null && eye.OwnerId==s.Holder && camera!=null;
+            if(inView)
+            {
+                if(handBall==null || handBall.parent!=camera.transform)
+                {
+                    if(handBall!=null)Destroy(handBall.gameObject);
+                    handBall=Node(camera.transform,"Ball in diving gloves",Vector3.zero);
+                    handBall.gameObject.AddComponent<MeshFilter>().sharedMesh=ball.GetComponent<MeshFilter>().sharedMesh;
+                    handBall.gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
+                }
+                handBall.localPosition=GoshaBallGrip.CameraCenter(GoshaBallGrip.Charge(eye));
+            }
+            if(handBall!=null)handBall.gameObject.SetActive(inView && !UI.UiInputGate.Modal);
+            worldBall.enabled=s.Ball!=GoshaBallMode.Held || displayHeldBall&&!inView;
             if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(JawSocket);
             ball.position=s.Ball==GoshaBallMode.Held||s.Ball==GoshaBallMode.Carried?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
             if(presented && (s.Ball==GoshaBallMode.Deck || s.Ball==GoshaBallMode.Flying))

@@ -149,7 +149,7 @@ namespace Raid
             float beat=Mathf.Sin(movingPhase);
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
-            bool ball=RaidWorld.Instance?.HasGoshaBall(diver)??false;
+            bool ball=RaidWorld.Instance?.GoshaBallInHands(diver)??false;
             bool cuddling=RaidWorld.Instance?.IsHoldingGosha(diver)??false;
             var pocket=!ball&&!cuddling&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
             gun.gameObject.SetActive(!diver.IsDead && !cuddling && tool.HarpoonInHands);

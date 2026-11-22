@@ -31,12 +31,13 @@ namespace Raid
         private readonly SyncVar<NetworkObject> _assistTarget = new();
         private readonly SyncVar<NetworkObject> _assistant = new();
         private readonly SyncVar<bool> _reelingActive = new();
-        public struct PocketCatch
+        public struct PocketItem
         {
             public NetworkObject species;
             public long id;
+            public bool ball;
         }
-        private readonly SyncList<PocketCatch> pockets = new();
+        private readonly SyncList<PocketItem> pockets = new();
         private readonly SyncVar<int> pocketCapacity = new(3);
         public int PocketCapacity => pocketCapacity.Value;
         public int SlotCount => PocketCapacity+2;
@@ -70,7 +71,7 @@ namespace Raid
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
-        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.IsHoldingGosha(Motor)??false) && !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
+        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.IsHoldingGosha(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
@@ -90,10 +91,42 @@ namespace Raid
         public int SmallestCatchSize => PocketCount>0?1:HandsFull?HeavySpecies.cargoSize:0;
         public FishActor CarriedFish => HandsFull?HeavySpecies:FishInSlot(FirstOccupiedPocket());
 
-        PocketCatch Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
-        void SetPocket(int slot,PocketCatch item) => pockets[slot-2]=item;
+        PocketItem Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
+        void SetPocket(int slot,PocketItem item) => pockets[slot-2]=item;
         public FishActor FishInSlot(int slot) => Pocket(slot).species?.GetComponent<FishActor>();
         public long CatchIdInSlot(int slot) => Pocket(slot).id;
+        public bool HasBallInSlot(int slot) => Pocket(slot).ball;
+        bool PocketOccupied(int slot) => HasBallInSlot(slot) || CatchIdInSlot(slot)>0;
+
+        internal int BallSlot
+        {
+            get
+            {
+                for(int slot=2;slot<MaximumSlots;slot++)if(HasBallInSlot(slot))return slot;
+                return -1;
+            }
+        }
+
+        internal bool StoreBall()
+        {
+            int slot=FreePocket();
+            if(!IsServerInitialized || slot<0 || BallSlot>=0)return false;
+            SetPocket(slot,new PocketItem{ball=true});
+            EquipSlot(slot);
+            return true;
+        }
+
+        internal void RemoveBall()
+        {
+            int slot=BallSlot;
+            if(slot>=0)SetPocket(slot,default);
+        }
+
+        void EquipSlot(int slot)
+        {
+            if(slot!=ActiveSlot && HasBallInSlot(ActiveSlot))RaidWorld.Instance?.CancelBallWind(Motor);
+            _slot.Value=slot;
+        }
 
         public bool SelectSlot(int slot)
         {
@@ -111,7 +144,7 @@ namespace Raid
             if (!CanSelect(slot) || slot == ActiveSlot) return;
             ReleaseBallLineOnServer();
             if (_fish != null) _fish.ReleaseHook(this);
-            _slot.Value = slot;
+            EquipSlot(slot);
         }
         public bool HasBallLine => _impact.Value.ball && _impact.Value.target!=null;
         internal void ReleaseBallLineOnServer()
@@ -233,7 +266,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
-            if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.HasGoshaBall(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
+            if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
             if (!OwnsHarpoon || HandsFull || tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
@@ -424,9 +457,9 @@ namespace Raid
             if (!IsServerInitialized || _fish != fish || fish.RequiresPartner) return false;
             for (int slot = 2; slot < SlotCount; slot++)
             {
-                if (CatchIdInSlot(slot)!=0) continue;
+                if (PocketOccupied(slot)) continue;
                 // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
-                SetPocket(slot,new PocketCatch { species = fish.NetworkObject, id = fish.CargoId });
+                SetPocket(slot,new PocketItem { species = fish.NetworkObject, id = fish.CargoId });
                 _fish = null;
                 _fishObject.Value = null;
                 FinishFishingLine();

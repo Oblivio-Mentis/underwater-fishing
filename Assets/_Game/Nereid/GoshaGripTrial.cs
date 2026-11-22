@@ -15,8 +15,11 @@ namespace Raid.Nereid
             var initialAim=camera.forward;
             yield return new WaitForSeconds(.22f);
             var ball=camera.Find("Ball in diving gloves");
-            check("Held ball and temporary orange item icon visible",
-                ball!=null && ball.gameObject.activeInHierarchy && ui.GetComponentInChildren<DeckBallIcon>()!=null);
+            var icon=ui.GetComponentInChildren<DeckBallIcon>();
+            var tool=holder.GetComponent<HarpoonTool>();
+            check("Held ball icon appears inside the selected numbered pocket",
+                ball!=null && ball.gameObject.activeInHierarchy && icon!=null &&
+                icon.transform.parent.parent.name=="Slot "+(tool.ActiveSlot+1));
             var position=ball.localPosition;
             var rotation=ball.localRotation;
             float maxDistance=0,maxAngle=0,turned=0;

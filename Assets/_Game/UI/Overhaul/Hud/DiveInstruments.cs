@@ -18,7 +18,7 @@ namespace Raid.UI
         static Sprite[] art;
         readonly Image[] slotRim=new Image[7], slotArt=new Image[7], crewGauge=new Image[5], contacts=new Image[5];
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[7];
-        readonly RectTransform ballSlot;
+        readonly DeckBallIcon[] ballIcons=new DeckBallIcon[7];
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
@@ -79,16 +79,16 @@ namespace Raid.UI
                 slotRim[i]=Icon(hotbar,"Slot "+(i+1),Mark.SlotOutline,x,0,66,66,Rim);
                 var face=Icon(slotRim[i].transform,"Slot well",Mark.Tile,3,-3,60,60,Ink);
                 slotArt[i]=Icon(face.transform,"Item",Mark.Spear,5,-5,50,50,Ivory);
+                if(i>=2)
+                {
+                    var icon=At(face.transform,"Striped ball",Vector2.up,Vector2.up,4,-4,52,52).gameObject.AddComponent<DeckBallIcon>();
+                    icon.raycastTarget=false;
+                    icon.gameObject.SetActive(false);
+                    ballIcons[i]=icon;
+                }
                 keys[i]=Caption(hotbar,"Key "+(i+1),x,-66,66,23,18,TextAlignmentOptions.Center);
                 keys[i].fontStyle=FontStyles.Bold;UiKit.Set(keys[i],(i+1).ToString());
             }
-            ballSlot=At(hotbar,"Held ball",Vector2.up,Vector2.up,370,0,66,92);
-            var ballRim=Icon(ballSlot,"Selected ball",Mark.SlotOutline,0,0,66,66,Gold);
-            var ballWell=Icon(ballRim.transform,"Ball well",Mark.Tile,3,-3,60,60,Ink);
-            var ballIcon=At(ballWell.transform,"Striped ball",Vector2.up,Vector2.up,4,-4,52,52).gameObject.AddComponent<DeckBallIcon>();
-            ballIcon.raycastTarget=false;
-            UiKit.Set(Caption(ballSlot,"Ball label",0,-66,66,23,16,TextAlignmentOptions.Center),"МЯЧ");
-            ballSlot.gameObject.SetActive(false);
             navigation=At(root,"HUD Navigation",Vector2.right,Vector2.right,-32,25,148,148);
             Icon(navigation,"Bearing dial",Mark.Compass,0,0,148,148,Color.white);
             Box(navigation,"Diver bearing",73,-70,2,9,Ivory);
@@ -157,12 +157,8 @@ namespace Raid.UI
             hotbar.gameObject.SetActive(tool!=null&&!diver.IsDead);
             if(tool!=null)
             {
-                bool ball=c.World.HasGoshaBall(diver);
-                ballSlot.gameObject.SetActive(ball);
                 int slots=tool.SlotCount;
-                float width=slots*74;
-                ballSlot.anchoredPosition=new Vector2(width,ballSlot.anchoredPosition.y);
-                hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,width-8+(ball?74:0));
+                hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,slots*74-8);
                 for(int i=0;i<slotRim.Length;i++)
                 {
                     bool available=i<slots;
@@ -170,7 +166,8 @@ namespace Raid.UI
                     keys[i].gameObject.SetActive(available);
                     if(!available)continue;
                     var fish=i>=2?tool.FishInSlot(i):null;
-                    bool selected=!ball && i==tool.ActiveSlot&&!tool.HandsFull;
+                    if(i>=2)ballIcons[i].gameObject.SetActive(tool.HasBallInSlot(i));
+                    bool selected=i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;
                     slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null;
                     slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?Mark.Glove:CatchMark(fish))];

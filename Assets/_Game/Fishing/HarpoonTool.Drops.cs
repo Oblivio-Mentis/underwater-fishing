@@ -11,7 +11,7 @@ namespace Raid
     {
         // -1 marks the default starting harpoon until the authoritative instance ID arrives.
         readonly SyncVar<long> _harpoonId = new(-1);
-        readonly SyncVar<PocketCatch> _liftedHeavy = new();
+        readonly SyncVar<PocketItem> _liftedHeavy = new();
         public bool OwnsHarpoon => _harpoonId.Value != 0;
         public long HarpoonId => _harpoonId.Value;
         public FishActor LiftedHeavy => _liftedHeavy.Value.species == null ? null : _liftedHeavy.Value.species.GetComponent<FishActor>();
@@ -32,9 +32,9 @@ namespace Raid
         {
             id = 0;
             if (Motor == null) return DroppedKind.None;
-            if (RaidWorld.Instance?.HasGoshaBall(Motor) == true) { id = 1; return DroppedKind.Ball; }
             if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true) return DroppedKind.None;
             if (HandsFull) { id = HeavyId; return DroppedKind.Catch; }
+            if (RaidWorld.Instance?.GoshaBallInHands(Motor) == true) { id = 1; return DroppedKind.Ball; }
             if (ActiveSlot == 0 && HarpoonId > 0) { id = HarpoonId; return DroppedKind.Harpoon; }
             if (ActiveSlot >= 2 && (id = CatchIdInSlot(ActiveSlot)) > 0) return DroppedKind.Catch;
             if (ActiveSlot == 1)
@@ -83,7 +83,7 @@ namespace Raid
                     UnequipGun();
                     _harpoonId.Value = 0;
                     world.RegisterDrop(DroppedItem.Gun(id, at, transform.eulerAngles.y));
-                    _slot.Value = 1;
+                    EquipSlot(1);
                     placed = true;
                     break;
                 case DroppedKind.Catch:
@@ -111,9 +111,9 @@ namespace Raid
 
         internal bool EquipSalvageHands()
         {
-            if (!MayHandleItems || !CanSelect(1) || RaidWorld.Instance.HasGoshaBall(Motor)) return false;
+            if (!MayHandleItems || !CanSelect(1) || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
             if (ActiveSlot == 0) UnequipGun();
-            _slot.Value = 1;
+            EquipSlot(1);
             return true;
         }
 
@@ -138,7 +138,7 @@ namespace Raid
                 world.RemoveDrop(id);
                 if (previous > 0) world.RegisterDrop(DroppedItem.Gun(previous, item.position, item.yaw));
                 _harpoonId.Value = id;
-                _slot.Value = 0;
+                EquipSlot(0);
             }
             else
             {
@@ -147,10 +147,10 @@ namespace Raid
                 int slot=fish.RequiresPartner?1:FreePocket();
                 if(slot<0 || fish.RequiresPartner && HandsFull)return;
                 world.RemoveDrop(id);
-                var carried=new PocketCatch {species=item.species,id=id};
+                var carried=new PocketItem {species=item.species,id=id};
                 if(fish.RequiresPartner)_liftedHeavy.Value=carried;
                 else SetPocket(slot,carried);
-                _slot.Value = slot;
+                EquipSlot(slot);
             }
             Motor.ConfirmInteraction();
         }
@@ -158,7 +158,7 @@ namespace Raid
         internal bool CanPickUp(DroppedItem item)
         {
             if (!MayHandleItems || HandsFull || _fish != null || TetherActive || AssistTarget != null
-                || RaidWorld.Instance.HasGoshaBall(Motor) || HasBallLine || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
+                || HasBallLine || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
             return item.kind == DroppedKind.Harpoon || item.Fish != null && (item.Fish.RequiresPartner || FreePocket() >= 0);
         }
 
@@ -176,12 +176,12 @@ namespace Raid
         {
             int slot=FreePocket();
             if(!IsServerInitialized || slot<0 || Motor.IsHelpless || Motor.IsTrapped)return false;
-            SetPocket(slot,new PocketCatch { species=fish.NetworkObject,id=fish.CargoId });
+            SetPocket(slot,new PocketItem { species=fish.NetworkObject,id=fish.CargoId });
             return true;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        internal void StagePocketForTrial(FishActor fish,long id) => SetPocket(2,new PocketCatch {species=fish.NetworkObject,id=id});
+        internal void StagePocketForTrial(FishActor fish,long id,int slot=2) => SetPocket(slot,new PocketItem {species=fish.NetworkObject,id=id});
 #endif
         bool pocketTheftShieldUsed;
         internal void RearmPocketShield() => pocketTheftShieldUsed=false;
@@ -195,7 +195,7 @@ namespace Raid
 
         int FreePocket()
         {
-            for (int slot = 2; slot < SlotCount; slot++) if (CatchIdInSlot(slot) == 0) return slot;
+            for (int slot = 2; slot < SlotCount; slot++) if (!PocketOccupied(slot)) return slot;
             return -1;
         }
     }

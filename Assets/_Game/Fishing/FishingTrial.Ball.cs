@@ -53,6 +53,21 @@ namespace Raid
             Destroy(partition);
             Check("A solid barrier introduced after attachment severed the line and left the ball on its original side.");
 
+            Phase("Reeling with a full ordinary inventory");
+            var species=FindObjectsByType<FishActor>().First(f=>f.IsServerInitialized && !f.RequiresPartner);
+            for(int slot=2;slot<host.SlotCount;slot++)host.StagePocketForTrial(species,slot,slot);
+            yield return ShootBall();
+            Require(host.QaHoldOwned(false,5),"Could not reel to the full inventory.");
+            yield return Wait(()=>!host.HasBallLine && world.Gosha.Ball==GoshaBallMode.Deck,6,
+                "Full pockets did not leave the retrieved ball available in the world.");
+            Require(host.QaHoldOwned(false,0) && host.CatchCount==3 && !world.HasGoshaBall(host.Motor) &&
+                Enumerable.Range(2,host.PocketCapacity).All(slot=>host.CatchIdInSlot(slot)==slot),
+                "A full inventory lost a fish or accepted a ball.");
+            for(int slot=2;slot<host.SlotCount;slot++)Require(host.DropOneCatch(),"Could not restore the empty test inventory.");
+            Check("Full numbered pockets kept every catch and left the same ball loose after reeling.");
+            // Restore the original sightline for the independent shoot-out.
+            world.StageBallTrial(spawn);
+            yield return Pause(.3f);
             yield return ShootBall();
             var target=world.Gosha.BallPosition;
             var peerEye=helper.transform.position+Vector3.up*.6f;
@@ -75,7 +90,7 @@ namespace Raid
             Require(host.HasBallLine && !helper.HasBallLine && world.Gosha.Holder==host.OwnerId,"Second shooter stole the reserved ball.");
             Check("A second owner's shot at the reserved physical ball did not reassign it.");
             yield return ReelBall();
-            Check("The deck ball travelled down the line into the shooter's temporary hand slot.");
+            Check("The deck ball travelled down the line into the shooter's numbered inventory.");
 
             Phase("Reel the single physical ball in open water");
             // The vessel has a twofold scale; use world coordinates in the open cargo pool.
@@ -93,15 +108,19 @@ namespace Raid
             yield return Shot("ball-hook-water.png");
             yield return ReelBall();
             yield return Pause(.65f);
-            Require(world.HasGoshaBall(host.Motor) && host.CatchCount==0,"Water retrieval interfered with pockets or dropped the ball.");
-            Check("Submerged owner retrieved the same loose ball, and retained it underwater without using a fish pocket.");
+            Require(world.HasGoshaBall(host.Motor) && host.HasBallInSlot(2) && host.ActiveSlot==2 && host.CatchCount==0,
+                "Water retrieval did not place the ball in the normal inventory.");
+            Check("Submerged owner retrieved the same loose ball and retained it in numbered slot 3.");
 
             Phase("Drop the held ball, then drop a loaded harpoon");
             long gunId=host.HarpoonId;
             Require(gunId>0 && host.RequestDropSelected(),"Q did not accept the selected hand-held ball.");
             yield return Wait(()=>world.Gosha.Ball==GoshaBallMode.Deck && ReadClient()?.gosha.Ball==GoshaBallMode.Deck,
                 3,"Q did not release the held ball on both peers.");
-            Require(host.HarpoonId==gunId && world.DroppedCount==0 && !host.HasBallLine,"Dropping the ball also removed the gun.");
+            Require(host.HarpoonId==gunId && world.DroppedCount==0 && !host.HasBallLine &&
+                !host.HasBallInSlot(2) && world.Gosha.Thrower<0,"Q did not empty the selected ball pocket without starting fetch.");
+            Require(host.SelectSlot(0),"The normal slot selector did not equip the preserved harpoon.");
+            yield return Wait(()=>host.HarpoonInHands,3,"The preserved harpoon did not equip.");
             host.Motor.Teleport(world.Gosha.BallPosition-Vector3.forward*3.4f-Vector3.up*.6f);
             yield return ShootBall();
             Require(host.RequestDropSelected(),"Q did not accept the gun with an active ball line.");
@@ -140,7 +159,8 @@ namespace Raid
             yield return Wait(()=>Vector3.Distance(start,world.Gosha.BallPosition)>.2f,3,"Ball did not move.");
             Require(world.Gosha.Ball==GoshaBallMode.Tethered,"Distant shot teleported straight to hands.");
             yield return Wait(()=>world.HasGoshaBall(host.Motor) && ReadClient()?.gosha.Holder==host.OwnerId &&
-                ReadClient()?.gosha.Ball==GoshaBallMode.Held,5,"Peers did not agree on the held ball.");
+                ReadClient()?.gosha.Ball==GoshaBallMode.Held && host.HasBallInSlot(host.ActiveSlot),
+                5,"Peers did not agree on the ball entering the inventory.");
             Require(host.QaHoldOwned(false,0),"Could not release the owner reel after pickup.");
             float travel=Vector3.Distance(start,world.Gosha.BallPosition);
             Require(travel>1,"The ball did not travel the staged distance.");

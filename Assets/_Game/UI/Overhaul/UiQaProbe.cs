@@ -411,7 +411,7 @@ namespace Raid.UI
                 snapshot.activeSlot = tool.ActiveSlot;
                 snapshot.handsFull = tool.HandsFull;
                 snapshot.heldSpecies = tool.CarriedFish == null ? "" : tool.CarriedFish.SpeciesId;
-                snapshot.pockets = Enumerable.Range(2,3).Select(i => tool.FishInSlot(i)?.SpeciesId ?? "").ToArray();
+                snapshot.pockets = Enumerable.Range(2,tool.PocketCapacity).Select(i => tool.HasBallInSlot(i) ? "ball" : tool.FishInSlot(i)?.SpeciesId ?? "").ToArray();
                 snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
                 snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }

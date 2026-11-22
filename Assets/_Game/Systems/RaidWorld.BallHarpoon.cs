@@ -109,8 +109,8 @@ namespace Raid
                     DropLooseBallLine();
                     return;
                 }
+                if(!GiveBall(recipient)){DropLooseBallLine();return;}
                 ClearBallLine();
-                GiveBall(recipient);
                 recipient.ConfirmInteraction();
                 return;
             }

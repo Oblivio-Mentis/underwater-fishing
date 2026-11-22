@@ -10,7 +10,7 @@ namespace Raid
     {
         public RaidSession session;
         private const string Game = "raid-underwater-fishing-2026";
-        private const string Protocol = "nereid-submarine-expedition-v5";
+        private const string Protocol = "nereid-submarine-expedition-v6";
         private CSteamID currentLobby;
         private CSteamID originalHost;
         private bool initialized;
