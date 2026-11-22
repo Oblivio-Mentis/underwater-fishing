@@ -90,6 +90,12 @@ namespace Raid.UI
             catch(ArgumentException){return null;}
         }
 
+        TeamProgress RemoteTeam()
+        {
+            string summary=Remote()?.team;
+            return string.IsNullOrEmpty(summary)?null:JsonUtility.FromJson<TeamProgress>(summary);
+        }
+
         IEnumerator Send(string action,string argument = "",float number=0)
         {
             string id=Guid.NewGuid().ToString("N");
@@ -155,9 +161,9 @@ namespace Raid.UI
             var a=world.Team.Player(world.ProgressKey(host));
             var b=world.Team.Player(world.ProgressKey(peer));
             Check("Two distinct profile bindings",a!=b);
-            a.wallet=b.wallet=new MaterialCost(64,64,64,64);
-            a.revision++;b.revision++;
-            world.RefreshCrewProfilesForTrial();
+            world.Team.Treasury=new MaterialCost(64,64,64,64);
+            yield return Wait("Both screens receive the shared treasury",
+                ()=>world.View?.Treasury.biomass==64 && RemoteTeam()?.Treasury.biomass==64);
             station=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.SkillTree);
             Transform screen=station.screenAnchor;
             host.Teleport(screen.position-screen.forward*1.69f-Vector3.up*.38f);
@@ -179,32 +185,56 @@ namespace Raid.UI
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"skill-host-720.png"));
             yield return Send("capture","skill-peer-1080.png");
 
-            var aStart=a.wallet;
-            var bStart=b.wallet;
+            var hostTool=host.GetComponent<HarpoonTool>();
+            var peerTool=peer.GetComponent<HarpoonTool>();
+            float startHostReel=hostTool.ReelMultiplier,startPeerReel=peerTool.ReelMultiplier;
+            float startHostAir=host.OxygenMultiplier,startPeerAir=peer.OxygenMultiplier;
+            MaterialCost start=world.Team.Treasury;
+            int oldRevision=world.Team.teamRevision;
             yield return ClickHost("H1");
-            Check("LMB only selects H1",a.wallet.biomass==aStart.biomass && !a.skills.Contains(SkillId.H1));
+            Check("LMB only selects H1",world.Team.Treasury.Equals(start) && !a.skills.Contains(SkillId.H1));
             yield return ClickHost("H1",true);
-            yield return Wait("RMB buys H1 for host",()=>a.skills.Contains(SkillId.H1) && world.LocalProgress.skills.Contains(SkillId.H1));
+            yield return Wait("RMB buys H1 for host and updates the treasury on peer",
+                ()=>a.skills.Contains(SkillId.H1) && world.LocalProgress.skills.Contains(SkillId.H1)
+                    && RemoteTeam()?.teamRevision==world.Team.teamRevision);
+            var beforeStale=world.Team.Treasury;
+            world.RequestSkill(SkillId.H2,oldRevision);
+            yield return new WaitForSecondsRealtime(.5f);
+            Check("Stale request for unlocked H2 cannot debit the shared balance",
+                !a.skills.Contains(SkillId.H2) && world.Team.Treasury.Equals(beforeStale));
             yield return ClickPeer("S1",true);
-            yield return Wait("RMB buys S1 for peer",()=>b.skills.Contains(SkillId.S1) && Remote()?.localProgress?.skills.Contains(SkillId.S1)==true);
-            Check("Opposite private branches and separate balances",!a.skills.Contains(SkillId.S1) && !b.skills.Contains(SkillId.H1)
-                && a.wallet.biomass==aStart.biomass-world.progression.Skill(SkillId.H1).Cost.biomass
-                && b.wallet.biomass==bStart.biomass-world.progression.Skill(SkillId.S1).Cost.biomass);
+            yield return Wait("RMB buys S1 for peer",()=>b.skills.Contains(SkillId.S1)
+                && Remote()?.localProgress?.skills.Contains(SkillId.S1)==true && world.View.teamRevision==world.Team.teamRevision);
+            var expected=start.Subtract(world.progression.Skill(SkillId.H1).Cost).Subtract(world.progression.Skill(SkillId.S1).Cost);
+            Check("H1 and S1 affect separate private skill lists and debit one common treasury",
+                !a.skills.Contains(SkillId.S1) && !b.skills.Contains(SkillId.H1)
+                && world.Team.Treasury.Equals(expected) && RemoteTeam().Treasury.Equals(expected));
+            yield return Wait("Reel +12% only for host and oxygen +20% only for peer",
+                ()=>Mathf.Abs(hostTool.ReelMultiplier-startHostReel-.12f)<.001f
+                    && Mathf.Abs(peerTool.ReelMultiplier-startPeerReel)<.001f
+                    && Mathf.Abs(host.OxygenMultiplier-startHostAir)<.001f
+                    && Mathf.Abs(peer.OxygenMultiplier-startPeerAir-.20f)<.001f);
 
             int capacity=world.Team.Capacity(world.progression);
-            int treasury=world.Team.biomass, buyer=a.wallet.biomass, other=b.wallet.biomass;
+            int revision=world.Team.teamRevision;
             yield return ClickHost("K1",true);
-            yield return Wait("K1 updates common capacity",()=>world.Team.teamSkills.Contains(SkillId.K1)
-                && world.Team.Capacity(world.progression)==capacity+world.progression.Skill(SkillId.K1).Magnitude);
+            yield return Wait("K1 updates common capacity for both roles",()=>world.Team.teamSkills.Contains(SkillId.K1)
+                && world.View.Capacity(world.progression)==capacity+world.progression.Skill(SkillId.K1).Magnitude
+                && RemoteTeam()?.Capacity(world.progression)==world.View.Capacity(world.progression));
             yield return ClickPeer("K1",true);
-            Check("K1 charged exactly one personal wallet and preserved treasury",
-                a.wallet.biomass==buyer-world.progression.Skill(SkillId.K1).Cost.biomass && b.wallet.biomass==other && world.Team.biomass==treasury);
+            expected=expected.Subtract(world.progression.Skill(SkillId.K1).Cost);
+            Check("One shared purchase moved the revision once and charged the common balance once",
+                world.Team.teamRevision==revision+1 && world.Team.Treasury.Equals(expected)
+                && world.Team.teamSkills.Count(id=>id==SkillId.K1)==1
+                && RemoteTeam().Treasury.Equals(expected));
 
-            yield return ClickHost("Treasury");
-            for(int i=0;i<5;i++)yield return ClickHost("IncreaseB");
-            buyer=a.wallet.biomass;
-            yield return ClickHost("DepositResources");
-            yield return Wait("Five biomass transferred",()=>a.wallet.biomass==buyer-5 && world.Team.biomass==treasury+5);
+            yield return ClickHost("H1");
+            yield return AimHost(screen);
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"skill-host-720.png"));
+            yield return ClickPeer("S1");
+            yield return Send("reticle_aim",station.name);
+            yield return new WaitForSecondsRealtime(.25f);
+            yield return Send("capture","skill-peer-1080.png");
         }
     }
 }

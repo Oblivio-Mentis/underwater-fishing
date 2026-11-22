@@ -168,33 +168,9 @@ namespace Raid.UI
         public void ClosePanel()
         {
             if(confirmation.gameObject.activeSelf){CancelConfirmation();return;}
-            if(Page==UiPage.SkillTree && skills.TreasuryOnly)
-            {
-                CloseTreasury();
-                return;
-            }
             if(computerSurface)dismissedConsole=Context.SelectedConsole;
             ShowPage(Page==UiPage.Settings?settingsBack:Page==UiPage.Crew?crewBack:Context.Connected?UiPage.None:UiPage.Main);
         }
-        public void OpenTreasury()
-        {
-            if(Page==UiPage.SkillTree){skills.ShowTreasury(true);return;}
-            if(Page!=UiPage.Terminal || Context.SelectedConsole?.kind!=ShipConsoleKind.Upgrades)return;
-            skills.Open(true);
-            ShowPage(UiPage.SkillTree);
-        }
-
-        public void CloseTreasury()
-        {
-            if(Page!=UiPage.SkillTree)return;
-            if(skills.TreasuryOnly)
-            {
-                ShowPage(UiPage.Terminal);
-                terminal.SelectTab("upgrades");
-            }
-            else skills.ShowTreasury(false);
-        }
-
         void SetCursor()
         {
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
@@ -221,7 +197,7 @@ namespace Raid.UI
                 else ClosePanel();
             }
             var mouse=Application.isFocused?Mouse.current:null;
-            bool skillPurchase=Page==UiPage.SkillTree && !skills.TreasuryOnly && mouse!=null && mouse.rightButton.wasPressedThisFrame;
+            bool skillPurchase=Page==UiPage.SkillTree && mouse!=null && mouse.rightButton.wasPressedThisFrame;
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.SkillMonitorLook && mouse!=null && !overlayBefore;
             UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
                 mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
@@ -408,7 +384,7 @@ namespace Raid.UI
             {
                 if(!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
                 Context.SelectedConsole=station;
-                skills.Open(false);
+                skills.Open();
                 ShowPage(UiPage.SkillTree);
                 return;
             }
