@@ -11,6 +11,7 @@ OUT=ROOT/'Assets/_Game/Nereid/Art'
 OUT.mkdir(parents=True,exist_ok=True)
 PREVIEW=ROOT/'art/nereid'
 INTERIOR_ONLY='--interior-only' in sys.argv
+EXPORT_ONLY='--export-only' in sys.argv
 SCALE_COMPAT='industrial-v2'
 ROOT_SCALE=2.0
 FBX_X_EXPORT_SIGN=-1.0
@@ -96,7 +97,7 @@ expanded=[]
 for i in range(len(bands)-1):
     z0,w0,h0=bands[i];z1,w1,h1=bands[i+1];count=max(1,math.ceil((z1-z0)/2.7))
     cuts=[z0+(z1-z0)*j/count for j in range(count)]
-    for cut in (-16,-15.65,-12.35,-8):
+    for cut in (-24.97,-22.29,-16,-15.65,-12.35,-8):
         if z0<cut<z1:cuts.append(cut)
     for z in sorted(set(cuts)):
         t=(z-z0)/(z1-z0);expanded.append((z,w0+(w1-w0)*t,h0+(h1-h0)*t))
@@ -108,7 +109,8 @@ for bi in range(len(expanded)-1):
         xs=math.cos(mid);ym=1+math.sin(mid)*(h0+h1)/2;zm=(z0+z1)/2
         window=(-8<=zm<=8 and abs(xs)>.75 and .0<ym<3.9)
         hatch=(-15.65<=zm<=-12.35 and xs>.72 and -.2<ym<3.9)
-        if window or hatch:continue
+        bridge_stair=(-24.97<=zm<=-22.29 and -.83<xs<-.18 and math.sin(mid)>.37)
+        if window or hatch or bridge_stair:continue
         gap=.028;z0g=z0+gap;z1g=z1-gap
         verts=[(math.cos(a)*w0,1+math.sin(a)*h0,z0g),(math.cos(b)*w0,1+math.sin(b)*h0,z0g),(math.cos(b)*w1,1+math.sin(b)*h1,z1g),(math.cos(a)*w1,1+math.sin(a)*h1,z1g)]
         add(S,'Nereid_Hull'if (bi+j)%6 else 'Nereid_Steel',verts,[(0,1,2,3)])
@@ -116,10 +118,15 @@ for bi in range(len(expanded)-1):
         iv=[(x*.985,1+(y-1)*.985,z)for x,y,z in verts];add(S,'Nereid_Dark',iv,[(3,2,1,0)])
 for z,w,h in expanded:
     pts=[]
+    # Omit concealed pressure hoops across the passage from the old hull into the companionway.
     for i in range(65):
-        a=i*math.tau/64;pts.append((math.cos(a)*(w+.025),1+math.sin(a)*(h+.025),z))
-    # Thin seams rather than thick toy hoops.
-    tube(S,pts,.035,'Nereid_Dark',6,False)
+        a=i*math.tau/64
+        if -24.98<=z<=-22.28 and -.86<math.cos(a)<-.15 and math.sin(a)>.32:
+            if len(pts)>1:tube(S,pts,.035,'Nereid_Dark',6,False)
+            pts=[]
+            continue
+        pts.append((math.cos(a)*(w+.025),1+math.sin(a)*(h+.025),z))
+    if len(pts)>1:tube(S,pts,.035,'Nereid_Dark',6,False)
 # Twin lower segmented saddle tanks and protective side rails.
 for side in (-1,1):
     for k in range(5):
@@ -273,11 +280,13 @@ portal=[(-1.52,0,-7.9),(-1.52,2.55,-7.9),(-1.15,3.15,-7.9),(1.15,3.15,-7.9),(1.5
 for a,b in zip(portal,portal[1:]):beam(S,a,b,.17,.16,'Nereid_Trim')
 for side in (-1,1):
     for y in (.55,1.4,2.25):box(S,'door latch',(side*1.53,y,-7.72),(.13,.22,.2),'Nereid_Ochre')
-# Aft-most sealed engine partition and its broad recessed inspection hatch.
-box(S,'aft engine bulkhead',(0,1.9,-15.98),(11.8,3.8,.18),'Nereid_Hull')
-box(S,'engine hatch inset',(0,1.6,-15.84),(3.4,2.8,.08),'Nereid_Dark')
-box(S,'engine hatch',(0,1.6,-15.77),(3.0,2.5,.09),'Nereid_Steel')
-ring(S,(0,1.7,-15.66),.34,.34,.055,'Nereid_Trim',20)
+# Stern transfer pressure frame. The central opening now leads into
+# the walkable machinery bay rather than ending at a sealed hatch.
+for side in (-1,1):
+    box(S,'machine deck side armour',(side*3.68,1.9,-15.98),(4.45,3.8,.18),'Nereid_Hull')
+    box(S,'machine deck latch stile',(side*1.51,1.43,-15.81),(.16,2.78,.12),'Nereid_Trim')
+    for y in (.70,1.51,2.35):box(S,'wet lock latch',(side*1.60,y,-15.75),(.19,.17,.18),'Nereid_Ochre')
+box(S,'machine deck pressure header',(0,3.51,-15.98),(3.0,.59,.19),'Nereid_Hull')
 # Starboard airlock collar; no plane crosses the actual 3.1m opening.
 for z in (-15.63,-12.37):
     box(S,'wet lock upright',(5.81,1.52,z),(.35,3.04,.2),'Nereid_Trim')
@@ -368,6 +377,9 @@ for scope,obs in objects.items():
     meta['models'][scope]={'file':path.name,'objects':len(obs),'triangles':tris,'unity_bounds_min':lo,'unity_bounds_max':hi,'root_scale2_world_bounds_min':[v*ROOT_SCALE for v in lo],'root_scale2_world_bounds_max':[v*ROOT_SCALE for v in hi]}
 assert sum(m['triangles']for m in meta['models'].values())<250000,meta['models']
 (OUT/'Nereid_Architecture.json').write_text(json.dumps(meta,indent=2)+'\n',encoding='utf-8')
+if EXPORT_ONLY:
+    print('NEREID_EXPORT',json.dumps(meta))
+    raise SystemExit(0)
 bpy.ops.wm.save_as_mainfile(filepath=str(PREVIEW/'Nereid_Architecture.blend'))
 
 # Headless preview uses only generated camera/lights and is never exported into the game.

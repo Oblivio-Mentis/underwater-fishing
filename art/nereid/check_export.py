@@ -41,5 +41,22 @@ for name in ('Interior','Exterior'):
             assert not hit,(name,'Exit aperture/catwalk clearance',height,z,obj.name if obj else None)
             clear_count+=1
     result[name]['starboard_exit_clearance_grid']={'expected_unity_x_start':5.4,'expected_unity_x_end':8.4,'local_heights':heights,'local_depths':depths,'clear_rays':clear_count,'total_rays':len(heights)*len(depths)}
+    tested=[]
+    if name=='Interior':
+        for x in (-1.13,-.5,0,.5,1.13):
+            for height in (.35,.77,1.22,1.87,2.4):
+                tested.append(((x,height,-15.45),(0,0,-1),1.21))
+    else:
+        for x in (-3.26,-2.95,-2.58,-2.26,-1.91):
+            for height in (.36,.62,.92):
+                start=(x,height,-16.95)
+                tested.append((start,(0,4.85,-7.90),(4.85**2+7.90**2)**.5))
+    for origin,axis,distance in tested:
+        x,y,z=origin
+        dx,dy,dz=axis
+        hit,_,_,_,obj,_=bpy.context.scene.ray_cast(bpy.context.evaluated_depsgraph_get(),
+            Vector((-x,-z,y)),Vector((-dx,-dz,dy)).normalized(),distance=distance)
+        assert not hit,(name,'Machinery/bridge walk clearance',origin,obj.name if obj else None)
+    result[name]['machinery_bridge_clear_rays']=len(tested)
 print('ROUNDTRIP_VALIDATION',json.dumps(result))
 (root/'Assets/_Game/Nereid/Art/Nereid_ExportCheck.json').write_text(json.dumps({'method':'Blender FBX export/reimport; expected Unity coordinates include the default importer X handedness conversion observed by root; ray tests prove the asymmetric hatch in that coordinate convention. Final live Unity verification remains with root.','result':result},indent=2)+'\n',encoding='utf-8')

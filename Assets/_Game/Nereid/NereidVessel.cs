@@ -16,6 +16,7 @@ namespace Raid.Nereid
         public LineRenderer hoistCable;
         RaidWorld world;
         NereidAirlock airlock;
+        internal NereidDeckExtension DeckExtension { get; private set; }
         CargoBasket basket;
         CageReceivingHopper hopper;
         TeamProgress observed;
@@ -28,6 +29,7 @@ namespace Raid.Nereid
         {
             Active=this;
             airlock=NereidAirlock.Install(transform);
+            DeckExtension=NereidDeckExtension.Install(this);
             NereidServiceFittings.Install(transform,airlock);
             gameObject.AddComponent<NereidHullLighting>();
             var reef=new GameObject("NEREID fishing grounds");
@@ -39,8 +41,9 @@ namespace Raid.Nereid
         public bool ContainsSealed(Vector3 point)
         {
             if(airlock!=null&&airlock.Contains(point))return !airlock.IsSubmerged(point+Vector3.up*.6f);
-            if(sealedRooms==null)return false;
             point=transform.InverseTransformPoint(point);
+            if(DeckExtension!=null && NereidDeckExtension.TryGround(point,out _))return true;
+            if(sealedRooms==null)return false;
             foreach(var room in sealedRooms)if(room.Contains(point))return true;
             return false;
         }

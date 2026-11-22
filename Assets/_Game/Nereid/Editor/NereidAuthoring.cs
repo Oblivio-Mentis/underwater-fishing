@@ -259,8 +259,6 @@ namespace Raid.Nereid.Editor
             var vessel=Object.FindAnyObjectByType<NereidVessel>();
             var owner=vessel.GetComponent<NereidShipScreens>();if(owner==null)owner=vessel.gameObject.AddComponent<NereidShipScreens>();
             var stations=new List<ShipConsole>();var labels=new List<TMPro.TMP_Text>();
-            var upgrade=GameObject.Find("UpgradeConsole");if(upgrade!=null){upgrade.transform.localPosition=new Vector3(3.7f,0,-7.45f);upgrade.transform.rotation=Quaternion.Euler(0,180,0);}
-            var reservoir=GameObject.Find("ReservoirConsole");if(reservoir!=null)reservoir.transform.localPosition=new Vector3(0,0,-.75f);
             foreach(var station in Object.FindObjectsByType<ShipConsole>())
             {
                 if(station.kind==ShipConsoleKind.Feed||station.kind==ShipConsoleKind.Process||station.screenAnchor==null)continue;
@@ -268,7 +266,7 @@ namespace Raid.Nereid.Editor
                 var go=new GameObject("Live idle instrument");go.transform.SetParent(station.screenAnchor,false);go.transform.localPosition=new Vector3(0,0,-.012f);
                 var text=go.AddComponent<TMPro.TextMeshPro>();text.font=AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>("Assets/_Game/UI/Overhaul/Fonts/PTSans-SDF.asset");
                 text.fontSize=1.2f;text.color=new Color(.3f,.83f,.83f);text.alignment=TMPro.TextAlignmentOptions.Center;text.textWrappingMode=TMPro.TextWrappingModes.NoWrap;
-                float scale=station.screenScale/.0018f;text.rectTransform.sizeDelta=new Vector2(2.25f*scale,1.55f*scale);text.fontSize*=scale;
+                text.rectTransform.sizeDelta=station.DisplaySize*.89f;
                 text.text="NEREID";text.overflowMode=TMPro.TextOverflowModes.Ellipsis;stations.Add(station);labels.Add(text);
             }
             owner.stations=stations.ToArray();owner.screens=labels.ToArray();EditorUtility.SetDirty(owner);

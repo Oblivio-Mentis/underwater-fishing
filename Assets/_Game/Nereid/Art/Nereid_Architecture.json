@@ -35,7 +35,7 @@
     "Interior": {
       "file": "Nereid_Interior.fbx",
       "objects": 8,
-      "triangles": 128126,
+      "triangles": 127726,
       "unity_bounds_min": [
         -6.925000190734863,
         -0.2199999988079071,
@@ -60,7 +60,7 @@
     "Exterior": {
       "file": "Nereid_Exterior.fbx",
       "objects": 9,
-      "triangles": 68212,
+      "triangles": 71028,
       "unity_bounds_min": [
         -10.695561408996582,
         -4.05531120300293,
