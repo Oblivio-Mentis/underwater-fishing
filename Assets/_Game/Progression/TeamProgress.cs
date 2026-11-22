@@ -13,10 +13,19 @@ namespace Raid
         public string[] caughtBy;
         public CatchDestination destination;
         public bool dispatchCommitted;
+        public bool salvage;
         public int biomass, chitin, offering, cargoSize, depthTier, scrap, electronics;
+        public bool IsSalvage => salvage;
+        internal bool IsLegacySalvage => string.IsNullOrEmpty(species) && biomass==0 && chitin==0 && offering==0 && (scrap>0 || electronics>0);
+        internal MaterialCost SalvageYield => new(0,0,scrap,electronics);
+        public static CatchItem Salvage(long id,int tier,int scrap,int electronics) =>
+            new CatchItem(id,0,0,0,1,tier,scrap,electronics){salvage=true};
         public CatchItem(long id, int biomass, int chitin, int offering, int cargoSize, int depthTier, int scrap=0, int electronics=0, string species=null)
         { this.id = id; this.biomass = biomass; this.chitin = chitin; this.offering = offering; this.cargoSize = cargoSize; this.depthTier = depthTier; this.scrap=scrap; this.electronics=electronics; this.species=species; }
-        public bool IsValid => (!dispatchCommitted || destination!=CatchDestination.Hold) && destination>=CatchDestination.Hold && destination<=CatchDestination.Feed && id > 0 && biomass >= 0 && chitin >= 0 && scrap>=0 && electronics>=0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
+        public bool IsValid => destination>=CatchDestination.Hold && destination<=CatchDestination.Feed &&
+            id>0 && biomass>=0 && chitin>=0 && scrap>=0 && electronics>=0 && offering>=0 && cargoSize>0 && depthTier>0 &&
+            (!dispatchCommitted || destination!=CatchDestination.Hold) &&
+            (!salvage || string.IsNullOrEmpty(species) && biomass==0 && chitin==0 && offering==0 && destination==CatchDestination.Hold);
         public CatchItem Copy()
         {
             var copy=PublicCopy();
@@ -24,7 +33,7 @@ namespace Raid
             return copy;
         }
         public CatchItem PublicCopy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier,scrap,electronics,species)
-            {destination=destination,dispatchCommitted=dispatchCommitted};
+            {destination=destination,dispatchCommitted=dispatchCommitted,salvage=salvage};
     }
 
     [Serializable]
@@ -123,9 +132,10 @@ namespace Raid
         private float Duration(float seconds, ProgressionTuning tuning) =>
             Math.Max(.01f, seconds / Math.Max(1f, 1f + winchLevel * tuning.winchSpeedPerLevel));
 
-        public void TickHoist(float dt, ProgressionTuning tuning)
+        public MaterialCost TickHoist(float dt, ProgressionTuning tuning)
         {
             if (float.IsNaN(dt) || float.IsInfinity(dt) || dt < 0f) throw new ArgumentOutOfRangeException(nameof(dt));
+            MaterialCost recovered=default;
             while (hoistPhase != HoistPhase.Loading && dt >= hoistRemaining)
             {
                 dt -= hoistRemaining;
@@ -136,7 +146,7 @@ namespace Raid
                 }
                 else if (hoistPhase == HoistPhase.Unloading)
                 {
-                    foreach (CatchItem item in cargo) Deliver(item);
+                    recovered=Deliver(cargo);
                     cargo.Clear();
                     hoistPhase = HoistPhase.Returning;
                     hoistRemaining = Duration(tuning.returningSeconds, tuning);
@@ -144,22 +154,57 @@ namespace Raid
                 else { hoistPhase = HoistPhase.Loading; hoistRemaining = 0f; }
             }
             if (hoistPhase != HoistPhase.Loading) hoistRemaining -= dt;
+            return recovered;
         }
 
         /// <summary>Direct delivery for a server-authorized delivery point; cargo uses the timed hoist.</summary>
         public bool Deposit(CatchItem item)
         {
             if (item == null || !item.IsValid || deliveredIds.Contains(item.id) || cargo.Exists(f => f.id == item.id)) return false;
-            Deliver(item);
+            Deliver(new[]{item});
             return true;
         }
 
-        private void Deliver(CatchItem item)
+        private MaterialCost Deliver(IReadOnlyList<CatchItem> stock)
         {
-            long total = checked(lifetimeCatch + item.biomass + item.chitin + item.scrap + item.electronics);
-            deliveredIds.Add(item.id);
-            tank.Add(item.Copy());
-            lifetimeCatch = total;
+            long total=lifetimeCatch;
+            MaterialCost salvage=default;
+            foreach(var item in stock)
+            {
+                total=checked(total+item.biomass+item.chitin+item.scrap+item.electronics);
+                if(item.IsSalvage)salvage=salvage.Add(item.SalvageYield);
+            }
+            var balance=Treasury.Add(salvage);
+            int revision=salvage.IsEmpty?teamRevision:checked(teamRevision+1);
+            foreach(var item in stock)
+            {
+                deliveredIds.Add(item.id);
+                if(!item.IsSalvage)tank.Add(item.Copy());
+            }
+            lifetimeCatch=total;
+            Treasury=balance;
+            teamRevision=revision;
+            return salvage;
+        }
+
+        internal void RecoverLegacySalvage()
+        {
+            MaterialCost recovered=default;
+            foreach(var item in tank)
+                if(item.IsLegacySalvage)recovered=recovered.Add(item.SalvageYield);
+            if(!recovered.IsEmpty)
+            {
+                Treasury=Treasury.Add(recovered);
+                // These deliveries already contributed to the ledger and the depth unlock.
+                tank.RemoveAll(item=>item.IsLegacySalvage);
+            }
+            foreach(var item in cargo)
+                if(item.IsLegacySalvage)
+                {
+                    item.salvage=true;
+                    item.destination=CatchDestination.Hold;
+                    item.dispatchCommitted=false;
+                }
         }
 
         public bool Process(long id) => CreditProcessedCatch(id,null,out _);
@@ -217,7 +262,7 @@ namespace Raid
             foreach (long id in deliveredIds) if (id <= 0 || !delivered.Add(id)) throw new InvalidOperationException("Invalid delivery ledger.");
             HashSet<long> stock = new HashSet<long>();
             foreach (CatchItem item in tank)
-                if (item == null || !item.IsValid || !delivered.Contains(item.id) || !stock.Add(item.id))
+                if (item == null || !item.IsValid || item.IsSalvage || !delivered.Contains(item.id) || !stock.Add(item.id))
                     throw new InvalidOperationException("Invalid tank contents.");
             foreach (CatchItem item in cargo)
                 if (item == null || !item.IsValid || delivered.Contains(item.id) || !stock.Add(item.id))

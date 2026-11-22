@@ -14,6 +14,13 @@ namespace Raid
         static readonly Vector3 RestPosition=new Vector3(.29f,-.245f,.53f);
         static HarpoonPresentation active;
         internal static HarpoonPresentation ActiveModel => active;
+        internal bool HasCameraOn(DiverMotor actor) => actor!=null && owner!=null
+            && (owner.IsDead?owner.Spectating:owner)==actor;
+        internal bool TryCameraBallCenter(DiverMotor actor,out Vector3 center)
+        {
+            center=hands==null?Vector3.zero:hands.BallCenter;
+            return actor==viewed && hands?.BallVisible==true;
+        }
         readonly List<Mesh> meshes=new List<Mesh>();
         Camera view;
         DiverMotor owner;

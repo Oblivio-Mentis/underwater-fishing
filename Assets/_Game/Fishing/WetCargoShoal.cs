@@ -16,7 +16,15 @@ namespace Raid
             internal Vector3 ExitStart;
         }
 
+        sealed class SalvageModel
+        {
+            internal Transform Model;
+            internal Bounds MeshBounds;
+            internal Vector3 Berth;
+        }
+
         readonly Dictionary<long,Swimmer> swimmers=new();
+        readonly Dictionary<long,SalvageModel> salvage=new();
         readonly HashSet<long> confirmed=new();
         readonly List<long> removed=new();
         RaidWorld world;
@@ -63,6 +71,7 @@ namespace Raid
             // these fish in the cage. Do not replay the entry path when that phase clock resets.
             deliveryProgress=unloading ? Mathf.Max(deliveryProgress,
                 vessel.PresentedHoistPhase==HoistPhase.Unloading ? vessel.HoistAnimation : 1f) : 0;
+            PresentSalvage(deliveryProgress);
             var route=world.FishRoute;
             foreach(var entry in swimmers)
             {
@@ -81,11 +90,17 @@ namespace Raid
             manifest=state;
             confirmed.Clear();
             cageCount=0;
+            int equipmentCount=0;
             if(state!=null)
             {
                 foreach(var item in state.cargo)
                 {
-                    if(!VisibleFish(item))continue;
+                    if(item.IsSalvage)
+                    {
+                        PlaceSalvage(item,equipmentCount++);
+                        confirmed.Add(item.id);
+                        continue;
+                    }
                     Slot(item).InCage=true;
                     confirmed.Add(item.id);
                     cageCount++;
@@ -93,7 +108,7 @@ namespace Raid
                 if(reservoir!=null)
                     foreach(var item in state.tank)
                     {
-                        if(!VisibleFish(item))continue;
+                        if(item.IsSalvage)continue;
                         var fish=Slot(item);
                         bool arrivedFromCage=fish.InCage;
                         fish.InCage=false;
@@ -112,9 +127,53 @@ namespace Raid
                 Destroy(model.gameObject);
                 swimmers.Remove(id);
             }
+            removed.Clear();
+            foreach(var entry in salvage)
+                if(!confirmed.Contains(entry.Key))removed.Add(entry.Key);
+            foreach(long id in removed)
+            {
+                var model=salvage[id].Model.gameObject;
+                model.SetActive(false);
+                Destroy(model);
+                salvage.Remove(id);
+            }
         }
 
-        static bool VisibleFish(CatchItem item) => item.species!=null || item.offering>0;
+        void PlaceSalvage(CatchItem item,int index)
+        {
+            int columns=vessel==null?3:4;
+            float spacing=vessel==null?.51f:.73f;
+            float scale=vessel==null?.26f:.38f;
+            if(!salvage.TryGetValue(item.id,out var entry))
+            {
+                LootActor source=null;
+                foreach(var actor in LootActor.VisibleStock)
+                    if(actor.tier==item.depthTier && actor.gameObject.scene==gameObject.scene) {source=actor;break;}
+                if(source==null)return;
+                var model=source.CopyModel(transform,source.DisplayName+" "+item.id);
+                model.localScale=Vector3.one*scale;
+                entry=new SalvageModel{Model=model,MeshBounds=source.MeshBounds};
+                salvage.Add(item.id,entry);
+            }
+            int layer=index/(columns*columns);
+            float floor=vessel==null?-.46f:CargoBasket.Floor+.16f;
+            var bounds=entry.MeshBounds;
+            entry.Berth=new Vector3((index%columns-(columns-1)*.5f)*spacing,
+                floor+scale*(-bounds.min.y+layer*bounds.size.y),
+                (index/columns%columns-(columns-1)*.5f)*spacing);
+        }
+
+        void PresentSalvage(float unloading)
+        {
+            float offload=Mathf.InverseLerp(.36f,.81f,unloading);
+            float slide=CargoBasket.Ease(offload);
+            foreach(var entry in salvage.Values)
+            {
+                entry.Model.gameObject.SetActive(offload<1f);
+                entry.Model.localPosition=entry.Berth+new Vector3(-slide*2.8f,-slide*slide*.58f,0);
+                entry.Model.localRotation=Quaternion.Euler(0,0,slide*26f);
+            }
+        }
 
         Swimmer Slot(CatchItem item)
         {

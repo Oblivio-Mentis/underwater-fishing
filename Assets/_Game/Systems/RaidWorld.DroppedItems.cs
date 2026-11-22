@@ -41,16 +41,16 @@ namespace Raid
             if (index >= 0) dropped.RemoveAt(index);
         }
 
-        internal Vector3 PlaceItem(DiverMotor diver)
+        internal Vector3 PlaceItem(DiverMotor diver,float radius=.17f,float clearance=.17f)
         {
             Vector3 eye = diver.transform.position + Vector3.up * .52f;
             Vector3 forward = diver.transform.forward;
             float reach = 1.13f;
-            if (Physics.SphereCast(eye, .17f, forward, out var wall, reach, ~0, QueryTriggerInteraction.Ignore))
+            if (Physics.SphereCast(eye, radius, forward, out var wall, reach, ~0, QueryTriggerInteraction.Ignore))
                 reach = Mathf.Max(.05f, wall.distance - .08f);
             Vector3 point = eye + forward * reach;
             if (Physics.Raycast(point, Vector3.down, out var floor, 1.85f, ~0, QueryTriggerInteraction.Ignore))
-                return floor.point + floor.normal * .17f;
+                return floor.point + floor.normal * clearance;
             return point + Vector3.down * .28f;
         }
 

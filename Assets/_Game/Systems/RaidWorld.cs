@@ -126,7 +126,14 @@ namespace Raid
             TickAirlock();
             TickGosha();
             TickRouteClock();
-            team.TickHoist(Time.fixedDeltaTime,progression);
+            var beforeHoist=team.Treasury;
+            var salvageYield=team.TickHoist(Time.fixedDeltaTime,progression);
+            if(!salvageYield.IsEmpty)
+            {
+                SendProcessingReceipt(salvageYield,beforeHoist,team.Treasury,fromSalvage:true);
+                Publish();
+                Save();
+            }
             // A defense belongs to the deadline that just expired. The next feeding
             // interval stays full in the save and begins ticking when defense ends.
             if((threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
@@ -222,16 +229,11 @@ namespace Raid
                 case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;
                 case WorldAction.StopFeeding: success=StopFishRoute(true,id); break;
                 case WorldAction.LoadCargo:
-                    var tool=diver.GetComponent<HarpoonTool>(); var fish=tool!=null?tool.CarriedFish:null;
-                    if(team.hoistPhase!=HoistPhase.Loading) break;
-                    if(fish==null)
-                    {
-                        foreach(var loot in FindObjectsByType<LootActor>())
-                            if(loot.IsCarriedBy(diver) && team.LoadCargo(new CatchItem(loot.itemId,0,0,0,1,loot.tier,loot.scrap,loot.electronics),progression))
-                            { loot.Consume(); success=true; break; }
-                        break;
-                    }
-                    success = tool.UnloadCatches(team, progression);
+                    var tool=diver.GetComponent<HarpoonTool>();
+                    if(tool==null || team.hoistPhase!=HoistPhase.Loading)break;
+                    var salvage=tool.CarriedSalvage;
+                    success=salvage!=null ? salvage.LoadInto(tool,team,progression,salvage.CargoId)
+                        : tool.UnloadCatches(team,progression);
                     break;
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
                 default:
@@ -251,15 +253,8 @@ namespace Raid
                 if(!tool.PlaceSelectedCatch(team,progression,id))return false;
                 catchOwners.Remove(id);
             }
-            else
-            {
-                var loot=LootActor.HeldBy(tool.Motor);
-                if(loot==null || !loot.IsCarriedBy(tool.Motor))return false;
-                var item=new CatchItem(loot.itemId,0,0,0,1,loot.tier,loot.scrap,loot.electronics);
-                if(loot.Collector!=null)item.caughtBy=new[]{loot.Collector};
-                if(!team.LoadCargo(item,progression))return false;
-                loot.Consume();
-            }
+            else if(kind!=DroppedKind.Salvage || tool.CarriedSalvage?.LoadInto(tool,team,progression,id)!=true)
+                return false;
             Publish();
             Save();
             return true;

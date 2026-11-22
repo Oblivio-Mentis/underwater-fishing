@@ -16,7 +16,7 @@ namespace Raid
         public long HarpoonId => _harpoonId.Value;
         public FishActor LiftedHeavy => _liftedHeavy.Value.species == null ? null : _liftedHeavy.Value.species.GetComponent<FishActor>();
         FishActor HeavySpecies => LiftedHeavy ?? _fish;
-        public long HeldCargoId => HandsFull?HeavyId:CatchIdInSlot(ActiveSlot);
+        public long HeldCargoId => HoldingHeavyCatch?HeavyId:CatchIdInSlot(ActiveSlot);
         long HeavyId => _liftedHeavy.Value.id > 0 ? _liftedHeavy.Value.id : _fish.CargoId;
 
         static long NewToolId() => BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
@@ -33,15 +33,12 @@ namespace Raid
             id = 0;
             if (Motor == null) return DroppedKind.None;
             if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true) return DroppedKind.None;
-            if (HandsFull) { id = HeavyId; return DroppedKind.Catch; }
+            var salvage = CarriedSalvage;
+            if (salvage != null) { id = salvage.CargoId; return DroppedKind.Salvage; }
+            if (HoldingHeavyCatch) { id = HeavyId; return DroppedKind.Catch; }
             if (RaidWorld.Instance?.GoshaBallInHands(Motor) == true) { id = 1; return DroppedKind.Ball; }
             if (ActiveSlot == 0 && HarpoonId > 0) { id = HarpoonId; return DroppedKind.Harpoon; }
             if (ActiveSlot >= 2 && (id = CatchIdInSlot(ActiveSlot)) > 0) return DroppedKind.Catch;
-            if (ActiveSlot == 1)
-            {
-                var salvage = LootActor.HeldBy(Motor);
-                if (salvage != null) { id = salvage.ObjectId; return DroppedKind.Salvage; }
-            }
             return DroppedKind.None;
         }
 
@@ -68,7 +65,7 @@ namespace Raid
                 if(world.LoadSelectedCargo(this,expectedKind,id))Motor.ConfirmInteraction();
                 return;
             }
-            var at = world.PlaceItem(Motor);
+            var at = expectedKind==DroppedKind.Salvage ? default : world.PlaceItem(Motor);
             bool placed = false;
             switch (expectedKind)
             {
@@ -76,7 +73,7 @@ namespace Raid
                     placed = world.PutDownHeldBall(Motor, at);
                     break;
                 case DroppedKind.Salvage:
-                    placed = LootActor.HeldBy(Motor)?.PutDown(Motor, at) == true;
+                    placed = CarriedSalvage?.DropAtFeet(Motor) == true;
                     break;
                 case DroppedKind.Harpoon:
                     if (!world.CanRegisterDrop(id)) break;
@@ -87,11 +84,11 @@ namespace Raid
                     placed = true;
                     break;
                 case DroppedKind.Catch:
-                    var fish = HandsFull ? HeavySpecies : FishInSlot(ActiveSlot);
+                    var fish = HoldingHeavyCatch ? HeavySpecies : FishInSlot(ActiveSlot);
                     if (fish == null || !world.CanRegisterDrop(id)) break;
                     var item = new DroppedItem { id = id, kind = DroppedKind.Catch, species = fish.NetworkObject,
                         position = at, yaw = transform.eulerAngles.y };
-                    if (HandsFull ? !RemoveHeavy() : !EmptyPocket(ActiveSlot, false)) break;
+                    if (HoldingHeavyCatch ? !RemoveHeavy() : !EmptyPocket(ActiveSlot, false)) break;
                     world.RegisterDrop(item);
                     placed = true;
                     break;
@@ -109,17 +106,17 @@ namespace Raid
             FinishFishingLine();
         }
 
-        internal bool EquipSalvageHands()
+        internal bool CanEquipSalvage => MayHandleItems && CanSelect(1) && !RaidWorld.Instance.IsHoldingGosha(Motor);
+
+        internal void EquipSalvageHands()
         {
-            if (!MayHandleItems || !CanSelect(1) || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
             if (ActiveSlot == 0) UnequipGun();
             EquipSlot(1);
-            return true;
         }
 
         public bool RequestPickup(long id)
         {
-            if (!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked) return false;
+            if (!IsClientInitialized || !IsOwner || HandsFull || !MayHandleItems || UI.UiInputGate.Blocked) return false;
             PickupServer(id);
             return true;
         }
@@ -145,7 +142,7 @@ namespace Raid
                 var fish = item.Fish;
                 if (fish == null) return;
                 int slot=fish.RequiresPartner?1:FreePocket();
-                if(slot<0 || fish.RequiresPartner && HandsFull)return;
+                if(slot<0)return;
                 world.RemoveDrop(id);
                 var carried=new PocketItem {species=item.species,id=id};
                 if(fish.RequiresPartner)_liftedHeavy.Value=carried;
@@ -164,7 +161,7 @@ namespace Raid
 
         internal bool PlaceSelectedCatch(TeamProgress team,ProgressionTuning tuning,long id)
         {
-            bool heavy=HandsFull;
+            bool heavy=HoldingHeavyCatch;
             var fish=heavy?HeavySpecies:FishInSlot(ActiveSlot);
             if(fish==null || !team.LoadCargo(RaidWorld.Instance.AttributeCatch(fish.ToCargo(id)),tuning))return false;
             if(heavy?RemoveHeavy():EmptyPocket(ActiveSlot,false))return true;
@@ -175,7 +172,7 @@ namespace Raid
         internal bool AcceptGoshaCatch(FishActor fish)
         {
             int slot=FreePocket();
-            if(!IsServerInitialized || slot<0 || Motor.IsHelpless || Motor.IsTrapped)return false;
+            if(!IsServerInitialized || HandsFull || slot<0 || Motor.IsHelpless || Motor.IsTrapped)return false;
             SetPocket(slot,new PocketItem { species=fish.NetworkObject,id=fish.CargoId });
             return true;
         }

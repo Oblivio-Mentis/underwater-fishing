@@ -285,32 +285,34 @@ namespace Raid.Tests
         }
 
         [Test]
-        public void DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce()
+        public void LegacySalvageInTankCreditsOnceAndLegacyCargoStillNeedsTheHoist()
         {
-            Assert.That(team.Deposit(new CatchItem(7001, 0, 0, 0, 2, 2, 5, 3)), Is.True);
+            Assert.That(team.Deposit(new CatchItem(7001, 0, 0, 0, 1, 2, 5, 3)), Is.True);
+            Assert.That(team.LoadCargo(new CatchItem(7090, 0, 0, 0, 1, 1, 2, 1), tuning), Is.True);
             TeamSave.Save(savePath, team);
-            TeamProgress restored = TeamSave.Load(savePath);
-            Assert.That(restored.tank.Count, Is.EqualTo(1));
-            Assert.That(restored.tank[0].scrap, Is.EqualTo(5));
-            Assert.That(restored.tank[0].electronics, Is.EqualTo(3));
-            Assert.That(restored.tank[0].depthTier, Is.EqualTo(2));
-            Assert.That(restored.Process(7001), Is.True);
-            Assert.That(restored.Process(7001), Is.False);
-            TeamSave.Save(savePath, restored);
-            TeamProgress processed = TeamSave.Load(savePath);
-            Assert.That(processed.scrap, Is.EqualTo(5));
-            Assert.That(processed.electronics, Is.EqualTo(3));
-            Assert.That(processed.biomass + processed.chitin, Is.Zero);
-            Assert.That(processed.lifetimeCatch, Is.EqualTo(8));
-            Assert.That(processed.tank, Is.Empty);
-            Assert.That(processed.Deposit(new CatchItem(7001, 0, 0, 0, 2, 2, 5, 3)), Is.False);
+
+            var restored=TeamSave.Load(savePath);
+            Assert.That(restored.tank, Is.Empty);
+            Assert.That(restored.Treasury, Is.EqualTo(new MaterialCost(0,0,5,3)));
+            Assert.That(restored.lifetimeCatch, Is.EqualTo(8));
+            Assert.That(restored.cargo[0].IsSalvage, Is.True);
+            Assert.That(restored.Deposit(CatchItem.Salvage(7001,2,5,3)), Is.False);
+            Assert.That(restored.BeginHoist(tuning), Is.True);
+            Assert.That(restored.TickHoist(1000,tuning), Is.EqualTo(new MaterialCost(0,0,2,1)));
+            Assert.That(restored.tank, Is.Empty);
+            TeamSave.Save(savePath,restored);
+            var saved=TeamSave.Load(savePath);
+            Assert.That(saved.Treasury, Is.EqualTo(new MaterialCost(0,0,7,4)));
+            Assert.That(saved.lifetimeCatch, Is.EqualTo(11));
         }
 
         [Test]
-        public void ZeroOfferingLootCannotBeFedOrDiscardedByFeeding()
+        public void NamedFishWithOnlyMineralYieldRemainsFishAfterSaveAndCannotBeFed()
         {
             team.offering = 3;
-            Assert.That(team.Deposit(new CatchItem(7002, 0, 0, 0, 1, 1, 2, 1)), Is.True);
+            Assert.That(team.Deposit(new CatchItem(7002, 0, 0, 0, 1, 1, 2, 1, species:"Bristlefish")), Is.True);
+            TeamSave.Save(savePath,team);
+            team=TeamSave.Load(savePath);
             Assert.That(team.Feed(7002), Is.False);
             Assert.That(team.offering, Is.EqualTo(3));
             Assert.That(team.tank.Count, Is.EqualTo(1), "A rejected feed must preserve the resource item.");
@@ -371,17 +373,17 @@ namespace Raid.Tests
         {
             tuning.raisingSeconds = 2; tuning.unloadingSeconds = 3; tuning.returningSeconds = 4;
             Assert.That(team.LoadCargo(new CatchItem(7003, 4, 1, 3, 1, 1, 2, 3), tuning), Is.True);
-            Assert.That(team.LoadCargo(new CatchItem(7004, 0, 0, 0, 2, 2, 5, 2), tuning), Is.True);
+            Assert.That(team.LoadCargo(CatchItem.Salvage(7004,2,5,2), tuning), Is.True);
             Assert.That(team.BeginHoist(tuning), Is.True);
             team.TickHoist(2, tuning);
             Assert.That(team.lifetimeCatch, Is.Zero, "Raising alone must not count undelivered resources.");
-            team.TickHoist(3, tuning);
-            Assert.That(team.tank.Count, Is.EqualTo(2));
+            Assert.That(team.TickHoist(3, tuning), Is.EqualTo(new MaterialCost(0,0,5,2)));
+            Assert.That(team.tank.Count, Is.EqualTo(1));
             Assert.That(team.lifetimeCatch, Is.EqualTo(17));
-            team.TickHoist(100, tuning);
+            Assert.That(team.TickHoist(100, tuning).IsEmpty, Is.True);
             Assert.That(team.lifetimeCatch, Is.EqualTo(17), "Returning/idle ticks cannot deliver twice.");
             Assert.That(team.Process(7003), Is.True);
-            Assert.That(team.Process(7004), Is.True);
+            Assert.That(team.Process(7004), Is.False);
             Assert.That(team.biomass, Is.EqualTo(4));
             Assert.That(team.chitin, Is.EqualTo(1));
             Assert.That(team.scrap, Is.EqualTo(7));

@@ -25,12 +25,15 @@ namespace Raid
         {
             Phase("Original salvage object Q and E on independent owners");
             var loot=FindObjectsByType<LootActor>().First(l=>l.IsVisible && l.CarrierOwnerId<0);
-            long original=loot.itemId;
+            long original=loot.CargoId;
             AtSight(host,loot.transform.position,1.25f);
             yield return Pause(.35f);
             world.Command(WorldAction.Collect,0);
             yield return Wait(()=>loot.IsCarriedBy(host.Motor),4,"Host failed to pick up initial salvage.");
-            Require(host.ActiveSlot==1 && host.SelectedItem(out _)==DroppedKind.Salvage,"Salvage did not select the hands.");
+            Require(host.ActiveSlot==1 && host.HandsFull && host.SelectedItem(out long held)==DroppedKind.Salvage
+                && held==original && host.CatchCount==0 && !host.SelectSlot(0),
+                "Salvage must occupy both hands, preserve ID, and stay separate from catches.");
+            Require(!host.RequestPickup(original),"A heavy load did not prevent another pickup.");
             host.Motor.Teleport(HandoffWater);
             yield return Pause(.4f);
             Require(host.RequestDropSelected(),"Host failed to request a salvage drop.");
@@ -41,7 +44,7 @@ namespace Raid
             yield return Pause(.75f);
             Send("key",.15f,"E");
             yield return Wait(()=>loot.IsCarriedBy(helper.Motor),6,"Remote E did not pick up salvage.");
-            Require(loot.itemId==original,"Salvage changed its cargo ID on pickup.");
+            Require(loot.CargoId==original && helper.HandsFull,"Salvage changed identity or did not occupy both remote hands.");
             Send("key",.15f,"Q");
             yield return Wait(()=>loot.CarrierOwnerId<0 && loot.IsVisible,6,"Remote Q did not put salvage down.");
             Check("Salvage "+original+" moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.");
