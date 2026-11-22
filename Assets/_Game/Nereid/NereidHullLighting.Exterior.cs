@@ -203,6 +203,11 @@ namespace Raid.Nereid
         {
             var font=UI.UiRoot.Instance?.font;
             if(font==null)return;
+            var hull=transform.Find("Nereid_Exterior");
+            if(hull!=null)
+                foreach(var renderer in hull.GetComponentsInChildren<MeshRenderer>())
+                    if(renderer.name.StartsWith("Exterior_NEREID_stencil",System.StringComparison.Ordinal))
+                        renderer.enabled=false;
             for(int side=-1;side<=1;side+=2)
             {
                 var label=Pivot(outerArt,"NEREID vessel service stripe",new Vector3(side*6.92f,3.355f,-8.73f));
