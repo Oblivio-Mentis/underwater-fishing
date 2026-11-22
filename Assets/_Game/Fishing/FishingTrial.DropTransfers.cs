@@ -10,6 +10,8 @@ namespace Raid
     {
         static bool VerifyDropTransfers => Array.IndexOf(Environment.GetCommandLineArgs(), "-raid-verify-drops") >= 0;
         static readonly Vector3 HandoffWater = new(29,-5,7);
+        long loadedSalvageId;
+        MaterialCost loadedSalvageYield;
 
         bool WorldHas(long id) => Enumerable.Range(0,world.DroppedCount).Any(i=>world.DroppedAt(i).id==id);
         DroppedItem FindDrop(long id) => Enumerable.Range(0,world.DroppedCount).Select(world.DroppedAt).Single(d=>d.id==id);
@@ -50,6 +52,23 @@ namespace Raid
             Check("Salvage "+original+" moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.");
             Send("slot",0);
             yield return Wait(()=>helper.ActiveSlot==0,4,"Remote could not re-equip its harpoon after salvage.");
+            helper.Motor.Teleport(HandoffWater+Vector3.right*12);
+            AtSight(host,loot.transform.position,1.25f);
+            yield return Pause(.4f);
+            world.Command(WorldAction.Collect,0);
+            yield return Wait(()=>loot.IsCarriedBy(host.Motor),5,"Host could not reclaim the same salvage for delivery.");
+
+            var cage=world.container.GetComponentInChildren<CargoDispatch>();
+            Vector3 center=cage.Frame.position;
+            host.Motor.Teleport(center+new Vector3(2.14f,-.18f,-.4f));
+            host.Motor.LookAtConsole(center);
+            yield return Wait(()=>CargoDispatch.CanLoad(world,host.Motor),4,"No access to the cage for salvage.");
+            Require(host.RequestDropSelected(),"The selected salvage could not be deposited with Q.");
+            yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count(x=>x.id==original && x.IsSalvage)==1,5,
+                "The physical cage failed to record salvage distinctly from fish.");
+            loadedSalvageId=original;
+            loadedSalvageYield=new MaterialCost(0,0,loot.scrap,loot.electronics);
+            Check("Q placed the original salvage inside the physical cage as technical cargo.");
             yield return RefillOnDeck();
         }
 

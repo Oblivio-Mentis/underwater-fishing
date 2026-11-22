@@ -319,12 +319,20 @@ namespace Raid
             host.Motor.Teleport(button+new Vector3(1.6f,-.6f,0));
             host.Motor.LookAtConsole(button);
             yield return Wait(()=>CargoDispatch.CanUse(host.Motor),5,"Actual dispatch button is not on the server sightline.");
+            var walletBeforeHoist=world.Team.Treasury;
             world.Command(WorldAction.Hoist,0);
             yield return Wait(() => world.Team.hoistPhase != HoistPhase.Loading, 4, "Winch command refused.");
             yield return RefillOnDeck();
             yield return Wait(() => world.Team.hoistPhase == HoistPhase.Loading && caughtIds.All(id => world.Team.tank.Exists(item => item.id == id))
                 && cage.Count == 0 && ClientReceivedDelivery(caughtIds), 45, "Host and client did not return to Loading with the same four delivered identities.");
             Check("Winch delivered each original ID to the reservoir and both cages emptied.");
+            if(loadedSalvageId>0)
+            {
+                Require(world.Team.deliveredIds.Contains(loadedSalvageId) && !world.Team.tank.Exists(x=>x.id==loadedSalvageId) &&
+                    world.Team.Treasury.Subtract(walletBeforeHoist).Equals(loadedSalvageYield),
+                    "Mixed hoist added salvage to the aquarium or credited the wrong materials.");
+                Check("Mixed hoist preserved all four fish and credited only the salvage to the shared wallet.");
+            }
             Require(world.Team.tank.Find(item=>item.id==landedHeavyId)?.caughtBy?.Length==2,
                 "Heavy catch lost one of its two confirmed participants.");
             Require(caughtIds.Take(3).All(id=>world.Team.tank.Find(item=>item.id==id)?.caughtBy?.Length==1),

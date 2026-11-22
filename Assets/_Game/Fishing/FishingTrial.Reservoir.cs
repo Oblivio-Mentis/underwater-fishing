@@ -63,6 +63,7 @@ namespace Raid
             ui.ClosePanel();
             yield return Wait(()=>!world.Team.tank.Exists(item=>item.id==big.id),30,"Selected fish never reached the processor.");
             yield return Wait(()=>ui.ProcessingReceiptVisible && ui.Page==UiPage.None,3,"The confirmed processing receipt did not appear on the HUD.");
+            yield return Pause(.65f);
             yield return Shot("processing-receipt.png");
             yield return Wait(()=>!world.Team.tank.Exists(item=>item.id==food.id),30,"Selected fish never reached the creature.");
             var credited=world.Team.Treasury.Subtract(beforeTreasury);

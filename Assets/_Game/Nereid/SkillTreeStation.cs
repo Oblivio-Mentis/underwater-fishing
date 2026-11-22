@@ -68,7 +68,7 @@ namespace Raid.Nereid
             idle.textWrappingMode = TextWrappingModes.NoWrap;
             idle.fontSize = .17f;
             idle.color = UI.UiTheme.Cyan;
-            idle.text = "NEREID\n\nСНАРЯЖЕНИЕ ЭКИПАЖА\n\nЛКМ · ОТКРЫТЬ ДЕРЕВО";
+            idle.text = "NEREID\n\nСНАРЯЖЕНИЕ ЭКИПАЖА\n\nE / ЛКМ · ОТКРЫТЬ";
         }
 
         static Material FindSurface(ShipConsoleKind kind)
