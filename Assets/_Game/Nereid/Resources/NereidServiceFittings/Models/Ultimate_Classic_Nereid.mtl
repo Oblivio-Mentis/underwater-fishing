@@ -1,0 +1,39 @@
+newmtl Q_Classic_Main
+Kd .31 .36 .36
+Ka .15 .15 .15
+Ks .22 .22 .22
+Ns 33
+d 1
+illum 2
+
+newmtl Q_Classic_DarkGrey
+Kd .12 .17 .18
+Ka .15 .15 .15
+Ks .22 .22 .22
+Ns 33
+d 1
+illum 2
+
+newmtl Q_Classic_Accent
+Kd .61 .39 .16
+Ka .15 .15 .15
+Ks .22 .22 .22
+Ns 33
+d 1
+illum 2
+
+newmtl Q_Classic_DarkAccent
+Kd .26 .18 .11
+Ka .15 .15 .15
+Ks .22 .22 .22
+Ns 33
+d 1
+illum 2
+
+newmtl Q_Classic_Black
+Kd .043 .065 .073
+Ka .15 .15 .15
+Ks .22 .22 .22
+Ns 33
+d 1
+illum 2
