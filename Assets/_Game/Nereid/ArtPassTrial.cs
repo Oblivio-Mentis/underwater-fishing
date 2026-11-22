@@ -111,6 +111,7 @@ namespace Raid.Nereid
             peer=DiverMotor.ServerDivers.FirstOrDefault(d=>d && !d.IsOwner);
             if(world.threats)world.threats.enabled=false;
             world.StageArtStock();
+            Application.runInBackground=true;
             QualitySettings.vSyncCount=0;Application.targetFrameRate=-1;
             result.gpu=SystemInfo.graphicsDeviceName;result.api=SystemInfo.graphicsDeviceType.ToString();
             result.profile=QualitySettings.names[QualitySettings.GetQualityLevel()];
@@ -180,6 +181,7 @@ namespace Raid.Nereid
         {
             var cpu=new List<double>();var gpu=new List<double>();var presented=new List<double>();
             ulong last=0;
+            int readings=0,cpuValues=0,gpuValues=0;
             double begin=Time.realtimeSinceStartupAsDouble,end=begin+7;
             while(Time.realtimeSinceStartupAsDouble<end)
             {
@@ -187,16 +189,25 @@ namespace Raid.Nereid
                 yield return new WaitForEndOfFrame();
                 if(Time.realtimeSinceStartupAsDouble<begin+2)continue;
                 uint count=FrameTimingManager.GetLatestTimings((uint)timingBuffer.Length,timingBuffer);
+                readings+=(int)count;
                 for(int i=(int)count-1;i>=0;i--)
                 {
                     FrameTiming timing=timingBuffer[i];
-                    if(timing.frameStartTimestamp<=last || timing.cpuFrameTime<=0 || timing.gpuFrameTime<=0)continue;
-                    last=timing.frameStartTimestamp;
+                    if(timing.cpuFrameTime>0)cpuValues++;
+                    if(timing.gpuFrameTime>0)gpuValues++;
+                    if(timing.cpuFrameTime<=0 || timing.gpuFrameTime<=0)continue;
+                    if(timing.frameStartTimestamp!=0)
+                    {
+                        if(timing.frameStartTimestamp<=last)continue;
+                        last=timing.frameStartTimestamp;
+                    }
+                    else if(i!=0)continue;
                     cpu.Add(timing.cpuFrameTime);gpu.Add(timing.gpuFrameTime);
                 }
                 presented.Add(Time.unscaledDeltaTime*1000);
             }
-            if(cpu.Count<50 || gpu.Count<50)throw new InvalidOperationException("Frame Timing Manager did not report enough CPU and GPU frames.");
+            if(cpu.Count<50 || gpu.Count<50)throw new InvalidOperationException(
+                $"Frame Timing Manager enabled={FrameTimingManager.IsFeatureEnabled()}, readings={readings}, CPU={cpuValues}, GPU={gpuValues}, pairs={cpu.Count}.");
             if(Vector3.Distance(sample.eye,eye.transform.position)>.1f || Vector3.Angle(sample.direction,eye.transform.forward)>1)
                 throw new InvalidOperationException("The measuring camera moved at "+sample.name);
             sample.samples=cpu.Count;

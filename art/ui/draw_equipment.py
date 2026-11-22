@@ -122,4 +122,3 @@ def draw(destination):
 if __name__ == "__main__":
     import sys
     draw(Path(sys.argv[1]))
-
