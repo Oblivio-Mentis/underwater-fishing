@@ -49,8 +49,8 @@ namespace Raid.Nereid
             cargo.shadows=LightShadows.Hard;cargo.shadowNearPlane=.23f;cargo.shadowNormalBias=.18f;
             cargo.GetUniversalAdditionalLightData().additionalLightsShadowResolutionTier=UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow;
             BuildHullGuides();
-            beams[3]=Fixture("Outer hatch wall wash",new Vector3(11.54f,2.02f,-15.49f),transform.TransformPoint(new Vector3(10.30f,1.0f,-13.7f)),
-                new Color(1.0f,.71f,.45f),amberLens,480,11.5f,48,82);
+            beams[3]=Fixture("Outer hatch wall wash",new Vector3(11.54f,2.02f,-15.49f),transform.TransformPoint(new Vector3(10.30f,.55f,-13.71f)),
+                new Color(1.0f,.72f,.47f),amberLens,250,11.5f,52,88);
             beams[4]=Fixture("Saddle-tank grazing light",new Vector3(9.53f,-.24f,-15.84f),transform.TransformPoint(new Vector3(7.50f,-.68f,-20.18f)),
                 new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
             BuildExteriorDetail();
