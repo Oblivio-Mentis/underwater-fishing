@@ -104,8 +104,8 @@ namespace Raid.UI
             }
             harpoonState.color=UiTheme.Cyan;harpoonTip.color=UiTheme.Muted;harpoonTip.fontSizeMax=16;
             UiKit.Size(harpoonTip,32);harpoonPanel.sizeDelta=new Vector2(352,92);
-            UiKit.Set(harpoonState,ReelReadout.Species(fish.SpeciesId)+" · обе руки заняты");
-            UiKit.Set(harpoonTip,"К клети за кормой   ·   R — отпустить");
+            UiKit.Set(harpoonState,ReelReadout.Species(tool.CarriedFish?.SpeciesId)+" · обе руки заняты");
+            UiKit.Set(harpoonTip,"К клети за кормой   ·   Q — положить");
 
         }
 
