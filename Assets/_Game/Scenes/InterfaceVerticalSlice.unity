@@ -22244,7 +22244,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -27322,7 +27322,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -31502,7 +31502,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 465043519}
@@ -31837,19 +31837,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8230337030297780056, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: f54221784b9cefa4abad525da6f602fc, type: 2}
     - target: {fileID: -6163057519222223901, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 3353e41645467034a9a34a76cee9199f, type: 2}
     - target: {fileID: -5210847093294832647, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 5464aabe2953d164a89d912581068083, type: 2}
     - target: {fileID: 241017148034300755, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: c9c46d67faf4a9d45bb85b0770c1e2bb, type: 2}
     - target: {fileID: 919132149155446097, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: m_Name
@@ -31857,23 +31857,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4471009046766696474, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: e652c6d6118354f4c8d5b692023fffb9, type: 2}
     - target: {fileID: 4793236789418369673, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: 5323977024013330664, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 4e97414746b2ea8438ff7574455a9053, type: 2}
     - target: {fileID: 6394901228383597787, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 9fe7de45575425646ac0836afcf28e06, type: 2}
     - target: {fileID: 9000541596987311784, guid: 11c82274bd39a9e4e931611814abf3d3, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 87f54169e66ac484cb2994c059c63ec1, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -35764,7 +35764,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c4e45e71df081f64f9ffec4a8b73ba26, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.VisualSlice.KelpSway
   blades:
   - {fileID: 15627443}
@@ -39218,7 +39218,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -49638,7 +49638,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -50233,27 +50233,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8649287151462440812, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: c9c46d67faf4a9d45bb85b0770c1e2bb, type: 2}
     - target: {fileID: -8062485300801861278, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 9fe7de45575425646ac0836afcf28e06, type: 2}
     - target: {fileID: -3441991606956237158, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 3353e41645467034a9a34a76cee9199f, type: 2}
     - target: {fileID: -168323398117621895, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: f54221784b9cefa4abad525da6f602fc, type: 2}
     - target: {fileID: 833618819862785071, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 87f54169e66ac484cb2994c059c63ec1, type: 2}
     - target: {fileID: 898901205749528232, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 4a7b96c9107080040846e7041d147105, type: 2}
     - target: {fileID: 919132149155446097, guid: f8a496c7557c4d04ba1b56e6f252d49a, type: 3}
       propertyPath: m_Name
@@ -52436,7 +52436,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -57849,7 +57849,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -73035,19 +73035,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -6688664169851649128, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 7381a4bd51e70864db05b5e494517833, type: 2}
     - target: {fileID: -5513865271473413775, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 9cadf05fde2b2c046aa8e169c442c0b8, type: 2}
     - target: {fileID: -1613367684548762933, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: dc2d13e13d36a9f4a9648c6d54bffdb4, type: 2}
     - target: {fileID: -990987583918896920, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 2e4c02603f706464aafff0923af36f1a, type: 2}
     - target: {fileID: 919132149155446097, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: m_Name
@@ -73055,7 +73055,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7202511984614799360, guid: 22f093cebd036ae4f8bfa3d4f943e3d2, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
-      value: 
+      value:
       objectReference: {fileID: 2100000, guid: 06d224b11e7a7f14aa63bdb4867c04e8, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -73150,7 +73150,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c246d36a0baaf94eb3bd3790cc739c1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidCreatureMotion
   eyes:
   - {fileID: 1402814099}
@@ -76676,7 +76676,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 3
   screenAnchor: {fileID: 551850604}
@@ -82872,7 +82872,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -84001,7 +84001,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -88933,7 +88933,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 427925e8437e2014d8768f633decaaea, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidShipScreens
   stations:
   - {fileID: 1482752637}
@@ -88953,7 +88953,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a41cbcf19fcd47a7b13122d3e90e5546, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidAim
   enterSeconds: 0.14
   exitSeconds: 0.11
@@ -88969,7 +88969,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 646b010e6b5a4b57bc0d49a507cd8622, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidFeedingReaction
   burpDelay: 0.44
   factory: {fileID: 0}
@@ -88983,7 +88983,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fb3e9a31cf3b60b488587b0520f5a904, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidVfx
 --- !u!114 &1702921845
 MonoBehaviour:
@@ -88995,7 +88995,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9d206ee5ce668b34db314c83737d3932, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.NereidVessel
   sealedRooms:
   - m_Center: {x: 0, y: 2.05, z: -1}
@@ -89936,7 +89936,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalLightData
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
@@ -101782,7 +101782,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5c2bd8d9d523165429557c8c8c7015a4, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishActor
   _componentIndexCache: 255
   _addedNetworkObject: {fileID: 1909217389}
@@ -101808,7 +101808,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 26b716c41e9b56b4baafaf13a523ba2e, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: FishNet.Runtime::FishNet.Object.NetworkObject
   _localLevelOfDetailCalculationType: 0
   _useLevelOfDetail: 0
@@ -102455,7 +102455,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8e7e51ea20592714289705f2f78874b5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ShipConsole
   kind: 2
   screenAnchor: {fileID: 1343704120}
@@ -103702,7 +103702,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -114721,7 +114721,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9541d86e2fd84c1d9990edf0852d74ab, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshPro
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
