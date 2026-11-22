@@ -17,6 +17,7 @@ namespace Raid.Nereid
         readonly List<Material> materials = new();
         readonly List<Mesh> meshes = new();
         Material enamel, steel, cabling, housing, grille, warmLens;
+        Material classicShell, classicTrim, classicOchre, classicBronze;
 
         internal static void Install(Transform hull, NereidAirlock chamber)
         {
@@ -34,12 +35,16 @@ namespace Raid.Nereid
         {
             enamel = Metal(shader, "Petrol pressure enamel", new Color(.58f, .72f, .73f), .40f, .31f, "T_Trim_01_BaseColor");
             steel = Metal(shader, "Weathered service steel", new Color(.75f, .79f, .77f), .53f, .39f, "T_Trim_02_BaseColor");
-            cabling = Metal(shader, "Petrol cable insulation", new Color(.10f, .28f, .31f), .06f, .22f, "T_Trim_03_Cables");
+            cabling = Metal(shader, "Petrol cable insulation", new Color(.43f, .62f, .65f), .06f, .22f, "T_Trim_03_Cables");
             housing = Metal(shader, "Pressure-rated ochre insulation", new Color(.63f, .59f, .42f), .12f, .25f, "T_PaddedWall_BaseColor");
             grille = Metal(shader, "Black intake backing", new Color(.075f, .11f, .125f), .18f, .24f);
             warmLens = Metal(shader, "Warm caged luminaire", new Color(.78f, .66f, .41f), .08f, .36f);
             warmLens.SetColor("_EmissionColor", new Color(1.04f, .64f, .28f));
             warmLens.EnableKeyword("_EMISSION");
+            classicShell = Metal(shader, "Classic cast steel", new Color(.31f, .36f, .36f), .36f, .30f);
+            classicTrim = Metal(shader, "Classic pressure panel edges", new Color(.12f, .17f, .18f), .47f, .31f);
+            classicOchre = Metal(shader, "Classic ochre fitting", new Color(.55f, .32f, .13f), .29f, .32f);
+            classicBronze = Metal(shader, "Classic inlet blades", new Color(.24f, .16f, .10f), .45f, .37f);
         }
 
         void FitMainHall()
@@ -67,6 +72,8 @@ namespace Raid.Nereid
             var bulkhead = new Bay(this, transform, "Aft workshop service bulkhead");
             bulkhead.Add(Cable, new Vector3(-3.56f, 2.70f, -15.90f), new Vector3(.31f, .83f, 3.28f), Quaternion.Euler(0, -90, 0));
             bulkhead.Add(Vent, new Vector3(3.8f, 1.76f, -15.90f), new Vector3(2.3f, .15f, .65f), Quaternion.Euler(90, 0, 0));
+            bulkhead.Add("Details_Plate_Details", new Vector3(3.77f, 2.38f, -15.89f),
+                new Vector3(.93f, .79f, .10f), Quaternion.identity);
             bulkhead.Add(Light, new Vector3(-2.5f, 3.18f, -11.5f), new Vector3(1.26f, .16f, .43f), Quaternion.identity);
             bulkhead.Build();
 
@@ -78,8 +85,10 @@ namespace Raid.Nereid
                 foreach (int side in new[] { -1, 1 })
                 {
                     Vector3 position = factory.ProcessorPoint(new Vector3(-3.45f + side * 2.195f, 1.53f, -7f));
-                    machine.Add("Prop_Vent_Small", position, new Vector3(.62f * scale.z, .105f * scale.x, .91f * scale.y),
-                        Quaternion.LookRotation(Vector3.up, Vector3.right * side));
+                    if (!machine.Add("Details_Vent_4", position, new Vector3(.62f * scale.z, .91f * scale.y, .105f * scale.x),
+                        Quaternion.LookRotation(Vector3.right * side, Vector3.up)))
+                        machine.Add("Prop_Vent_Small", position, new Vector3(.62f * scale.z, .105f * scale.x, .91f * scale.y),
+                            Quaternion.LookRotation(Vector3.up, Vector3.right * side));
                 }
                 machine.Build();
             }
@@ -90,7 +99,7 @@ namespace Raid.Nereid
                     continue;
                 var rear = new Bay(this, station.transform, "Instrument rear ventilation");
                 float ratio = station.screenScale / .0018f;
-                rear.Add(Vent, station.screenAnchor.localPosition + new Vector3(0, 0, .47f),
+                rear.Add("Prop_Vent_Small", station.screenAnchor.localPosition + new Vector3(0, 0, .47f),
                     new Vector3(1.40f * ratio, .105f, .39f * ratio), Quaternion.Euler(90, 0, 0));
                 rear.Build();
             }
@@ -114,6 +123,7 @@ namespace Raid.Nereid
                 if (bay.Add(Light, new Vector3(x, 3.91f, 0), new Vector3(1.47f, .12f, .28f), Quaternion.Euler(0, 90, 0)))
                     HideChamberSkin(chamber, "Inspection light", x);
             }
+            bay.Add("RoofTile_Pipes1", new Vector3(4.22f, 4.03f, -1.68f), new Vector3(2.43f, .23f, 2.32f), Quaternion.identity);
             bay.Add(Cable, new Vector3(3.95f, 3.57f, -3.02f), new Vector3(.23f, .67f, 4.6f), Quaternion.Euler(0, -90, 0));
             bay.Build();
         }
@@ -141,7 +151,13 @@ namespace Raid.Nereid
         {
             string label = source == null ? "" : source.name;
             if (label.StartsWith("MI_Trim_02")) return steel;
-            if (label.StartsWith("MI_Trim_03")) return cabling;
+            if (label.StartsWith("MI_Trim_03_Cables")) return cabling;
+            if (label.StartsWith("MI_Trim_03")) return grille;
+            if (label.StartsWith("Q_Classic_Main")) return classicShell;
+            if (label.StartsWith("Q_Classic_DarkGrey")) return classicTrim;
+            if (label.StartsWith("Q_Classic_Accent")) return classicOchre;
+            if (label.StartsWith("Q_Classic_DarkAccent")) return classicBronze;
+            if (label.StartsWith("Q_Classic_Black")) return grille;
             if (label.StartsWith("MI_PaddedWall")) return housing;
             if (label.StartsWith("M_Black")) return grille;
             if (label.StartsWith("M_Light")) return warmLens;
