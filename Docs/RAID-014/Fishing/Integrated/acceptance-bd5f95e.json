@@ -1,0 +1,40 @@
+{
+  "commit": "bd5f95e9a687a69f6469bae7d170dd6354887296",
+  "unity": "6000.5.6f1",
+  "build": "Windows x64 Development",
+  "scene": "InterfaceVerticalSlice",
+  "transport": "Tugboat on loopback, port 17844, two Windows processes",
+  "resolution": [
+    "1280x720",
+    "1920x1080"
+  ],
+  "status": "passed",
+  "owner_ids": {
+    "host": 0,
+    "client_before_reconnect": 1,
+    "client_after_reconnect": 2
+  },
+  "setup": "Isolated saves, staged diver positions, reef hunter AI paused during cargo identity tracking.",
+  "checks": [
+    "Approach with a slack line and no reel did not wind or collect the fish.",
+    "First fish reached the hand with 4,40 stamina remaining.",
+    "Inside the hand radius a confirmed shot alone did not collect the fish.",
+    "Server accepted the shot on a visible fourth small fish and retained exactly three pockets.",
+    "Confirmed hook widened the owned camera; zero intensity restored base FOV.",
+    "Solo surge displaced the shooter 0,50 m.",
+    "Host hook 0/#5, remote measured hook 1/#1, host/peer frames 2656/712, attached travel 7,324/1,754 m, worst tip drift 0,000003/0,000003 m, worst nock drift 0,000000/0,000000 m.",
+    "Both rendered and attached independent server-confirmed projectiles; opposing directions did not exhaust the fish.",
+    "Simultaneous contacts are 0,334 m apart on the moving fish.",
+    "Winch delivered each original ID to the reservoir and both cages emptied.",
+    "Partner death and connection teardown each removed only its own harpoon. Rejoined owner had free hands, and all four delivered IDs remained unique."
+  ],
+  "player_file_sha256": {
+    "UnderwaterFishing.exe": "95d0c3362277726adce36509ace867138edb472da0d02db64eb4beeaff0c29bc",
+    "UnderwaterFishing_Data/Managed/Assembly-CSharp.dll": "f1b7294eadbf84877510716db90a21e2e08e620f868ab68a1b47f2489b1db537",
+    "UnderwaterFishing_Data/Managed/Raid.Progression.dll": "a034f41213a68c235f35cc4b1e929df992f7e34ab4d4fc358ba9c61c51f8b583",
+    "UnderwaterFishing_Data/level0": "9fa095e70f2ce898e5776466341c501dbd9ca431a05b53be8eddb3f508133725",
+    "UnderwaterFishing_Data/sharedassets0.assets": "8de2993cedece6abd2cfe37a03d1994422d070f96665ab7accb0d1868bfb0b69",
+    "UnderwaterFishing_Data/resources.assets": "079108b4e3b2a0d8252bf1f9b4b35b967764a32569d8927375f47f4c944bf5e9"
+  },
+  "raw_result_json_sha256": "0df6b266127490d258af2a85c827c975f5fdefd855b52fdd1a337795513925d3"
+}
