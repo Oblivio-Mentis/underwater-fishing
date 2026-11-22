@@ -497,14 +497,14 @@ namespace Raid.UI
                 else
                 {
                     float fov=desiredFov+fightZoom;
-                    if(Page==UiPage.SkillTree && computerSurface && Context.SelectedConsole!=null)
+                    if(computerSurface && Context.SelectedConsole!=null && (Page==UiPage.SkillTree || Context.SelectedConsole.kind==ShipConsoleKind.Reservoir))
                     {
                         var station=Context.SelectedConsole;
                         var face=station.screenAnchor;
                         float distance=Vector3.Dot(face.position-viewCamera.transform.position,face.forward);
-                        float height=skills.Root.rect.height*station.screenScale;
+                        float height=(Page==UiPage.SkillTree?skills.Root.rect.height:terminal.Root.rect.height)*station.screenScale;
                         float readingFov=2f*Mathf.Atan2(height*.5f,Mathf.Max(.15f,distance)*.76f)*Mathf.Rad2Deg;
-                        fov=Mathf.Clamp(readingFov,34f,desiredFov);
+                        fov=Mathf.Clamp(readingFov,30f,desiredFov);
                     }
                     viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,fov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
                 }

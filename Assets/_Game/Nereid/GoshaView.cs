@@ -92,7 +92,10 @@ namespace Raid.Nereid
         void Show(GoshaSnapshot s)
         {
             float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
-            creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);
+            var local=UI.UiRoot.Instance?.Context.Player;
+            var eye=local!=null && local.IsDead?local.Spectating:local;
+            bool onViewedShoulder=s.Mode==GoshaMode.Riding && eye!=null && s.Rider==eye.OwnerId;
+            creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting && !onViewedShoulder);
             bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing && s.Mode!=GoshaMode.Cradled;
             Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;var visualUp=Vector3.up;
             var ui=UI.UiRoot.Instance;
