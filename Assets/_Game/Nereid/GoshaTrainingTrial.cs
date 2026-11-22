@@ -102,9 +102,10 @@ namespace Raid.Nereid
             try{return File.Exists(file)?JsonUtility.FromJson<Signal>(File.ReadAllText(file)):null;}
             catch(IOException){return null;}catch(ArgumentException){return null;}
         }
-        void PeerKey(string key)
+        void PeerKey(string key)=>PeerCommand("key",key,.12f);
+        void PeerCommand(string action,string value="",float amount=0,float pitch=0)
         {
-            var command=new UiQaProbe.Request {id=Guid.NewGuid().ToString("N"),action="key",value=key,number=.12f};
+            var command=new UiQaProbe.Request {id=Guid.NewGuid().ToString("N"),action=action,value=value,number=amount,number2=pitch};
             string file=Path.Combine(peer,"request.json"),tmp=file+".tmp";
             File.WriteAllText(tmp,JsonUtility.ToJson(command));
             if(File.Exists(file))File.Replace(tmp,file,null);else File.Move(tmp,file);
@@ -183,6 +184,39 @@ namespace Raid.Nereid
             var progress=world.Team.Player(world.ProgressKey(guest));
             Check("Harvest alone awards no processing materials",progress.wallet.biomass==0 && progress.wallet.chitin==0 && progress.wallet.scrap==0 && progress.wallet.electronics==0);
             Check("The same fish cannot be collected a second time",!fish.CollectForGosha(bag,world.ProgressKey(guest)));
+            yield return ProcessDelivery(cargo);
+        }
+
+        IEnumerator ProcessDelivery(CatchItem cargo)
+        {
+            var cage=world.container.position;
+            int slot=Enumerable.Range(2,bag.PocketCapacity).Single(i=>bag.CatchIdInSlot(i)==cargoId);
+            guest.Teleport(cage+new Vector3(2.14f,-.18f,-.40f));
+            yield return new WaitForSeconds(.42f);
+            PeerCommand("slot","",slot);
+            yield return Wait("Buyer selected its Gosha catch in the normal equipment slot",()=>bag.HeldCargoId==cargoId);
+            var euler=Quaternion.LookRotation(cage-guest.transform.position-Vector3.up*.6f).eulerAngles;
+            PeerCommand("view","",euler.y,Mathf.DeltaAngle(0,euler.x));
+            yield return Wait("Real cage opening is in the buyer's drop reach",()=>CargoDispatch.CanLoad(world,guest));
+            PeerCommand("drop_selected");
+            yield return Wait("Buyer's drop placed the same ID into the physical cage",()=>bag.CatchIdInSlot(slot)==0 && world.Team.cargo.Any(x=>x.id==cargoId));
+            var button=world.container.GetComponentInChildren<CargoDispatch>();
+            host.Teleport(cage+new Vector3(3.33f,.19f,1.32f));
+            yield return new WaitForSeconds(.28f);
+            host.LookAtConsole(button.transform.position);
+            yield return Wait("Other diver can operate the real cage dispatch button",()=>CargoDispatch.CanUse(host));
+            world.Command(WorldAction.Hoist,0);
+            yield return Wait("Hoist delivered that Gosha catch to the tank",()=>world.Team.tank.Any(x=>x.id==cargoId),60);
+            Check("The cage and tank have only one copy",!world.Team.cargo.Any(x=>x.id==cargoId) && world.Team.tank.Count(x=>x.id==cargoId)==1);
+            var monitor=ShipConsole.Stations.First(s=>s.kind==ShipConsoleKind.Reservoir).screenAnchor;
+            host.Teleport(monitor.position-monitor.forward*1.4f-Vector3.up*.45f);host.LookAtConsole(monitor.position);
+            yield return Wait("Reservoir selection in range on the processing operator",()=>host.IsInside&&ShipConsole.CanUse(host,WorldAction.Process));
+            var treasury=world.Team.Treasury;var owner=world.Team.Player(world.ProgressKey(guest));var other=world.Team.Player(world.ProgressKey(host));
+            world.Command(WorldAction.Process,cargoId);
+            yield return Wait("Physical processing route consumed the exact catch",()=>!world.Team.tank.Any(x=>x.id==cargoId),35);
+            Check("Processing paid its complete base yield only to the ordering guest",
+                owner.wallet.biomass==cargo.biomass && owner.wallet.chitin==cargo.chitin && owner.wallet.scrap==cargo.scrap && owner.wallet.electronics==cargo.electronics &&
+                other.wallet.IsEmpty && world.Team.Treasury.Subtract(treasury).IsEmpty);
         }
     }
 }
