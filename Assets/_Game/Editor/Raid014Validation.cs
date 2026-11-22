@@ -239,7 +239,7 @@ namespace Raid.Editor
 
             foreach (bool feeding in new[] { false, true })
             {
-                var action = feeding ? WorldAction.FeedAll : WorldAction.ProcessAll;
+                var action = feeding ? WorldAction.Feed : WorldAction.Process;
                 var station = ShipConsole.Stations.First(s => s.Supports(action));
                 bool reachable = false;
                 foreach (var side in new[] {Vector3.forward,Vector3.back,Vector3.left,Vector3.right})
@@ -252,8 +252,7 @@ namespace Raid.Editor
                 long id = feeding ? 1400202 : 1400201;
                 int before = feeding ? w.Team.offering : w.Team.biomass;
                 Check(w.Team.Deposit(new CatchItem(id, 2, 0, 1, 1, 1)), "Staged one fish in the reservoir");
-                int required = Mathf.Max(1, w.progression.foodRequired + (w.Team.highestDepth-1)*w.progression.foodPerDepth);
-                w.Command(action, FishRouteQuote.Compute(w.Team.tank, required));
+                w.Command(action,id);
                 await Until(() => w.FishRoute.active, "start " + action);
                 await Until(() => !w.FishRoute.active, "complete " + action, 30);
                 int added = (feeding ? w.Team.offering : w.Team.biomass) - before;

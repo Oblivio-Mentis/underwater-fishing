@@ -17,6 +17,8 @@ function Start-Peer($roleFlag, $dir, $width, $height, $extra) {
     $base = @('-batchmode','-force-d3d11','-raid-local-port',$Port,'-screen-fullscreen','0',
         '-screen-width',$width,'-screen-height',$height,'-job-worker-count','3',$roleFlag,
         '-raid-ui-probe',$dir,'-raid-save',(Join-Path $dir 'save.json'),'-logFile',(Join-Path $dir 'Player.log'))
+    $profile=if($roleFlag -eq '-raid-host'){'1d4eaa6e-45b0-4dd0-a181-6112b61def68'}else{'37233d34-775c-45c8-bb17-adad67561884'}
+    $base += @('-raid-profile',$profile)
     $quoted = @($base + $extra | ForEach-Object { '"{0}"' -f $_ })
     Start-Process -FilePath $playerPath -WorkingDirectory (Split-Path -Parent $playerPath) -WindowStyle Hidden -ArgumentList $quoted -PassThru
 }

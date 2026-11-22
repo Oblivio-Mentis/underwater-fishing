@@ -32,14 +32,14 @@ namespace Raid.Tests
         [Test]
         public void LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging()
         {
-            tuning.Recipe(Upgrade.Reel).additionalPerLevel=new MaterialCost(0,2,1,1);
+            tuning.Recipe(Upgrade.Winch).additionalPerLevel=new MaterialCost(0,2,1,1);
             team.biomass=100;
-            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.True);
+            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.True);
             int balance=team.biomass;
-            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.False);
+            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.False);
             Assert.That(team.biomass,Is.EqualTo(balance));
             team.chitin=2;team.scrap=1;team.electronics=1;
-            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.True);
+            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.True);
             Assert.That(team.chitin+team.scrap+team.electronics,Is.Zero);
         }
 
@@ -73,11 +73,11 @@ namespace Raid.Tests
         [Test]
         public void UpgradePriceScalesAndChargesExactMaterials()
         {
-            tuning.Recipe(Upgrade.Reel).initialCost = new MaterialCost(3, 2, 1, 1);
-            tuning.Recipe(Upgrade.Reel).costMultiplier = 1.5f;
+            tuning.Recipe(Upgrade.Winch).initialCost = new MaterialCost(3, 2, 1, 1);
+            tuning.Recipe(Upgrade.Winch).costMultiplier = 1.5f;
             team.biomass = 30; team.chitin = 20; team.scrap = 10; team.electronics = 10;
-            Assert.That(team.Buy(Upgrade.Reel, true, tuning), Is.True);
-            MaterialCost next = team.Cost(Upgrade.Reel, tuning);
+            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
+            MaterialCost next = team.Cost(Upgrade.Winch, tuning);
             Assert.That(next.biomass, Is.EqualTo(5));
             Assert.That(next.chitin, Is.EqualTo(3));
             Assert.That(next.scrap, Is.EqualTo(2));
@@ -95,33 +95,36 @@ namespace Raid.Tests
             tuning.Recipe(Upgrade.Reel).costMultiplier = 1.7f;
             team.reelLevel = 1;
             Assert.That(team.Cost(Upgrade.Reel, tuning).biomass, Is.EqualTo(17));
+            team.biomass=100;
+            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.False);
+            Assert.That(team.biomass,Is.EqualTo(100));
         }
 
         [Test]
         public void MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything()
         {
-            tuning.Recipe(Upgrade.Reel).initialCost = new MaterialCost(3, 2, 1, 1);
+            tuning.Recipe(Upgrade.Winch).initialCost = new MaterialCost(3, 2, 1, 1);
             team.biomass = 30; team.chitin = 20; team.scrap = 10;
-            Assert.That(team.Buy(Upgrade.Reel, true, tuning), Is.False);
+            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.False);
             team.electronics = 1;
-            Assert.That(team.Buy(Upgrade.Reel, false, tuning), Is.False);
+            Assert.That(team.Buy(Upgrade.Winch, false, tuning), Is.False);
             Assert.That(team.biomass, Is.EqualTo(30));
             Assert.That(team.chitin, Is.EqualTo(20));
             Assert.That(team.scrap, Is.EqualTo(10));
             Assert.That(team.electronics, Is.EqualTo(1));
-            Assert.That(team.reelLevel, Is.Zero);
+            Assert.That(team.winchLevel, Is.Zero);
         }
 
         [Test]
         public void MaximumUpgradeLevelCannotSpendResourcesAgain()
         {
-            tuning.Recipe(Upgrade.Fins).maximumLevel = 1;
+            tuning.Recipe(Upgrade.Winch).maximumLevel = 1;
             team.biomass = 100;
-            Assert.That(team.Buy(Upgrade.Fins, true, tuning), Is.True);
+            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
             int balance = team.biomass;
-            Assert.That(team.Buy(Upgrade.Fins, true, tuning), Is.False);
+            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.False);
             Assert.That(team.biomass, Is.EqualTo(balance));
-            Assert.That(team.finsLevel, Is.EqualTo(1));
+            Assert.That(team.winchLevel, Is.EqualTo(1));
         }
 
         [Test]
@@ -179,12 +182,12 @@ namespace Raid.Tests
         }
 
         [Test]
-        public void WinchUpgradeActuallyIncreasesCapacityAndShortensCycle()
+        public void WinchUpgradeKeepsCapacityAndShortensCycle()
         {
             team.biomass = 100;
             int capacity = team.Capacity(tuning);
             Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
-            Assert.That(team.Capacity(tuning), Is.GreaterThan(capacity));
+            Assert.That(team.Capacity(tuning), Is.EqualTo(capacity));
             team.LoadCargo(Fish(1), tuning);
             team.BeginHoist(tuning);
             Assert.That(team.hoistRemaining, Is.LessThan(tuning.raisingSeconds));
@@ -226,7 +229,7 @@ namespace Raid.Tests
             for (int i = 1; i <= 20; i++) team.Deposit(Fish(i));
             team.biomass = 100;
             team.Buy(Upgrade.Hull, true, tuning);
-            team.Buy(Upgrade.Reel, true, tuning);
+            team.reelLevel = 1; // Legacy equipment already earned on this campaign.
             int resources = team.biomass;
             Assert.That(team.ApplyStockLoss(tuning), Is.EqualTo(4));
             Assert.That(team.tank.Count, Is.EqualTo(16));

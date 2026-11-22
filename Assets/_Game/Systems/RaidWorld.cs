@@ -190,20 +190,13 @@ namespace Raid
             {Respond(sender,requestId,false,"unavailable");return;}
             Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
             bool factory=Nereid.NereidVessel.Active!=null;
-            bool qaLegacy=false;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            var args=Environment.GetCommandLineArgs();
-            qaLegacy=Array.IndexOf(args,"-raid-legacy-fixture")>=0;
-#endif
-            if(factory && !qaLegacy && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
+            if(factory && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
             {Respond(sender,requestId,false,"unavailable");return;}
-            if(factory && action==WorldAction.Hoist && !qaLegacy && !CargoDispatch.CanUse(diver))
+            if(factory && action==WorldAction.Hoist && !CargoDispatch.CanUse(diver))
             {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
-            if(!(factory && action==WorldAction.Hoist && !qaLegacy) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
-            if(stationCommand && (action==WorldAction.Process || action==WorldAction.Feed) && team.tank.Exists(x=>x.id==id&&x.offering>0))
-            {Respond(sender,requestId,false,"use_route");return;}
+            if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
             if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
             {Respond(sender,requestId,false,"route_busy");return;}
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))

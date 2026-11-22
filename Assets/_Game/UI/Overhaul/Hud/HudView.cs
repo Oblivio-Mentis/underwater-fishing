@@ -113,7 +113,7 @@ namespace Raid.UI
         {
             var view=context.View;var tuning=context.Tuning;
             bool busy=view.hoistPhase!=HoistPhase.Loading;
-            cargoPanel.gameObject.SetActive(context.NearCargo || busy);
+            cargoPanel.gameObject.SetActive(Nereid.NereidVessel.Active==null && (context.NearCargo || busy));
             cargoPanel.anchoredPosition=new Vector2(-24,harpoonPanel.gameObject.activeSelf?harpoonPanel.sizeDelta.y+38:24);
             if(!cargoPanel.gameObject.activeSelf)return;
             int capacity=view.Capacity(tuning);UiKit.Set(cargoCount,UiText.HudCargoCount(view.CargoUsed,capacity));

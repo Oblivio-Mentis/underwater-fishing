@@ -287,14 +287,26 @@ namespace Raid
             long landedHeavyId = heavy.CargoId;
             if (VerifyDropTransfers) yield return CatchHandoffs(landedHeavyId);
             Phase("Deposit and observe swimming cargo on both peers");
-            host.Motor.Teleport(world.tuning.cargoPosition - host.Motor.AimDirection * 2.65f - Vector3.up * .6f);
-            Physics.SyncTransforms();
-            var cage = world.container.GetComponentInChildren<WetCargoShoal>();
-            int before = world.Team.cargo.Count, beforeSwimmers = cage == null ? 0 : cage.Count;
-            var caughtIds = new[] { host.CatchIdInSlot(2), host.CatchIdInSlot(3), host.CatchIdInSlot(4), landedHeavyId };
-            world.Command(WorldAction.LoadCargo, 0);
-            yield return Wait(() => host.CatchCount == 0 && world.Team.cargo.Count == before + 4, 6, "Server did not deposit all four catches.");
-            Require(caughtIds.All(id => world.Team.cargo.Count(item => item.id == id) == 1), "Deposit lost or duplicated a catch ID.");
+            var control=world.container.GetComponentInChildren<CargoDispatch>();
+            var cage=world.container.GetComponentInChildren<WetCargoShoal>();
+            var center=control.Frame.position;
+            int before=world.Team.cargo.Count,beforeSwimmers=cage==null?0:cage.Count;
+            var caughtIds=new[]{host.CatchIdInSlot(2),host.CatchIdInSlot(3),host.CatchIdInSlot(4),landedHeavyId};
+            host.Motor.Teleport(center+new Vector3(2.14f,-.18f,-.4f));
+            host.Motor.LookAtConsole(center);
+            yield return Wait(()=>CargoDispatch.CanLoad(world,host.Motor),4,"Cannot reach the basket's open face.");
+            Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
+            yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"Q did not deposit the heavy catch.");
+            for(int slot=2;slot<5;slot++)
+            {
+                Require(host.SelectSlot(slot),"Cannot select the full pocket.");
+                yield return Wait(()=>host.ActiveSlot==slot,3,"Pocket selection not confirmed.");
+                Require(host.RequestDropSelected(),"Owned Q refused a pocket catch.");
+                int expected=before+slot;
+                yield return Wait(()=>world.Team.cargo.Count==expected,5,"Q did not deposit exactly one fish.");
+            }
+            Require(host.CatchCount==0 && caughtIds.All(id=>world.Team.cargo.Count(item=>item.id==id)==1),
+                "Q lost or duplicated a catch ID.");
             yield return Wait(() => cage != null && cage.Count == beforeSwimmers + 4 && ReadClient()?.cageSwimmers == cage.Count,
                 10, "Host/client cage swimmers did not reflect four new entries.");
             yield return Shot("catch-cage.png");
@@ -302,15 +314,27 @@ namespace Raid
 
             Phase("Hoist cargo into reservoir");
             yield return Pause(.3f);
-            world.Command(WorldAction.Hoist, 0);
+            var button=control.transform.position;
+            host.Motor.Teleport(button+new Vector3(1.6f,-.6f,0));
+            host.Motor.LookAtConsole(button);
+            yield return Wait(()=>CargoDispatch.CanUse(host.Motor),5,"Actual dispatch button is not on the server sightline.");
+            world.Command(WorldAction.Hoist,0);
             yield return Wait(() => world.Team.hoistPhase != HoistPhase.Loading, 4, "Winch command refused.");
             yield return RefillOnDeck();
             yield return Wait(() => world.Team.hoistPhase == HoistPhase.Loading && caughtIds.All(id => world.Team.tank.Exists(item => item.id == id))
                 && cage.Count == 0 && ClientReceivedDelivery(caughtIds), 45, "Host and client did not return to Loading with the same four delivered identities.");
             Check("Winch delivered each original ID to the reservoir and both cages emptied.");
+            Require(world.Team.tank.Find(item=>item.id==landedHeavyId)?.caughtBy?.Length==2,
+                "Heavy catch lost one of its two confirmed participants.");
+            Require(caughtIds.Take(3).All(id=>world.Team.tank.Find(item=>item.id==id)?.caughtBy?.Length==1),
+                "A pocket catch lost its single owner.");
+            Check("The exact Q deposits retained all personal ownership across the real hoist.");
+            yield return ChooseReservoirRoutes(caughtIds);
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after landing.");
 
-            if (VerifyDropTransfers) yield return RearmAfterHandoffs();
+            ui.ShowPage(UiPage.None);
+            yield return Pause(.3f);
+            yield return RearmAfterHandoffs();
             Phase("Owner death and reconnect with two active lines");
             yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,100,"Heavy shoal did not return.");
             yield return Hook(heavy);

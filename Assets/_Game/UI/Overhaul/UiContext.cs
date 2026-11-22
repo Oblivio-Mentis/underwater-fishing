@@ -62,7 +62,7 @@ namespace Raid.UI
             }
             AimedConsole=ShipConsole.ResolveSight(Player,camera);
             if(AimedConsole!=null){Interaction=UiInteraction.Terminal;return;}
-            if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo){Interaction=UiInteraction.Cargo;return;}
+            if(ShipConsole.Stations.Count==0 && NearTerminal){Interaction=UiInteraction.Terminal;return;}if(NearCargo && Nereid.NereidVessel.Active==null){Interaction=UiInteraction.Cargo;return;}
             foreach(var other in Players)
             {
                 if(other==Player)continue;var tool=other.GetComponent<HarpoonTool>();
