@@ -30,6 +30,8 @@ namespace Raid
             return mat;
         }
         float searchAt;
+        int seenWaveHits;
+        float recoilUntil;
         sealed class Visual
         {
             public Transform source,root,tail,leftFin,rightFin,jaw;
@@ -47,7 +49,7 @@ namespace Raid
                 Release();if(Time.unscaledTime<searchAt)return;
                 searchAt=Time.unscaledTime+.3f;director=Object.FindAnyObjectByType<ThreatDirector>();
             }
-            if(director==null||director.NetworkObject==null||!director.IsClientInitialized){RestoreOriginals();return;}
+            if(director==null||director.NetworkObject==null||(!director.IsClientInitialized && !director.IsServerInitialized)){RestoreOriginals();return;}
             if(visuals.Count==0&&skin!=null&&dark!=null&&tooth!=null)
             {
                 foreach(Transform child in director.transform)
@@ -56,11 +58,18 @@ namespace Raid
                     else if(child.name=="Reservoir raider")Build(child,true);
                 }
             }
+            if (seenWaveHits != director.WaveHits)
+            {
+                seenWaveHits = director.WaveHits;
+                recoilUntil = Time.time + .22f;
+            }
             foreach(var visual in visuals)
             {
                 if(visual.source==null||visual.root==null)continue;
                 if(visual.original!=null&&visual.original.enabled)visual.original.enabled=false;
                 if(!visual.root.gameObject.activeSelf)visual.root.gameObject.SetActive(true);
+                if (!visual.ambusher)
+                    visual.root.localRotation = Quaternion.Euler(0, 0, Mathf.Clamp01((recoilUntil-Time.time)/.22f)*20f);
                 var hunt=visual.ambusher?director.AnglerStage:ThreatDirector.HuntStage.Watching;
                 bool display=hunt==ThreatDirector.HuntStage.Display;
                 bool rushing=hunt==ThreatDirector.HuntStage.Pursuit;
@@ -154,6 +163,9 @@ namespace Raid
             }
             float hitRadius=director.tuning==null?1.25f:Mathf.Max(.1f,director.tuning.strikeRadius);
             root.localScale=Vector3.one*Mathf.Min(.98f,hitRadius*.92f/Mathf.Max(.01f,radius));
+            if (raider && director.IsServerInitialized)
+                foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+                    filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
             visuals.Add(visual);
         }
 

@@ -58,6 +58,13 @@ namespace Raid.Nereid
         public bool DoorOccupied(bool sea)
         {
             float x=sea?OuterX:0;
+            var threats = ThreatDirector.Instance;
+            if (threats != null && threats.WaveActive)
+            {
+                var raider = transform.InverseTransformPoint(threats.WavePosition);
+                if (Mathf.Abs(raider.x-x) < threats.tuning.raiderBodyRadius + .18f && Mathf.Abs(raider.z) < HalfDoor)
+                    return true;
+            }
             foreach(var d in DiverMotor.ServerDivers)
             {
                 if(d==null||d.IsConsumed)continue;

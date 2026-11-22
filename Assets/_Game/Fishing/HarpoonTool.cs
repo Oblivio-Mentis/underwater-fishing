@@ -214,7 +214,7 @@ namespace Raid
                 bool tail=hit.collider.transform==fish.ImpactSurface(true) && fish.ImpactSurface(true)!=fish.ImpactSurface(false);
                 contact=HarpoonContact.FromHit(fish.NetworkObject,fish.ImpactSurface(tail),tail,hit,Motor.AimDirection);
             }
-            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier);
+            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier,hit);
             if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
             _impact.Value=contact;
             _shotSequence.Value++;

@@ -22,6 +22,7 @@ namespace Raid
         [Min(0f)] public float patrolRadius = 5f;
         [Min(.01f)] public float patrolSpeed = .5f;
         [Min(.1f)] public float pursuitSpeed = 2f;
+        [Min(.05f)] public float raiderBodyRadius = .65f;
         [Min(1f)] public float waveHealth = 10f;
         [Min(1f)] public float waveSeconds = 45f;
         [Min(.1f)] public float stockAttackInterval = 5f;
