@@ -402,8 +402,10 @@ namespace Raid
             if (!IsServerInitialized) return false;
             if (_liftedHeavy.Value.id > 0) { _liftedHeavy.Value = default; return true; }
             if (HoldingHeavyCatch) { _fish.ReleaseHook(this); return true; }
-            return EmptyPocket(FirstOccupiedPocket(), true);
+            return DropPocketCatch();
         }
+
+        internal bool DropPocketCatch() => IsServerInitialized && EmptyPocket(FirstOccupiedPocket(), true);
 
         private int FirstOccupiedPocket()
         {

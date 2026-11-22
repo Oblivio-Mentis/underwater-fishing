@@ -69,7 +69,7 @@ namespace Raid.UI
             {
                 int value=Amount(quote,i);
                 surfaces[i].gameObject.SetActive(showZero || value>0);
-                if(showZero || value>0)UiKit.Set(amounts[i],Labels[i]+" "+(hundredths?TeamProgress.FoodText(value):value.ToString()));
+                if(showZero || value>0)UiKit.Set(amounts[i],(i==2?"Лом":Labels[i])+" "+(hundredths?TeamProgress.FoodText(value):value.ToString()));
             }
         }
 

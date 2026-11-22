@@ -273,7 +273,7 @@ namespace Raid
             SwimEel(ref reef,eelSeen + lead,5.9f,dt);
             if ((reef.Eel - point).sqrMagnitude > 1.5f * 1.5f || !ClearTo(reef.Eel,eelTarget)) return;
             var inventory = eelTarget.GetComponent<HarpoonTool>();
-            bool stoleFish = inventory != null && !inventory.ResistPocketTheft() && inventory.DropOneCatch();
+            bool stoleFish = inventory != null && !inventory.ResistPocketTheft() && inventory.DropPocketCatch();
             eelTarget.DamageOxygen(7);
             DistractEel(ref reef,point,7);
             main.Message = stoleFish ? "Сетевик сорвал рыбу и отвлёкся на добычу." : "Сетевик наскочил на водолаза.";
