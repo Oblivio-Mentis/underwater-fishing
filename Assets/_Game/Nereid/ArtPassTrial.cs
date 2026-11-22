@@ -112,6 +112,20 @@ namespace Raid.Nereid
                 return world && world.NetworkObject && world.IsServerInitialized && world.View!=null &&
                     owner && owner.NetworkObject && owner.IsOwner && world.TravelRemaining==0;
             },75);
+            if (Array.IndexOf(Environment.GetCommandLineArgs(),"--verify-nereid-surfaces")>=0)
+            {
+                var hull=NereidVessel.Active.transform;
+                var outside=hull.Find("Nereid_Exterior");
+                int CountTextured(Transform assembly) => assembly.GetComponentsInChildren<MeshRenderer>()
+                    .Count(renderer=>renderer.sharedMaterials.Any(material=>material!=null &&
+                        material.HasProperty("_SurfaceAtlas") && material.GetTexture("_SurfaceAtlas")!=null &&
+                        material.GetVector("_SurfaceDetail").w>.5f && material.shader.isSupported));
+                var exteriorCount=CountTextured(outside);
+                var vesselCount=CountTextured(hull);
+                if(exteriorCount<5 || vesselCount<30)
+                    throw new InvalidOperationException($"Incomplete vessel surfaces: {vesselCount} total meshes, {exteriorCount} exterior.");
+                Debug.Log($"[NEREID SURFACES] {vesselCount} textured meshes including {exteriorCount} exterior meshes");
+            }
             var hardware=NereidVessel.Active.transform.Find("NEREID service fittings");
             result.fittings=hardware==null?0:hardware.GetComponentsInChildren<MeshRenderer>().Length;
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-rebuild")>=0 && result.fittings==0)

@@ -1,4 +1,4 @@
-param([string]$Player,[string]$Output,[int]$Port=18401,[switch]$Timing,[switch]$Peer,[string]$MarksFile="$PSScriptRoot/camera-marks.json",[ValidateSet("d3d11","d3d12")][string]$Graphics="d3d11")
+param([string]$Player,[string]$Output,[int]$Port=18401,[switch]$Timing,[switch]$Peer,[switch]$VerifySurfaces,[string]$MarksFile="$PSScriptRoot/camera-marks.json",[ValidateSet("d3d11","d3d12")][string]$Graphics="d3d11")
 $ErrorActionPreference='Stop'
 $playerPath=(Resolve-Path -LiteralPath $Player).Path
 if(Test-Path -LiteralPath $Output){throw "Choose a fresh result directory"}
@@ -27,6 +27,7 @@ function Read($path){
 $hostArgs=@('-raid-host','-raid-ui-probe',"$out/host",'-raid-save',"$out/host.json",'-logFile',"$out/host.log",'-raid-art-pass',$out,$marks,
     '-raid-profile','76119edf-50e7-4444-aef0-720c2761a479')
 if($Timing){$hostArgs+='-raid-art-timing'}else{$hostArgs+='-batchmode'}
+if($VerifySurfaces){$hostArgs+='--verify-nereid-surfaces'}
 $hostProcess=$null
 $peerProcess=$null
 try{

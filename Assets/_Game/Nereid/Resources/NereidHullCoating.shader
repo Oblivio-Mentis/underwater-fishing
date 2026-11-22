@@ -107,10 +107,19 @@ Shader "RAID/Nereid Hull Coating"
             half SamplePanel(float2 axes)
             {
                 float2 repeated=axes*_SurfaceTiling.xy;
-                float2 uv=_SurfaceRegion.xy+frac(repeated)*_SurfaceRegion.zw;
+                float2 cell=frac(repeated);
+                float2 uv=_SurfaceRegion.xy+cell*_SurfaceRegion.zw;
                 float2 gradients=repeated*_SurfaceRegion.zw;
                 half3 texel=SAMPLE_TEXTURE2D_GRAD(_SurfaceAtlas,sampler_SurfaceAtlas,uv,ddx(gradients),ddy(gradients)).rgb;
-                return dot(texel,half3(.2126,.7152,.0722));
+                float2 edge=min(cell,1.-cell);
+                float2 aa=clamp(fwidth(repeated),.001,.024);
+                float2 borders=1.-smoothstep(float2(.013,.014)-aa,float2(.021,.028)+aa,edge);
+                float joint=max(borders.x,borders.y);
+                float lip=(1.-smoothstep(.057-aa.x,.072+aa.x,min(edge.x,edge.y)))*(1.-joint);
+                float2 studDist=(edge-float2(.075,.087))*float2(1.05,1);
+                float fastener=1.-smoothstep(.012,.025+max(aa.x,aa.y),length(studDist));
+                float panel=dot(texel,half3(.2126,.7152,.0722))/max(_SurfaceDetail.x,.015);
+                return panel*(1.-joint*.44)+lip*.26+fastener*.40;
             }
 
             half PanelHeight(Varyings i)
@@ -121,7 +130,7 @@ Shader "RAID/Nereid Hull Coating"
                 alignment/=max(dot(alignment,half3(1,1,1)),.001);
                 return (SamplePanel(i.panelPosition.zy)*alignment.x+
                     SamplePanel(i.panelPosition.xz)*alignment.y+
-                    SamplePanel(i.panelPosition.xy)*alignment.z)/max(_SurfaceDetail.x,.015);
+                    SamplePanel(i.panelPosition.xy)*alignment.z);
             }
 
             float3 ReliefNormal(float3 position,float3 normal,float height)
@@ -149,7 +158,7 @@ Shader "RAID/Nereid Hull Coating"
                 lighting.viewDirectionWS=SafeNormalize(GetWorldSpaceViewDir(i.position));
                 lighting.shadowCoord=TransformWorldToShadowCoord(i.position);
                 lighting.vertexLighting=i.vertexLight;
-                lighting.bakedGI=SampleSH(n)+(_Marine>.5 ? WaterIrradiance(i.position,n) : half3(.056,.06,.063));
+                lighting.bakedGI=SampleSH(n)+(_Marine>.5 ? WaterIrradiance(i.position,n) : half3(.089,.10,.11));
                 lighting.normalizedScreenSpaceUV=GetNormalizedScreenSpaceUV(i.clip);
                 lighting.shadowMask=half4(1,1,1,1);
                 SurfaceData surface=(SurfaceData)0;
