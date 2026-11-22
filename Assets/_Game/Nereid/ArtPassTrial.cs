@@ -313,6 +313,8 @@ namespace Raid
 
         internal void SetArtMark(Vector3 center,Quaternion rotation)
         {
+            // The sea staggers schools. Bring in the real actor before lining up the controlled shot.
+            if(!InHabitat)SetDepthActive(true);
             artPoseUntil=Time.unscaledTime+.70f;
             _origin=center;
             transform.SetPositionAndRotation(center,rotation);
