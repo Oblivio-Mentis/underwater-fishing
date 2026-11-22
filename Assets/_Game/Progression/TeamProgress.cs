@@ -39,7 +39,7 @@ namespace Raid
     [Serializable]
     public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 2;
+        public const int CurrentSchema = 3;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
@@ -89,16 +89,14 @@ namespace Raid
         public bool Buy(Upgrade upgrade, bool onBoard, ProgressionTuning tuning)
         {
             UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (upgrade<Upgrade.Hull || !onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
+            if (teamRevision==int.MaxValue || upgrade<Upgrade.Hull || !onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
             if (upgrade == Upgrade.Hull && lifetimeCatch < tuning.depthTwoLifetimeCatch) return false;
             MaterialCost cost = Cost(upgrade, tuning);
             if (biomass < cost.biomass || chitin < cost.chitin || scrap < cost.scrap || electronics < cost.electronics) return false;
             biomass -= cost.biomass; chitin -= cost.chitin; scrap -= cost.scrap; electronics -= cost.electronics;
+            teamRevision++;
             switch (upgrade)
             {
-                case Upgrade.Reel: ++reelLevel; break;
-                case Upgrade.Fins: ++finsLevel; break;
-                case Upgrade.Tank: ++tankLevel; break;
                 case Upgrade.Hull: ++hullLevel; highestDepth = Math.Max(highestDepth, 2); break;
                 case Upgrade.Winch: ++winchLevel; break;
             }
@@ -163,7 +161,7 @@ namespace Raid
             lifetimeCatch = total;
         }
 
-        public bool Process(long id) => Distribute(id,null,out _);
+        public bool Process(long id) => CreditProcessedCatch(id,null,out _);
 
         public bool Feed(long id, ProgressionTuning tuning=null)
         {

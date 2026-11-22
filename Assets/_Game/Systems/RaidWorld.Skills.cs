@@ -103,7 +103,7 @@ namespace Raid
         {
             if(profile==null)return;
             ApplyProfile(connection,JsonUtility.ToJson(new PlayerProgress
-                { wallet=profile.wallet, skills=profile.skills, revision=profile.revision }));
+                { skills=profile.skills, revision=profile.revision }));
         }
 
         [TargetRpc]
@@ -133,60 +133,30 @@ namespace Raid
             var owned=node.Team ? team.teamSkills : player.skills;
             if(owned.Contains(id))
             {SkillReply(sender,false,node.Team?"Уже улучшено экипажем":"Навык уже открыт");return;}
-            if(revision!=(node.Team?team.teamRevision:player.revision))
+            if(revision!=team.teamRevision)
             {SendProfile(sender,player);SkillReply(sender,false,"Данные обновились. Выберите узел снова");return;}
-            if(!SkillTreeDefinition.IsAvailable(id,owned) || !player.wallet.Covers(node.Cost))
+            if(!SkillTreeDefinition.IsAvailable(id,owned) || !team.Treasury.Covers(node.Cost))
             {SkillReply(sender,false,"Не хватает материалов или предыдущего навыка");return;}
-            var before=player.wallet;
+            var before=team.Treasury;
             int previousPlayer=player.revision, previousTeam=team.teamRevision;
-            if(previousPlayer==int.MaxValue || node.Team && previousTeam==int.MaxValue)
+            if(previousPlayer==int.MaxValue || previousTeam==int.MaxValue)
             {SkillReply(sender,false,"Достигнут предел версии сохранения");return;}
             owned.Add(id);
-            player.wallet=before.Subtract(node.Cost);
+            team.Treasury=before.Subtract(node.Cost);
             player.revision++;
-            if(node.Team)team.teamRevision++;
+            team.teamRevision++;
             if(!SaveTransaction())
             {
                 owned.Remove(id);
-                player.wallet=before;
+                team.Treasury=before;
                 player.revision=previousPlayer;
                 team.teamRevision=previousTeam;
-                SkillReply(sender,false,"Сохранение недоступно. Материалы остались у вас");
+                SkillReply(sender,false,"Сохранение недоступно. Материалы остались в казне");
                 return;
             }
             Publish();
             SendProfile(sender,player);
             SkillReply(sender,true,node.Name);
-        }
-
-        [ServerRpc(RequireOwnership=false)]
-        public void RequestTreasury(MaterialCost amount,int revision,NetworkConnection sender=null)
-        {
-            if(sender==null)return;
-            var diver=sender.FirstObject==null?null:sender.FirstObject.GetComponent<DiverMotor>();
-            var player=team?.Player(ProgressKey(diver));
-            if(player==null || diver.IsHelpless || transitionRemaining>0 ||
-                (!ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree) && !ShipConsole.CanUseKind(diver,ShipConsoleKind.Upgrades)))
-            {SkillReply(sender,false,"Казна доступна у бортового компьютера");return;}
-            if(revision!=player.revision || player.revision==int.MaxValue || amount.IsEmpty || !player.wallet.Covers(amount))
-            {SkillReply(sender,false,"Проверьте баланс и сумму взноса");return;}
-            var treasury=team.Treasury;
-            var balance=player.wallet;
-            try { team.Treasury=treasury.Add(amount); }
-            catch(OverflowException){SkillReply(sender,false,"Казна достигла предела");return;}
-            player.wallet=balance.Subtract(amount);
-            player.revision++;
-            if(!SaveTransaction())
-            {
-                team.Treasury=treasury;
-                player.wallet=balance;
-                player.revision--;
-                SkillReply(sender,false,"Сохранение недоступно. Взнос отменён");
-                return;
-            }
-            Publish();
-            SendProfile(sender,player);
-            SkillReply(sender,true,"Взнос поступил в казну NEREID");
         }
 
         bool SaveTransaction()

@@ -8,7 +8,6 @@ namespace Raid
     public sealed class PlayerProgress
     {
         public string key;
-        public MaterialCost wallet;
         public List<SkillId> skills = new();
         public int revision;
     }
@@ -35,6 +34,13 @@ namespace Raid
             if(schemaVersion!=1)return;
             legacyCargoCapacityBonus=checked(winchLevel*capacityPerWinch);
             offering=previousFood;
+            schemaVersion=CurrentSchema;
+        }
+
+        public void MigrateV2(MaterialCost balance)
+        {
+            if(schemaVersion!=2)return;
+            Treasury=Treasury.Add(balance);
             schemaVersion=CurrentSchema;
         }
 
@@ -83,7 +89,7 @@ namespace Raid
             return projection;
         }
 
-        public bool Distribute(long id, ProgressionTuning tuning, out MaterialCost yield)
+        public bool CreditProcessedCatch(long id, ProgressionTuning tuning, out MaterialCost yield)
         {
             yield=default;
             int index=tank.FindIndex(item=>item.id==id);
@@ -95,32 +101,9 @@ namespace Raid
             int s=checked(points.scrap+processingRemainder.scrap);
             int e=checked(points.electronics+processingRemainder.electronics);
             var total=new MaterialCost(b/100,c/100,s/100,e/100);
-            var recipients=new List<PlayerProgress>();
-            if(fish.caughtBy!=null)
-            {
-                var sorted=new SortedSet<string>(fish.caughtBy,StringComparer.Ordinal);
-                foreach(var key in sorted)
-                {
-                    var player=Player(key);
-                    if(player!=null)recipients.Add(player);
-                }
-            }
-            if(recipients.Count==0)Treasury=Treasury.Add(total);
-            else
-            {
-                var balances=new MaterialCost[recipients.Count];
-                var revisions=new int[recipients.Count];
-                for(int i=0;i<recipients.Count;i++)
-                {
-                    balances[i]=recipients[i].wallet.Add(total.Share(recipients.Count,i));
-                    revisions[i]=checked(recipients[i].revision+1);
-                }
-                for(int i=0;i<recipients.Count;i++)
-                {
-                    recipients[i].wallet=balances[i];
-                    recipients[i].revision=revisions[i];
-                }
-            }
+            int revision=checked(teamRevision+1);
+            Treasury=Treasury.Add(total);
+            teamRevision=revision;
             processingRemainder=new MaterialCost(b%100,c%100,s%100,e%100);
             tank.RemoveAt(index);
             yield=total;
@@ -138,7 +121,7 @@ namespace Raid
             foreach(var player in players)
             {
                 if(player==null || string.IsNullOrEmpty(player.key) || !keys.Add(player.key) ||
-                    !player.wallet.IsValid || player.revision<0 || player.skills==null)
+                    player.revision<0 || player.skills==null)
                     throw new InvalidOperationException("Invalid player progress.");
                 ValidateNodes(player.skills,false);
             }

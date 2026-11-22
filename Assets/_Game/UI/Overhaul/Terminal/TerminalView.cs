@@ -188,18 +188,11 @@ namespace Raid.UI
 
         void OnProcessingFinished(MaterialCost total,MaterialCost before,MaterialCost after)
         {
-            if(!receipt.gameObject.activeSelf){receiptBefore=before;receiptTotal=total;}
-            else
-            {
-                if(receiptWasPersonal!=observedWorld.ProcessingWasPersonal){receiptBefore=before;receiptTotal=total;}
-                else receiptTotal=total;
-            }
-            receiptWasPersonal=observedWorld.ProcessingWasPersonal;
+            receiptBefore=before;receiptTotal=total;
             receiptAfter=after;
             receiptStarted=Time.unscaledTime;
         }
 
-        bool receiptWasPersonal;
         public void UpdateReceipt()
         {
             var world=app.Context.World;
@@ -218,7 +211,7 @@ namespace Raid.UI
             receiptFade.alpha=Mathf.Clamp01(elapsed*7)*Mathf.Clamp01(6-elapsed);
             receipt.anchoredPosition=new Vector2(-35,83+20*(1-reveal));
             receiptBar.fillAmount=reveal;
-            UiKit.Set(receiptHeader,receiptWasPersonal?"ПЕРЕРАБОТКА · ВАША ДОЛЯ":"ПЕРЕРАБОТКА · ВЫХОД ЛИНИИ");
+            UiKit.Set(receiptHeader,"ПЕРЕРАБОТКА · КАЗНА NEREID");
             for(int i=0;i<receiptRows.Length;i++)
             {
                 int old=MaterialAt(receiptBefore,i);
@@ -231,8 +224,6 @@ namespace Raid.UI
 
         void BuildUpgrades()
         {
-            if(app is UiRoot root)
-                UiKit.Button(content,"OpenTreasury","Внести ресурсы в казну NEREID",root.OpenTreasury,false,45);
             var loaded=app.Context.View;
             if(loaded.reelLevel+loaded.finsLevel+loaded.tankLevel>0)
                 TerminalParts.Text(content,"Legacy gear","Унаследованы прежние уровни катушки, ласт и баллонов",33,19,UiTheme.Muted);

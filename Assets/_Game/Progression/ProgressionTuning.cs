@@ -19,9 +19,6 @@ namespace Raid
             checked(scrap+other.scrap),checked(electronics+other.electronics));
         public MaterialCost Subtract(MaterialCost other) => new(biomass-other.biomass,chitin-other.chitin,
             scrap-other.scrap,electronics-other.electronics);
-        public MaterialCost Share(int count,int index) => new(Portion(biomass,count,index),Portion(chitin,count,index),
-            Portion(scrap,count,index),Portion(electronics,count,index));
-        static int Portion(int amount,int count,int index) => amount/count + (index<amount%count ? 1 : 0);
         public bool IsEmpty => biomass==0 && chitin==0 && scrap==0 && electronics==0;
         public bool IsValid => biomass >= 0 && chitin >= 0 && scrap >= 0 && electronics >= 0;
     }

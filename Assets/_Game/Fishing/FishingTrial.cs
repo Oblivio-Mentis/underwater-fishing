@@ -341,7 +341,7 @@ namespace Raid
             host.Motor.LookAtConsole(ownerCamera.transform.position+fishingAim*10);
             yield return Wait(()=>Vector3.Dot(host.Motor.AimDirection,fishingAim)>.999f,4,"Fishing aim did not restore after the monitor.");
             var departingKey=world.ProgressKey(helper.Motor);
-            var remoteBalance=world.Team.Player(departingKey).wallet;
+            var balanceBeforeReconnect=world.Team.Treasury;
             yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,100,"Heavy shoal did not return.");
             yield return Hook(heavy);
             yield return HookPeer(heavy);
@@ -360,10 +360,10 @@ namespace Raid
             Require(helper.HookedFish==null && helper.CatchCount==0 && world.Team.tank.Count(x=>caughtIds.Contains(x.id))==2 && caughtIds.All(id=>world.Team.deliveredIds.Contains(id)),
                 "Reconnection restored another player's line or duplicated cargo.");
             yield return Wait(()=>world.ProgressKey(helper.Motor)==departingKey,4,"Remote did not restore its campaign identity.");
-            Require(world.Team.Player(departingKey).wallet.Equals(remoteBalance),"Remote balance changed on reconnect.");
+            Require(world.Team.Treasury.Equals(balanceBeforeReconnect),"The shared balance changed on reconnect.");
             host.QaReleaseOwned();
             yield return Wait(()=>heavy.HookCount==0 && host.HookedFish==null,3,"Last hook failed to release.");
-            Check("Partner death and connection teardown each removed only its own harpoon. Rejoined owner had free hands, and all four delivered IDs remained unique. Private campaign balance restored to the reconnecting diver.");
+            Check("Partner death and connection teardown each removed only its own harpoon. Rejoined owner had free hands, and all four delivered IDs remained unique. The same campaign profile returned and the shared wallet was unchanged.");
         }
 
         private IEnumerator RefillOnDeck()

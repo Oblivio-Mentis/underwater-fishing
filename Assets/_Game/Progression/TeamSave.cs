@@ -33,6 +33,8 @@ namespace Raid
 
         /// <summary>Missing/corrupt/unsupported saves throw; callers must explicitly choose recovery or a new team.</summary>
         [Serializable] private sealed class LegacyFood { public int offering=0; }
+        [Serializable] private sealed class LegacyWallet { public MaterialCost wallet=default; }
+        [Serializable] private sealed class LegacyCrew { public LegacyWallet[] players; }
 
         public static TeamProgress Load(string path, ProgressionTuning tuning=null)
         {
@@ -45,11 +47,24 @@ namespace Raid
                     throw new InvalidDataException("Save format or checksum mismatch.");
                 TeamProgress progress = JsonUtility.FromJson<TeamProgress>(envelope.payload);
                 if (progress == null) throw new InvalidDataException("Missing team progress.");
-                progress.MigrateV1(JsonUtility.FromJson<LegacyFood>(envelope.payload).offering,tuning==null?4:tuning.cargoCapacityPerWinch);
+                if(progress.schemaVersion==1)
+                    progress.MigrateV1(JsonUtility.FromJson<LegacyFood>(envelope.payload).offering,tuning==null?4:tuning.cargoCapacityPerWinch);
+                else if(progress.schemaVersion==2)
+                {
+                    var combined=new MaterialCost();
+                    var legacy=JsonUtility.FromJson<LegacyCrew>(envelope.payload);
+                    if(legacy?.players!=null)
+                        foreach(var profile in legacy.players)
+                        {
+                            if(profile==null || !profile.wallet.IsValid)throw new InvalidDataException("Invalid former wallet.");
+                            combined=combined.Add(profile.wallet);
+                        }
+                    progress.MigrateV2(combined);
+                }
                 progress.Validate();
                 return progress;
             }
-            catch (Exception error) when (error is ArgumentException || error is InvalidOperationException || error is InvalidDataException)
+            catch (Exception error) when (error is ArgumentException || error is InvalidOperationException || error is InvalidDataException || error is OverflowException)
             { throw new InvalidDataException("Team save is corrupt or unsupported; original preserved: " + path, error); }
         }
 

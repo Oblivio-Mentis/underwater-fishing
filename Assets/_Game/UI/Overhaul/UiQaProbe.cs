@@ -177,7 +177,9 @@ namespace Raid.UI
             {
                 if(File.Exists(path))
                 {
-                    var request=JsonUtility.FromJson<Request>(File.ReadAllText(path));
+                    using var requestFile=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete);
+                    using var reader=new StreamReader(requestFile);
+                    var request=JsonUtility.FromJson<Request>(reader.ReadToEnd());
                     if(request!=null&&!string.IsNullOrEmpty(request.id)&&request.id!=lastId)
                     {lastId=request.id;error="";Execute(request);}
                 }

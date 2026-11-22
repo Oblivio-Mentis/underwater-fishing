@@ -40,25 +40,44 @@ namespace Raid.Tests
         }
 
         [Test]
-        public void OfflineCrewKeepFairSharesAndFeedingLeavesTheirWalletsAlone()
+        public void ASharedCatchCreditsOneYieldAndFeedingLeavesTheWalletAlone()
         {
             var team=new TeamProgress();
-            var later=team.RegisterPlayer("zz");
-            var first=team.RegisterPlayer("aa");
+            team.RegisterPlayer("zz");
+            team.RegisterPlayer("aa");
             team.Deposit(new CatchItem(1,7,3,2,3,1){caughtBy=new[]{"zz","aa","zz"}});
             Assert.That(team.Process(1));
-            Assert.That(first.wallet.biomass,Is.EqualTo(4));
-            Assert.That(first.wallet.chitin,Is.EqualTo(2));
-            Assert.That(later.wallet.biomass,Is.EqualTo(3));
-            Assert.That(later.wallet.chitin,Is.EqualTo(1));
-            Assert.That(team.biomass,Is.Zero);
+            Assert.That(team.biomass,Is.EqualTo(7));
+            Assert.That(team.chitin,Is.EqualTo(3));
             Assert.That(team.offeringPoints,Is.Zero);
             team.teamSkills.AddRange(new[]{SkillId.N1,SkillId.N2,SkillId.N4});
             team.Deposit(new CatchItem(2,2,0,2,1,1){caughtBy=new[]{"aa"}});
             Assert.That(team.Feed(2));
             Assert.That(team.offeringPoints,Is.EqualTo(290));
-            Assert.That(first.wallet.biomass,Is.EqualTo(4));
+            Assert.That(team.biomass,Is.EqualTo(7));
             Assert.That(team.PublicView().players,Is.Empty);
+        }
+
+        [Test]
+        public void VersionTwoBalancesMergeOnceAndSkillsStayWithTheirOwner()
+        {
+            string file=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")+".json");
+            try
+            {
+                const string old="{\"schemaVersion\":2,\"biomass\":5,\"scrap\":3,\"offeringPoints\":290,"+
+                    "\"players\":[{\"key\":\"one\",\"wallet\":{\"biomass\":2},\"skills\":[1]},{\"key\":\"two\",\"wallet\":{\"biomass\":4,\"scrap\":8},\"skills\":[5]}]}";
+                using var sha=SHA256.Create();
+                var envelope=new LegacyEnvelope{format="RAID.TeamProgress",payload=old,sha256=Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(old)))};
+                File.WriteAllText(file,JsonUtility.ToJson(envelope));
+                var team=TeamSave.Load(file);
+                Assert.That(team.Treasury,Is.EqualTo(new MaterialCost(11,0,11,0)));
+                Assert.That(team.Player("one").skills,Is.EqualTo(new[]{SkillId.H1}));
+                Assert.That(team.Player("two").skills,Is.EqualTo(new[]{SkillId.S1}));
+                Assert.That(team.offeringPoints,Is.EqualTo(290));
+                TeamSave.Save(file,team);
+                Assert.That(TeamSave.Load(file).Treasury,Is.EqualTo(team.Treasury));
+            }
+            finally { File.Delete(file);File.Delete(file+".bak"); }
         }
 
         [Test]

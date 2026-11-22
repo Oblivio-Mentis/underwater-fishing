@@ -99,28 +99,16 @@ namespace Raid
 
         bool ProcessDeliveredFish(long id)
         {
-            var treasury=team.Treasury;
-            var before=new Dictionary<string,MaterialCost>();
-            foreach(var profile in team.players)before[profile.key]=profile.wallet;
-            if(!team.Distribute(id,progression,out var total))return false;
+            var before=team.Treasury;
+            if(!team.CreditProcessedCatch(id,progression,out var total))return false;
             catchOwners.Remove(id);
-            foreach(var pair in crewProfiles)
-            {
-                if(!pair.Key.IsActive || pair.Key.FirstObject==null)continue;
-                var balance=team.Player(pair.Value).wallet;
-                var previous=before[pair.Value];
-                bool personal=!balance.Subtract(previous).IsEmpty;
-                SendProcessingReceipt(pair.Key,total,personal?previous:treasury,personal?balance:team.Treasury,personal);
-            }
-            PublishProfiles();
+            SendProcessingReceipt(total,before,team.Treasury);
             return true;
         }
 
-        public bool ProcessingWasPersonal { get; private set; }
-        [FishNet.Object.TargetRpc]
-        void SendProcessingReceipt(FishNet.Connection.NetworkConnection connection,MaterialCost total,MaterialCost before,MaterialCost after,bool personal)
+        [FishNet.Object.ObserversRpc]
+        void SendProcessingReceipt(MaterialCost total,MaterialCost before,MaterialCost after)
         {
-            ProcessingWasPersonal=personal;
             ProcessingFinished?.Invoke(total,before,after);
         }
     }
