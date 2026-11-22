@@ -49,6 +49,7 @@ namespace Raid
         {
             if(IsDead)return;
             var state=_state.Value;
+            departureAir = default;
             state.Dead=true;
             state.Consumed=consumed;
             state.MayReturn=false;

@@ -26,6 +26,22 @@ namespace Raid.Tests
         }
 
         [Test]
+        public void FloodingRetainsExistingAirOnlyUntilOpeningOrTimeout()
+        {
+            var flooding = new AirlockSnapshot { Phase = AirlockPhase.Flooding, Water = .8f };
+            var first = new DepartureAir();
+            var lateArrival = new DepartureAir();
+            Assert.That(first.DrainSeconds(9, true, flooding, 10), Is.Zero);
+            Assert.That(first.DrainSeconds(2, true, flooding, 10), Is.EqualTo(1));
+            Assert.That(lateArrival.DrainSeconds(1, true, flooding, 10), Is.Zero);
+            flooding.Phase = AirlockPhase.OpeningOuter;
+            Assert.That(lateArrival.DrainSeconds(.2f, true, flooding, 10), Is.EqualTo(.2f));
+            first.DrainSeconds(1, false, flooding, 10);
+            flooding.Phase = AirlockPhase.Flooding;
+            Assert.That(first.DrainSeconds(1, true, flooding, 10), Is.Zero);
+        }
+
+        [Test]
         public void OccupiedThresholdKeepsPressureOnCurrentSide()
         {
             var state=AirlockSnapshot.Dry;

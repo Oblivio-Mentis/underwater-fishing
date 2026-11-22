@@ -11,6 +11,8 @@ namespace Raid
         public float lookSensitivity = 0.12f;
         public float oxygenCapacity = 240f;
         public float oxygenRecovery = 20f;
+        [Tooltip("Maximum seconds of air retained while the pressure lock floods on departure.")]
+        [Min(0)] public float airlockBreathingWindow = 10f;
         [Min(.1f)] public float suffocationDamagePerSecond = 4.5f;
         [Min(0)] public float onboardHealingPerSecond = 5f;
         public float safeDepth = 35f;

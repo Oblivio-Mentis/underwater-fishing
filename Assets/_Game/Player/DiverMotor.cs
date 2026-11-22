@@ -12,6 +12,7 @@ namespace Raid
         public DiverTuning tuning;
         public float SpeedMultiplier = 1f, OxygenMultiplier = 1f, SafeDepthBonus, DepthOffset;
         private float _helplessTime, _trappedTime;
+        private DepartureAir departureAir;
 
         public struct DiverState
         {
@@ -80,6 +81,7 @@ namespace Raid
         public override void OnStartServer()
         {
             ServerDivers.Add(this);
+            departureAir = default;
             _controller.enabled = true;
             _previousPosition = transform.position;
             _serverYaw = transform.eulerAngles.y;
@@ -268,14 +270,19 @@ namespace Raid
             state.Sprinting=_serverSprint && active && axes.sqrMagnitude>.04f && (state.Position-_previousPosition).sqrMagnitude>.000001f;
             state.Inside = IsSealedInterior(state.Position);
             state.Trapped = _trappedTime > 0;
-            state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery : -1f) * Time.fixedDeltaTime,
+            var lockRoom = Nereid.NereidAirlock.Active;
+            var world = RaidWorld.Instance;
+            bool wetInLock = !state.Inside && lockRoom != null && world != null && lockRoom.Contains(state.Position);
+            float drainSeconds = departureAir.DrainSeconds(Time.fixedDeltaTime, wetInLock,
+                wetInLock ? world.Airlock : default, tuning.airlockBreathingWindow);
+            state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery * Time.fixedDeltaTime : -drainSeconds),
                 0f, Mathf.Max(1f, tuning.oxygenCapacity * OxygenMultiplier));
             float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
             float verticalExcess = walking?0:Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
             float stressChange = state.Inside ? -1f : depthExcess + verticalExcess;
             state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
             if(!state.Inside && state.Stress>=tuning.stressDanger)
-                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*Time.fixedDeltaTime);
+                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*drainSeconds);
             _previousPosition = state.Position;
             var vesselHere=Nereid.NereidVessel.Active;
             if(vesselHere!=null)

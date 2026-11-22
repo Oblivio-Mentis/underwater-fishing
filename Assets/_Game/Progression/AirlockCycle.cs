@@ -4,6 +4,21 @@ namespace Raid
 {
     public enum AirlockPhase : byte { InnerOpen, ClosingInner, Flooding, OpeningOuter, OuterOpen, ClosingOuter, Draining, OpeningInner }
 
+    public struct DepartureAir
+    {
+        float elapsed;
+        // Elapsed belongs to one continuously submerged diver, never to the ship.
+        public float DrainSeconds(float dt, bool submergedInLock, AirlockSnapshot lockState, float limit)
+        {
+            if (!submergedInLock) { elapsed = 0; return dt; }
+            float remaining = Mathf.Max(0, limit - elapsed);
+            elapsed += dt;
+            if (lockState.Phase != AirlockPhase.Flooding || lockState.Inner > 0 || lockState.Outer > 0)
+                return dt;
+            return Mathf.Max(0, dt - remaining);
+        }
+    }
+
     public struct AirlockSnapshot
     {
         public AirlockPhase Phase;
