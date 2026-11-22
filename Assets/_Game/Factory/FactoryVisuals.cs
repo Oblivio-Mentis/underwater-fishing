@@ -51,12 +51,13 @@ namespace Raid.Factory
                 stock[i]=Instantiate(fishTemplate,transform);stock[i].name="Reservoir fish "+i;stock[i].gameObject.SetActive(false);
             }
             fishTemplate.gameObject.SetActive(false);
+            var shell=FindAnyObjectByType<Nereid.NereidVessel>()!=null?Resources.Load<Material>("NereidBubbles"):null;
             for(int i=0;i<bubbles.Length;i++)
             {
                 var bubble=new GameObject("Tank circulation bubble "+i,typeof(MeshFilter),typeof(MeshRenderer));
                 bubble.transform.SetParent(transform,false);bubbles[i]=bubble.transform;
                 bubble.GetComponent<MeshFilter>().sharedMesh=bubbleMesh!=null?bubbleMesh:fishTemplate.GetComponentInChildren<MeshFilter>().sharedMesh;
-                bubbleRenderers[i]=bubble.GetComponent<MeshRenderer>();bubbleRenderers[i].sharedMaterial=bubbleMaterial;
+                bubbleRenderers[i]=bubble.GetComponent<MeshRenderer>();bubbleRenderers[i].sharedMaterial=shell!=null?shell:bubbleMaterial;
             }
             if(upperJaw!=null)upperScale=upperJaw.localScale;if(lowerJaw!=null)lowerScale=lowerJaw.localScale;
         }
@@ -182,9 +183,12 @@ namespace Raid.Factory
             for(int i=0;i<bubbles.Length;i++)
             {
                 float age=Mathf.Repeat(Time.time*(.35f+(i%4)*.04f)+i*.417f,1);
-                bubbles[i].localPosition=center+new Vector3(Mathf.Sin(i*5.27f)*1.08f,-1.05f+age*2.1f,Mathf.Cos(i*3.71f)*1.08f);
-                bubbles[i].localScale=new Vector3(.035f,.07f,.035f)*(1+age*.5f);
-                block.Clear();block.SetColor(ColorId,new Color(.32f,.81f,.9f,Mathf.Sin(age*Mathf.PI)*.38f));bubbleRenderers[i].SetPropertyBlock(block);
+                float wobble=Time.time*(2.1f+(i%3)*.2f)+i;
+                bubbles[i].localPosition=center+new Vector3(Mathf.Sin(i*5.27f)*1.06f+.035f*Mathf.Sin(wobble),
+                    -1.05f+age*2.1f,Mathf.Cos(i*3.71f)*1.06f+.026f*Mathf.Cos(.79f*wobble));
+                float size=(.66f+(i%5)*.14f)*(1+age*.27f);
+                bubbles[i].localScale=new Vector3(.049f,.063f,.046f)*size;
+                block.Clear();block.SetColor(ColorId,new Color(.49f,.78f,.87f,Mathf.Sin(age*Mathf.PI)*.48f));bubbleRenderers[i].SetPropertyBlock(block);
             }
         }
 

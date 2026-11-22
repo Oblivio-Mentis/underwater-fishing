@@ -56,7 +56,11 @@ Shader "RAID/Pressure pump flow"
                         float3 bubble=_Outlet.xyz+float3(axis.x*(.11+phase*.24),phase*min(.85,max(.18,h-_Outlet.y+.04)),-.18-.64*phase+axis.y*phase*.19);
                         float size=(.012+.021*hash(seed))*sin(phase*3.14159);
                         p=lerp(drop,bubble,beneath)+v.shape*float3(size,size*1.35,size);
-                        col=half4(.67,.91,.94,.72*sin(phase*3.14159));
+                        // Submerged bubbles catch a glint on their upper shoulder. Keep the
+                        // jet legible through the bulk water without adding a second emitter.
+                        float sheen=saturate(.48+.42*v.shape.y+.26*v.shape.x);
+                        col=half4(lerp(half3(.40,.73,.77),half3(.84,.96,.99),sheen),
+                            lerp(.68,.43,beneath)*sin(phase*3.14159));
                     }
                 }
                 else
@@ -79,7 +83,8 @@ Shader "RAID/Pressure pump flow"
                         float r=(.08+.46*u*u)*(.7+.32*hash(seed+1.));
                         float size=(.011+.014*hash(seed+17.))*sin(phase*3.14159);
                         p=lerp(bottom,top,u)+float3(r*cos(spin),-.026*sin(phase*3.14159),r*sin(spin))+size*v.shape;
-                        col=half4(.68,.88,.87,(.24+.53*u)*sin(phase*3.14159));
+                        float sheen=saturate(.48+.42*v.shape.y-.26*v.shape.x);
+                        col=half4(lerp(half3(.35,.65,.67),half3(.78,.91,.92),sheen),(.24+.53*u)*sin(phase*3.14159));
                     }
                 }
                 V o;o.positionCS=TransformObjectToHClip(p);o.color=col;o.fog=ComputeFogFactor(o.positionCS.z);return o;

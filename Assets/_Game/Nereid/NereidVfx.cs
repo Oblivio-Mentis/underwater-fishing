@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Raid.Nereid
@@ -11,12 +12,14 @@ namespace Raid.Nereid
 
         void Awake()
         {
+            gameObject.AddComponent<NereidDecorativeShoals>();
             factory=Object.FindAnyObjectByType<Factory.FactoryVisuals>();
             var source=Resources.Load<Material>("NereidBubbles");if(source==null||factory==null){enabled=false;return;}
             particles=new Material(source);
+            particles.SetFloat("_ParticleTint",1);
             Vector3 discharge=factory.processTube!=null&&factory.processTube.Length>0?factory.processTube[factory.processTube.Length-1]:new Vector3(-3.45f,2.95f,-4.95f);
-            outlet=MakeParticles("Processor water vapour",discharge+new Vector3(0,-1.15f,-.15f),new Color(.5f,.62f,.63f,.11f),.14f,.8f);
-            mouth=MakeParticles("Feeding pressure bubbles",new Vector3(1.35f,2.5f,7.55f),new Color(.35f,.67f,.72f,.2f),.055f,.7f);
+            outlet=MakeParticles("Processor water vapour",discharge+new Vector3(0,-1.15f,-.15f),new Color(.74f,.79f,.73f,.39f),.105f,.73f);
+            mouth=MakeParticles("Feeding pressure bubbles",new Vector3(1.35f,2.5f,7.55f),new Color(.62f,.78f,.78f,.58f),.08f,.64f);
         }
 
         void Update()
@@ -35,10 +38,19 @@ namespace Raid.Nereid
             var ps=go.AddComponent<ParticleSystem>();ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
             var main=ps.main;main.startColor=color;main.startSize=new ParticleSystem.MinMaxCurve(size*.35f,size);main.startLifetime=new ParticleSystem.MinMaxCurve(.3f,.9f);
             main.startSpeed=speed;main.maxParticles=20;main.simulationSpace=ParticleSystemSimulationSpace.World;
-            var shape=ps.shape;shape.shapeType=ParticleSystemShapeType.Sphere;shape.radius=.16f;
-            var velocity=ps.velocityOverLifetime;velocity.enabled=true;velocity.y=.18f;
+            var shape=ps.shape;shape.shapeType=ParticleSystemShapeType.Sphere;shape.radius=.12f;
+            var velocity=ps.velocityOverLifetime;velocity.enabled=true;
+            velocity.y=.38f;
+            var lifetime=ps.colorOverLifetime;lifetime.enabled=true;
+            var fade=new Gradient();
+            fade.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(Color.white,1)},
+                new[]{new GradientAlphaKey(0,0),new GradientAlphaKey(1,.18f),new GradientAlphaKey(.85f,.68f),new GradientAlphaKey(0,1)});
+            lifetime.color=fade;
             var emission=ps.emission;emission.rateOverTime=0;
             var renderer=go.GetComponent<ParticleSystemRenderer>();renderer.sharedMaterial=particles;renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=factory.bubbleMesh;
+            renderer.SetActiveVertexStreams(new List<ParticleSystemVertexStream>{ParticleSystemVertexStream.Position,
+                ParticleSystemVertexStream.Normal,ParticleSystemVertexStream.Color});
+            renderer.sortMode=ParticleSystemSortMode.Distance;
             renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;renderer.receiveShadows=false;ps.Play();return ps;
         }
 

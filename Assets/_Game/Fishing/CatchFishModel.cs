@@ -130,7 +130,9 @@ namespace Raid
                     waterSkin.SetColor("_BaseColor",albedo);
                     waterSkin.SetColor("_RimColor",Color.Lerp(albedo,new Color(.60f,.81f,.81f),.56f));
                     waterSkin.SetColor("_EmissionColor",lit.GetColor("_EmissionColor"));
-                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));wild[i]=waterSkin;
+                    waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));
+                    waterSkin.SetFloat("_PatternStrength",i<3?(ray?.78f:.36f):0);
+                    wild[i]=waterSkin;
                 }
             }
 
