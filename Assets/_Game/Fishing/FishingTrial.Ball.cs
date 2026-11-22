@@ -82,6 +82,21 @@ namespace Raid
             yield return Pause(.65f);
             Require(world.HasGoshaBall(host.Motor) && host.CatchCount==0,"Water retrieval interfered with pockets or dropped the ball.");
             Check("Submerged owner retrieved the same loose ball, and retained it underwater without using a fish pocket.");
+
+            Phase("Drop the held ball, then drop a loaded harpoon");
+            long gunId=host.HarpoonId;
+            Require(gunId>0 && host.RequestDropSelected(),"Q did not accept the selected hand-held ball.");
+            yield return Wait(()=>world.Gosha.Ball==GoshaBallMode.Deck && ReadClient()?.gosha.Ball==GoshaBallMode.Deck,
+                3,"Q did not release the held ball on both peers.");
+            Require(host.HarpoonId==gunId && world.DroppedCount==0 && !host.HasBallLine,"Dropping the ball also removed the gun.");
+            host.Motor.Teleport(world.Gosha.BallPosition-Vector3.forward*3.4f-Vector3.up*.6f);
+            yield return ShootBall();
+            Require(host.RequestDropSelected(),"Q did not accept the gun with an active ball line.");
+            yield return Wait(()=>!host.OwnsHarpoon && !host.HasBallLine && world.Gosha.Ball==GoshaBallMode.Deck &&
+                ReadClient()?.droppedItems?.Count(item=>item.kind=="Harpoon" && item.instance==gunId.ToString())==1,
+                4,"Dropping the gun left its line, ball, or instance in the wrong state.");
+            Require(FindObjectsByType<GoshaBallBody>().Length==1,"Dropping the gun duplicated the ball.");
+            Check("Q released the held ball underwater and preserved the original harpoon. Q on the loaded gun then freed the ball and replicated that same gun ID once.");
         }
 
         IEnumerator AimAtBall()
