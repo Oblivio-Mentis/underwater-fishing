@@ -29,61 +29,56 @@ namespace Raid.Nereid
 
         void MachineryFinishes()
         {
-            for(int side=-1;side<=1;side+=2)
-            {
-                for(int i=0;i<5;i++)
-                {
-                    float z=-17.15f-1.7f*i;
-                    TiledPanel(new(side*4.065f,.63f,z),new(1.57f,1.10f,.071f),
-                        Quaternion.Euler(0,90,0),pressedEnamel,PressedPanelUv);
-                    TiledPanel(new(side*4.064f,1.78f,z),new(1.57f,.76f,.072f),
-                        Quaternion.Euler(0,90,0),brushedRib,RibTrimUv);
-                    Panel("Heel scuff rail",new(side*4.002f,.185f,z),new(.14f,.095f,1.53f),steel);
-                }
-                Tube(new[]{
-                    new Vector3(side*3.97f,2.56f,-16.19f),new Vector3(side*3.97f,2.56f,-24.18f),
-                    new Vector3(side*3.97f,2.43f,-24.43f)},.118f,windowBrass);
-                Tube(new[]{
-                    new Vector3(side*3.95f,2.80f,-16.2f),new Vector3(side*3.95f,2.80f,-23.55f),
-                    new Vector3(side*3.95f,2.66f,-24.31f)},.057f,steel);
-                for(int i=0;i<5;i++)
-                {
-                    float z=-16.95f-1.60f*i;
-                    Tube(new[]{new Vector3(side*3.97f,2.56f,z-.079f),new Vector3(side*3.97f,2.56f,z+.079f)},.153f,ochre);
-                }
-            }
-
             for(int i=0;i<5;i++)
             {
-                Grating(new(-.52f,.038f,-16.95f-i*1.53f),.88f,1.37f,12);
-                Grating(new(2.12f,.038f,-16.95f-i*1.53f),.75f,1.37f,12);
-                TiledPanel(new(.84f,.031f,-16.95f-i*1.53f),new(1.33f,.018f,1.445f),
-                    Quaternion.identity,deckTexture,DeckPlateUv);
-                Panel("Amber edge line",new(1.514f,.044f,-16.95f-i*1.53f),new(.035f,.014f,1.38f),ochre);
+                float z=-17.0f-i*1.60f;
+                Grating(new(-.73f,.031f,z),.74f,1.46f,12);
+                TiledPanel(new(.50f,.028f,z),new(1.62f,.022f,1.56f),Quaternion.identity,deckTexture,DeckPlateUv);
+                Panel("Continuous route marking",new(1.27f,.044f,z),new(.069f,.011f,1.57f),ochre);
+                Panel("Service line at floor",new(-1.14f,.046f,z),new(.048f,.015f,1.57f),cold);
+                Grating(new(2.43f,.033f,z),1.17f,1.46f,12);
+
+                Panel("Pale machinery panel",new(4.092f,.62f,z),new(.095f,1.02f,1.47f),ceramic);
+                Panel("Machinery panel relief",new(4.033f,.66f,z),new(.040f,.64f,1.16f),enamel);
+                Panel("Machinery panel lower handle",new(3.995f,.49f,z),new(.044f,.07f,.36f),steel);
+                TiledPanel(new(4.065f,1.83f,z),new(1.46f,1.11f,.083f),
+                    Quaternion.Euler(0,90,0),brushedRib,RibTrimUv);
+                Beam("Chamfered pressure knee",new(4.08f,2.41f,z-.73f),new(3.69f,2.98f,z-.73f),.15f,.20f,ceramic);
+                Panel("Knee band in the machinery crown",new(1.90f,2.99f,z-.73f),new(3.61f,.15f,.20f),ceramic);
+                Panel("Caged task strip",new(.86f,2.86f,z-.73f),new(1.17f,.055f,.092f),i<2?warm:cold);
+                if(i%2==0)Lamp(new(.92f,2.80f,z-.73f),i<2?AmberFill:WaterFill,7.8f,170);
             }
 
-            // Back wall pump deck and physical valve wheels; mounted outside the ascent.
-            float back=-24.52f;
-            TiledPanel(new(1.96f,1.47f,back),new(3.68f,2.42f,.15f),
-                Quaternion.identity,pressedEnamel,PressedPanelUv);
+            Tube(new[]{new Vector3(3.87f,2.50f,-16.27f),new Vector3(3.87f,2.50f,-23.51f),
+                new Vector3(3.51f,2.35f,-24.18f),new Vector3(3.4f,1.92f,-24.28f)},.109f,windowBrass);
+            Tube(new[]{new Vector3(3.91f,2.67f,-16.27f),new Vector3(3.91f,2.67f,-22.91f),
+                new Vector3(3.42f,2.34f,-24.29f)},.064f,steel);
+            for(int i=0;i<5;i++)
+            {
+                float z=-16.74f-i*1.47f;
+                Tube(new[]{new Vector3(3.87f,2.50f,z-.093f),new Vector3(3.87f,2.50f,z+.093f)},.149f,ochre);
+            }
+
+            const float back=-24.39f;
+            Panel("Power distribution carrier",new(1.77f,.34f,back+.29f),new(3.81f,.68f,.98f),gunmetal,true);
+            Panel("Pale aft instrument crown",new(1.82f,2.54f,back),new(3.63f,.39f,.15f),ceramic);
+            Panel("Power bay insulation",new(1.82f,1.45f,back),new(3.64f,1.80f,.14f),gunmetal);
             for(int i=0;i<3;i++)
             {
-                float x=1.36f+i*.93f;
-                Tube(new[]{new Vector3(x,.37f,back+.17f),new Vector3(x,1.84f,back+.17f)},.098f,steel);
-                Tube(new[]{new Vector3(x,1.03f,back+.14f),new Vector3(x,1.03f,back+.29f)},.05f,ochre);
-                Wheel(new(x,1.03f,back+.31f),.20f,ochre);
-                Panel("Manifold port stripe",new(x,1.97f,back+.08f),new(.33f,.066f,.034f),i==0?cold:warm);
+                float x=.52f+i*1.18f;
+                Tube(new[]{new Vector3(x,.39f,back+.33f),new Vector3(x,.76f,back+.33f),
+                    new Vector3(x,1.84f,back+.33f),new Vector3(x,2.15f,back+.33f)},.31f,ceramic);
+                Tube(new[]{new Vector3(x,.87f,back+.33f),new Vector3(x,1.00f,back+.33f)},.34f,ochre);
+                Tube(new[]{new Vector3(x,1.15f,back+.33f),new Vector3(x,1.84f,back+.33f)},.324f,enamel);
+                Tube(new[]{new Vector3(x,2.10f,back+.33f),new Vector3(x,2.21f,back+.33f),
+                    new Vector3(x+.30f,2.31f,back+.33f)},.095f,windowBrass);
+                Panel("Ceramic phase badge",new(x,1.56f,back+.645f),new(.21f,.19f,.044f),gunmetal);
+                Panel("Coolant indicator",new(x,1.60f,back+.676f),new(.132f,.027f,.027f),i==0?warm:cold);
+                Wheel(new(x+.37f,1.14f,back+.59f),.116f,ochre);
             }
-            Sign(archive,"ГИДРАВЛИКА",new(2.33f,2.39f,back+.11f),Quaternion.Euler(0,180,0),2.76f,.18f);
-            for(int i=0;i<3;i++)
-            {
-                float z=-18.05f-i*2.38f;
-                Panel("Caged wall washer",new(3.55f,2.83f,z),new(.39f,.19f,.55f),gunmetal);
-                Panel("Opal wall washer lens",new(3.51f,2.716f,z),new(.33f,.046f,.34f),warm);
-                Wash(new(3.40f,2.69f,z),new(4.2f,1.1f,z-.4f),AmberFill,7.8f,250);
-            }
-            Wash(new(1.97f,2.81f,-23.1f),new(.95f,1.01f,-24.58f),AmberFill,8.9f,250);
-            Wash(new(-1.31f,2.74f,-17.82f),new(-3.70f,.80f,-18.90f),WaterFill,8.1f,155);
+            Sign(archive,"КОНТУРЫ ТЯГИ",new(1.81f,2.53f,back+.085f),Quaternion.Euler(0,180,0),3.41f,.20f);
+            Wash(new(1.87f,2.77f,-23.12f),new(1.64f,.87f,back+.34f),AmberFill,8.9f,170);
+            Wash(new(-1.31f,2.74f,-17.82f),new(-3.70f,.80f,-18.90f),WaterFill,8.1f,110);
         }
 
         void BridgeFinishes()
@@ -98,10 +93,10 @@ namespace Raid.Nereid
                 foreach(int side in new[]{-1,1})
                 {
                     float x=side*(width-.12f);
-                    Panel("Pressure window inside edge",new(x,floor+.565f,z),new(.115f,.127f,1.38f),windowBrass);
-                    Panel("Upper warm frame lip",new(x,floor+1.813f,z),new(.12f,.09f,1.38f),windowBrass);
+                    Panel("Pressure window inside edge",new(x,floor+.565f,z),new(.115f,.127f,1.38f),ceramic);
+                    Panel("Upper warm frame lip",new(x,floor+1.813f,z),new(.12f,.09f,1.38f),ceramic);
                     Panel("Reflector set into frame",new(x-side*.025f,floor+1.749f,z),new(.051f,.035f,1.19f),warm);
-                    Panel("Mullion reinforcement",new(x,floor+1.165f,z-.665f),new(.152f,1.32f,.103f),steel);
+                    Panel("Mullion reinforcement",new(x,floor+1.165f,z-.665f),new(.152f,1.32f,.103f),ceramic);
                     TiledPanel(new(x,floor+.282f,z),new(1.347f,.41f,.083f),Quaternion.Euler(0,90,0),brushedRib,RibTrimUv);
                     Grating(new(side*3.31f,floor+.040f,z),.54f,1.185f,10);
                     TiledPanel(new(side*1.61f,floor+.040f,z),new(2.37f,.023f,1.34f),Quaternion.identity,deckTexture,DeckPlateUv);
@@ -112,7 +107,7 @@ namespace Raid.Nereid
             for(int i=0;i<3;i++)
             {
                 float z=BridgeFront-1.08f-i*1.78f;
-                Panel("Overhead rollover brace",new(0,floor+1.99f,z),new(7.81f,.20f,.192f),steel);
+                Panel("Overhead rollover brace",new(0,floor+1.99f,z),new(7.81f,.20f,.192f),ceramic);
                 foreach(int side in new[]{-1,1})
                 {
                     Beam("Welded armature knee",new(side*4.18f,floor+1.55f,z),new(side*3.49f,floor+1.985f,z),.13f,.19f,steel);
@@ -153,7 +148,7 @@ namespace Raid.Nereid
         void OperatorDesk(Vector3 center)
         {
             // Existing collision seat remains the floor plan's limit.
-            Panel("Operator binnacle",center+new Vector3(0,.459f,.058f),new(1.52f,.33f,.72f),enamel);
+            Panel("Operator binnacle",center+new Vector3(0,.459f,.058f),new(1.52f,.33f,.72f),ceramic);
             Panel("Inclined operator instruments",center+new Vector3(0,.662f,.095f),new(1.62f,.119f,.63f),gunmetal,false,Quaternion.Euler(-17,0,0));
             Panel("Electronic chart surface",center+new Vector3(-.32f,.718f,.088f),new(.81f,.054f,.54f),screen,false,Quaternion.Euler(-17,0,0));
             for(int i=0;i<5;i++)

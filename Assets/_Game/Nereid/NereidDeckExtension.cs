@@ -19,7 +19,7 @@ namespace Raid.Nereid
 
         readonly List<Object> owned=new();
         readonly List<Light> cabinLights=new();
-        Material enamel,steel,gunmetal,ochre,warm,cold,glass,screen,coating;
+        Material enamel,steel,gunmetal,ochre,warm,cold,glass,screen,coating,ceramic;
         Transform archive;
         PanelBatch batch;
         ThreatDirector threat;
@@ -79,6 +79,7 @@ namespace Raid.Nereid
             cold=Finish(lit,"Ice-blue guides",new Color(.28f,.80f,.84f),.06f,.42f,1.42f);
             screen=Finish(lit,"Terminal pressure glass",new Color(.012f,.039f,.048f),.02f,.26f,.35f);
             coating=Finish(Resources.Load<Shader>("NereidHullCoating")??lit,"NEREID / saddle plate",new Color(.23f,.36f,.38f),.21f,.39f);
+            ceramic=Finish(lit,"Ceramic instrument cladding",new Color(.57f,.63f,.59f),.23f,.48f);
             CreateFinishes(lit);
             var originalGlass=FindMaterial(hull,"Nereid_Window");
             glass=originalGlass!=null?originalGlass:Finish(lit,"Window fallback",new Color(.18f,.37f,.41f),.08f,.49f);
@@ -112,73 +113,29 @@ namespace Raid.Nereid
             archive=Node(transform,"03 / Service and machinery deck",Vector3.zero);
             batch=new PanelBatch(archive,owned);
             Panel("Machinery deck",new(0,-.13f,-20.28f),new(8.5f,.26f,8.92f),gunmetal,true);
-            Panel("Stern watertight wall",new(0,1.60f,-24.7f),new(8.45f,3.2f,.23f),enamel,true);
-            Panel("Aft transfer header",new(0,2.83f,-16.015f),new(2.95f,.76f,.25f),steel,true);
-            Panel("Shipboard equipment ceiling",new(1.16f,3.20f,-20.32f),new(5.95f,.24f,8.86f),gunmetal,true);
+            Panel("Aft propulsion pressure wall",new(0,1.60f,-24.7f),new(8.45f,3.2f,.23f),enamel,true);
+            Panel("Transfer header",new(0,2.83f,-16.015f),new(2.95f,.76f,.25f),gunmetal,true);
+            Panel("Coolant plenum",new(1.16f,3.20f,-20.32f),new(5.95f,.24f,8.86f),gunmetal,true);
             Panel("Port equipment ceiling",new(-3.98f,3.20f,-20.32f),new(.48f,.24f,8.86f),gunmetal,true);
-            for(int side=-1;side<=1;side+=2)
+            foreach(int side in new[]{-1,1})
             {
-                Panel("Stern frame cheek",new(side*2.27f,1.56f,-16.015f),new(1.62f,3.12f,.24f),enamel,true);
-                Panel("Stern frame cheek outboard",new(side*4.49f,1.56f,-16.015f),new(2.84f,3.12f,.24f),enamel,true);
-                Panel("Pressure-room side",new(side*4.22f,1.57f,-20.28f),new(.18f,3.15f,8.87f),enamel,true);
-                Panel("Painted utility chase",new(side*4.04f,2.34f,-20.35f),new(.23f,.37f,8.55f),gunmetal);
-                for(int i=0;i<5;i++)
-                {
-                    float z=-16.43f-i*1.76f;
-                    Panel("Pressure rib",new(side*4.04f,1.59f,z),new(.20f,3.07f,.16f),steel);
-                    Panel("Horizontal inspection panel",new(side*4.106f,1.31f,z-.76f),new(.09f,1.25f,1.30f),gunmetal);
-                    Panel("Service footlight",new(side*3.998f,.25f,z-.46f),new(.07f,.075f,.45f),side<0?warm:cold);
-                }
+                Panel("Machinery entrance bulkhead",new(side*2.27f,1.56f,-16.015f),new(1.62f,3.12f,.24f),enamel,true);
+                Panel("Machinery entrance bulkhead return",new(side*4.49f,1.56f,-16.015f),new(2.84f,3.12f,.24f),enamel,true);
+                Panel("Propulsion room side",new(side*4.22f,1.57f,-20.28f),new(.18f,3.15f,8.87f),gunmetal,true);
+                Beam("Entrance pressure jamb",new(side*1.35f,.026f,-16.20f),new(side*1.35f,1.95f,-16.20f),.16f,.20f,ceramic);
+                Beam("Rounded pressure jamb shoulder",new(side*1.35f,1.95f,-16.20f),new(side*.97f,2.41f,-16.20f),.17f,.20f,ceramic);
+                Panel("Downward handle light",new(side*1.255f,1.53f,-16.234f),new(.028f,.61f,.10f),side<0?cold:warm);
             }
-
-            // Close the original aft pressure compartment at the new doorway.
-            // Rounded trim is deliberately outside the capsule's entry path.
-            for(int i=0;i<15;i++)
-            {
-                float x=(i-7)*.19f;
-                Panel("Machinery threshold chevron",new(x,.018f,-16.03f),new(.115f,.018f,.31f),ochre,false,Quaternion.Euler(0,32,0));
-            }
-            for(int row=0;row<7;row++)
-                for(int column=0;column<5;column++)
-                {
-                    float x=-3.26f+column*1.64f,z=-16.61f-row*1.18f;
-                    Panel("Pressed deck panel",new(x,.014f,z),new(1.59f,.024f,1.13f),column==2?enamel:steel);
-                    if(column==2)Panel("Path edge marking",new(x+.74f,.029f,z),new(.05f,.016f,.86f),ochre);
-                }
-            for(int i=0;i<3;i++)
-            {
-                float z=-17.7f-i*2.65f;
-                Panel("Inspection gantry",new(1.16f,2.98f,z),new(5.87f,.22f,.18f),steel);
-                Panel("Twin task lamp",new(.37f,2.83f,z),new(1.55f,.10f,.28f),gunmetal);
-                Panel("Twin task lamp diffuser",new(.37f,2.765f,z),new(1.30f,.035f,.18f),i==0?cold:warm);
-                Lamp(new(.3f,2.70f,z),i==0?new(.51f,.88f,.98f):new(1,.73f,.46f),7.7f,170);
-            }
-            PanelsOfExchange();
+            Panel("Pressure jamb crown",new(0,2.41f,-16.20f),new(2.0f,.16f,.20f),ceramic);
+            Panel("Propulsion access threshold",new(0,.022f,-16.12f),new(2.63f,.035f,.30f),steel);
             MachineryFinishes();
             batch.Build();
             SetProp("Prop_AccessPoint",new(3.72f,1.06f,-23.66f),new(.38f,1.62f,.83f),Quaternion.Euler(0,90,0),steel);
             SetProp("Prop_Crate4",new(-1.25f,.37f,-23.66f),new(.83f,.72f,.84f),Quaternion.Euler(0,12,0),ochre);
-            SetProp("Door_Frame_SquareTall",new(0,1.19f,-16.10f),new(3.64f,2.44f,.31f),Quaternion.identity,enamel,false);
             SetProp("Prop_Vent_Wide",new(3.99f,2.24f,-17.24f),new(1.06f,.12f,.38f),Quaternion.Euler(90,0,90),
                 brushedRib,false,Fittings+"Models/");
             SetProp("TopCables_Straight",new(2.50f,3.02f,-21.71f),new(.51f,.19f,3.87f),Quaternion.identity,
                 gunmetal,false,Fittings+"Models/");
-        }
-
-        void PanelsOfExchange()
-        {
-            Panel("Pump rack footing",new(0,.19f,-23.80f),new(1.40f,.38f,1.13f),gunmetal,true);
-            Panel("Accumulator enclosure",new(0,1.09f,-24.04f),new(1.38f,1.51f,.81f),enamel,true);
-            Panel("Inset accumulator face",new(0,1.14f,-23.60f),new(1.23f,1.28f,.06f),gunmetal);
-            for(int i=0;i<8;i++)
-                Panel("Oblong cooling slots",new(0,.63f+i*.107f,-23.55f),new(.95f,.039f,.035f),steel);
-            for(int j=0;j<3;j++)
-                Panel("Pump current indicators",new(-.36f+j*.19f,1.61f,-23.546f),new(.085f,.055f,.035f),j==0?warm:cold);
-            foreach(float x in new[]{-.68f,.68f})
-            {
-                Panel("Accumulator copper inlet",new(x,1.0f,-23.69f),new(.11f,1.66f,.11f),ochre);
-                Panel("Accumulator shut-off lever",new(x,1.36f,-23.62f),new(.28f,.053f,.052f),steel);
-            }
         }
 
         void BuildStairway()
@@ -190,14 +147,14 @@ namespace Raid.Nereid
             for(int step=0;step<treads;step++)
             {
                 float z=StairStart-run*(step+.5f),y=rise*(step+1);
-                Panel("Raised traction tread",new(StairX,y-.085f,z),new(StairWidth,.17f,run+.024f),steel,true);
-                Panel("Machined amber nosing",new(StairX,y-.033f,z+run*.50f),new(StairWidth-.11f,.049f,.024f),step%4==0?ochre:gunmetal);
+                Panel("Raised traction tread",new(StairX,y-.085f,z),new(StairWidth,.17f,run+.024f),gunmetal,true);
+                Panel("Machined amber nosing",new(StairX,y-.033f,z+run*.50f),new(StairWidth-.11f,.049f,.024f),step%4==0?ochre:steel);
             }
             foreach(int side in new[]{-1,1})
             {
                 float x=StairX+side*StairWidth*.51f;
                 Beam("Stair stringer",new(x,-.16f,StairStart),new(x,UpperDeck-.16f,StairEnd),.13f,.44f,gunmetal);
-                Beam("Stair guard",new(x,.58f,StairStart),new(x,UpperDeck+.58f,StairEnd),.082f,.09f,ochre,true);
+                Beam("Stair guard",new(x,.58f,StairStart),new(x,UpperDeck+.58f,StairEnd),.082f,.09f,ceramic,true);
                 Beam("Pressure step cheek",new(x,.02f,StairStart),new(x,UpperDeck+.02f,StairEnd),.09f,.19f,enamel,true);
                 for(int i=1;i<10;i++)
                 {
