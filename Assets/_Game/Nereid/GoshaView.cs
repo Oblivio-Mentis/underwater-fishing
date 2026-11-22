@@ -87,7 +87,7 @@ namespace Raid.Nereid
             float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
             creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);
             bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing && s.Mode!=GoshaMode.Cradled;
-            Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;
+            Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;var visualUp=Vector3.up;
             var ui=UI.UiRoot.Instance;
             if(s.Mode==GoshaMode.Riding && ui!=null)
                 foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)
@@ -97,8 +97,9 @@ namespace Raid.Nereid
                 {
                     var cam=keeper.IsOwner?keeper.GetComponentInChildren<Camera>():null;
                     var anchor=cam==null?keeper.transform:cam.transform;
-                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.25f,.64f));
-                    dir=anchor.rotation*Quaternion.Euler(0,145,0)*Vector3.forward;
+                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.16f,.84f));
+                    dir=anchor.rotation*Quaternion.Euler(0,cam==null?145:105,0)*Vector3.forward;
+                    visualUp=anchor.up;
                     break;
                 }
             var travel=presented?Vector3.Distance(lastPet,s.Position):0;
@@ -106,7 +107,7 @@ namespace Raid.Nereid
             gait+=(Mathf.Min(travel,.54f)*8.6f);
             bool held=s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Cradled;
             creature.position=!presented||held?at:Vector3.Lerp(creature.position,at,blend);
-            if(dir.sqrMagnitude>.01f)creature.rotation=Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
+            if(dir.sqrMagnitude>.01f)creature.rotation=held?Quaternion.LookRotation(dir,visualUp):Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
             bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming;
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
             float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;

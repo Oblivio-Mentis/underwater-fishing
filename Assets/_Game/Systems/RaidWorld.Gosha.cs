@@ -180,7 +180,7 @@ namespace Raid
             }
             var step=Vector3.MoveTowards(old,nextFootstep,speed*dt);
             step.y=Mathf.MoveTowards(old.y,deck.Ground(step).y,4.5f*dt);
-            if(deck.Clear(old,step,.13f))pet.Position=step;
+            if(deck.WalkClear(old,step,.13f))pet.Position=step;
             var travel=Vector3.ProjectOnPlane(pet.Position-old,Vector3.up);
             Face(travel);
             blockedTime=travel.sqrMagnitude<.0000001f?blockedTime+dt:0;
@@ -356,7 +356,7 @@ namespace Raid
             GiveBall(target);
             if(team.goshaTamed && pet.Mode!=GoshaMode.Cradled)SetMode(GoshaMode.Chasing,20);
         }
-        static bool CanHold(DiverMotor d)=>d.TryGetComponent<HarpoonTool>(out var tool)&&!tool.HandsFull&&tool.HookedFish==null&&!tool.TetherActive;
+        static bool CanHold(DiverMotor d)=>d.TryGetComponent<HarpoonTool>(out var tool)&&!tool.HandsFull&&tool.HookedFish==null&&!tool.TetherActive&&!tool.HasBallLine;
         float ThrowCharge() => Mathf.Clamp01((Time.time-ballWindStarted)/Mathf.Max(.1f,tuning.ballWindSeconds));
 
         static bool RestingPet(GoshaMode mode)=>mode==GoshaMode.Roaming||mode==GoshaMode.Resting||mode==GoshaMode.Petted;

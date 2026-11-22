@@ -15,7 +15,7 @@ namespace Raid.Nereid
             new(-4.7f,Pivot,-7.74f),new(-4.7f,.89f,-6),new(-4.7f,Gallery+Pivot,-4.5f),
             new(-4.7f,Gallery+Pivot,-.75f),new(-4.7f,Gallery+Pivot,3),new(-4.7f,.89f,4.5f),
             new(-4.7f,Pivot,6.27f),new(-2.75f,Pivot,5.8f),new(0,Pivot,5.75f),
-            new(3.2f,Pivot,5.5f),new(-3,Pivot,-13.3f),new(3,Pivot,-11f),
+            new(3.2f,Pivot,5.5f),new(3,Pivot,-11f),
             new(-3.65f,Pivot,2.9f),new(-3.6f,Pivot,-4.65f)
         };
         readonly RaycastHit[] hits=new RaycastHit[32];
@@ -70,9 +70,12 @@ namespace Raid.Nereid
         public Vector3 Ground(Vector3 world)
         {var p=Hull.InverseTransformPoint(world);p.y=Surface(p)+Pivot;return Hull.TransformPoint(p);}
         static bool Obstacle(Collider c)=>c.GetComponentInParent<DiverMotor>()==null&&!c.TryGetComponent<GoshaBallBody>(out _);
+        // Ground follows the incline through each stair nose. Sweep the belly above that line.
+        static readonly Vector3 BellyLift=Vector3.up*.19f;
+        public bool WalkClear(Vector3 from,Vector3 to,float radius)=>Clear(from+BellyLift,to+BellyLift,radius);
         bool RoomForBody(Vector3 p,float radius)
         {
-            int n=Physics.OverlapSphereNonAlloc(p,radius,overlaps,~0,QueryTriggerInteraction.Ignore);
+            int n=Physics.OverlapSphereNonAlloc(p+BellyLift,radius,overlaps,~0,QueryTriggerInteraction.Ignore);
             for(int i=0;i<n;i++)if(Obstacle(overlaps[i]))return false;
             return n<overlaps.Length;
         }
@@ -86,7 +89,7 @@ namespace Raid.Nereid
         }
         bool Walkable(Vector3 a,Vector3 b)
         {
-            if(!Clear(a,b,.15f))return false;
+            if(!WalkClear(a,b,.15f))return false;
             // Check the walk surface between endpoints as well as obstacle clearance:
             // a line passing above a stair rail or straight across an open drop is not a path.
             int steps=Mathf.CeilToInt(Vector3.Distance(a,b)/.62f);
