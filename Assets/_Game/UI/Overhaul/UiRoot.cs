@@ -237,7 +237,7 @@ namespace Raid.UI
             var player=Context.Player;
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
-            if(Context.World.HasGoshaBall(player))
+            if(Context.World!=null && Context.World.HasGoshaBall(player))
             {
                 UiInputGate.PointerReserved=true;
                 if(clicked && allowed)Context.World.RequestGosha(GoshaAction.Throw);

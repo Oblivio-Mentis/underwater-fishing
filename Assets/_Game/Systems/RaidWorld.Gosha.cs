@@ -171,6 +171,7 @@ namespace Raid
                 var target=chase?victim.transform.position:pet.BallPosition;
                 if(!deck.Interior(target) || moodTime<=0){CancelFetch();return;}
                 if(!Walk(target,chase?5.5f:4.3f,dt))return;
+                if(!chase && Mathf.Abs(target.y-pet.Position.y)>.55f)return;
                 if(chase)SetMode(GoshaMode.Pouncing,.22f);
                 else{TakeBall();SetMode(GoshaMode.Delivering,20);}
                 return;
@@ -209,7 +210,8 @@ namespace Raid
         void CancelFetch()
         {
             var at=deck.Interior(deck.Ground(pet.Position))?deck.Ground(pet.Position):deck.Mark(7);
-            if(pet.Ball==GoshaBallMode.Carried || pet.Mode==GoshaMode.Chasing || pet.Mode==GoshaMode.Pouncing)
+            if(pet.Ball==GoshaBallMode.Carried || pet.Mode==GoshaMode.Chasing || pet.Mode==GoshaMode.Pouncing ||
+                (pet.Mode==GoshaMode.Fetching && pet.Ball==GoshaBallMode.Deck))
                 DropBall(at+Vector3.up*.18f,Vector3.zero,false);
             pet.Thrower=-1;SetMode(GoshaMode.Roaming);
         }

@@ -268,6 +268,20 @@ namespace Raid.Tests
         }
 
         [Test]
+        public void CrewPetSurvivesRestartOnlyAfterReturningAboard()
+        {
+            var crew = new TeamProgress(tuning);
+            Assert.That(crew.goshaMet || crew.goshaTamed, Is.False);
+            crew.goshaMet = true;
+            TeamSave.Save(savePath, crew);
+            var stillOutside = TeamSave.Load(savePath);
+            Assert.That(stillOutside.goshaMet && !stillOutside.goshaTamed);
+            stillOutside.goshaTamed = true;
+            TeamSave.Save(savePath, stillOutside);
+            Assert.That(TeamSave.Load(savePath).goshaTamed);
+        }
+
+        [Test]
         public void DeliveredLootSurvivesSaveAndProcessesScrapAndElectronicsExactlyOnce()
         {
             Assert.That(team.Deposit(new CatchItem(7001, 0, 0, 0, 2, 2, 5, 3)), Is.True);
