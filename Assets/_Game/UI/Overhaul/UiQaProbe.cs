@@ -32,6 +32,8 @@ namespace Raid.UI
             public float x,y,z,oxygen,stress,depth,travel,rescueProgress,uiScale,fov,sensitivity,aimYaw,aimPitch,actualFov,aimBlend,lookMultiplier;
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
+            public PlayerProgress localProgress;
+            public int skillTreeNodes;
             public string[] pockets;
             public string heldSpecies, harpoonInstance, selectedItem, selectedInstance;
             public DropReadout[] droppedItems;
@@ -388,7 +390,8 @@ namespace Raid.UI
         {
             var root=UiRoot.Instance;var context=root.Context;var player=context.Player;var world=context.World;var fish=context.Harpoon==null?null:context.Harpoon.HookedFish;
             var snapshot=new Snapshot{request=lastId,page=root.Page.ToString(),error=error,cursor=Cursor.lockState.ToString(),connected=context.Connected,pending=root.CommandPending,inputBlocked=UiInputGate.Blocked,
-                width=Screen.width,height=Screen.height,players=context.Players.Count,depthTier=world==null?0:world.CurrentDepth,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
+                width=Screen.width,height=Screen.height,players=context.Players.Count,localProgress=world?.LocalProgress,
+                skillTreeNodes=root.Page==UiPage.SkillTree?root.GetComponentsInChildren<SkillPurchaseButton>().Length:0,depthTier=world==null?0:world.CurrentDepth,worldMessage=world==null?"":world.Message,travel=world==null?0:world.TravelRemaining,
                 scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene().name,events=UnityEngine.Object.FindObjectsByType<EventSystem>().Count(e=>e.isActiveAndEnabled),
                 canvases=UnityEngine.Object.FindObjectsByType<Canvas>().Count(c=>c.isActiveAndEnabled&&c.isRootCanvas),audioSources=UnityEngine.Object.FindObjectsByType<AudioSource>(FindObjectsInactive.Include).Length,audioListeners=UnityEngine.Object.FindObjectsByType<AudioListener>().Count(a=>a.isActiveAndEnabled),
                 uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,lastSuccess=root.LastCommandSucceeded,
