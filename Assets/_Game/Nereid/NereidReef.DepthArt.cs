@@ -110,9 +110,34 @@ namespace Raid.Nereid
             return -2.4f+(i-100)*7.2f;
         }
 
+        const int Columns=103,Rows=125;
+
+        // Analytic and interpolated heights diverge on steep banks. Root scenery
+        // at the exact vertices and diagonal used by Terrain's collision mesh.
+        static float Seafloor(bool deep,float x,float z)
+        {
+            static int Cell(float value,int count,Func<int,float> axis)
+            {
+                int low=0,high=count-1;
+                while(high-low>1)
+                {
+                    int middle=(high+low)/2;
+                    if(axis(middle)<=value)low=middle;
+                    else high=middle;
+                }
+                return low;
+            }
+            int i=Cell(x,Columns,TerrainX),j=Cell(z,Rows,TerrainZ);
+            float l=TerrainX(i),r=TerrainX(i+1),b=TerrainZ(j),t=TerrainZ(j+1);
+            float u=Mathf.InverseLerp(l,r,x),v=Mathf.InverseLerp(b,t,z);
+            float At(float px,float pz)=>deep?RiftHeight(px,pz):ShoalHeight(px,pz);
+            float origin=At(l,b),corner=At(r,t),edge=u>v?At(r,b):At(l,t);
+            return origin+Mathf.Max(u,v)*(edge-origin)+Mathf.Min(u,v)*(corner-edge);
+        }
+
         static ReefGeometry Terrain(Func<float,float,float> height,bool deep)
         {
-            const int columns=103, rows=125;
+            const int columns=Columns,rows=Rows;
             var bed=new ReefGeometry();
             for(int z=0;z<rows;z++)
             for(int x=0;x<columns;x++)
