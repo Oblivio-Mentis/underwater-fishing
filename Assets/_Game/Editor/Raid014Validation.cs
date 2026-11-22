@@ -196,6 +196,11 @@ namespace Raid.Editor
             await Shoot(new Vector3(stopped.x+4,stopped.y-.6f,stopped.z));
             Check(t.WaveHealth<hp,$"Exposed render mesh takes one shot: {hp:F1} -> {t.WaveHealth:F1}");
             Capture(d,"raider-door.png");
+            d.Teleport(stopped + new Vector3(1.0f,-.5f,1.7f));
+            await Awaitable.WaitForSecondsAsync(.25f);
+            d.LookAtConsole(aimPoint);
+            await Awaitable.WaitForSecondsAsync(.4f);
+            Capture(d,"raider-at-seal.png");
             if (DiverMotor.ServerDivers.Count == 2)
                 await RemoteShot(d,t,aimPoint,stopped);
             int attacks = 0;
