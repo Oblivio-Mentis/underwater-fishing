@@ -47,7 +47,7 @@
             0.0,
             -0.0
           ],
-          "triangle_or_polygon_index": 1238
+          "triangle_or_polygon_index": 1282
         },
         "starboard": {
           "expected_unity_origin": [
@@ -86,7 +86,8 @@
         ],
         "clear_rays": 25,
         "total_rays": 25
-      }
+      },
+      "machinery_bridge_clear_rays": 25
     },
     "Exterior": {
       "unity_metre_bounds_min": [
@@ -134,7 +135,7 @@
             -0.1365954428911209,
             1.0312668941026004e-08
           ],
-          "triangle_or_polygon_index": 328
+          "triangle_or_polygon_index": 384
         },
         "starboard": {
           "expected_unity_origin": [
@@ -173,7 +174,8 @@
         ],
         "clear_rays": 25,
         "total_rays": 25
-      }
+      },
+      "machinery_bridge_clear_rays": 15
     }
   }
 }

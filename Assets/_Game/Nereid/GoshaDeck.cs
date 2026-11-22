@@ -16,7 +16,11 @@ namespace Raid.Nereid
             new(-4.7f,Gallery+Pivot,-.75f),new(-4.7f,Gallery+Pivot,3),new(-4.7f,.89f,4.5f),
             new(-4.7f,Pivot,6.27f),new(-2.75f,Pivot,5.8f),new(0,Pivot,5.75f),
             new(3.2f,Pivot,5.5f),new(3,Pivot,-11f),
-            new(-3.65f,Pivot,2.9f),new(-3.6f,Pivot,-4.65f)
+            new(-3.65f,Pivot,2.9f),new(-3.6f,Pivot,-4.65f),
+            new(0,Pivot,-16.72f),new(0,Pivot,-18.1f),new(1.6f,Pivot,-20.2f),new(1.6f,Pivot,-23.24f),
+            NereidDeckExtension.StairMark(-16.54f,Pivot),NereidDeckExtension.StairMark(-19f,Pivot),
+            NereidDeckExtension.StairMark(-22f,Pivot),
+            new(-2.58f,5.03f,-25.05f),new(-2.58f,5.03f,-26.85f),new(1.2f,5.03f,-26.76f)
         };
         readonly RaycastHit[] hits=new RaycastHit[32];
         readonly Collider[] overlaps=new Collider[32];
@@ -45,6 +49,7 @@ namespace Raid.Nereid
             var vessel=NereidVessel.Active;
             if(vessel==null || !vessel.ContainsSealed(world) || NereidAirlock.Active.Contains(world))return false;
             var p=Hull.InverseTransformPoint(world);
+            if(vessel.DeckExtension!=null && NereidDeckExtension.TryGround(p,out float floor))return p.y<=floor+1.22f;
             return p.z<6.72f && p.y<3.35f && (new Vector2(p.x,p.z+3)).sqrMagnitude>3.72f;
         }
         public bool Mouth(Vector3 world)
@@ -68,7 +73,13 @@ namespace Raid.Nereid
             return p.y<Gallery-.32f?0:Gallery;
         }
         public Vector3 Ground(Vector3 world)
-        {var p=Hull.InverseTransformPoint(world);p.y=Surface(p)+Pivot;return Hull.TransformPoint(p);}
+        {
+            var p=Hull.InverseTransformPoint(world);
+            float floor=NereidVessel.Active.DeckExtension!=null && NereidDeckExtension.TryGround(p,out var extensionFloor)
+                ? extensionFloor : Surface(p);
+            p.y=floor+Pivot;
+            return Hull.TransformPoint(p);
+        }
         static bool Obstacle(Collider c)=>c.GetComponentInParent<DiverMotor>()==null&&!c.TryGetComponent<GoshaBallBody>(out _);
         // Ground follows the incline through each stair nose. Sweep the belly above that line.
         static readonly Vector3 BellyLift=Vector3.up*.19f;
