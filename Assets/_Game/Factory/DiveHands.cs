@@ -64,7 +64,7 @@ namespace Raid
         public bool HasPanelPress(DiverMotor actor)
             => viewed==actor && (press>0||sequence!=actor.InteractionSequence);
 
-        public bool Animate(DiverMotor actor,HarpoonTool equipment,Transform gun,float aim,float dt,bool panelPress)
+        public bool Animate(DiverMotor actor,HarpoonTool equipment,Transform gun,float aim,float dt,bool panelPress,float monitorRest)
         {
             if(viewed!=actor)
             {
@@ -102,9 +102,9 @@ namespace Raid
             stride.Advance(actor,Time.deltaTime);
             float freedom=(1f-aim)*(1f-push);
             float breath=Mathf.Sin(Time.time*1.7f)*Mathf.Lerp(.0024f,.00035f,aim);
-            Vector3 lower=stowOffset+Vector3.up*breath;
+            Vector3 lower=stowOffset+Vector3.up*breath+new Vector3(.03f,-.29f,0)*monitorRest;
             gun.localPosition+=lower+stride.Offset*freedom;
-            gun.localRotation*=Quaternion.Euler(stride.Tilt*freedom+new Vector3(12*stow,0,-stow*8));
+            gun.localRotation*=Quaternion.Euler(stride.Tilt*freedom+new Vector3(12*stow+15*monitorRest,0,-stow*8));
             Vector3 fishPos=new Vector3(displayedHeavy?0:.11f,displayedHeavy?-.245f:-.207f,displayedHeavy?.67f:.51f)+stride.Offset*.55f+lower;
             fishAnchor.localPosition=fishPos;
             fishAnchor.localRotation=Quaternion.Euler(-8,displayedHeavy?77:57,displayedHeavy?-8:-19);

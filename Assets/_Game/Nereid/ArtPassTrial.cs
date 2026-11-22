@@ -303,10 +303,11 @@ namespace Raid
         {
             team.biomass=24;team.chitin=7;team.scrap=13;team.electronics=3;
             team.hungerRemaining=160;
+            team.hullLevel=Mathf.Max(1,team.hullLevel);
             team.tank.Clear();
             team.tank.Add(new CatchItem(1101,4,0,2,1,1,species:"Needlefish"));
             team.tank.Add(new CatchItem(1102,6,1,3,2,1,species:"Sailray"));
-            team.tank.Add(new CatchItem(1103,0,0,0,1,1,3,2));
+            team.tank.Add(new CatchItem(1103,5,1,4,1,1,1,0,species:"Bristlefish"));
             foreach(var item in team.tank)
                 if(!team.deliveredIds.Contains(item.id))team.deliveredIds.Add(item.id);
             team.Validate();

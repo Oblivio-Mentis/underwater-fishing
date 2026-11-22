@@ -34,7 +34,7 @@ namespace Raid
         int observedShot;
         Renderer statusLamp;
         Vector3 sway;
-        float searchAt,recoil,recoilVelocity;
+        float searchAt,recoil,recoilVelocity,monitorRest;
 
         void OnEnable()
         {
@@ -95,9 +95,10 @@ namespace Raid
             }
             visible&=viewedTool!=null;
             hands.SetVisible(visible);
-            if(!visible){model.gameObject.SetActive(false);sway=Vector3.zero;recoil=0;recoilVelocity=0;return;}
+            if(!visible){model.gameObject.SetActive(false);sway=Vector3.zero;recoil=0;recoilVelocity=0;monitorRest=0;return;}
 
             float dt=Mathf.Clamp(Time.unscaledDeltaTime,0,.05f);
+            monitorRest=Mathf.MoveTowards(monitorRest,UI.UiInputGate.MonitorLook?1f:0f,dt*6);
             bool controlling=actor==owner&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked&&!UI.UiInputGate.Blocked;
             var mouse=Mouse.current;
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
@@ -119,7 +120,7 @@ namespace Raid
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
             model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
-            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress));
+            model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress,monitorRest));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
 

@@ -17,6 +17,7 @@ namespace Raid
         float predatorProximity, breathPhase;
         const float BeamCandela=245f;
         bool lampOn;
+        float lampGain=.78f,targetLampGain=.78f,nextLampSample;
         Light diveLamp;
         static readonly int WaterShader=Shader.PropertyToID("_NereidTurbidity");
         static readonly int LampShader=Shader.PropertyToID("_NereidLampForward");
@@ -68,6 +69,7 @@ namespace Raid
             float inner=Mathf.Cos(.5f*diveLamp.innerSpotAngle*Mathf.Deg2Rad);
             Shader.SetGlobalVector(LampConeShader,new Vector4(outer,inner,0,0));
             lampOn=true;
+            nextLampSample=0;
         }
 
         void UpdateDiveLamp(bool submerged)
@@ -78,10 +80,18 @@ namespace Raid
                 lampOn=!lampOn;
 
             diveLamp.enabled=lampOn && viewed!=null && !viewed.IsDead && wetBlend>.04f;
-            diveLamp.intensity=BeamCandela*wetBlend;
             var lamp=diveLamp.transform;
             var pos=lamp.position;
             var dir=lamp.forward;
+            if(diveLamp.enabled && Time.unscaledTime>=nextLampSample)
+            {
+                nextLampSample=Time.unscaledTime+.10f;
+                // Wreck plating and close rocks should retain their colour inside the beam.
+                targetLampGain=Physics.Raycast(pos,dir,out var surface,9f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)
+                    ?Mathf.Lerp(.24f,.78f,Mathf.InverseLerp(.8f,8f,surface.distance)): .78f;
+            }
+            lampGain=Mathf.Lerp(lampGain,targetLampGain,1-Mathf.Exp(-Time.unscaledDeltaTime*9f));
+            diveLamp.intensity=BeamCandela*wetBlend*lampGain;
             Shader.SetGlobalVector(LampShader,new Vector4(dir.x,dir.y,dir.z,diveLamp.enabled?diveLamp.intensity:0));
             Shader.SetGlobalVector(LampOriginShader,new Vector4(pos.x,pos.y,pos.z,diveLamp.range));
         }
