@@ -34,10 +34,17 @@ namespace Raid.Editor
         {
             var path = Arg("-raid-exe");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions {
-                scenes = new[] { Scene }, target = BuildTarget.StandaloneWindows64,
-                locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
-            });
+            bool timing=PlayerSettings.enableFrameTimingStats;
+            BuildReport report;
+            try
+            {
+                if(Arg("-raid-frame-timing")=="on")PlayerSettings.enableFrameTimingStats=true;
+                report=BuildPipeline.BuildPlayer(new BuildPlayerOptions {
+                    scenes = new[] { Scene }, target = BuildTarget.StandaloneWindows64,
+                    locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
+                });
+            }
+            finally { if(PlayerSettings.enableFrameTimingStats!=timing)PlayerSettings.enableFrameTimingStats=timing; }
             var s = report.summary;
             Debug.Log($"RAID014_BUILD {s.result} errors={s.totalErrors} warnings={s.totalWarnings} bytes={s.totalSize}");
             EditorApplication.Exit(s.result == BuildResult.Succeeded ? 0 : 1);
@@ -45,6 +52,12 @@ namespace Raid.Editor
 
         public static void Play()
         {
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-editor")>=0)
+            {
+                EditorSceneManager.OpenScene(Scene);
+                EditorApplication.EnterPlaymode();
+                return;
+            }
             if (string.IsNullOrEmpty(Output) || string.IsNullOrEmpty(Arg("-raid-save")))
                 throw new ArgumentException("Supply -raid-output and -raid-save for a disposable local run.");
             Directory.CreateDirectory(Output);
