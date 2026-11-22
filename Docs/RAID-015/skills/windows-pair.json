@@ -1,6 +1,6 @@
 {
     "status": "passed",
-    "phase": "Five biomass transferred",
+    "phase": "peer capture skill-peer-1080.png",
     "error": "",
     "checks": [
         "Two distinct profile bindings",
@@ -9,15 +9,10 @@
         "Host reticle LMB H1",
         "LMB only selects H1",
         "Host reticle RMB H1",
-        "Opposite private branches and separate balances",
+        "Stale request for unlocked H2 cannot debit the shared balance",
+        "H1 and S1 affect separate private skill lists and debit one common treasury",
         "Host reticle RMB K1",
-        "K1 charged exactly one personal wallet and preserved treasury",
-        "Host reticle LMB Treasury",
-        "Host reticle LMB IncreaseB",
-        "Host reticle LMB IncreaseB",
-        "Host reticle LMB IncreaseB",
-        "Host reticle LMB IncreaseB",
-        "Host reticle LMB IncreaseB",
-        "Host reticle LMB DepositResources"
+        "One shared purchase moved the revision once and charged the common balance once",
+        "Host reticle LMB H1"
     ]
 }

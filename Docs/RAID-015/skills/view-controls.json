@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "revision": "b93d759",
+  "checks": [
+    "H4 rejected: one branch root is insufficient",
+    "Both clients saw team K1, P1 and N1 and converged on treasury balances",
+    "H3 rejected with only B2 although its predecessor was owned",
+    "Selected H1 and focused its branch on the physical monitor",
+    "H4 expanded to its full Russian name after focus",
+    "Reset collapsed the distal labels",
+    "Wheel expanded the graph labels again",
+    "Esc restored normal gameplay gates from the physical monitor"
+  ],
+  "H4_original": {
+    "name": "H4",
+    "text": "",
+    "interactable": true,
+    "x": 628.2401733398438,
+    "y": 407.68792724609375,
+    "w": 23.4971923828125,
+    "h": 23.351287841796875
+  },
+  "H4_focus": {
+    "name": "H4",
+    "text": "Общий такт",
+    "interactable": true,
+    "x": 585.2649536132812,
+    "y": 495.2075500488281,
+    "w": 109.88739013671875,
+    "h": 38.179473876953125
+  },
+  "H4_reset": {
+    "name": "H4",
+    "text": "",
+    "interactable": true,
+    "x": 311.8707580566406,
+    "y": 307.1519775390625,
+    "w": 31.844207763671875,
+    "h": 23.95025634765625
+  },
+  "H4_wheel": {
+    "name": "H4",
+    "text": "Общий такт",
+    "interactable": true,
+    "x": -309.504150390625,
+    "y": 1312.4876708984375,
+    "w": 120.03614807128906,
+    "h": 51.723388671875
+  }
+}
