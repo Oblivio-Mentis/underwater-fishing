@@ -409,8 +409,8 @@ namespace Raid.UI
                 return;
             }
             Context.SelectedConsole=station;
-            ShowPage(UiPage.Terminal);
             terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
+            ShowPage(UiPage.Terminal);
         }
         void ToggleFishRoute(bool feeding)
         {

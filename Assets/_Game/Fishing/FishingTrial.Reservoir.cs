@@ -111,8 +111,12 @@ namespace Raid
                 }
                 Canvas.ForceUpdateCanvases();
             }
-            host.Motor.LookAtConsole(rect.TransformPoint(rect.rect.center));
-            yield return Pause(.3f);
+            yield return Wait(()=>
+            {
+                host.Motor.LookAtConsole(rect.TransformPoint(rect.rect.center));
+                ui.QaScrollReticle(0);
+                return ui.ReticleControl==name;
+            },5,"The owned camera could not centre the physical reticle on "+name);
             Require(ui.QaClickReticle(),"The real reticle could not activate "+name);
         }
     }
