@@ -20,53 +20,53 @@ namespace Raid.Nereid
             var markers=new ReefGeometry();
             var platform=new ReefGeometry();
             var pipe=new ReefGeometry();
-            var positions=new[]{
-                LockRim(.035f,4.56f,-2.72f,5.58f,1.13f),
-                LockRim(1.42f,4.48f,-2.49f,5.35f,1.10f),
-                LockRim(3.36f,4.15f,-2.06f,5.10f,.98f),
-                LockRim(5.75f,3.87f,-1.77f,4.91f,.88f),
-                LockRim(7.64f,3.69f,-1.46f,4.71f,.82f),
-                LockRim(9.37f,3.43f,-1.26f,4.46f,.78f),
-                LockRim(9.62f,3.31f,-1.19f,4.38f,.76f)
+            var shoulder=new[]{
+                LockRim(-.35f,5.30f,-2.29f,5.36f,1.47f),
+                LockRim(.91f,5.27f,-2.17f,5.31f,1.39f),
+                LockRim(2.57f,4.93f,-1.94f,5.06f,1.23f),
+                LockRim(4.72f,4.42f,-1.73f,4.86f,1.05f),
+                LockRim(6.86f,3.95f,-1.57f,4.66f,.95f),
+                LockRim(8.92f,3.58f,-1.46f,4.47f,.88f),
+                LockRim(9.71f,3.37f,-1.34f,4.31f,.82f)
             };
-            for(int i=1;i<positions.Length;i++)
-            {
-                NereidFairing.Join(outer,positions[i-1],positions[i]);
-                if(i%2==1)NereidFairing.Seam(joining,positions[i],.057f);
-            }
+            for(int i=1;i<shoulder.Length;i++)NereidFairing.Join(outer,shoulder[i-1],shoulder[i]);
+            NereidFairing.Seam(joining,shoulder[3],.040f);
+            NereidFairing.Seam(joining,shoulder[5],.059f);
 
-            // The pressure leaves are behind this wide relief. The rectangular
-            // opening within the collar covers the two actual control pad rays.
-            var innerLip=LockRim(9.60f,2.71f,-.065f,3.99f,.47f);
-            var backing=LockRim(8.86f,2.66f,-.078f,3.90f,.43f);
-            NereidFairing.Join(joining,positions[positions.Length-1],innerLip);
-            NereidFairing.Join(throat,backing,innerLip,true);
-            var doorOpening=LockRim(8.87f,1.54f,-.032f,3.256f,.054f);
-            NereidFairing.Join(throat,backing,doorOpening);
-            NereidFairing.Seam(joining,innerLip,.034f);
-            for(int side=-1;side<=1;side+=2)
+            // Both controls stay ahead of the backing and within the full width
+            // of the wet vestibule. The actual door and deck are independent.
+            var lip=LockRim(9.72f,2.80f,-.071f,4.06f,.47f);
+            var back=LockRim(8.88f,2.67f,-.073f,3.92f,.36f);
+            var opening=LockRim(8.87f,1.52f,-.028f,3.25f,.041f);
+            NereidFairing.Join(joining,shoulder[^1],lip);
+            NereidFairing.Join(throat,back,lip,true);
+            NereidFairing.Join(throat,back,opening);
+            NereidFairing.Seam(joining,lip,.042f);
+            foreach(int sign in new[]{-1,1})
             {
-                CollarTube(markers,new[]{new Vector3(9.41f,.58f,side*2.806f),new Vector3(9.41f,1.05f,side*2.80f)},.055f);
-                CollarTube(markers,new[]{new Vector3(9.39f,3.27f,side*2.79f),new Vector3(9.39f,3.46f,side*2.72f),
-                    new Vector3(9.41f,3.77f,side*2.47f)},.055f);
-                CollarTube(pipe,new[]{new Vector3(1.61f,-1.54f,side*4.30f),new Vector3(4.83f,-1.94f,side*3.73f),
-                    new Vector3(7.24f,-1.09f,side*3.58f),new Vector3(9.53f,-.45f,side*3.89f)},.13f);
-                CollarTube(pipe,new[]{new Vector3(1.99f,-2.51f,side*2.99f),new Vector3(4.51f,-1.99f,side*3.47f),
-                    new Vector3(7.33f,-.85f,side*4.13f),new Vector3(8.93f,-.44f,side*4.43f)},.124f);
+                CollarTube(markers,new[]{new Vector3(9.69f,.63f,sign*2.91f),new Vector3(9.69f,.96f,sign*2.91f)},.034f);
+                CollarTube(markers,new[]{new Vector3(9.69f,3.37f,sign*2.91f),new Vector3(9.69f,3.61f,sign*2.81f),
+                    new Vector3(9.69f,3.80f,sign*2.60f)},.039f);
+                // The lower cradle converges from the hull rib into the dock sill.
+                CollarTube(pipe,new[]{new Vector3(.57f,-1.79f,sign*4.11f),new Vector3(4.14f,-2.13f,sign*3.68f),
+                    new Vector3(7.10f,-1.73f,sign*3.29f),new Vector3(9.76f,-.52f,sign*4.06f)},.145f);
+                CollarTube(pipe,new[]{new Vector3(2.27f,-2.11f,sign*3.03f),new Vector3(4.64f,-2.21f,sign*2.93f),
+                    new Vector3(7.14f,-1.62f,sign*3.90f),new Vector3(9.55f,-.27f,sign*4.39f)},.093f);
             }
             DockGangway(platform,joining);
 
             var skinShader=Resources.Load<Shader>("NereidHullCoating");
-            var skin=Metal("Pressure lock cladding",new Color(.132f,.193f,.208f),.42f);
+            var skin=Metal("Pressure lock cladding",new Color(.111f,.167f,.184f),.42f);
             if(skinShader!=null)
             {
                 skin.shader=skinShader;
-                skin.SetColor("_BaseColor",new(.132f,.193f,.208f));
+                skin.SetColor("_BaseColor",new(.111f,.167f,.184f));
                 skin.SetFloat("_Metallic",.35f);
                 skin.SetFloat("_Smoothness",.43f);
             }
             FairingPart(hub,"Tapered pressure chamber shoulders",outer,skin);
-            FairingPart(hub,"Welded dock flange and sill plating",joining,trim);
+            var porcelain=Metal("Silt-resistant docking ceramic",new Color(.48f,.56f,.54f),.42f);
+            FairingPart(hub,"Ceramic boarding surround and weld bands",joining,porcelain);
             FairingPart(hub,"Recessed relief into the pressure doors",throat,steel);
             FairingPart(hub,"Caged amber door markers",markers,amber);
             FairingPart(hub,"Sloped dock cradle mounts",pipe,skin);
@@ -118,11 +118,13 @@ namespace Raid.Nereid
             FairingPart(barrier,label+" inner lining",geometry,finish);
         }
 
-        static Vector3[] LockRim(float x,float halfWidth,float bottom,float top,float bevel)
-            => new[]{new Vector3(x,bottom,-halfWidth+bevel),new Vector3(x,bottom,halfWidth-bevel),
-                new Vector3(x,bottom+bevel,halfWidth),new Vector3(x,top-bevel,halfWidth),
-                new Vector3(x,top,halfWidth-bevel),new Vector3(x,top,-halfWidth+bevel),
-                new Vector3(x,top-bevel,-halfWidth),new Vector3(x,bottom+bevel,-halfWidth)};
+        static Vector3[] LockRim(float x,float w,float low,float high,float b)
+            => new[]{new Vector3(x,low,-w+b),new Vector3(x,low,w-b),
+                new Vector3(x,low+b*.23f,w-b*.34f),new Vector3(x,low+b*.71f,w),
+                new Vector3(x,high-b*.71f,w),new Vector3(x,high-b*.23f,w-b*.34f),
+                new Vector3(x,high,w-b),new Vector3(x,high,-w+b),
+                new Vector3(x,high-b*.23f,-w+b*.34f),new Vector3(x,high-b*.71f,-w),
+                new Vector3(x,low+b*.71f,-w),new Vector3(x,low+b*.23f,-w+b*.34f)};
 
         static void CollarTube(ReefGeometry shape,Vector3[] sections,float radius)
         {

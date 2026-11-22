@@ -32,10 +32,10 @@ namespace Raid.Nereid
         void Awake()
         {
             Active=this;
-            steel=Metal("Petrol enamel",new Color(.14f,.25f,.27f),.51f);
+            steel=Metal("Petrol enamel",new Color(.16f,.23f,.24f),.51f);
             charcoal=Metal("Gasket",new Color(.028f,.055f,.062f),.13f);
-            trim=Metal("Brushed sill",new Color(.37f,.47f,.47f),.67f);
-            paint=Metal("Safety ochre",new Color(.72f,.37f,.065f),.4f);
+            trim=Metal("Brushed sill",new Color(.45f,.54f,.53f),.67f);
+            paint=Metal("Safety ochre",new Color(.69f,.39f,.10f),.4f);
             amber=Metal("Pump telltale",new Color(.96f,.53f,.11f),.18f,1.8f);
             cold=Metal("Deck lighting",new Color(.27f,.82f,.84f),.22f,1.5f);
             signal=Metal("Door status",new Color(.34f,.82f,.57f),.22f,1.1f);
@@ -99,6 +99,7 @@ namespace Raid.Nereid
                 Lining("Pressure chamber flank",new(OuterX*.5f,Height*.5f,side*3.2f),new(OuterX+.32f,Height,.22f),
                     steel,Vector3.back*side,Vector3.left*side,Vector3.up);
                 Box("Waist rail",new Vector3(OuterX*.5f,1.06f,side*2.97f),new Vector3(OuterX-.48f,.08f,.10f),paint);
+                Box("Flood chamber egress line",new Vector3(OuterX*.5f,.038f,side*1.69f),new Vector3(OuterX-.24f,.013f,.052f),cold);
                 for(int i=0;i<4;i++)
                 {
                     float x=.64f+i*2.43f;
@@ -110,7 +111,9 @@ namespace Raid.Nereid
             {
                 float x=1.4f+i*2.82f;
                 Box("Overhead rib",new Vector3(x,Height-.08f,0),new Vector3(.18f,.22f,6.24f),charcoal);
-                Box("Inspection light",new Vector3(x,Height-.22f,0),new Vector3(.24f,.08f,1.45f),amber);
+                Box("Inspection lens housing",new Vector3(x,Height-.20f,0),new Vector3(.32f,.19f,1.78f),charcoal);
+                for(int s=-1;s<=1;s+=2)
+                    Box("Recessed inspection lens",new Vector3(x,Height-.31f,s*.47f),new Vector3(.147f,.023f,.61f),amber);
             }
             var lum=new GameObject("Amber chamber fill");lum.transform.SetParent(transform,false);lum.transform.localPosition=new Vector3(4.3f,3.25f,0);
             var light=lum.AddComponent<Light>();light.type=LightType.Point;light.color=new Color(1,.78f,.52f);light.intensity=4;light.range=8;light.shadows=LightShadows.None;
