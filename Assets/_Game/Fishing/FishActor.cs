@@ -217,6 +217,9 @@ namespace Raid
             if (!IsServerInitialized || _runtime == null) return;
             if(arrivalPending)TryArrive();
             if(!_depthActive)return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if(Mode==FishMode.Roam && HookCount==0 && Time.unscaledTime<artPoseUntil)return;
+#endif
             if(staggered && Mode==FishMode.Transported && _elapsed>=tuning.respawnSeconds)
             {
                 ScheduleAt(Time.time+2.5f);

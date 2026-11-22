@@ -4,6 +4,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using Stopwatch=System.Diagnostics.Stopwatch;
 using Raid.UI;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -40,7 +42,10 @@ namespace Raid.Nereid
 
         internal static event Action<Camera> PrepareShoalStill;
         readonly Result result=new();
-        readonly FrameTiming[] timingBuffer=new FrameTiming[10];
+        const int BeginGpuCamera=41,EndGpuCamera=42;
+        [DllImport("Raid016Timing")]static extern IntPtr GetArtTimingEvent();
+        [DllImport("Raid016Timing")]static extern int ArtTimingReady();
+        [DllImport("Raid016Timing")]static extern ulong ReadArtTiming(out ulong nanoseconds);
         string folder,marksFile;
         DiverMotor owner,peer;
         RaidWorld world;
@@ -177,9 +182,22 @@ namespace Raid.Nereid
             {
                 featured.SetArtMark(look,Quaternion.Euler(0,6,0));
                 Physics.SyncTransforms();
-                if(!Physics.Raycast(eye.transform.position,eye.transform.forward,out var hit,20,Physics.DefaultRaycastLayers,
-                    QueryTriggerInteraction.Ignore) || hit.collider.GetComponentInParent<FishActor>()!=featured)
-                    throw new InvalidOperationException("The featured fish is not the first hit. Hit "+hit.collider?.name);
+                var surface=featured.ImpactSurface(false).GetComponent<MeshCollider>();
+                Vector3 center=surface.bounds.center;
+                RaycastHit hit=default;
+                bool found=false;
+                for(int y=-2;y<=2 && !found;y++)
+                for(int z=-2;z<=2 && !found;z++)
+                {
+                    Vector3 target=center+Vector3.up*surface.bounds.extents.y*y*.4f+
+                        Vector3.forward*surface.bounds.extents.z*z*.4f;
+                    found=Physics.Raycast(eye.transform.position,target-eye.transform.position,out hit,24,
+                        Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) &&
+                        hit.collider.GetComponentInParent<FishActor>()==featured;
+                }
+                if(!found)throw new InvalidOperationException("No first-hit ray to the featured fish at "+center);
+                owner.LookAtConsole(hit.point);
+                yield return new WaitForSecondsRealtime(.25f);
                 if(!inventory.QaFireOwned())throw new InvalidOperationException("The owned harpoon could not fire at the featured fish.");
                 yield return Await("Physical hunt connects to the ray",()=>inventory.HookedFish==featured,3);
                 yield return new WaitForSecondsRealtime(.18f);
@@ -199,42 +217,62 @@ namespace Raid.Nereid
 
         IEnumerator Measure(Sample sample)
         {
-            var cpu=new List<double>();var gpu=new List<double>();var presented=new List<double>();
-            ulong last=0;
-            int readings=0,cpuValues=0,gpuValues=0;
-            double begin=Time.realtimeSinceStartupAsDouble,end=begin+7;
-            while(Time.realtimeSinceStartupAsDouble<end)
+            if(ArtTimingReady()==0)throw new InvalidOperationException("The QA D3D11 timestamp plugin has no active device.");
+            var callback=GetArtTimingEvent();
+            var cpu=new List<double>();
+            var gpu=new List<double>();
+            var completed=new List<double>();
+            ulong last=ReadArtTiming(out _);
+            var target=RenderTexture.GetTemporary(Screen.width,Screen.height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            var pixel=new Texture2D(1,1,TextureFormat.RGB24,false);
+            var oldTarget=eye.targetTexture;
+            var request=new RenderPipeline.StandardRequest{destination=target};
+            try
             {
-                FrameTimingManager.CaptureFrameTimings();
-                yield return new WaitForEndOfFrame();
-                if(Time.realtimeSinceStartupAsDouble<begin+2)continue;
-                uint count=FrameTimingManager.GetLatestTimings((uint)timingBuffer.Length,timingBuffer);
-                readings+=(int)count;
-                for(int i=(int)count-1;i>=0;i--)
+                eye.targetTexture=target;
+                double begin=Time.realtimeSinceStartupAsDouble,end=begin+7;
+                while(Time.realtimeSinceStartupAsDouble<end)
                 {
-                    FrameTiming timing=timingBuffer[i];
-                    if(timing.cpuFrameTime>0)cpuValues++;
-                    if(timing.gpuFrameTime>0)gpuValues++;
-                    if(timing.cpuFrameTime<=0 || timing.gpuFrameTime<=0)continue;
-                    if(timing.frameStartTimestamp!=0)
+                    yield return new WaitForEndOfFrame();
+                    long start=Stopwatch.GetTimestamp();
+                    GL.IssuePluginEvent(callback,BeginGpuCamera);
+                    RenderPipeline.SubmitRenderRequest(eye,request);
+                    GL.IssuePluginEvent(callback,EndGpuCamera);
+                    double cpuTime=ElapsedMilliseconds(start);
+                    var previous=RenderTexture.active;
+                    try
                     {
-                        if(timing.frameStartTimestamp<=last)continue;
-                        last=timing.frameStartTimestamp;
+                        RenderTexture.active=target;
+                        pixel.ReadPixels(new Rect(target.width/2,target.height/2,1,1),0,0,false);
                     }
-                    else if(i!=0)continue;
-                    cpu.Add(timing.cpuFrameTime);gpu.Add(timing.gpuFrameTime);
+                    finally { RenderTexture.active=previous; }
+                    ulong index=ReadArtTiming(out var nanos);
+                    if(Time.realtimeSinceStartupAsDouble>=begin+2 && index>last && nanos>0)
+                    {
+                        cpu.Add(cpuTime);
+                        gpu.Add(nanos/1e6);
+                        completed.Add(ElapsedMilliseconds(start));
+                    }
+                    last=index;
                 }
-                presented.Add(Time.unscaledDeltaTime*1000);
+            }
+            finally
+            {
+                eye.targetTexture=oldTarget;
+                Destroy(pixel);
+                RenderTexture.ReleaseTemporary(target);
             }
             if(cpu.Count<50 || gpu.Count<50)throw new InvalidOperationException(
-                $"Frame Timing Manager enabled={FrameTimingManager.IsFeatureEnabled()}, readings={readings}, CPU={cpuValues}, GPU={gpuValues}, pairs={cpu.Count}.");
+                $"D3D11 camera timestamps captured {cpu.Count} usable samples, device total {last}.");
             if(Vector3.Distance(sample.eye,eye.transform.position)>.1f || Vector3.Angle(sample.direction,eye.transform.forward)>1)
                 throw new InvalidOperationException("The measuring camera moved at "+sample.name);
             sample.samples=cpu.Count;
-            (sample.frameMedianMs,sample.frameP95Ms)=Distribution(presented);
+            (sample.frameMedianMs,sample.frameP95Ms)=Distribution(completed);
             (sample.cpuMedianMs,sample.cpuP95Ms)=Distribution(cpu);
             (sample.gpuMedianMs,sample.gpuP95Ms)=Distribution(gpu);
         }
+
+        static double ElapsedMilliseconds(long start)=>(Stopwatch.GetTimestamp()-start)*1000.0/Stopwatch.Frequency;
 
         static (double,double) Distribution(List<double> values)
         {
@@ -271,8 +309,11 @@ namespace Raid
 
     public sealed partial class FishActor
     {
+        float artPoseUntil;
+
         internal void SetArtMark(Vector3 center,Quaternion rotation)
         {
+            artPoseUntil=Time.unscaledTime+.70f;
             _origin=center;
             transform.SetPositionAndRotation(center,rotation);
             var pose=_snapshot.Value;

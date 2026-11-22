@@ -49,3 +49,7 @@
 .idea/
 crashlytics-build.properties
 # <<< studioigor:unity
+
+# Local RAID-016 GPU profiling plugin produced from Tools/RAID016.
+/Assets/Plugins/ArtTimingQA/
+/Assets/Plugins/ArtTimingQA.meta
