@@ -10,6 +10,8 @@ namespace Raid.Nereid
         readonly List<Object> owned=new();
         Material skin,luminous,mud;
         Transform clamShell,eel,kraken,warning,lure,shadow;
+        Transform anglerJaw,anglerTail,anglerFinLeft,anglerFinRight,krakenMantle,eelPhotophores;
+        Material huntingLights;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
         float lureDisplay;
@@ -22,7 +24,7 @@ namespace Raid.Nereid
             skin=Material("NereidReef","Reef fauna");luminous=Material("NereidReef","Photophores");
             skin.SetFloat("_Hide",1);luminous.SetFloat("_Glow",1.35f);
             mud=Material("NereidSilt","Silt bloom");
-            MakeClam();MakeEel();MakeKraken();MakeLure(angler);
+            MakeClam();MakeEel();MakeKraken();MakeAngler(angler);
             first=true;
         }
 
@@ -86,6 +88,14 @@ namespace Raid.Nereid
                 face.Tube(new[]{new Vector3(s*.2f,.06f,.3f),new(s*.24f,.06f,.41f)},new[]{.076f,.038f},new Color(.81f,.43f,.12f),7);
             }
             Part(eel,"Scraping jaws",face,skin);
+            var eyes = new ReefGeometry();
+            for (int i = -1; i <= 1; i += 2)
+                for (int j = 0; j < 3; j++)
+                {
+                    var point = new Vector3(i * (.17f + j * .03f),.11f,.38f - j * .17f);
+                    eyes.Tube(new[]{point,point + Vector3.up * .028f},new[]{.035f - j * .006f,.006f},new Color(.9f,.37f,.1f),6);
+                }
+            eelPhotophores = Part(eel,"Hunting photophores",eyes,luminous);
         }
 
         void MakeKraken()
@@ -101,11 +111,12 @@ namespace Raid.Nereid
                 body.Tube(new[]{d*1.3f,d*2.8f+Vector3.down*.76f,d*4.4f+side*.8f+Vector3.down*1.5f,d*5.7f+side*.93f+Vector3.down*.9f,d*6.3f+side*.48f+Vector3.down*.45f},
                     new[]{.64f,.49f,.31f,.16f,.018f},new Color(.16f,.116f,.21f),10,.85f);
             }
-            Part(kraken,"Mantle over the rift",body,skin);
+            krakenMantle = Node(kraken,"Kraken mantle",Vector3.zero);
+            Part(krakenMantle,"Mantle over the rift",body,skin);
             var eyes=new ReefGeometry();
             for(int s=-1;s<=1;s+=2)
                 eyes.Tube(new[]{new Vector3(s*1.1f,.3f,-1.14f),new(s*1.33f,.39f,-1.42f),new(s*1.52f,.46f,-1.5f)},new[]{.04f,.19f,.03f},new Color(.86f,.28f,.055f),9,.5f);
-            Part(kraken,"Rift eyes",eyes,luminous);
+            Part(krakenMantle,"Rift eyes",eyes,luminous);
             strikingArm=new FlexibleBody(this,kraken,"Sweeping arm",25,.71f,new Color(.21f,.15f,.24f),skin);
 
             warning=Node(kraken,"Rising silt",Vector3.zero);
@@ -130,9 +141,85 @@ namespace Raid.Nereid
             shadow.gameObject.SetActive(false);
         }
 
+        void MakeAngler(Transform proxy)
+        {
+            proxy.GetComponent<MeshRenderer>().enabled = false;
+            Transform body = Node(proxy,"Reef angler",Vector3.zero);
+            Vector3 scale = proxy.localScale;
+            body.localScale = new Vector3(1 / scale.x,1 / scale.y,1 / scale.z);
+            var hide = new Color(.23f,.19f,.24f);
+            var silhouette = new ReefGeometry();
+            silhouette.Tube(new[]{new Vector3(0,0,-1.45f),new(0,.02f,-.73f),new(0,.08f,-.18f),new(0,.06f,.43f),new(0,-.10f,.83f)},
+                new[]{.065f,.29f,.53f,.53f,.34f},hide,12,.85f);
+            silhouette.Tube(new[]{new Vector3(0,.37f,-.57f),new(0,.72f,-.74f),new(0,.52f,-.96f)},
+                new[]{.17f,.1f,.012f},new Color(.27f,.25f,.22f),7,.56f);
+            Part(body,"Spined angler hide",silhouette,skin);
+
+            var ridge = new ReefGeometry();
+            for (int side = -1; side <= 1; side += 2)
+            {
+                ridge.Tube(new[]{new Vector3(side*.17f,-.14f,.88f),new(side*.39f,-.06f,.62f),new(side*.46f,.06f,.37f)},
+                    new[]{.1f,.17f,.1f},Armour,8,.8f);
+                for (int i = 0; i < 4; i++)
+                {
+                    float z = .81f - i * .11f;
+                    Vector3 top = new(side * (.20f + i * .054f),-.16f + i * .022f,z);
+                    ridge.Tube(new[]{top,top + new Vector3(0,-.12f,-.018f),top + new Vector3(0,-.17f,.042f)},
+                        new[]{.034f,.02f,.003f},Pale,6);
+                }
+            }
+            Part(body,"Upper jaw and teeth",ridge,skin);
+            anglerJaw = Node(body,"Angler jaw hinge",new Vector3(0,-.19f,.4f));
+            var mandible = new ReefGeometry();
+            mandible.Tube(new[]{new Vector3(0,-.11f,-.05f),new(0,-.092f,.23f),new(0,-.025f,.47f)},
+                new[]{.24f,.25f,.10f},hide,9,.46f);
+            for (int side = -1; side <= 1; side += 2)
+                for (int i = 0; i < 3; i++)
+                {
+                    var tooth = new Vector3(side * (.12f + i * .041f),.005f,.39f - i * .09f);
+                    mandible.Tube(new[]{tooth,tooth + new Vector3(0,.105f,-.03f)},new[]{.029f,.003f},Pale,6);
+                }
+            Part(anglerJaw,"Lower jaw and teeth",mandible,skin);
+
+            anglerTail = Node(body,"Muscular tail",new Vector3(0,0,-1.18f));
+            var tail = new ReefGeometry();
+            tail.Tube(new[]{Vector3.zero,new Vector3(0,.018f,-.40f),new(0,.13f,-.76f)},
+                new[]{.16f,.10f,.020f},hide,8,.76f);
+            tail.Tube(new[]{new Vector3(0,-.13f,-.54f),new(0,.05f,-.68f),new(0,.40f,-.91f)},
+                new[]{.014f,.15f,.016f},Armour,8,.42f);
+            Part(anglerTail,"Tail and split fin",tail,skin);
+            anglerFinLeft = AnglerSideFin(body,-1);
+            anglerFinRight = AnglerSideFin(body,1);
+
+            var eyes = new ReefGeometry();
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var eye = new Vector3(s * .405f,.19f,.52f);
+                eyes.Tube(new[]{eye,eye + new Vector3(s*.055f,.037f,.054f)},new[]{.084f,.042f},new Color(.32f,.81f,.64f),10,.86f);
+            }
+            huntingLights = Material("NereidReef","Angler hunting light");
+            huntingLights.SetFloat("_Glow",1.2f);
+            Part(body,"Reflective angler eyes",eyes,huntingLights);
+            MakeLure(body);
+        }
+
+        Transform AnglerSideFin(Transform body,int side)
+        {
+            var joint = Node(body,"Angler fin joint",new Vector3(side*.34f,-.03f,-.1f));
+            var fin = new ReefGeometry();
+            fin.Tube(new[]{Vector3.zero,new Vector3(side*.25f,-.07f,-.19f),new(side*.59f,-.17f,-.53f)},
+                new[]{.13f,.14f,.014f},Armour,7,.39f);
+            Part(joint,"Ribbed pectoral fin",fin,skin);
+            return joint;
+        }
+
         void MakeLure(Transform angler)
         {
-            lure=Node(angler,"Shoal-shaped angler lure",new(.075f,.39f,.39f));
+            var whisker = new ReefGeometry();
+            whisker.Tube(new[]{new Vector3(0,.36f,.3f),new Vector3(0,.64f,.45f),new Vector3(.035f,.69f,.68f),new Vector3(.06f,.6f,.9f)},
+                new[]{.05f,.042f,.025f,.017f},Armour,7,.82f);
+            Part(angler,"Lure filament",whisker,skin);
+            lure=Node(angler,"Shoal-shaped angler lure",new(.06f,.6f,.9f));
             lureFish=new Transform[5];
             for(int i=0;i<lureFish.Length;i++)
             {
@@ -160,6 +247,11 @@ namespace Raid.Nereid
                     eelBody.Path[i]=new Vector3(Mathf.Sin(u*6.4f-t*(state.EelPhase==2?7.6f:3.7f))*.52f*u,Mathf.Sin(u*4-t*1.4f)*u*.24f,-3.7f*u);
                 }
                 eelBody.Deform();
+                eelPhotophores.localScale = Vector3.one * (state.EelPhase == 1 ? 1 + .12f * Mathf.Sin(t*14) : 1);
+                float breath = Mathf.Sin(t * .9f) * .035f;
+                float emerge = state.KrakenPhase == 1 ? .72f : state.KrakenPhase == 2 ? 1f : 0;
+                krakenMantle.localPosition = Vector3.Lerp(krakenMantle.localPosition,Vector3.up * (emerge * 1.2f + breath),blend);
+                krakenMantle.localScale = new Vector3(1 + breath,1 - breath * .5f,1 + breath);
 
                 Vector3 rest=new(-4.2f,.15f,3.45f);
                 Vector3 destination=state.KrakenPhase is 1 or 2?kraken.InverseTransformPoint(state.Sweep):rest;
@@ -196,6 +288,14 @@ namespace Raid.Nereid
             {
                 // The moving points on the lure spread into a pale fan before the fish commits to a strike.
                 lureDisplay=Mathf.MoveTowards(lureDisplay,angler==ThreatDirector.HuntStage.Display?1f:0f,Time.deltaTime*3.5f);
+                bool striking = angler == ThreatDirector.HuntStage.Pursuit;
+                float jaw = striking ? 36 : 4 + lureDisplay * 22;
+                anglerJaw.localRotation = Quaternion.Slerp(anglerJaw.localRotation,Quaternion.Euler(jaw,0,0),blend);
+                float stroke = Mathf.Sin(t * (striking ? 11 : 4));
+                anglerTail.localRotation = Quaternion.Euler(0,stroke * (striking ? 36 : 20),0);
+                anglerFinLeft.localRotation = Quaternion.Euler(0,0,stroke * 17);
+                anglerFinRight.localRotation = Quaternion.Euler(0,0,-stroke * 17);
+                huntingLights.SetFloat("_Glow",1.05f + lureDisplay * (2.7f + .48f * Mathf.Sin(t * 16)));
                 for(int i=0;i<lureFish.Length;i++)
                 {
                     float phase=t*1.22f+i*2.4f;

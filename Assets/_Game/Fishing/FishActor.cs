@@ -55,7 +55,17 @@ namespace Raid
         public string SpeciesId => fishId;
         public bool RequiresPartner => cargoSize > 1;
         public long CargoId => IsServerInitialized ? _cargoId : _snapshot.Value.CaptureId;
-        public CatchItem ToCargo(long id) => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier, species: SpeciesId);
+        public CatchItem ToCargo(long id)
+        {
+            var (scrap,electronics) = SpeciesId switch
+            {
+                "Bristlefish" => (depthTier > 1 ? 2 : 1,0),
+                "Sailray" => (depthTier > 1 ? 2 : 1,depthTier > 1 ? 1 : 0),
+                "Lanternfish" when depthTier > 1 => (0,1),
+                _ => (0,0)
+            };
+            return new CatchItem(id,biomass,chitin,offering,cargoSize,depthTier,scrap,electronics,SpeciesId);
+        }
         public bool IsStowed => _snapshot.Value.Stowed;
         public bool IsHeldByLocalPlayer => Mode == FishMode.Captured && IsClientInitialized
             && (_snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId
@@ -137,6 +147,8 @@ namespace Raid
         public override void OnStopClient()
         {
             _presentation?.Unbind();
+            lastVisualActive = false;
+            PresentWake(default,false,true);
             foreach (var body in _renderers) body.enabled = false;
         }
 
@@ -156,6 +168,9 @@ namespace Raid
             ClearFishing();
             arrivalPending=false;
             fleeRemaining=0;
+            habitat=null;
+            leaving=false;
+            bank=0;
             hookAvailableAt=avoidUntil=0;
             _depthActive = active;
             transform.position = _origin;
@@ -236,12 +251,7 @@ namespace Raid
                 ScheduleAt(Time.time+2.5f);
                 return;
             }
-            if(staggered && Mode==FishMode.Roam && DesiredState==FishMode.Roam && Time.time>departureAt &&
-                NearestSwimmer(transform.position,14)==null && HasRoamingReplacement())
-            {
-                ScheduleAt(Time.time+18);
-                return;
-            }
+            if (TryMigrate()) return;
             _runtime.Tick(Time.fixedDeltaTime);
             _runtime.FixedTick(Time.fixedDeltaTime);
         }
@@ -305,18 +315,24 @@ namespace Raid
         private void LateUpdate()
         {
             if (!IsClientInitialized) return;
-            if (!IsServerInitialized)
+            var visual = _snapshot.Value;
+            bool snap = visual.Active && (!lastVisualActive || (transform.position - visual.Position).sqrMagnitude > 64);
+            if (!IsServerInitialized && visual.Active)
             {
-                float blend = 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.02f, tuning.snapshotInterval));
-                transform.position = Vector3.Lerp(transform.position, _snapshot.Value.Position, blend);
-                transform.rotation = Quaternion.Slerp(transform.rotation, _snapshot.Value.Rotation, blend);
+                float blend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.02f, tuning.snapshotInterval));
+                transform.position = Vector3.Lerp(transform.position, visual.Position, blend);
+                transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, blend);
             }
-            bool collidable = !_snapshot.Value.Reserved && _snapshot.Value.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
-            bool visible = _snapshot.Value.Active && Mode != FishMode.Transported && !_snapshot.Value.Stowed && !IsHeldByLocalPlayer;
+            lastVisualActive = visual.Active;
+            bool collidable = !visual.Reserved && visual.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
+            bool visible = visual.Active && Mode != FishMode.Transported && !visual.Stowed && !IsHeldByLocalPlayer;
+            PresentWake(visual,visible && !visual.Reserved,snap);
             if(_model!=null && _model.TryGetComponent<CatchFishModel>(out var specimen) && specimen.CargoId!=CargoId)specimen.CargoId=CargoId;
             foreach (var body in _renderers) body.enabled = visible;
             if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = collidable;
         }
+
+        private void OnDestroy() => DisposeWake();
 
         private void OnSnapshotChanged(FishSnapshot previous, FishSnapshot next, bool asServer)
         {
