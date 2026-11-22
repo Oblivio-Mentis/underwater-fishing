@@ -1,0 +1,21 @@
+Zero-window departure spent 3,02 O2 before the opening
+Opening at 3,00s after immersion. O2 240,00 -> 239,98
+Open outer door consumes real O2: 238,58
+Stalled wet lock holds O2 until limit: 240,00
+Stalled wet lock resumes consumption: 238,70
+Approach (28.00, 1.50, -28.00) -> (21.35, 1.50, -28.00), outer control (20.05, 1.53, -29.92), active=True
+Closed ocean door stops raider at (21.35, 1.50, -28.00), pad (20.05, 1.53, -29.92), stock loss 0
+Closed door blocks harpoon damage
+Exposed render mesh takes one shot: 10,0 -> 9,0
+Remote owner hit visible raider once: 9,0 -> 8,0
+Inner door holds the raider at (12.70, 1.50, -28.00)
+Physical contact at the tank: (0.00, 1.50, -10.34)
+Next wave spawns outside with full health
+Repeat wave is stopped again by the closed outer door
+Remote F rescued the immobilized diver on deck
+Reached physical station Process
+Staged one fish in the reservoir
+Process consumed one fish and added 2
+Reached physical station Feed
+Staged one fish in the reservoir
+Feed consumed one fish and added 1

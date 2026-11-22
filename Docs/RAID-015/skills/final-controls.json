@@ -1,0 +1,19 @@
+{
+    "status": "passed",
+    "phase": "Empty-field LMB drag moved the same radial graph",
+    "error": "",
+    "checks": [
+        "Two distinct profile bindings",
+        "LMB opens physical graph on host",
+        "Monitor reserves normal gameplay",
+        "Host reticle LMB H1",
+        "LMB only selects H1",
+        "Host reticle RMB H1",
+        "Stale request for unlocked H2 cannot debit the shared balance",
+        "H1 and S1 affect separate private skill lists and debit one common treasury",
+        "Host reticle RMB K1",
+        "One shared purchase moved the revision once and charged the common balance once",
+        "Host reticle LMB H1",
+        "Panning neither spends anything nor changes personal skills"
+    ]
+}

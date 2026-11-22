@@ -1,0 +1,203 @@
+{
+  "baseline": "7ed4417",
+  "candidate": "17760c5",
+  "method": "Sequential Windows Development players, each paired with a headless separate Windows client. Exact same first reef fixed camera, no other gameplay or builds. Compare the two water-enabled samples. The harness stopped after all four completed A/B/B/A samples.",
+  "versions": {
+    "raid014": {
+      "status": "measuring A/B/B/A",
+      "gpu": "NVIDIA GeForce RTX 4070",
+      "api": "Direct3D11",
+      "quality": "PC",
+      "pipeline": "PC_RPAsset",
+      "error": "",
+      "timing": "Completed offscreen URP camera stacks per real second, including a synchronous one-pixel GPU readback per frame. Screen overlay HUD excluded.",
+      "width": 1280,
+      "height": 720,
+      "depth": 1,
+      "msaa": 1,
+      "vsync": 0,
+      "targetFps": -1,
+      "scale": 1.0,
+      "nearestPassMetres": 0.0,
+      "drySuppressed": true,
+      "wetVisible": true,
+      "wetChamberVisible": false,
+      "deepWaterVisible": false,
+      "chamberFill": 0.0,
+      "samples": [
+        {
+          "effects": false,
+          "frames": 1466,
+          "seconds": 4.000243186950684,
+          "fps": 366.47772216796875,
+          "medianMs": 2.659600019454956,
+          "p95Ms": 3.363800048828125,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": true,
+          "frames": 1513,
+          "seconds": 4.002436637878418,
+          "fps": 378.01971435546875,
+          "medianMs": 2.5683999061584473,
+          "p95Ms": 3.2816998958587646,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": true,
+          "frames": 1589,
+          "seconds": 4.00043249130249,
+          "fps": 397.2070617675781,
+          "medianMs": 2.4677000045776367,
+          "p95Ms": 2.903700113296509,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": false,
+          "frames": 1567,
+          "seconds": 4.00054931640625,
+          "fps": 391.6961975097656,
+          "medianMs": 2.4900999069213867,
+          "p95Ms": 2.9892001152038574,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        }
+      ],
+      "enabledMeanFPS": 387.610986750884,
+      "playerAssemblySha256": "7e2198cd53d09ce7cea6932ca5cc1937e21e41ab1db21baf0e41b6366848e67b"
+    },
+    "raid015": {
+      "status": "measuring A/B/B/A",
+      "gpu": "NVIDIA GeForce RTX 4070",
+      "api": "Direct3D11",
+      "quality": "PC",
+      "pipeline": "PC_RPAsset",
+      "error": "",
+      "timing": "Completed offscreen URP camera stacks per real second, including a synchronous one-pixel GPU readback per frame. Screen overlay HUD excluded.",
+      "width": 1280,
+      "height": 720,
+      "depth": 1,
+      "msaa": 1,
+      "vsync": 0,
+      "targetFps": -1,
+      "scale": 1.0,
+      "nearestPassMetres": 0.0,
+      "drySuppressed": true,
+      "wetVisible": true,
+      "wetChamberVisible": false,
+      "deepWaterVisible": false,
+      "chamberFill": 0.0,
+      "samples": [
+        {
+          "effects": false,
+          "frames": 1527,
+          "seconds": 4.002159595489502,
+          "fps": 381.54400634765625,
+          "medianMs": 2.5557000637054443,
+          "p95Ms": 3.0915000438690186,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": true,
+          "frames": 1564,
+          "seconds": 4.00213098526001,
+          "fps": 390.79180908203125,
+          "medianMs": 2.500999927520752,
+          "p95Ms": 2.973299980163574,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": true,
+          "frames": 1536,
+          "seconds": 4.002486705780029,
+          "fps": 383.76141357421875,
+          "medianMs": 2.5434000492095947,
+          "p95Ms": 3.027600049972534,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        },
+        {
+          "effects": false,
+          "frames": 1548,
+          "seconds": 4.001232624053955,
+          "fps": 386.8807678222656,
+          "medianMs": 2.5290000438690186,
+          "p95Ms": 2.986799955368042,
+          "eye": {
+            "x": 24.771146774291992,
+            "y": -14.354652404785156,
+            "z": -29.531600952148438
+          },
+          "angles": {
+            "x": 8.921311378479004,
+            "y": 17.622304916381836,
+            "z": -2.160571881404394e-07
+          }
+        }
+      ],
+      "enabledMeanFPS": 387.27645962029914,
+      "playerAssemblySha256": "0d51ccaf0a7b678c3a70acf1a178bace54c20402f3b9a83b322cebb9622d9372"
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "source": "d50d8be",
+  "scene": "InterfaceVerticalSlice",
+  "scope": "Two independent Windows players, localhost. Fixture stages diver poses and pauses reef AI around the catch. Shots, line winding, Q release, hauling, per-fish routing and reconnect run on their normal network paths.",
+  "checks": 30,
+  "errors": {
+    "host": [],
+    "peer": []
+  },
+  "report": {
+    "phase": "Owner death and reconnect with two active lines",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+      "Distinct connected owners 0 and 1",
+      "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+      "Salvage 5707182765251519995 moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Approach with a slack line and no reel did not wind or collect the fish.",
+      "First fish reached the hand with 4,42 stamina remaining.",
+      "Needlefish captured and stowed by one diver.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Inside the hand radius a confirmed shot alone did not collect the fish.",
+      "Lanternfish captured and stowed by one diver.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Needlefish captured and stowed by one diver.",
+      "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+      "Server accepted the shot on a visible fourth small fish and retained exactly three pockets.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Confirmed hook widened the owned camera; zero intensity restored base FOV.",
+      "Solo surge displaced the shooter 0,50 m.",
+      "Host hook 0/#5, remote measured hook 1/#1, host/peer frames 2658/735, attached travel 7,833/1,877 m, worst tip drift 0,000003/0,000003 m, worst nock drift 0,000000/0,000000 m.",
+      "Both rendered and attached independent server-confirmed projectiles; opposing directions did not exhaust the fish.",
+      "Simultaneous contacts are 1,069 m apart on the moving fish.",
+      "Heavy capture completed with all three small catches intact; tool switch and fire blocked.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Physical E/Q on remote plus stale duplicate RPC transferred heavy catch 4803910897931803870 and selected pocket 5008544577133317767 back to the original owner. Three pockets, two occupied hands and zero world records restored for cargo deposit.",
+      "Four authoritative catch IDs now swim in both cages; hands and pockets are empty.",
+      "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+      "Winch delivered each original ID to the reservoir and both cages emptied.",
+      "The exact Q deposits retained all personal ownership across the real hoist.",
+      "Selected heavy #4803910897931803870: 6 B, 0 C in the shared wallet. Feed #5221763468381645455: +200 hundredths. The other two fish stayed in the aquarium.",
+      "Partner death and connection teardown each removed only its own harpoon. Rejoined owner had free hands, and all four delivered IDs remained unique. The same campaign profile returned and the shared wallet was unchanged."
+    ]
+  }
+}
