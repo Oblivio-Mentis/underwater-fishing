@@ -15,7 +15,7 @@ namespace Raid
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
         public Transform Tail => tail;
-        public long CargoId { get; private set; }
+        public long CargoId { get; internal set; }
         private float phase, strokeWeight;
         private bool ray;
         private FishActor actor;

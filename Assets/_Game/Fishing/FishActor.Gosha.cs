@@ -12,6 +12,7 @@ namespace Raid
         {
             if(!IsAvailableForGosha)return false;
             goshaReserved=true;
+            SetReservationView(true);
             foreach(var shape in _colliders)shape.enabled=false;
             return true;
         }
@@ -30,6 +31,7 @@ namespace Raid
         {
             if(!IsServerInitialized || !goshaReserved)return;
             goshaReserved=false;
+            SetReservationView(false);
             foreach(var shape in _colliders)shape.enabled=_depthActive;
         }
 
@@ -38,6 +40,7 @@ namespace Raid
             if(!IsServerInitialized || !goshaReserved || tool==null || !tool.AcceptGoshaCatch(this))return false;
             RaidWorld.Instance.RecordCatch(CargoId,new[]{owner});
             goshaReserved=false;
+            SetReservationView(false);
             if(staggered)ScheduleAt(Time.time+tuning.respawnSeconds);
             else
             {
@@ -50,6 +53,13 @@ namespace Raid
                 _snapshot.Value=state;
             }
             return true;
+        }
+
+        void SetReservationView(bool reserved)
+        {
+            var state=_snapshot.Value;
+            state.Reserved=reserved;
+            _snapshot.Value=state;
         }
 
         float goshaRespawn;

@@ -23,7 +23,7 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public float Tension, Stamina;
-            public bool Active, Stowed, Startled, Coordinated, SurgeWarning, Surging;
+            public bool Active, Stowed, Reserved, Startled, Coordinated, SurgeWarning, Surging;
             public int HookCount;
             public int Holder;
             public long CaptureId;
@@ -61,7 +61,13 @@ namespace Raid
             && (_snapshot.Value.Holder == NetworkManager.ClientManager.Connection.ClientId
                 || UI.UiRoot.Instance?.Context?.Player?.Spectating?.OwnerId == _snapshot.Value.Holder);
 
-        private void RenewCargoId() => _cargoId = BitConverter.ToInt64(Guid.NewGuid().ToByteArray(), 0) & long.MaxValue;
+        private void RenewCargoId()
+        {
+            _cargoId=BitConverter.ToInt64(Guid.NewGuid().ToByteArray(),0)&long.MaxValue;
+            var state=_snapshot.Value;
+            state.CaptureId=_cargoId;
+            _snapshot.Value=state;
+        }
 
         Transform tailSurface;
         public Transform ImpactSurface(bool tail) => _model == null ? transform : tail ? tailSurface : _model.transform;
@@ -102,7 +108,7 @@ namespace Raid
             _depthActive=false;
             _clock = _origin.x + _origin.z;
             RenewCargoId();
-            _snapshot.Value = new FishSnapshot { Position = _origin, Rotation = transform.rotation, Mode = FishMode.Roam, Active = _depthActive };
+            _snapshot.Value = new FishSnapshot { Position = _origin, Rotation = transform.rotation, Mode = FishMode.Roam, Active = _depthActive, CaptureId=_cargoId };
             DesiredState = FishMode.Roam;
             _runtime = fsmProfile.Build(gameObject, fsmDefinition);
             _runtime.Initialize();
@@ -158,7 +164,7 @@ namespace Raid
             var state = _snapshot.Value;
             state.Position = _origin;
             state.Rotation = transform.rotation;
-            state.Startled = false;
+            state.Startled = state.Reserved = false;
             state.Active = active;
             state.Stowed = false;
             state.Holder = -1;
@@ -166,8 +172,8 @@ namespace Raid
             state.HookCount = 0;
             state.Coordinated = state.SurgeWarning = state.Surging = false;
             state.Tension = state.Stamina = 0f;
-            if (active) RenewCargoId();
             _snapshot.Value = state;
+            if (active) RenewCargoId();
             foreach (var fishCollider in _colliders) fishCollider.enabled = active;
         }
 
@@ -282,6 +288,7 @@ namespace Raid
             }
             state.Position = transform.position;
             state.Rotation = transform.rotation;
+            state.CaptureId=_cargoId;
             _snapshot.Value = state;
         }
 
@@ -301,8 +308,9 @@ namespace Raid
                 transform.position = Vector3.Lerp(transform.position, _snapshot.Value.Position, blend);
                 transform.rotation = Quaternion.Slerp(transform.rotation, _snapshot.Value.Rotation, blend);
             }
-            bool collidable = _snapshot.Value.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
+            bool collidable = !_snapshot.Value.Reserved && _snapshot.Value.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
             bool visible = _snapshot.Value.Active && Mode != FishMode.Transported && !_snapshot.Value.Stowed && !IsHeldByLocalPlayer;
+            if(_model!=null && _model.TryGetComponent<CatchFishModel>(out var specimen) && specimen.CargoId!=CargoId)specimen.CargoId=CargoId;
             foreach (var body in _renderers) body.enabled = visible;
             if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = collidable;
         }
