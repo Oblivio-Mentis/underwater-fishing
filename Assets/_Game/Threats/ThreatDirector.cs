@@ -27,7 +27,13 @@ namespace Raid
         private int depthTier = 1, stockAttacks;
         private int factoryWaypoint;
         private Collider reservoirWall;
-        readonly RaycastHit[] routeHits = new RaycastHit[24];
+        int obstacleMask;
+        MeshCollider primitiveHitbox;
+        internal static int RaiderLayer => LayerMask.NameToLayer("ReservoirRaider");
+        internal void ShowPrimitiveHitbox(bool usePrimitive)
+        {
+            if (primitiveHitbox != null) primitiveHitbox.enabled = usePrimitive && IsServerInitialized;
+        }
         public Vector3 WavePosition => state.Value.WavePosition;
         public float WaveHealth => state.Value.WaveHealth;
         public int WaveHits => state.Value.WaveHits;
@@ -64,6 +70,12 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            obstacleMask = Physics.DefaultRaycastLayers & ~(1 << RaiderLayer);
+            waveView.gameObject.layer = RaiderLayer;
+            primitiveHitbox = waveView.GetComponent<MeshCollider>();
+            if (primitiveHitbox == null) primitiveHitbox = waveView.gameObject.AddComponent<MeshCollider>();
+            primitiveHitbox.sharedMesh = waveView.GetComponent<MeshFilter>().sharedMesh;
+            primitiveHitbox.enabled = true;
             ResetReef();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
             state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = tuning.predatorHealth };
@@ -125,21 +137,11 @@ namespace Raid
                     next.WaveHeading = direction;
                     float step = Mathf.Min(delta.magnitude, Mathf.Max(.1f, tuning.pursuitSpeed) * dt);
                     float clearance = Mathf.Max(.05f, tuning.raiderBodyRadius);
-                    int count = Physics.SphereCastNonAlloc(next.WavePosition, clearance, direction, routeHits,
-                        step + .03f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
-                    float closest = float.PositiveInfinity;
-                    Collider barrier = null;
-                    for (int i = 0; i < count; i++)
-                    {
-                        var hit = routeHits[i];
-                        if (hit.transform.IsChildOf(waveView) || hit.distance >= closest) continue;
-                        closest = hit.distance;
-                        barrier = hit.collider;
-                    }
-                    if (count == routeHits.Length) step = 0;
-                    else if (barrier != null) step = Mathf.Clamp(closest - .03f, 0, step);
+                    bool blocked = Physics.SphereCast(next.WavePosition, clearance, direction, out var hit,
+                        step + .03f, obstacleMask, QueryTriggerInteraction.Ignore);
+                    if (blocked) step = Mathf.Clamp(hit.distance - .03f, 0, step);
                     next.WavePosition += direction * step;
-                    atTank = barrier != null && barrier == reservoirWall && closest <= .04f && factoryPath && factoryWaypoint == factoryWaveRoute.Length - 1;
+                    atTank = blocked && hit.collider == reservoirWall && hit.distance <= .04f && factoryPath && factoryWaypoint == factoryWaveRoute.Length - 1;
                 }
                 if (atTank || Vector3.Distance(next.WavePosition, goal) < .2f)
                 {

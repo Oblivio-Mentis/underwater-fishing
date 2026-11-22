@@ -148,7 +148,7 @@ namespace Raid.Nereid.Editor
                 threats.factoryWaveRoute=new[]{new Vector3(24,1.5f,-28),new Vector3(20,1.5f,-28),new Vector3(10,1.5f,-28),new Vector3(0,1.5f,-28),new Vector3(0,1.5f,-15.6f),new Vector3(0,1.5f,-9.6f)};
                 string threatPath=Folder+"/NereidThreats.asset";var threatTuning=AssetDatabase.LoadAssetAtPath<ThreatTuning>(threatPath);
                 if(threatTuning==null){threatTuning=Object.Instantiate(threats.tuning);AssetDatabase.CreateAsset(threatTuning,threatPath);}
-                threatTuning.predatorSpawn=new Vector3(28,-5,-29);threatTuning.waveSpawn=new Vector3(26,1.5f,-36);threatTuning.airlockWaypoint=new Vector3(12,1.5f,-28);threatTuning.reservoirPoint=new Vector3(0,2.8f,-6);
+                threatTuning.predatorSpawn=new Vector3(28,-5,-29);threatTuning.waveSpawn=new Vector3(28,1.5f,-28);threatTuning.airlockWaypoint=new Vector3(12,1.5f,-28);threatTuning.reservoirPoint=new Vector3(0,2.8f,-6);
                 threats.tuning=threatTuning;EditorUtility.SetDirty(threatTuning);EditorUtility.SetDirty(threats);
             }
         }

@@ -58,6 +58,7 @@ namespace Raid
                     else if(child.name=="Reservoir raider")Build(child,true);
                 }
             }
+            director.ShowPrimitiveHitbox(visuals.Count == 0);
             if (seenWaveHits != director.WaveHits)
             {
                 seenWaveHits = director.WaveHits;
@@ -164,8 +165,13 @@ namespace Raid
             float hitRadius=director.tuning==null?1.25f:Mathf.Max(.1f,director.tuning.strikeRadius);
             root.localScale=Vector3.one*Mathf.Min(.98f,hitRadius*.92f/Mathf.Max(.01f,radius));
             if (raider && director.IsServerInitialized)
+            {
                 foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    filter.gameObject.layer = ThreatDirector.RaiderLayer;
                     filter.gameObject.AddComponent<MeshCollider>().sharedMesh = filter.sharedMesh;
+                }
+            }
             visuals.Add(visual);
         }
 
@@ -255,6 +261,7 @@ namespace Raid
 
         void RestoreOriginals()
         {
+            if (director != null) director.ShowPrimitiveHitbox(true);
             foreach(var visual in visuals)
             {
                 if(visual.original!=null)visual.original.enabled=visual.originalEnabled;

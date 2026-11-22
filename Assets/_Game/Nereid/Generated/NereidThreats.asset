@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: NereidThreats
   m_EditorClassIdentifier: Assembly-CSharp::Raid.ThreatTuning
   predatorSpawn: {x: 28, y: -5, z: -29}
-  waveSpawn: {x: 26, y: 1.5, z: -36}
+  waveSpawn: {x: 28, y: 1.5, z: -28}
   airlockWaypoint: {x: 12, y: 1.5, z: -28}
   reservoirPoint: {x: 0, y: 2.8, z: -6}
   reservoirApproachOffset: {x: 0, y: 1, z: 2.3}
