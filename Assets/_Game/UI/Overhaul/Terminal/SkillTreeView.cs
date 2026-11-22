@@ -75,7 +75,9 @@ namespace Raid.UI
             graphArea.gameObject.AddComponent<SkillGraphPan>().View = this;
             graph = UiKit.Node(graphArea,"Skill tree geometry");
             UiKit.Place(graph,Center,Center,Vector2.zero,new(1148,531));
-            wires = UiKit.Node(graph,"Nine branches").gameObject.AddComponent<SkillWires>();
+            var wireObject = UiKit.Node(graph,"Nine branches").gameObject;
+            wireObject.AddComponent<CanvasRenderer>();
+            wires = wireObject.AddComponent<SkillWires>();
             UiKit.Fill(wires.rectTransform);
             wires.raycastTarget = false;
 
