@@ -36,7 +36,7 @@ The custom URP shaders include the already installed Unity shader libraries; tho
 | Component | Use | License |
 |---|---|---|
 | [Quaternius Ultimate Modular Sci-Fi](https://quaternius.com/packs/ultimatemodularscifi.html) | Processor vent, workshop service plate and airlock ceiling pipes | CC0 1.0, notice in Docs/Licenses |
-| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.com/packs/modularscifimegakit.html) | Six selected fittings for NEREID, adapted to the ship palette | CC0 1.0, notice in Docs/Licenses |
+| [Quaternius Modular Sci-Fi MegaKit](https://quaternius.com/packs/modularscifimegakit.html) | Ship fittings, access point, crate and tall bulkhead doorway | CC0 1.0, notice in Docs/Licenses |
 | [Kenney Nature Kit 2.1](https://kenney.nl/assets/nature-kit) | rock_largeC, rock_smallFlatB and rock_tallH in the shallow reef and deep rift | CC0 1.0, notice in Docs/Licenses |
 | [Quaternius Animated Fish](https://opengameart.org/content/animated-fish) | Fish1 and Fish2 in decorative shoals | CC0 1.0, notice in Docs/Licenses |
 

@@ -20,3 +20,7 @@ https://www.patreon.com/quaternius
 -------------------------------------------------------
 Join the Discord Server:
 https://discord.gg/vJqnRUYRfT
+
+RAID-018 uses Unity FBX variants of Prop_AccessPoint, Prop_Crate4 and
+Door_Frame_SquareTall, downloaded from the author's Standard edition.
+https://quaternius.itch.io/modular-sci-fi-megakit
