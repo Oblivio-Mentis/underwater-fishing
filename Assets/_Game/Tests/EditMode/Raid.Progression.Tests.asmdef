@@ -1,7 +1,7 @@
 {
   "name": "Raid.Progression.Tests",
   "rootNamespace": "Raid.Tests",
-  "references": ["Raid.Progression"],
+  "references": ["Raid.Progression", "OblivioMentis.UniversalFSM.Runtime"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"],
   "autoReferenced": false

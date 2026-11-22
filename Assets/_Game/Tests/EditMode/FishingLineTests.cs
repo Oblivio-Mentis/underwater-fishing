@@ -1,4 +1,8 @@
+using System;
+using System.Linq;
 using NUnit.Framework;
+using OblivioMentis.UniversalFSM;
+using UnityEditor;
 
 namespace Raid.Tests
 {
@@ -21,6 +25,21 @@ namespace Raid.Tests
             Assert.That(lines.Attach(new LineOwner {Id=50}),Is.True);
             lines.Clear();
             Assert.That(lines.Attach(new LineOwner {Id=41}),Is.True);
+        }
+
+        [TestCase("Struggling")]
+        [TestCase("Tired")]
+        public void ShippedGraphCanLandFromEitherFightState(string mode)
+        {
+            var asset=AssetDatabase.LoadAssetAtPath<UniversalFsmDefinitionAsset>("Assets/_Game/Data/Fishing/FishGraph.asset");
+            Assert.That(asset.Validate("RaidFishing",Type.GetType("Raid.FishContext, Assembly-CSharp",true)).IsValid,Is.True);
+            var graph=asset.Definition;
+            int source=graph.states.Single(s=>s.name==mode).id, captured=graph.states.Single(s=>s.name=="Captured").id;
+            var checks=graph.condition_nodes.Where(c=>c.variable_id=="DesiredState" && c.compare_value==captured
+                && c.compare==UniversalCompareOperator.Equal).Select(c=>c.node_uid).ToHashSet();
+            var gates=graph.edges.Where(e=>e.from_state_id==source && checks.Contains(e.to_condition_uid)).Select(e=>e.to_condition_uid);
+            Assert.That(gates.Any(uid=>graph.edges.Any(e=>e.from_condition_uid==uid
+                && graph.states.Any(s=>s.id==e.to_state_id && (s.id==captured || s.mirror_of_id==captured)))),Is.True);
         }
 
         [Test] public void SwimmingToTheHookCannotWindOrLandIt()
