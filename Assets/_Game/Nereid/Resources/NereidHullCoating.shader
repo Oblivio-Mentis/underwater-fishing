@@ -50,7 +50,7 @@ Shader "RAID/Nereid Hull Coating"
             {
                 // A broad patch of downwelling light gives rounded ballast skins a readable terminator.
                 half sky=saturate(.5+.5*dot(normal,half3(-.47,.84,-.27)));
-                half3 light=half3(.20,.29,.33)+half3(.30,.56,.64)*sky;
+                half3 light=half3(.15,.23,.27)+half3(.23,.45,.52)*sky;
                 // Approximate the diffuse return from the actual floodlit patches on the sandy bed.
                 [unroll] for(int i=0;i<3;i++)
                 {
@@ -61,9 +61,25 @@ Shader "RAID/Nereid Hull Coating"
                     float3 toPatch=origin.xyz+axis*travel-positionWS;
                     float distance2=max(dot(toPatch,toPatch),.01);
                     half facing=saturate(.20+.8*dot(normal,toPatch*rsqrt(distance2)));
-                    light+=_NereidWorkLightRadiance[i].rgb*(reach*facing/(2400.+distance2*13.));
+                    light+=_NereidWorkLightRadiance[i].rgb*(reach*facing/(2800.+distance2*16.));
                 }
                 return light;
+            }
+
+            float HullHash(float2 p)
+            {
+                float3 q=frac(float3(p.xyx)*.1031);
+                q+=dot(q,q.yzx+33.33);
+                return frac((q.x+q.y)*q.z);
+            }
+
+            float HullNoise(float2 p)
+            {
+                float2 id=floor(p), t=frac(p);
+                t=t*t*(3.-2.*t);
+                float a=lerp(HullHash(id),HullHash(id+float2(1,0)),t.x);
+                float b=lerp(HullHash(id+float2(0,1)),HullHash(id+1.),t.x);
+                return lerp(a,b,t.y);
             }
 
             half4 frag(Varyings i):SV_Target
@@ -80,13 +96,24 @@ Shader "RAID/Nereid Hull Coating"
                 lighting.normalizedScreenSpaceUV=GetNormalizedScreenSpaceUV(i.clip);
                 lighting.shadowMask=half4(1,1,1,1);
                 SurfaceData surface=(SurfaceData)0;
-                surface.albedo=_BaseColor.rgb;
+                // Pressure enamel collects oxidation along vertical water flow.
+                // Broad marks remain visible at expedition distances, fine scratches emerge up close.
+                float2 skin=float2(dot(i.position,float3(.46,0.,.89)),i.position.y);
+                float broad=HullNoise(skin*.62);
+                float deposits=HullNoise(skin*float2(3.8,.31)+float2(12.8,47.));
+                float streak=smoothstep(.52,.87,deposits)*smoothstep(.29,.68,broad);
+                half coat=lerp(.87,1.10,broad)-streak*.20;
+                surface.albedo=_BaseColor.rgb*coat + half3(.019,.022,.013)*streak;
                 surface.metallic=_Metallic;
-                surface.smoothness=_Smoothness;
+                surface.smoothness=saturate(_Smoothness*(.69+.31*broad)-streak*.11);
                 surface.normalTS=half3(0,0,1);
                 surface.occlusion=1;
                 surface.alpha=1;
                 half3 steel=UniversalFragmentPBR(lighting,surface).rgb;
+                // Roll off reflections from close work lights while preserving their shape.
+                half peak=max(steel.r,max(steel.g,steel.b));
+                half specular=max(0.,peak-.69);
+                if(specular>0.)steel*=(.69+specular/(1.+specular*.84))/peak;
                 float3 delta=i.position-GetCameraPositionWS();
                 float transmission=exp2(-dot(delta,delta)*_NereidReefClarity.x);
                 half3 submerged=lerp(WaterColumnColor(-lighting.viewDirectionWS),steel,transmission);
