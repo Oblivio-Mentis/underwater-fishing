@@ -253,11 +253,16 @@ namespace Raid.UI
                 if(tool==null||!tool.IsOwner)throw new InvalidOperationException("Owned player is not connected");
                 tool.CancelFriendTether();return;
             }
-            if(r.action=="gosha_pet" || r.action=="gosha_pickup" || r.action=="gosha_throw")
+            if(r.action=="ball_press" || r.action=="ball_release")
+            {
+                UiRoot.Instance.HandleBallPointer(r.action=="ball_press",r.action=="ball_release");
+                return;
+            }
+            if(r.action=="gosha_pet" || r.action=="gosha_pickup")
             {
                 var player=UiRoot.Instance.Context.Player;var world=RaidWorld.Instance;
                 if(player==null || !player.IsOwner || world==null)throw new InvalidOperationException("Owned player required");
-                world.RequestGosha(r.action=="gosha_pet"?GoshaAction.Pet:r.action=="gosha_throw"?GoshaAction.Throw:GoshaAction.PickUp);
+                world.RequestGosha(r.action=="gosha_pet"?GoshaAction.Pet:GoshaAction.PickUp);
                 return;
             }
             if(r.action=="capture")

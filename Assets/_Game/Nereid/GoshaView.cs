@@ -9,7 +9,8 @@ namespace Raid.Nereid
     {
         readonly List<Mesh> meshes=new();
         readonly Transform[] legs=new Transform[8], feelers=new Transform[2];
-        Transform creature,body,ball;
+        Transform creature,body,ball,handBall;
+        MeshRenderer worldBall;
         Material shell;
         bool presented;
         Vector3 lastBall;
@@ -68,6 +69,7 @@ namespace Raid.Nereid
                 if(j>0){int a=(j-1)*cols+i,b=(j-1)*cols+(i+1)%cols;ropeBall.Quad(a,b,b+cols,a+cols);}
             }
             MeshPart(ball,ropeBall);
+            worldBall=ball.GetComponent<MeshRenderer>();
         }
         public void Show(GoshaSnapshot s)
         {
@@ -92,14 +94,40 @@ namespace Raid.Nereid
                 legs[i].localRotation=Quaternion.Euler((idle?4:16)*cycle,sign*(swim?19:8)*cycle,sign*(idle?3:11)*Mathf.Max(0,-cycle));
             }
             for(int j=0;j<2;j++)feelers[j].localRotation=Quaternion.Euler((happy?-26:0)+Mathf.Sin(phase*.73f+j)*8,(j==0?-1:1)*Mathf.Cos(phase*.7f)*8,0);
-            var ballAt=s.BallPosition;bool localHand=false;
-            if(s.Ball==GoshaBallMode.Held && ui!=null && ui.Context.Player!=null && ui.Context.Player.OwnerId==s.Holder)
+            var ballAt=s.BallPosition;
+            var owner=ui?.Context.Player;
+            var viewed=owner!=null && owner.IsDead?owner.Spectating:owner;
+            bool inView=s.Ball==GoshaBallMode.Held && viewed!=null && viewed.OwnerId==s.Holder;
+            if(inView)
             {
-                var cam=ui.Context.Player.GetComponentInChildren<Camera>();
-                if(cam!=null){ballAt=cam.transform.TransformPoint(new Vector3(.11f,-.205f,.48f));localHand=true;}
+                var camera=owner.GetComponentInChildren<Camera>();
+                if(camera!=null)
+                {
+                    if(handBall==null || handBall.parent!=camera.transform)
+                    {
+                        if(handBall!=null)Destroy(handBall.gameObject);
+                        handBall=Node(camera.transform,"Ball in diving gloves",Vector3.zero);
+                        handBall.gameObject.AddComponent<MeshFilter>().sharedMesh=ball.GetComponent<MeshFilter>().sharedMesh;
+                        handBall.gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
+                    }
+                    handBall.localPosition=GoshaBallGrip.CameraCenter(GoshaBallGrip.Charge(viewed));
+                }
+                else inView=false;
+            }
+            if(handBall!=null)handBall.gameObject.SetActive(inView && !UI.UiInputGate.Modal);
+            worldBall.enabled=!inView;
+            if(s.Ball==GoshaBallMode.Held && ui!=null)
+            {
+                foreach(var holder in ui.Context.Players)
+                {
+                    if(holder==null || holder.OwnerId!=s.Holder)continue;
+                    ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(GoshaBallGrip.Charge(holder)));
+                    ball.rotation=holder.transform.rotation;
+                    break;
+                }
             }
             if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(new Vector3(0,-.02f,1.31f));
-            ball.position=localHand?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
+            ball.position=s.Ball==GoshaBallMode.Held?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
             if(presented && (s.Ball==GoshaBallMode.Deck || s.Ball==GoshaBallMode.Flying))
             {
                 var delta=ball.position-lastBall;Vector3 axis=Vector3.Cross(Vector3.up,delta);
@@ -107,6 +135,6 @@ namespace Raid.Nereid
             }
             lastBall=ball.position;presented=true;
         }
-        void OnDestroy(){if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
+        void OnDestroy(){if(handBall!=null)Destroy(handBall.gameObject);if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
     }
 }

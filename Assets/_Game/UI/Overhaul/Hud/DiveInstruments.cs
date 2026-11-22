@@ -18,6 +18,7 @@ namespace Raid.UI
         static Sprite[] art;
         readonly Image[] slotRim=new Image[5], slotArt=new Image[5], crewGauge=new Image[5], contacts=new Image[5];
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[5];
+        readonly RectTransform ballSlot;
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
@@ -81,6 +82,13 @@ namespace Raid.UI
                 keys[i]=Caption(hotbar,"Key "+(i+1),x,-66,66,23,18,TextAlignmentOptions.Center);
                 keys[i].fontStyle=FontStyles.Bold;UiKit.Set(keys[i],(i+1).ToString());
             }
+            ballSlot=At(hotbar,"Held ball",Vector2.up,Vector2.up,370,0,66,92);
+            var ballRim=Icon(ballSlot,"Selected ball",Mark.SlotOutline,0,0,66,66,Gold);
+            var ballWell=Icon(ballRim.transform,"Ball well",Mark.Tile,3,-3,60,60,Ink);
+            var ballIcon=At(ballWell.transform,"Striped ball",Vector2.up,Vector2.up,4,-4,52,52).gameObject.AddComponent<DeckBallIcon>();
+            ballIcon.raycastTarget=false;
+            UiKit.Set(Caption(ballSlot,"Ball label",0,-66,66,23,16,TextAlignmentOptions.Center),"МЯЧ");
+            ballSlot.gameObject.SetActive(false);
             navigation=At(root,"HUD Navigation",Vector2.right,Vector2.right,-32,25,148,148);
             Icon(navigation,"Bearing dial",Mark.Compass,0,0,148,148,Color.white);
             Box(navigation,"Diver bearing",73,-70,2,9,Ivory);
@@ -149,12 +157,15 @@ namespace Raid.UI
             hotbar.gameObject.SetActive(tool!=null&&!diver.IsDead);
             if(tool!=null)
             {
+                bool ball=c.World.HasGoshaBall(diver);
+                ballSlot.gameObject.SetActive(ball);
+                hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,ball?436:362);
                 for(int i=0;i<5;i++)
                 {
                     var fish=i>=2?tool.FishInSlot(i):null;
-                    bool selected=i==tool.ActiveSlot&&!tool.HandsFull;
+                    bool selected=!ball && i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;
-                    slotArt[i].enabled=i<2||fish!=null;
+                    slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null;
                     slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?Mark.Glove:CatchMark(fish))];
                     slotArt[i].color=tool.HandsFull?new Color(.68f,.73f,.73f):Ivory;
                 }

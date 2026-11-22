@@ -21,6 +21,8 @@ namespace Raid
         [Min(5)] public float fetchTimeout=24f, lostCompanionSeconds=32f;
         [Range(.5f,1.5f)] public float playfulFallSeconds=1.2f;
         [Min(1)] public float ballThrowSpeed=8.4f;
+        [Min(.1f)] public float ballWindSeconds=.55f;
+        [Min(.1f)] public float ballShortThrow=4.2f;
         [Min(0)] public float ballThrowLift=1.65f;
     }
 }

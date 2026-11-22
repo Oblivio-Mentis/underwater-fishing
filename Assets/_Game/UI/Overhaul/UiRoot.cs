@@ -26,6 +26,9 @@ namespace Raid.UI
         Nereid.AirlockPad aimedPad;
         RectTransform boardPointer;
         ReticleBoardInput boardInput;
+        float ballPressAt=-1;
+        public bool WindingBall => ballPressAt>=0;
+        public float LocalBallWind => WindingBall && Context.World!=null ? Mathf.Clamp01((Time.unscaledTime-ballPressAt)/Mathf.Max(.1f,Context.World.tuning.ballWindSeconds)) : 0;
         float desiredFov=80, fightZoom;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
@@ -121,6 +124,7 @@ namespace Raid.UI
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
             if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
+            if(value!=UiPage.None)CancelBallGesture();
             bool previousBoard=computerSurface;
             Page=value;
             if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
@@ -229,19 +233,54 @@ namespace Raid.UI
         }
         public Nereid.AirlockPad AimedPad => aimedPad;
 
+        void CancelBallGesture()
+        {
+            if(!WindingBall)return;
+            ballPressAt=-1;
+            if(Context?.World!=null && Context.World.HasGoshaBall(Context.Player))
+                Context.World.RequestGosha(GoshaAction.CancelWindUp);
+        }
+
+        internal void HandleBallPointer(bool pressed,bool released)
+        {
+            var world=Context.World;
+            if(Page!=UiPage.None || UiInputGate.Modal || Time.unscaledTime<UiInputGate.ResumeAt || world==null || !world.HasGoshaBall(Context.Player) ||
+               world.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing)
+            {
+                CancelBallGesture();
+                return;
+            }
+            if(pressed && !WindingBall)
+            {
+                ballPressAt=Time.unscaledTime;
+                world.RequestGosha(GoshaAction.WindUp);
+            }
+            if(released && WindingBall)
+            {
+                ballPressAt=-1;
+                world.RequestGosha(GoshaAction.Throw);
+            }
+        }
+
         bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed)
         {
             UiInputGate.PointerReserved=false;
             aimedPad=null;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
+            if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.HasGoshaBall(player)))CancelBallGesture();
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
             if(Context.World!=null && Context.World.HasGoshaBall(player))
             {
                 UiInputGate.PointerReserved=true;
-                if(clicked && allowed)Context.World.RequestGosha(GoshaAction.Throw);
-                return clicked;
+                if(allowed)HandleBallPointer(clicked,released);
+                return clicked || released;
+            }
+            if(Context.World!=null && Context.World.IsHoldingGosha(player))
+            {
+                UiInputGate.PointerReserved=true;
+                return false;
             }
             var station=ShipConsole.ResolveSight(player,cam);
             if(station!=dismissedConsole)dismissedConsole=null;

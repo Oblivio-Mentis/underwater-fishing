@@ -149,8 +149,9 @@ namespace Raid
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
             bool ball=RaidWorld.Instance?.HasGoshaBall(diver)??false;
-            var pocket=!ball&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
-            gun.gameObject.SetActive(!diver.IsDead && tool.HarpoonInHands);
+            bool cuddling=RaidWorld.Instance?.IsHoldingGosha(diver)??false;
+            var pocket=!ball&&!cuddling&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
+            gun.gameObject.SetActive(!diver.IsDead && !cuddling && tool.HarpoonInHands);
             UpdateFish(pocket!=null&&!held&&!diver.IsDead?pocket.SpeciesId:null);
             if(diver.IsDead)
             {
@@ -171,7 +172,7 @@ namespace Raid
                 Pose(legs[i],thigh,0,s*4,knee,0,-knee*.48f+swimming*18);
                 float shoulder=cycle*stride*27,elbow=-18-Mathf.Max(0,cycle)*17*stride;
                 float roll=s*7,yaw=0,wrist=83;
-                if(held||helper||ball)
+                if(held||helper||ball||cuddling)
                 {
                     shoulder=helper?-73:-42;elbow=helper?-13:-51;roll=s*(helper?4:19);yaw=-s*12;
                 }
@@ -193,8 +194,20 @@ namespace Raid
                 if(swimming>.01f&&(held||helper||gun.gameObject.activeSelf||pocket!=null))shoulder-=lean*.73f;
                 Pose(arms[i],shoulder,yaw,roll,elbow,0,wrist);
             }
-            if(gun.gameObject.activeSelf && weaponBuilt)
-                HoldHarpoon(beat,idle);
+            if(ball || cuddling)
+            {
+                float wind=ball?GoshaBallGrip.Charge(diver):0;
+                var center=ball?GoshaBallGrip.ObserverCenter(wind):new Vector3(0,.18f,.48f);
+                for(int i=0;i<2;i++)
+                {
+                    int side=i==0?-1:1;
+                    var grip=ball?GoshaBallGrip.GloveOffset(side,wind):new Vector3(side*.19f,-.04f,-.035f);
+                    if(cuddling && side>0)grip+=new Vector3(-.075f,.13f,.07f)*(.5f+.5f*Mathf.Sin(Time.time*5.6f));
+                    ReachGrip(arms[i],transform.TransformPoint(center+grip),transform.rotation*Quaternion.Euler(-16,side*24,-side*48),
+                        transform.rotation*new Vector3(side*.8f,-.65f,-.3f));
+                }
+            }
+            else if(gun.gameObject.activeSelf && weaponBuilt)HoldHarpoon(beat,idle);
         }
 
         void HoldHarpoon(float beat,float idle)

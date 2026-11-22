@@ -32,4 +32,6 @@ MonoBehaviour:
   lostCompanionSeconds: 32
   playfulFallSeconds: 1.2
   ballThrowSpeed: 8.4
+  ballWindSeconds: 0.55
+  ballShortThrow: 4.2
   ballThrowLift: 1.65
