@@ -53,3 +53,7 @@ crashlytics-build.properties
 # Local RAID-016 GPU profiling plugin produced from Tools/RAID016.
 /Assets/Plugins/ArtTimingQA/
 /Assets/Plugins/ArtTimingQA.meta
+
+# Local reef models extracted from the creator's original archive.
+/Assets/_Game/Nereid/Resources/ExpeditionAssets/ReodesuxzLocal/
+/Assets/_Game/Nereid/Resources/ExpeditionAssets/ReodesuxzLocal.meta
