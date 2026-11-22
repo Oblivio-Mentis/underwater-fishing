@@ -94,7 +94,7 @@ namespace Raid
                         bool arrivedFromCage=fish.InCage;
                         fish.InCage=false;
                         if(arrivedFromCage){fish.Arriving=true;fish.ExitStart=fish.Model.position;}
-                        fish.Model.SetParent(reservoir,true);
+                        if(fish.Model.parent!=reservoir)fish.Model.SetParent(reservoir,true);
                         confirmed.Add(item.id);
                     }
             }

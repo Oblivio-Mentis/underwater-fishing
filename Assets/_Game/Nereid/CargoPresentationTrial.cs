@@ -53,7 +53,8 @@ namespace Raid
                 if(awaitingPeer)await Until(()=>DiverMotor.ServerDivers.Count==2,"Standalone Windows peer",45);
                 Check(world.Team.cargo.Count==0 && world.Team.tank.Count==0,"Fixture started with a clean manifest.");
                 Vector3 center=world.container.position;
-                Vector3 start=center+new Vector3(3.33f,.18f,1.32f);
+                Vector3 start=center+new Vector3(4.2f,.28f,.13f);
+                await KeyPress(Key.L);
                 host.Teleport(start);
                 host.LookAtConsole(center);
                 await Awaitable.WaitForSecondsAsync(.4f);
@@ -86,16 +87,18 @@ namespace Raid
                 await Until(()=>tool.ActiveSlot==2 && tool.HeldCargoId==pocketCatch && CargoDispatch.CanLoad(world,host),"Aim and cargo ready");
                 await Until(()=>host.GetComponentInChildren<Camera>().GetComponentsInChildren<CatchFishModel>()
                     .Any(model=>model.CargoId==pocketCatch),"Hands display this catch ID");
-                await KeyQ();
+                await KeyPress(Key.Q);
                 await Until(()=>tool.CatchIdInSlot(2)==0 && world.Team.cargo.Any(item=>item.id==pocketCatch),"Owned Q transfers the same pocket catch");
                 Check(world.DroppedCount==0,"Valid Q in the cage creates no duplicate world drop.");
                 Check(world.Team.LoadCargo(stock[1],world.progression),"Staged "+stock[1].species+" #"+stock[1].id);
                 host.Teleport(start);
                 host.LookAtConsole(center+Vector3.up*.35f);
                 await Until(()=>cage.Count==2,"Two individually shaped catches under the work light");
+                await Awaitable.WaitForSecondsAsync(.18f);
                 ShootFrame("02-half-load.png");
                 foreach(var fish in stock.Skip(2))Check(world.Team.LoadCargo(fish,world.progression),"Staged "+fish.species+" #"+fish.id);
                 await Until(()=>cage.Count==stock.Length,"Full cage showing all four species");
+                await Awaitable.WaitForSecondsAsync(.18f);
                 ShootFrame("03-full-cage.png");
                 Check(!world.Team.LoadCargo(new CatchItem(15000005,2,0,1,1,1,species:"Needlefish"),world.progression),
                     "Cargo-size limit rejects an additional fish.");
@@ -103,6 +106,8 @@ namespace Raid
                 foreach(var entry in original)
                     Check(entry.Value!=null && entry.Value.GetComponent<CatchFishModel>().CargoId==entry.Key,
                         "Swimming model keeps cargo identity #"+entry.Key);
+                host.Teleport(center+new Vector3(3.33f,.19f,1.32f));
+                await Awaitable.WaitForSecondsAsync(.28f);
                 host.LookAtConsole(control.transform.position);
                 await Until(()=>CargoDispatch.Aimed(host,camera)==control && CargoDispatch.CanUse(host),"Both authoritative and local rays hit the mechanical button");
                 ShootFrame("04-physical-button.png");
@@ -116,13 +121,13 @@ namespace Raid
                 host.LookAtConsole(world.container.position+Vector3.up*.42f);
                 await Awaitable.WaitForSecondsAsync(.26f);
                 ShootFrame("06-rising.png");
-                host.Teleport(new Vector3(-4.05f,1.35f,-5.5f));
+                host.Teleport(new Vector3(6.75f,1.48f,-11.5f));
                 await Awaitable.WaitForSecondsAsync(.35f);
                 var vessel=NereidVessel.Active;
                 host.LookAtConsole(vessel.transform.TransformPoint(new Vector3(0,3.1f,-3)));
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Unloading,"Cage reaches the reservoir hopper",30);
                 float duration=world.progression.unloadingSeconds/Mathf.Max(1,1+world.Team.winchLevel*world.progression.winchSpeedPerLevel);
-                await Until(()=>world.Team.hoistRemaining<duration*.40f,"Cage trapdoor opens and water descends");
+                await Until(()=>world.Team.hoistRemaining<duration*.28f,"Cage trapdoor opens and water descends");
                 ShootFrame("07-discharge.png");
                 await Until(()=>world.Team.cargo.Count==0 && cage.TankCount==stock.Length,"Original IDs reach reservoir");
                 await Awaitable.WaitForSecondsAsync(.33f);
@@ -144,10 +149,10 @@ namespace Raid
             finally { Write(); }
         }
 
-        static async Awaitable KeyQ()
+        static async Awaitable KeyPress(Key key)
         {
             var keyboard=Keyboard.current??InputSystem.AddDevice<Keyboard>();
-            InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.Q));
+            InputSystem.QueueStateEvent(keyboard,new KeyboardState(key));
             await Awaitable.WaitForSecondsAsync(.14f);
             InputSystem.QueueStateEvent(keyboard,new KeyboardState());
         }
@@ -175,4 +180,3 @@ namespace Raid
     }
 }
 #endif
-

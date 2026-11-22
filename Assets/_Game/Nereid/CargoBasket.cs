@@ -17,7 +17,7 @@ namespace Raid.Nereid
         readonly List<Mesh> combinedMeshes=new();
         Transform loadingGate,shockRail,buttonStem;
         MeshRenderer buttonLens;
-        Material steel,frame,ochre,signal;
+        Material steel,frame,ochre,signal,fascia;
         MaterialPropertyBlock lights;
         TMP_Text meterText;
         Mesh cube;
@@ -47,7 +47,10 @@ namespace Raid.Nereid
             foreach(Transform part in transform)part.gameObject.SetActive(false);
             var legacy=world.container.GetComponent<Collider>();if(legacy!=null)legacy.enabled=false;
             ochre=Finish("Recovery cage · enamel",new Color(.78f,.36f,.09f),.38f,false);
-            signal=Finish("Recovery cage · illuminated indicator",Color.white,.55f,true);
+            var instrumentShader=Shader.Find("Universal Render Pipeline/Unlit");
+            signal=new Material(instrumentShader){name="Recovery cage illuminated indicator"};
+            fascia=new Material(instrumentShader){name="Recovery cage matte instrument face"};
+            fascia.SetColor(BaseColor,new Color(.016f,.032f,.048f));
             lights=new MaterialPropertyBlock();
 
             for(int s=-1;s<=1;s+=2)
@@ -87,7 +90,7 @@ namespace Raid.Nereid
 
             var panel=Pivot(transform,"Physical dispatch console",new Vector3(Side+.105f,.67f,.93f));
             Box(panel,"Recessed control housing",Vector3.zero,new Vector3(.25f,.54f,1.29f),frame);
-            Box(panel,"Contrasting control fascia",new Vector3(.127f,.012f,0),new Vector3(.027f,.45f,1.19f),steel);
+            Box(panel,"Contrasting control fascia",new Vector3(.127f,.012f,0),new Vector3(.027f,.45f,1.19f),fascia,false);
             Box(panel,"Padded push collar",new Vector3(.155f,-.02f,.43f),new Vector3(.115f,.32f,.30f),ochre);
             buttonStem=Pivot(panel,"Dispatch push rod",new Vector3(.215f,-.02f,.43f));
             var button=Box(buttonStem,"Physical cargo dispatch button",Vector3.zero,new Vector3(.09f,.188f,.188f),signal,false);
@@ -95,7 +98,7 @@ namespace Raid.Nereid
             var press=button.gameObject.AddComponent<CargoDispatch>();
             press.Initialize(world,transform);
             button.gameObject.AddComponent<BoxCollider>();
-            Box(panel,"Capacity bar recess",new Vector3(.151f,-.107f,-.20f),new Vector3(.025f,.110f,.72f),frame);
+            Box(panel,"Capacity bar recess",new Vector3(.151f,-.107f,-.20f),new Vector3(.025f,.110f,.72f),fascia,false);
             for(int i=0;i<meter.Length;i++)
                 meter[i]=Box(panel,"Capacity cell",new Vector3(.170f,-.107f,.142f-i*.0298f),new Vector3(.022f,.063f,.022f),signal,false);
             var font=Raid.UI.UiRoot.Instance?.font;
@@ -113,7 +116,7 @@ namespace Raid.Nereid
             foreach(var door in trapdoors)CombineShell(door);
             var lamp=Pivot(transform,"Cage work lights",new Vector3(0,Rim-.26f,-End+.3f)).gameObject.AddComponent<Light>();
             lamp.transform.rotation=Quaternion.LookRotation(new Vector3(0,-.65f,.78f));lamp.type=LightType.Spot;
-            lamp.color=new Color(.45f,.83f,1f);lamp.intensity=9;lamp.range=5.5f;lamp.spotAngle=110;lamp.shadows=LightShadows.None;
+            lamp.color=new Color(.45f,.83f,1f);lamp.intensity=4.6f;lamp.range=5.5f;lamp.spotAngle=110;lamp.shadows=LightShadows.None;
         }
 
         void CombineShell(Transform root)
@@ -235,7 +238,7 @@ namespace Raid.Nereid
             float pressDepth=state.hoistPhase==HoistPhase.Raising?.092f*(1-Ease(progress/.075f)):0;
             buttonDepth=Mathf.Lerp(buttonDepth,pressDepth,1-Mathf.Exp(-Time.deltaTime*18));
             buttonStem.localPosition=new Vector3(.215f-buttonDepth,-.02f,.43f);
-            Tint(buttonLens,atField?state.CargoUsed>0?Amber:Green:new Color(.14f,.28f,.33f),atField?2.1f:.35f);
+            Tint(buttonLens,atField?state.CargoUsed>0?Amber:Green:new Color(.14f,.28f,.33f),atField?.96f:.59f);
         }
 
         internal void Meter(int used,int limit)
@@ -245,13 +248,13 @@ namespace Raid.Nereid
             float fraction=Mathf.Clamp01((float)used/Mathf.Max(1,limit));
             Color color=fraction<=.58f?Color.Lerp(Green,Amber,fraction/.58f):Color.Lerp(Amber,Red,(fraction-.58f)/.42f);
             int amount=Mathf.Clamp(Mathf.CeilToInt(fraction*meter.Length),1,meter.Length);
-            for(int i=0;i<meter.Length;i++)Tint(meter[i],color,i<amount?1.45f:.14f);
+            for(int i=0;i<meter.Length;i++)Tint(meter[i],color,i<amount?.90f:.18f);
             if(meterText!=null)meterText.text=used+" / "+limit;
         }
 
         void Tint(Renderer renderer,Color color,float power)
         {
-            lights.Clear();lights.SetColor(BaseColor,color*Mathf.Min(1,power));lights.SetColor(Emission,color*power);
+            lights.Clear();lights.SetColor(BaseColor,color*power);
             renderer.SetPropertyBlock(lights);
         }
 
@@ -260,7 +263,7 @@ namespace Raid.Nereid
         void OnDestroy()
         {
             foreach(var mesh in combinedMeshes)if(mesh!=null)Destroy(mesh);
-            if(ochre!=null)Destroy(ochre);if(signal!=null)Destroy(signal);
+            if(ochre!=null)Destroy(ochre);if(signal!=null)Destroy(signal);if(fascia!=null)Destroy(fascia);
         }
     }
 }
