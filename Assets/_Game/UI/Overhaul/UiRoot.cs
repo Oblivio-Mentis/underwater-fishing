@@ -485,7 +485,20 @@ namespace Raid.UI
                 fightZoom = Mathf.Lerp(fightZoom, target * Settings.fishingCamera, 1-Mathf.Exp(-Time.unscaledDeltaTime*6));
                 if(aim!=null&&!computerSurface&&!UiInputGate.Modal&&Nereid.NereidAim.Blend>0)
                     viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov) + fightZoom;
-                else viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov + fightZoom,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+                else
+                {
+                    float fov=desiredFov+fightZoom;
+                    if(Page==UiPage.SkillTree && computerSurface && Context.SelectedConsole!=null)
+                    {
+                        var station=Context.SelectedConsole;
+                        var face=station.screenAnchor;
+                        float distance=Vector3.Dot(face.position-viewCamera.transform.position,face.forward);
+                        float height=skills.Root.rect.height*station.screenScale;
+                        float readingFov=2f*Mathf.Atan2(height*.5f,Mathf.Max(.15f,distance)*.76f)*Mathf.Rad2Deg;
+                        fov=Mathf.Clamp(readingFov,34f,desiredFov);
+                    }
+                    viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,fov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+                }
             }
         }
         void OnApplicationFocus(bool focused)
