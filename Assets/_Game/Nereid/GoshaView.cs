@@ -79,7 +79,14 @@ namespace Raid.Nereid
         void LateUpdate()
         {
             var world=RaidWorld.Instance;
-            if(world!=null && world.IsClientInitialized && world.Gosha.Active)Show(world.Gosha);
+            if(world==null || !world.IsClientInitialized || !world.Gosha.Active)return;
+            Show(world.Gosha);
+            var ui=UI.UiRoot.Instance;
+            var keyboard=UnityEngine.InputSystem.Keyboard.current;
+            if(keyboard==null || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Blocked ||
+                ui.Context.Player==null || ui.Context.Player.IsHelpless || ui.Context.Player.IsTrapped)return;
+            if(keyboard.gKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Come);
+            else if(keyboard.hKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.CatchFish);
         }
 
         void Show(GoshaSnapshot s)
@@ -108,7 +115,7 @@ namespace Raid.Nereid
             bool held=s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Cradled;
             creature.position=!presented||held?at:Vector3.Lerp(creature.position,at,blend);
             if(dir.sqrMagnitude>.01f)creature.rotation=held?Quaternion.LookRotation(dir,visualUp):Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
-            bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming;
+            bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming || (s.Mode>=GoshaMode.Coming && !NereidVessel.Active.ContainsWalkingDeck(s.Position));
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
             float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;
             body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));

@@ -212,6 +212,12 @@ namespace Raid.UI
             int target=context.Rescue==null?-1:context.Rescue.DisplayTargetOwnerId;
             bool rescuing=rescue>0 && target>=0;
             if(rescuing && prompt.Length==0)prompt=UiText.HudRescueProgress(target,rescue);
+            if(!player.IsHelpless && detail.Length==0 && !rescuing)
+            {
+                var training=context.World.GoshaTrainingHint(player);
+                if(prompt.Length==0)prompt=training;
+                else detail=training;
+            }
             promptPanel.gameObject.SetActive(prompt.Length>0&&!UiInputGate.Modal);reticle.gameObject.SetActive(!UiInputGate.Modal && (UiInputGate.PointerReserved || context.Harpoon!=null && context.Harpoon.HarpoonInHands));
             UiKit.Set(promptLabel,prompt);promptLabel.color=color;
             UiKit.Set(promptDetail,detail);promptDetail.gameObject.SetActive(detail.Length>0);

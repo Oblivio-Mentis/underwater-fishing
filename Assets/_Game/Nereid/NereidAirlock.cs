@@ -58,6 +58,8 @@ namespace Raid.Nereid
         public bool DoorOccupied(bool sea)
         {
             float x=sea?OuterX:0;
+            var world=RaidWorld.Instance;
+            if(world!=null && world.PetInDoor(transform.InverseTransformPoint(world.Gosha.Position),x))return true;
             var threats = ThreatDirector.Instance;
             if (threats != null && threats.WaveActive)
             {
