@@ -316,7 +316,8 @@ namespace Raid.Nereid
             anchor.localPosition=new Vector3(0,1.42f,-.15f);
             anchor.localRotation=Quaternion.identity;
             anchor.localScale=Vector3.one;
-            var face=anchor.GetComponent<BoxCollider>()??anchor.gameObject.AddComponent<BoxCollider>();
+            if(!anchor.TryGetComponent<BoxCollider>(out var face))
+                face=anchor.gameObject.AddComponent<BoxCollider>();
             face.enabled=true;
             face.center=Vector3.zero;
             face.size=new Vector3(ScreenSize.x/anchor.lossyScale.x,ScreenSize.y/anchor.lossyScale.y,.025f/anchor.lossyScale.z);

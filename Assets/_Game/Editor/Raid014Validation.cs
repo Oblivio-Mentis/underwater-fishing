@@ -287,8 +287,9 @@ namespace Raid.Editor
             }
 
             var camera=diver.GetComponentInChildren<Camera>();
-            foreach(var station in ShipConsole.Stations.Where(station=>station.IsMonitor))
+            foreach(var kind in new[]{ShipConsoleKind.Reservoir,ShipConsoleKind.Depths,ShipConsoleKind.Upgrades,ShipConsoleKind.SkillTree})
             {
+                var station=ShipConsole.Stations.Single(candidate=>candidate.kind==kind);
                 var panel=station.screenAnchor;
                 Vector3 position=panel.position-panel.forward*1.72f-Vector3.up*.60f;
                 diver.Teleport(position);
