@@ -15,6 +15,7 @@ namespace Raid
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
         public Transform Tail => tail;
+        public long CargoId { get; private set; }
         private float phase, strokeWeight;
         private bool ray;
         private FishActor actor;
@@ -24,7 +25,7 @@ namespace Raid
         public static bool Supports(string species) => species == "Lanternfish" || species == "Bristlefish"
             || species == "Needlefish" || species == "Sailray";
 
-        public static GameObject Create(Transform parent, string species)
+        public static GameObject Create(Transform parent, string species, long cargoId = 0)
         {
             if (!Supports(species)) species = "Lanternfish";
             if (!Shapes.TryGetValue(species, out var shape) || shape.body == null)
@@ -35,7 +36,8 @@ namespace Raid
             var model = body.AddComponent<CatchFishModel>();
             model.tail = MakePart("Caudal fin", body.transform, shape.tail, finish).transform;
             model.tail.localPosition = Vector3.back * .43f;
-            model.phase = Random.value * 6.28f;
+            model.CargoId = cargoId;
+            model.phase = cargoId>0?(cargoId%8191)/8191f*Mathf.PI*2:Random.value * 6.28f;
             model.actor = live;
             model.ray = species == "Sailray";
             return body;

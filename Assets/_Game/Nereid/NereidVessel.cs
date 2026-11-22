@@ -16,7 +16,12 @@ namespace Raid.Nereid
         public LineRenderer hoistCable;
         RaidWorld world;
         NereidAirlock airlock;
-        float railFraction=-1;
+        CargoBasket basket;
+        CageReceivingHopper hopper;
+        TeamProgress observed;
+        float seenAt,railVisual=-1;
+        internal float HoistAnimation {get;private set;}
+
 
         void Awake()
         {
@@ -57,23 +62,43 @@ namespace Raid.Nereid
             if(world==null||world.NetworkObject==null||!world.IsClientInitialized&&!world.IsServerInitialized)return;
             var state=world.IsServerInitialized?world.Team:world.View;
             if(state==null||world.container==null||cargoRail==null||cargoRail.Length<2)return;
-            float speed=1+state.winchLevel*world.progression.winchSpeedPerLevel;
-            float fraction=0;
-            if(state.hoistPhase==HoistPhase.Raising)fraction=1-state.hoistRemaining/(world.progression.raisingSeconds/speed);
-            else if(state.hoistPhase==HoistPhase.Unloading)fraction=1;
-            else if(state.hoistPhase==HoistPhase.Returning)fraction=state.hoistRemaining/(world.progression.returningSeconds/speed);
-            fraction=Mathf.Clamp01(fraction);
-            railFraction=railFraction<0||state.hoistPhase==HoistPhase.Loading?fraction:Mathf.Lerp(railFraction,fraction,1-Mathf.Exp(-Time.deltaTime*14));
-            world.container.position=transform.TransformPoint(AlongRail(railFraction));
-            var collider=world.container.GetComponent<Collider>();if(collider!=null)collider.enabled=state.hoistPhase==HoistPhase.Loading;
+            if(basket==null)
+            {
+                basket=CargoBasket.Install(world);
+                if(basket==null)return;
+                if(world.IsClientInitialized)WetCargoShoal.Attach(world);
+                hopper=CageReceivingHopper.Install(this,world);
+            }
+            if(state!=observed){observed=state;seenAt=Time.time;}
+            var duration=state.hoistPhase switch {
+                HoistPhase.Raising=>world.progression.raisingSeconds,
+                HoistPhase.Unloading=>world.progression.unloadingSeconds,
+                HoistPhase.Returning=>world.progression.returningSeconds,
+                _=>1
+            };
+            duration=Mathf.Max(.01f,duration/Mathf.Max(1f,1+state.winchLevel*world.progression.winchSpeedPerLevel));
+            float estimate=world.IsServerInitialized?0:Mathf.Min(world.tuning.snapshotInterval,Time.time-seenAt);
+            HoistAnimation=state.hoistPhase==HoistPhase.Loading?0:Mathf.Clamp01(1-(state.hoistRemaining-estimate)/duration);
+            float fraction=state.hoistPhase switch {
+                HoistPhase.Raising=>Mathf.InverseLerp(.15f,.96f,HoistAnimation),
+                HoistPhase.Unloading=>1,
+                HoistPhase.Returning=>1-Mathf.InverseLerp(.07f,.88f,HoistAnimation),
+                _=>0
+            };
+            railVisual=railVisual<0||state.hoistPhase==HoistPhase.Loading?fraction:
+                Mathf.Lerp(railVisual,fraction,1-Mathf.Exp(-Time.deltaTime*19));
+            world.container.position=transform.TransformPoint(AlongRail(railVisual));
+            basket.Meter(state.CargoUsed,state.Capacity(world.progression));
+            basket.Present(state,HoistAnimation);
+            if(hopper!=null)hopper.Present(state,HoistAnimation);
             if(hoistCable!=null)
             {
-                var point=world.container.position;
+                var liftingEye=basket.CableSocket.position;
                 hoistCable.positionCount=3;
-                float railY=transform.TransformPoint(new Vector3(0,6.9f,-14)).y;
-                hoistCable.SetPosition(0,transform.TransformPoint(new Vector3(0,6.9f,-14)));
-                hoistCable.SetPosition(1,new Vector3(point.x,railY,point.z));
-                hoistCable.SetPosition(2,point+Vector3.up*.8f);
+                float railY=transform.TransformPoint(new Vector3(0,7.14f,-14)).y;
+                hoistCable.SetPosition(0,new Vector3(liftingEye.x,railY+.05f,liftingEye.z));
+                hoistCable.SetPosition(1,new Vector3(liftingEye.x,railY-.11f,liftingEye.z));
+                hoistCable.SetPosition(2,liftingEye);
             }
         }
 
@@ -84,7 +109,7 @@ namespace Raid.Nereid
             for(int i=1;i<cargoRail.Length;i++)
             {
                 float segment=Vector3.Distance(cargoRail[i-1],cargoRail[i]);
-                if(remaining<=segment)return Vector3.Lerp(cargoRail[i-1],cargoRail[i],segment>.001f?remaining/segment:0);
+                if(remaining<=segment)return Vector3.Lerp(cargoRail[i-1],cargoRail[i],segment>.001f?CargoBasket.Ease(remaining/segment):0);
                 remaining-=segment;
             }
             return cargoRail[cargoRail.Length-1];

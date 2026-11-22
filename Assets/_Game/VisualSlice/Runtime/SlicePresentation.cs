@@ -35,7 +35,7 @@ namespace Raid.VisualSlice
             }
             if(harpoonRope!=null && harpoonRope.enabled && harpoonRope.positionCount>0)
                 harpoonRope.SetPosition(0,diverCamera.transform.TransformPoint(new Vector3(.29f,-.22f,.85f)));
-            if(tankFish!=null && RaidWorld.Instance!=null && RaidWorld.Instance.View!=null)
+            if(Nereid.NereidVessel.Active==null && tankFish!=null && RaidWorld.Instance!=null && RaidWorld.Instance.View!=null)
             {
                 int count=0;
                 foreach(var entry in RaidWorld.Instance.View.tank) if(entry.offering>0) count++;

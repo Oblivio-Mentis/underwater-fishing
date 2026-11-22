@@ -28,6 +28,7 @@ namespace Raid.Factory
         readonly Renderer[] bubbleRenderers=new Renderer[20];
         MaterialPropertyBlock block,treadBlock,glassBlock;
         bool batchFeeding,batchActive;
+        bool individualStock;
         int batchCount,batchSeed;
         float batchStarted,nextStockRead;
         int stockCount;
@@ -45,7 +46,8 @@ namespace Raid.Factory
         {
             block=new MaterialPropertyBlock();treadBlock=new MaterialPropertyBlock();glassBlock=new MaterialPropertyBlock();
             if(fishTemplate==null){enabled=false;return;}
-            for(int i=0;i<PoolSize;i++)
+            individualStock=FindAnyObjectByType<Raid.Nereid.NereidVessel>()!=null;
+            for(int i=0;!individualStock && i<PoolSize;i++)
             {
                 travelling[i]=Instantiate(fishTemplate,transform);travelling[i].name="Batch fish "+i;travelling[i].gameObject.SetActive(false);
                 stock[i]=Instantiate(fishTemplate,transform);stock[i].name="Reservoir fish "+i;stock[i].gameObject.SetActive(false);
@@ -83,7 +85,7 @@ namespace Raid.Factory
 
         void UpdateFish()
         {
-            if(!batchActive)return;
+            if(!batchActive || individualStock)return;
             float elapsed=Elapsed;
             // 48 slots at .18 s spacing recycle after 8.64 s; every fish completes its full 8 s before reuse.
             int latest=Mathf.Min(batchCount-1,Mathf.FloorToInt(elapsed/FishInterval));
@@ -104,11 +106,16 @@ namespace Raid.Factory
 
         Vector3 Position(int index,float age)
         {
-            var path=batchFeeding?feedTube:processTube;
             Vector3 origin=(tankCenter==null?new Vector3(0,1.35f,-3):tankCenter.localPosition)+new Vector3(Mathf.Sin(index*2.1f+batchSeed)*.45f,Mathf.Sin(index*1.9f)*.25f,Mathf.Cos(index*1.7f+batchSeed)*.5f);
+            return PathPosition(index,age,origin,batchFeeding);
+        }
+
+        internal Vector3 PathPosition(int index,float age,Vector3 origin,bool feeding)
+        {
+            var path=feeding?feedTube:processTube;
             if(path==null||path.Length<2)return origin;
             if(age<.9f)return Vector3.Lerp(origin,path[0],Smooth(age/.9f));
-            if(batchFeeding)
+            if(feeding)
             {
                 if(age<7.55f)return Along(path,(age-.9f)/6.65f);
                 return Vector3.Lerp(path[path.Length-1],new Vector3(0,1.75f,8.7f),(age-7.55f)/.45f);
@@ -133,6 +140,7 @@ namespace Raid.Factory
 
         void UpdateStock()
         {
+            if(individualStock)return;
             if(Time.time>=nextStockRead)
             {
                 nextStockRead=Time.time+.2f;stockCount=0;
