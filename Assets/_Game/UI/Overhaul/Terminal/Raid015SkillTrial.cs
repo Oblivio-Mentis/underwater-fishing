@@ -112,12 +112,23 @@ namespace Raid.UI
             yield return new WaitForSecondsRealtime(.25f);
         }
 
+        string HitDescription(DiverMotor diver)
+        {
+            var view=diver.GetComponentInChildren<Camera>();
+            var ray=view.ViewportPointToRay(new Vector3(.5f,.5f,0));
+            string surface=Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore)?hit.collider.name:"nothing";
+            return $"page {Ui.Page}; reticle {Ui.ReticleControl}; first hit {surface}; eye {ray.origin}; direction {ray.direction}";
+        }
+
         IEnumerator ClickHost(string control,bool buy=false)
         {
             var button=Ui.GetComponentsInChildren<UnityEngine.UI.Button>()
                 .First(item=>item.gameObject.name==control && item.IsActive());
             yield return AimHost(button.transform);
-            Check("Host reticle " + (buy?"RMB ":"LMB ") + control,buy?Ui.QaBuyReticle():Ui.QaClickReticle());
+            var before=HitDescription(host);
+            bool clicked=buy?Ui.QaBuyReticle():Ui.QaClickReticle();
+            if(!clicked)throw new InvalidOperationException("Host could not click "+control+"; "+before);
+            Check("Host reticle " + (buy?"RMB ":"LMB ") + control,true);
         }
 
         IEnumerator ClickPeer(string control,bool buy=false)
@@ -147,8 +158,8 @@ namespace Raid.UI
             world.RefreshCrewProfilesForTrial();
             station=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.SkillTree);
             Transform screen=station.screenAnchor;
-            host.Teleport(screen.position-screen.forward*1.4f+screen.right*.52f-Vector3.up*.38f);
-            peer.Teleport(screen.position-screen.forward*1.68f-screen.right*.52f-Vector3.up*.39f);
+            host.Teleport(screen.position-screen.forward*1.69f-Vector3.up*.38f);
+            peer.Teleport(screen.position-screen.forward*1.32f-screen.right*.91f-Vector3.up*.39f);
             yield return Wait("Both players near skill monitor",()=>host.IsInside && peer.IsInside &&
                 station.InRange(host) && station.InRange(peer),10);
             yield return new WaitForSecondsRealtime(.5f);

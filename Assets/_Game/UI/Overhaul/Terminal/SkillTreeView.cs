@@ -146,10 +146,14 @@ namespace Raid.UI
             var background = Image(border.transform,"Instrument face",Center,Vector2.zero,new(31,31),Panel);
             var symbol = UiKit.Symbol(background.transform,"Branch symbol",Icon[branch],accent);
             UiKit.Place(symbol.rectTransform,Center,Center,Vector2.zero,new(22,22));
-            var title = Label(background.transform,"Node title",Vector2.up,new(34,-3),new(121,24),"",16);
-            title.enableAutoSizing = true;title.fontSizeMin=13;title.fontSizeMax=16;
-            var scope = Label(background.transform,"Skill scope",Vector2.up,new(34,-24),new(121,15),"",13,accent);
-            var state = Label(background.transform,"Node state",Vector2.up,new(34,-38),new(122,13),"",11,UiTheme.Muted);
+            var title = Label(background.transform,"Node title",Vector2.up,new(33,-.5f),new(122,32),"",16);
+            title.enableAutoSizing=true;title.fontSizeMin=13;title.fontSizeMax=16;
+            title.textWrappingMode=TextWrappingModes.Normal;
+            title.overflowMode=TextOverflowModes.Overflow;
+            var scope = Label(background.transform,"Skill scope",Vector2.up,new(33,-31),new(123,18),"",13,accent);
+            scope.overflowMode=TextOverflowModes.Overflow;
+            var state=Label(background.transform,"Node state",Vector2.up,new(34,-35),new(119,18),"",13,UiTheme.Muted);
+            state.overflowMode=TextOverflowModes.Overflow;
             return new Card { Id=id, Branch=branch, Step=step, Root=border.rectTransform,
                 Border=border, Background=background, Symbol=symbol, Title=title, Scope=scope, State=state };
         }
@@ -257,8 +261,8 @@ namespace Raid.UI
             card.Root.sizeDelta=new(width,height);
             card.Background.rectTransform.sizeDelta=new(width-4,height-4);
             card.Title.gameObject.SetActive(expanded);
-            card.Scope.gameObject.SetActive(expanded);
-            card.State.gameObject.SetActive(expanded);
+            card.Scope.gameObject.SetActive(expanded && !detail);
+            card.State.gameObject.SetActive(expanded && detail);
             card.Symbol.rectTransform.anchoredPosition=expanded?new(-width*.5f+18,0):Vector2.zero;
         }
 
