@@ -1,0 +1,28 @@
+{
+  "sourceCommit": "b93d759",
+  "target": "Windows x64 Development",
+  "transport": "FishNet LAN with separate host and client processes",
+  "assemblyCSharpSha256": "4441f4af6933d69d68f984e83f956f0baa390c1fe816357dd524fed558c2714d",
+  "existingCrewTrial": {
+    "newTeam": {
+      "checks": 68,
+      "status": "passed",
+      "sameChecksAs": "../../RAID-014/playtest/gosha/windows-pair.json",
+      "resultSha256": "21b74758f2aab4b3e377439e1040c79013733cbf644f2bc9939d741d706ff22a"
+    },
+    "restartedTeam": {
+      "checks": 4,
+      "status": "passed",
+      "sameChecksAs": "../../RAID-014/playtest/gosha/restart.json",
+      "resultSha256": "0475ea0295af05bad2ffd2a0b21a4bc94629ea17189e8cab6343c5c3c3ccfdcc"
+    }
+  },
+  "savedTreasuryAfterProcessing": {
+    "biomass": 4,
+    "chitin": 0,
+    "scrap": 0,
+    "electronics": 0
+  },
+  "cargoId": "5014640262100495341",
+  "caughtBy": "requesting saved guest profile"
+}
