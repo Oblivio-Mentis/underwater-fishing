@@ -133,6 +133,18 @@ namespace Raid.UI
             else if(context.World.HasGoshaBall(player))prompt=context.World.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing?"Гоша догоняет вас!":UiRoot.Instance.WindingBall?"Отпустите ЛКМ — бросить мяч":"Удерживайте ЛКМ — замах · Q — выложить мяч";
             else if(context.World.IsHoldingGosha(player))prompt="E — опустить Гошу на палубу";
             else if(context.Harpoon!=null && context.Harpoon.HasBallLine)prompt="ЛКМ — подтянуть мяч · R — отпустить";
+            else if(UiRoot.Instance!=null && UiRoot.Instance.AimedCargoDispatch)
+            {
+                prompt=view.CargoUsed>0?"ЛКМ — отправить улов":"Контейнер пуст";
+                detail=view.CargoUsed+" / "+view.Capacity(context.Tuning);
+            }
+            else if(context.Harpoon!=null && CargoDispatch.CanLoad(context.World,player) &&
+                    context.Harpoon.SelectedItem(out _) is DroppedKind.Catch or DroppedKind.Salvage)
+            {
+                bool room=view.hoistPhase==HoistPhase.Loading && view.CargoUsed<view.Capacity(context.Tuning);
+                prompt=room?"Q — выпустить выбранный улов в контейнер":"Контейнер сейчас недоступен";
+                detail=view.CargoUsed+" / "+view.Capacity(context.Tuning);
+            }
             else if(UiRoot.Instance!=null && UiRoot.Instance.AimedPad!=null)
             {
                 var pad=UiRoot.Instance.AimedPad;
@@ -156,8 +168,8 @@ namespace Raid.UI
                         {
                             var route=context.World.FishRoute;
                             bool matching=route.feeding==(console.kind==ShipConsoleKind.Feed);
-                            prompt=route.active&&matching&&!route.stopping?"ЛКМ — остановить подачу":"ЛКМ — запустить подачу";
-                            detail=route.active?(route.stopping?"Клапан закрыт · рыба в трубе завершает путь":matching?"Повторное нажатие сохранит оставшуюся рыбу":"Другая линия занята"):"Поток из резервуара · повторное нажатие — стоп";
+                            prompt=route.active&&matching&&!route.stopping?"ЛКМ — остановить подачу":"Выбор рыбы на мониторе резервуара";
+                            detail=route.active?(route.stopping?"Клапан закрыт · рыба в трубе завершает путь":matching?"Повторное нажатие сохранит оставшуюся рыбу":"Другая линия занята"):"Выбранная рыба отправляется по одной";
                         }
                     }
                     else {prompt=UiText.HudTerminalPrompt;detail=UiText.HudTerminalHint;}

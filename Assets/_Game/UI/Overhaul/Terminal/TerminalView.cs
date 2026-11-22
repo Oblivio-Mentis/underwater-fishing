@@ -192,7 +192,7 @@ namespace Raid.UI
             else
             {
                 if(receiptWasPersonal!=observedWorld.ProcessingWasPersonal){receiptBefore=before;receiptTotal=total;}
-                else receiptTotal=receiptTotal.Add(total);
+                else receiptTotal=total;
             }
             receiptWasPersonal=observedWorld.ProcessingWasPersonal;
             receiptAfter=after;

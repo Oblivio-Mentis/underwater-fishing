@@ -139,8 +139,8 @@ namespace Raid.UI
                 UiKit.Set(stock,n.ToString());
                 UiKit.Set(food,TeamProgress.FoodText(v.offeringPoints)+" / "+c.FoodRequired);
                 UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
-                timer.color=c.DefendingReservoir?UiTheme.Red:v.offering==0&&v.hungerRemaining<=30?Gold:Ivory;
-                food.color=v.offering>0?Green:Ivory;
+                timer.color=c.DefendingReservoir?UiTheme.Red:v.offeringPoints==0&&v.hungerRemaining<=30?Gold:Ivory;
+                food.color=v.offeringPoints>0?Green:Ivory;
                 var flow=c.World.FishRoute;
                 UiKit.Set(route,flow.active?(flow.stopping?"Клапан закрыт":flow.feeding?"Кормление":"Переработка")+"   "+flow.completed+" / "+flow.total:"");
             }

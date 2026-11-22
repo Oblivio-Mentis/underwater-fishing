@@ -425,9 +425,8 @@ namespace Raid.UI
                 Send(feeding?WorldAction.StopFeeding:WorldAction.StopProcessing,route.sequence);return;
             }
             if(Nereid.NereidVessel.Active!=null){Toast("Выберите рыбу на экране резервуара");return;}
-            var fish=view.tank.FindAll(x=>x.offering>0);if(fish.Count==0){Toast("В резервуаре нет рыбы");return;}
-            long quoted=FishRouteQuote.Compute(fish,Context.FoodRequired);
-            Send(feeding?WorldAction.FeedAll:WorldAction.ProcessAll,quoted);
+            Toast("Выберите рыбу и её назначение на мониторе резервуара");
+            Context.SelectedConsole=null;
         }
         public void Send(WorldAction action,long id=0)
         {

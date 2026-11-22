@@ -14,6 +14,12 @@ namespace Raid
         public PlayerProgress LocalProgress { get; private set; }
         public event Action<bool,string> SkillResponded;
 
+        void UnbindProfile(NetworkConnection sender,FishNet.Transporting.RemoteConnectionStateArgs state)
+        {
+            if(state.ConnectionState==FishNet.Transporting.RemoteConnectionState.Stopped)
+                crewProfiles.Remove(sender);
+        }
+
         public string ProgressKey(DiverMotor diver)
         {
             if(diver==null || diver.Owner==null)return null;

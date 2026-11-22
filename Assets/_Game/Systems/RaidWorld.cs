@@ -52,6 +52,7 @@ namespace Raid
         public override void OnStartServer()
         {
             crewProfiles.Clear();
+            ServerManager.OnRemoteConnectionState+=UnbindProfile;
             catchOwners.Clear();
             ResetFishRoute();
             ResetAirlock();
@@ -82,6 +83,7 @@ namespace Raid
         }
         public override void OnStopServer()
         {
+            ServerManager.OnRemoteConnectionState-=UnbindProfile;
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
