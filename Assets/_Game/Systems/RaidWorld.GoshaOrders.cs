@@ -173,7 +173,12 @@ namespace Raid
         enum PetZone { Deck, Lock, Sea }
         PetZone SwimZone(Vector3 p)
         {
-            if(NereidAirlock.Active.Contains(p))return PetZone.Lock;
+            var chamber=NereidAirlock.Active;
+            if(chamber.Contains(p))return PetZone.Lock;
+            // The authored room stops 10 cm before the inner gate center. The steel sill
+            // in that seam is part of the doorway even before the chamber volume begins.
+            var local=chamber.transform.InverseTransformPoint(p);
+            if(local.x>=-.28f && local.x<0 && Mathf.Abs(local.z)<1.5f && local.y>-.16f && local.y<3.3f)return PetZone.Lock;
             return NereidVessel.Active.ContainsSealed(p)?PetZone.Deck:PetZone.Sea;
         }
         static Vector3 LockPoint(float x)=>NereidAirlock.Active.transform.TransformPoint(new Vector3(x,1,0));
