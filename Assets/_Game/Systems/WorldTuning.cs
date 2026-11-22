@@ -14,9 +14,10 @@ namespace Raid
         public float rescueRange=2.5f;
 
         [Header("Gosha and the deck ball")]
+        [Range(.28f,.48f)] public float petScale=.365f;
         [Min(.5f)] public float petReach=2.05f;
         [Min(.2f)] public float patCooldown=1.35f;
-        [Min(.5f)] public float petCrawlSpeed=1.45f, petFetchSpeed=4.3f, petChaseSpeed=5.5f;
+        [Min(.5f)] public float petCrawlSpeed=2.3f, petFetchSpeed=4.8f, petChaseSpeed=5.8f;
         [Min(1)] public float petSwimSpeed=3.8f, petCatchUpSpeed=6.2f;
         [Min(5)] public float fetchTimeout=24f, lostCompanionSeconds=32f;
         [Range(.5f,1.5f)] public float playfulFallSeconds=1.2f;

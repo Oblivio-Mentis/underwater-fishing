@@ -13,7 +13,10 @@ namespace Raid.Nereid
         MeshRenderer worldBall;
         Material shell;
         bool presented;
-        Vector3 lastBall;
+        Vector3 lastBall,lastPet;
+        float gait;
+        internal const float DeckOffset=.048f;
+        internal static readonly Vector3 JawSocket=new(0,-.195f,1.69f);
         internal Transform BallAnchor=>ball;
         readonly Color rose=new(.49f,.21f,.42f),plates=new(.54f,.39f,.51f),ivory=new(.86f,.71f,.66f);
         Transform Node(Transform parent,string label,Vector3 offset)
@@ -29,7 +32,7 @@ namespace Raid.Nereid
             shell=new Material(Resources.Load<Shader>("NereidReef")){name="Gosha lacquer and woven ball"};
             shell.SetFloat("_PigmentLightCap",1.18f);
             creature=Node(transform,"Гоша",Vector3.zero);
-            body=Node(creature,"Shieldback",Vector3.zero);body.localScale=Vector3.one*.24f;
+            body=Node(creature,"Shieldback",Vector3.zero);body.localScale=Vector3.one*RaidWorld.Instance.tuning.petScale;
             var g=new ReefGeometry();
             g.Tube(new[]{new Vector3(0,0,-1.52f),new(0,-.08f,-.94f),new(0,.03f,-.25f),new(0,.04f,.54f),new(0,-.17f,1.13f)},
                 new[]{.08f,.4f,.63f,.65f,.35f},rose,12,.7f);
@@ -42,7 +45,7 @@ namespace Raid.Nereid
             for(int j=0;j<2;j++)
             {
                 int side=j==0?-1:1;
-                g.Tube(new[]{new Vector3(.4f*side,-.08f,.7f),new(.69f*side,-.24f,1.1f),new(.55f*side,-.28f,1.41f),new(.23f*side,-.18f,1.48f)},
+                g.Tube(new[]{new Vector3(.4f*side,-.08f,.7f),new(.69f*side,-.24f,1.1f),new(.52f*side,-.26f,1.43f),new(.32f*side,-.19f,1.49f)},
                     new[]{.24f,.17f,.105f,.014f},ivory,8,.62f);
                 g.Tube(new[]{new Vector3(.34f*side,.12f,.87f),new(.4f*side,.17f,1.03f),new(.39f*side,.17f,1.11f)},new[]{.07f,.115f,.05f},new Color(.059f,.029f,.083f),9);
                 g.Tube(new[]{new Vector3(.4f*side,.2f,1.095f),new(.4f*side,.208f,1.11f)},new[]{.036f,.025f},new Color(.96f,.82f,.56f),8);
@@ -76,17 +79,30 @@ namespace Raid.Nereid
         {
             float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
             creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);
-            bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing;
-            Vector3 at=s.Position-(onFloor?Vector3.up*.115f:Vector3.zero);var dir=s.Heading;
+            bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing && s.Mode!=GoshaMode.Cradled;
+            Vector3 at=s.Position-(onFloor?Vector3.up*DeckOffset:Vector3.zero);var dir=s.Heading;
             var ui=UI.UiRoot.Instance;
             if(s.Mode==GoshaMode.Riding && ui!=null)
                 foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)
-                    {at=d.transform.TransformPoint(new Vector3(.23f,.37f,-.22f));dir=d.transform.forward;break;}
-            creature.position=!presented||s.Mode==GoshaMode.Riding?at:Vector3.Lerp(creature.position,at,blend);
+                    {at=d.transform.TransformPoint(new Vector3(.25f,.37f,-.31f));dir=d.transform.forward;break;}
+            if(s.Mode==GoshaMode.Cradled && ui!=null)
+                foreach(var keeper in ui.Context.Players)if(keeper!=null && keeper.OwnerId==s.Rider)
+                {
+                    var cam=keeper.IsOwner?keeper.GetComponentInChildren<Camera>():null;
+                    var anchor=cam==null?keeper.transform:cam.transform;
+                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.25f,.64f));
+                    dir=anchor.rotation*Quaternion.Euler(0,145,0)*Vector3.forward;
+                    break;
+                }
+            var travel=presented?Vector3.Distance(lastPet,s.Position):0;
+            lastPet=s.Position;
+            gait+=(Mathf.Min(travel,.54f)*8.6f);
+            bool held=s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Cradled;
+            creature.position=!presented||held?at:Vector3.Lerp(creature.position,at,blend);
             if(dir.sqrMagnitude>.01f)creature.rotation=Quaternion.Slerp(creature.rotation,Quaternion.LookRotation(dir),blend);
-            bool happy=s.Mode==GoshaMode.Petted,swim=s.Mode==GoshaMode.Swimming;
+            bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming;
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
-            float phase=t*(happy?13:idle?2:swim?6:10);
+            float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;
             body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
             body.localRotation=Quaternion.Euler(happy?-12:swim?5*Mathf.Sin(phase*.6f):0,0,(happy?10:2)*Mathf.Sin(phase));
             for(int i=0;i<legs.Length;i++)
@@ -127,8 +143,8 @@ namespace Raid.Nereid
                     break;
                 }
             }
-            if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(new Vector3(0,-.02f,1.31f));
-            ball.position=s.Ball==GoshaBallMode.Held?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
+            if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(JawSocket);
+            ball.position=s.Ball==GoshaBallMode.Held||s.Ball==GoshaBallMode.Carried?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
             if(presented && (s.Ball==GoshaBallMode.Deck || s.Ball==GoshaBallMode.Flying))
             {
                 var delta=ball.position-lastBall;Vector3 axis=Vector3.Cross(Vector3.up,delta);

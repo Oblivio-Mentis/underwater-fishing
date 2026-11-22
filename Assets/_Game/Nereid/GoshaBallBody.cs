@@ -11,6 +11,15 @@ namespace Raid.Nereid
         PhysicsMaterial rubber;
         public Vector3 Position=>body.position;
         public Vector3 Velocity=>body.linearVelocity;
+        public bool TouchedDeck { get; private set; }
+        bool underwater;
+        public void SetWater(bool wet)
+        {
+            if(wet==underwater)return;
+            underwater=wet;body.useGravity=!wet;
+            body.linearDamping=wet?2.4f:.37f;
+            body.angularDamping=wet?2.3f:.42f;
+        }
         public void Initialize(RaidWorld owner)
         {
             world=owner;
@@ -35,7 +44,7 @@ namespace Raid.Nereid
         }
         public void Release(Vector3 at,Vector3 speed)
         {
-            body.position=at;body.rotation=Quaternion.identity;sphere.enabled=true;
+            TouchedDeck=false;SetWater(false);body.position=at;body.rotation=Quaternion.identity;sphere.enabled=true;
             body.isKinematic=false;body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
             body.linearDamping=.37f;body.angularDamping=.42f;
             body.linearVelocity=speed;body.angularVelocity=Vector3.Cross(Vector3.up,speed)*3;
@@ -43,7 +52,9 @@ namespace Raid.Nereid
         }
         void OnCollisionEnter(Collision hit)
         {
-            if(world!=null && hit.collider.TryGetComponent<DiverMotor>(out var diver))world.BallTouchedDiver(diver);
+            var diver=hit.collider.GetComponentInParent<DiverMotor>();
+            if(world!=null && diver!=null){world.BallTouchedDiver(diver);return;}
+            if(hit.contactCount>0 && hit.GetContact(0).normal.y>.65f)TouchedDeck=true;
         }
         void OnCollisionStay(Collision contact)
         {
