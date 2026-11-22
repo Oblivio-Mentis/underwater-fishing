@@ -194,7 +194,10 @@ namespace Raid
                     * (state.Surging ? .25f : 1) * (leader.Paired ? 1 + tuning.assistBonus + (RaidWorld.Instance?.SkillFactor(leader.Tool.Motor,SkillId.H4)??0) : 1);
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
-                Vector3 motion = leader.TowardHand.normalized * Mathf.Min(excess, speed * dt);
+                // Once exhausted, tow the body rather than steering on the off-centre
+                // implant as it swings across the surface during animation.
+                Vector3 pull=tired?leader.PullDirection:leader.TowardHand.normalized;
+                Vector3 motion = pull * Mathf.Min(excess, speed * dt);
                 if (!SolidAhead(transform.position, transform.position + motion)) transform.position += motion;
                 if (Nereid.NereidVessel.Active != null)
                 {
@@ -219,7 +222,7 @@ namespace Raid
             else
             {
                 var lead = lines.At(0);
-                float escape = tuning.escapeSpeed * power * (state.Surging ? 2 : tired ? .3f : 1);
+                float escape = tuning.escapeSpeed * power * (state.Surging ? 2 : tired ? .10f : 1);
                 Vector3 away = -lead.PullDirection;
                 if (away.sqrMagnitude < .01f) away = transform.forward;
                 if (Nereid.NereidVessel.Active != null)

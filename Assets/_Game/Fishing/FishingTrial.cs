@@ -116,6 +116,20 @@ namespace Raid
             Check("Distinct connected owners " + host.OwnerId + " and " + helper.OwnerId);
             if (Array.IndexOf(Environment.GetCommandLineArgs(), "-raid-ball-harpoon") >= 0)
             { yield return RunBallHarpoon(); yield break; }
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-reservoir-only")>=0)
+            {
+                var staged=new[]
+                {
+                    new CatchItem(18001,4,0,2,1,1,species:"Needlefish"),
+                    new CatchItem(18002,3,1,2,1,1,species:"Lanternfish"),
+                    new CatchItem(18003,5,1,3,1,1,species:"Bristlefish"),
+                    new CatchItem(18004,6,1,3,2,1,1,0,"Sailray")
+                };
+                foreach(var item in staged)Require(world.Team.Deposit(item),"Reservoir test requires a fresh save.");
+                yield return Wait(()=>staged.All(item=>world.View.tank.Exists(fish=>fish.id==item.id)),4,"Staged catches were not published.");
+                yield return ChooseReservoirRoutes(staged.Select(item=>item.id).ToArray());
+                yield break;
+            }
 
             if (world.CurrentDepth != 1)
             {
@@ -488,7 +502,8 @@ namespace Raid
             {
                 Require(Time.unscaledTime < deadline && host.HookedFish == fish && !host.Motor.IsHelpless,
                     $"Landing lost or expired at {fish.HabitatName}: {fish.SpeciesId} / {fish.Mode}, stamina {fish.Stamina:F2}, "+
-                    $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.HandAnchor,fish.transform.position):F2} m.");
+                    $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.HandAnchor,fish.transform.position):F2} m, "+
+                    $"lines {host.LineLength:F2}/{helper.LineLength:F2} m.");
                 if (fish.Tension >= .58f) pulling = false;
                 else if (fish.Tension < .24f) pulling = true;
                 host.QaHoldOwned(false, pulling ? .6f : 0);
