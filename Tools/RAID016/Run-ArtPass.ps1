@@ -26,7 +26,7 @@ function Read($path){
 }
 $hostArgs=@('-raid-host','-raid-ui-probe',"$out/host",'-raid-save',"$out/host.json",'-logFile',"$out/host.log",'-raid-art-pass',$out,$marks,
     '-raid-profile','76119edf-50e7-4444-aef0-720c2761a479')
-if($Timing){$hostArgs+='-raid-art-timing'}
+if($Timing){$hostArgs+='-raid-art-timing'}else{$hostArgs+='-batchmode'}
 $hostProcess=$null
 $peerProcess=$null
 try{

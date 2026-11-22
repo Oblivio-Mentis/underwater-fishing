@@ -63,6 +63,8 @@ namespace Raid.Editor
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-editor")>=0)
             {
                 EditorSceneManager.OpenScene(Scene);
+                if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-rebuild")>=0)
+                    Nereid.Editor.NereidAuthoring.Install();
                 EditorApplication.EnterPlaymode();
                 return;
             }

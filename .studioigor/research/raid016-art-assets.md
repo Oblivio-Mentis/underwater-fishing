@@ -7,4 +7,3 @@
 - Для декоративных стай выбраны Fish1 и Fish2 из [Animated Fish Pack](https://opengameart.org/content/animated-fish), CC0. Сравнение моделей и установку магазинных пакетов описывает [отчёт по рыбе и VFX](../../Docs/RAID-016/fish-and-vfx.md).
 - Для пузырьков сохранены источники NEREID с общим материалом. [Bubbles VFX — URP](https://assetstore.unity.com/packages/vfx/bubbles-vfx-urp-389452) доступен через My Assets.
 - Иконки созданы для текущего uGUI-атласа. Сравнение рендера использует те же мировые точки и метки D3D11 до и после прохода камеры. [Документация Unity о GPU-профилировании](https://docs.unity3d.com/Manual/ProfilerGPU.html)
-

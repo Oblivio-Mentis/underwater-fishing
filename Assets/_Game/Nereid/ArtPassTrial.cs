@@ -35,7 +35,7 @@ namespace Raid.Nereid
         [Serializable] sealed class Result
         {
             public string status, phase, error, gpu, api, profile, pipeline;
-            public int width, height, msaa, vsync;
+            public int width, height, msaa, vsync, fittings;
             public float renderScale;
             public List<Sample> views=new();
         }
@@ -112,6 +112,10 @@ namespace Raid.Nereid
                 return world && world.NetworkObject && world.IsServerInitialized && world.View!=null &&
                     owner && owner.NetworkObject && owner.IsOwner && world.TravelRemaining==0;
             },75);
+            var hardware=NereidVessel.Active.transform.Find("NEREID service fittings");
+            result.fittings=hardware==null?0:hardware.GetComponentsInChildren<MeshRenderer>().Length;
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-rebuild")>=0 && result.fittings==0)
+                throw new InvalidOperationException("The rebuilt vessel did not restore its service models.");
             var marks=JsonUtility.FromJson<Marks>(File.ReadAllText(marksFile)).cameras;
             eye=owner.GetComponentInChildren<Camera>();
             peer=DiverMotor.ServerDivers.FirstOrDefault(d=>d && !d.IsOwner);
