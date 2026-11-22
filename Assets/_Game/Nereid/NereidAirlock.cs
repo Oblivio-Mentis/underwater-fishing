@@ -93,6 +93,11 @@ namespace Raid.Nereid
 
         void BuildChamber()
         {
+            var pressedSteel=Metal("Embossed pressure inserts",new Color(.84f,.91f,.91f),.30f);
+            Rect tile=NereidSurfaceFinish.PressedPanelUv;
+            pressedSteel.SetTexture("_BaseMap",Resources.Load<Texture2D>(NereidSurfaceFinish.PanelAtlasPath));
+            pressedSteel.SetTextureScale("_BaseMap",tile.size);
+            pressedSteel.SetTextureOffset("_BaseMap",tile.position);
             Lining("Pressure ceiling",new(OuterX*.5f,Height+.12f,0),new(OuterX+.32f,.26f,6.52f),steel,
                 Vector3.down,Vector3.right,Vector3.forward);
             Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),floor,
@@ -108,7 +113,7 @@ namespace Raid.Nereid
                     Box("Bearing panel above waterline",new Vector3(center,2.45f,side*3.019f),
                         new Vector3(1.90f,1.36f,.092f),steel);
                     Box("Machined windowless pressure insert",new Vector3(center,2.47f,side*2.961f),
-                        new Vector3(1.73f,1.19f,.052f),trim);
+                        new Vector3(1.73f,1.19f,.052f),pressedSteel);
                     Box("High water witness line",new Vector3(center,3.05f,side*2.929f),
                         new Vector3(1.57f,.031f,.025f),paint);
                 }

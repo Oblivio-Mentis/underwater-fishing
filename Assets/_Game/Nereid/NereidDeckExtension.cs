@@ -195,12 +195,14 @@ namespace Raid.Nereid
             Collision(archive,"Bridge / pressure crown",new(0,UpperDeck+2.14f,center),new(8.93f,.29f,length+.23f),Quaternion.identity);
             Panel("Bridge deck plate",new(0,UpperDeck-.055f,center),new(8.57f,.105f,length+.04f),gunmetal);
             Panel("Interior crown lining",new(0,UpperDeck+2.02f,center),new(8.48f,.105f,length+.026f),gunmetal);
-            const float crownPanelWidth=2.66f;
+            const float crownPanelWidth=2.66f, crownHeight=1.82f;
+            // The outer fairing overlaps the old lining. Mount the service
+            // panels below its lowest point inside the glazed cabin.
             float crownPanelLength=length/4;
             for(int row=0;row<4;row++)
                 for(int column=-1;column<=1;column++)
                 {
-                    var seat=new Vector3(column*(crownPanelWidth+.055f),UpperDeck+1.93f,BridgeFront-(row+.5f)*crownPanelLength);
+                    var seat=new Vector3(column*(crownPanelWidth+.055f),UpperDeck+crownHeight,BridgeFront-(row+.5f)*crownPanelLength);
                     TiledPanel(seat,new(crownPanelWidth,.045f,crownPanelLength-.056f),Quaternion.identity,pressedEnamel,PressedPanelUv);
                 }
             Panel("Bridge / marine equipment trunk",new(.72f,UpperDeck+2.62f,center-.83f),new(4.36f,.36f,2.70f),coating);
@@ -224,6 +226,9 @@ namespace Raid.Nereid
                 Panel("Exterior lens in a dark bezel",new(side*3.68f,UpperDeck+1.99f,BridgeBack-.37f),new(.72f,.12f,.038f),warm);
             }
             float rearSpan=(BridgeHalfWidth*2)/5;
+            for(int i=0;i<4;i++)
+                TiledPanel(new(0,UpperDeck+.023f,BridgeFront-(i+.5f)*crownPanelLength),
+                    new(1.46f,.027f,crownPanelLength-.037f),Quaternion.identity,centerDeckTexture,DeckPlateUv);
             for(int i=0;i<5;i++)Window(new(-BridgeHalfWidth+(i+.5f)*rearSpan,UpperDeck,BridgeBack),rearSpan,Quaternion.identity);
             Window(new(1.20f,UpperDeck,BridgeFront),6.2f,Quaternion.identity);
             Panel("Port portal wall",new(-3.95f,UpperDeck+1.06f,BridgeFront),new(.71f,2.12f,.24f),enamel,true);
@@ -231,9 +236,9 @@ namespace Raid.Nereid
             for(int i=0;i<3;i++)
             {
                 float z=BridgeFront-.85f-i*1.73f;
-                Panel("Amber command-ring lamp",new(0,UpperDeck+1.99f,z),new(3.48f,.092f,.22f),gunmetal);
-                Panel("Amber command-ring lens",new(0,UpperDeck+1.931f,z),new(2.98f,.038f,.082f),warm);
-                Lamp(new(0,UpperDeck+1.86f,z),new(1,.69f,.40f),6.4f,137);
+                Panel("Amber command-ring lamp",new(0,UpperDeck+crownHeight-.035f,z),new(3.48f,.082f,.22f),gunmetal);
+                Panel("Amber command-ring lens",new(0,UpperDeck+crownHeight-.081f,z),new(2.98f,.028f,.082f),warm);
+                Lamp(new(0,UpperDeck+crownHeight-.12f,z),new(1,.69f,.40f),6.4f,105);
             }
             BridgeFinishes();
             BuildBridgePressureFairing();

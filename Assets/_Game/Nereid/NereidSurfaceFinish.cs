@@ -8,6 +8,8 @@ namespace Raid.Nereid
         internal enum Surface { Enamel, Deck, Ceramic, Hull }
 
         const string Textures = "NereidServiceFittings/Textures/";
+        internal const string PanelAtlasPath = Textures + "T_Trim_01_BaseColor";
+        internal static readonly Rect PressedPanelUv = new(.242f,.686f,.516f,.293f);
         static readonly int Atlas = Shader.PropertyToID("_SurfaceAtlas");
         static readonly int Region = Shader.PropertyToID("_SurfaceRegion");
         static readonly int Tiling = Shader.PropertyToID("_SurfaceTiling");
@@ -21,7 +23,7 @@ namespace Raid.Nereid
         internal static void Apply(Material material, Surface surface, bool exterior = false)
         {
             if (coating == null) coating = Resources.Load<Shader>("NereidHullCoating");
-            if (panels == null) panels = Resources.Load<Texture2D>(Textures + "T_Trim_01_BaseColor");
+            if (panels == null) panels = Resources.Load<Texture2D>(PanelAtlasPath);
             if (doors == null) doors = Resources.Load<Texture2D>(Textures + "T_Trim_02_BaseColor");
             if (coating == null || panels == null || doors == null) return;
 

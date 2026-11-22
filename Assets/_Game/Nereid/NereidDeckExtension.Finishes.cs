@@ -7,15 +7,16 @@ namespace Raid.Nereid
         const string Fittings="NereidServiceFittings/";
         static readonly Color AmberFill=new(1,.61f,.32f);
         static readonly Color WaterFill=new(.28f,.65f,1);
-        static readonly Rect PressedPanelUv=new(.29f,.715f,.43f,.23f);
-        static readonly Rect DeckPlateUv=new(.055f,.095f,.89f,.268f);
+        static readonly Rect DeckPlateUv=new(.008f,.073f,.984f,.416f);
+        static readonly Rect PressedPanelUv=NereidSurfaceFinish.PressedPanelUv;
         static readonly Rect RibTrimUv=new(.035f,.775f,.42f,.17f);
-        Material deckTexture,pressedEnamel,brushedRib,windowBrass;
+        Material deckTexture,centerDeckTexture,pressedEnamel,brushedRib,windowBrass;
 
         void CreateFinishes(Shader lit)
         {
-            deckTexture=CoatedPanel(lit,"Rolled and scratched deck steel",new(.69f,.74f,.74f),"T_Trim_01_BaseColor",.39f,.66f);
-            pressedEnamel=CoatedPanel(lit,"Inset service walls",new(.62f,.70f,.68f),"T_Trim_01_BaseColor",.34f,.46f);
+            deckTexture=CoatedPanel(lit,"Rolled and scratched deck steel",new(.83f,.87f,.85f),"T_Trim_01_BaseColor",.22f,.34f);
+            centerDeckTexture=CoatedPanel(lit,"Warm bridge walkway",new(.95f,.83f,.60f),"T_Trim_01_BaseColor",.22f,.34f);
+            pressedEnamel=CoatedPanel(lit,"Inset service walls",new(.87f,.92f,.91f),"T_Trim_01_BaseColor",.18f,.34f);
             brushedRib=CoatedPanel(lit,"Longitudinal armour and seam tape",new(.70f,.72f,.68f),"T_Trim_02_BaseColor",.48f,.36f);
             windowBrass=Finish(lit,"Brass window trim",new(.59f,.36f,.16f),.48f,.44f);
         }
@@ -131,8 +132,8 @@ namespace Raid.Nereid
             OperatorDesk(new(3.05f,floor,BridgeBack+.59f));
             Wash(new(0,floor+1.84f,BridgeFront-.8f),new(-2.91f,floor+.47f,BridgeFront-2.08f),WaterFill,7.7f,145);
             Wash(new(.1f,floor+1.79f,BridgeBack+.77f),new(.1f,floor+.34f,BridgeBack+.075f),AmberFill,7.3f,220);
-            Wash(new(-2.70f,floor+1.41f,BridgeFront-1.27f),new(.30f,floor+1.95f,BridgeFront-2.89f),
-                new Color(.69f,.82f,.92f),6.8f,62);
+            Wash(new(-3.88f,floor+1.16f,BridgeFront-1.27f),new(-.78f,floor+1.82f,BridgeFront-2.89f),
+                new Color(.69f,.82f,.92f),6.8f,145);
 
             for(int s=-1;s<=1;s+=2)
             {
