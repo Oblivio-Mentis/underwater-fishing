@@ -13,7 +13,7 @@ namespace Raid
         FishActor orderFish;
         long orderFishId;
         string orderProfile;
-        bool carefulSwimmer;
+        bool carefulSwimmer, clearingSeaDoor;
         float lastOrderAt = float.NegativeInfinity, orderEnds, pocketWait;
         Vector3 fishWaterPosition;
         readonly GoshaSwimRoute swimRoute = new();
@@ -80,7 +80,7 @@ namespace Raid
         FishActor ClosestFish(Vector3 origin,float radius,bool careful)
         {
             FishActor nearest=null;float best=radius*radius;
-            foreach(var f in FindObjectsByType<FishActor>())
+            foreach(var f in FishActor.ServerSchool)
             {
                 if(!f.IsAvailableForGosha)continue;
                 Vector3 at=f.transform.position;float distance=(at-origin).sqrMagnitude;
@@ -181,6 +181,12 @@ namespace Raid
         bool TravelTo(Vector3 goal,float dt)
         {
             var here=SwimZone(pet.Position);var there=SwimZone(goal);
+            if(clearingSeaDoor && here==PetZone.Sea)
+            {
+                // Fully leave the sill before turning towards a shoal below or behind the hull.
+                if(!SwimTo(LockPoint(11.5f),dt,false))return false;
+                clearingSeaDoor=false;
+            }
             if(here==there)
                 return here==PetZone.Deck?Walk(goal,tuning.petFetchSpeed,dt):SwimTo(goal,dt,here==PetZone.Sea);
             var chamber=NereidAirlock.Active;
@@ -192,7 +198,8 @@ namespace Raid
                     if(SwimTo(LockPoint(4.25f),dt,false))RequestPetGate(sea);
                     return false;
                 }
-                SwimTo(LockPoint(sea?11.2f:-1.8f),dt,false);return false;
+                clearingSeaDoor=sea;
+                SwimTo(LockPoint(sea?11.5f:-1.8f),dt,false);return false;
             }
             bool outside=here==PetZone.Sea;
             var entrance=LockPoint(outside?11.2f:-1.8f);

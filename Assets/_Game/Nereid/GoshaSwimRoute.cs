@@ -47,6 +47,8 @@ namespace Raid.Nereid
             bool Open(Vector3 direction)
             {
                 var end=from+direction*ahead;
+                if(detour && (NereidAirlock.Active.Contains(end) || NereidVessel.Active.ContainsSealed(end) ||
+                    NereidAirlock.Active.Contains(Vector3.Lerp(from,end,.5f))))return false;
                 if(!Clear(from,end))return false;
                 if(!cautious)return true;
                 float risk=Mathf.Max(Risk(Vector3.Lerp(from,end,.5f)),Risk(end));
