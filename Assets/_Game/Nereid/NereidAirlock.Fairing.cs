@@ -64,8 +64,10 @@ namespace Raid.Nereid
                 skin.SetFloat("_Metallic",.35f);
                 skin.SetFloat("_Smoothness",.43f);
             }
+            NereidSurfaceFinish.Apply(skin,NereidSurfaceFinish.Surface.Hull,exterior:true);
             FairingPart(hub,"Tapered pressure chamber shoulders",outer,skin);
             var porcelain=Metal("Silt-resistant docking ceramic",new Color(.48f,.56f,.54f),.42f);
+            NereidSurfaceFinish.Apply(porcelain,NereidSurfaceFinish.Surface.Ceramic,exterior:true);
             FairingPart(hub,"Ceramic boarding surround and weld bands",joining,porcelain);
             FairingPart(hub,"Recessed relief into the pressure doors",throat,steel);
             FairingPart(hub,"Caged amber door markers",markers,amber);

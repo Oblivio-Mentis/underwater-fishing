@@ -12,7 +12,7 @@ namespace Raid.Nereid
         readonly Transform[,] leaves=new Transform[2,2];
         readonly AirlockPad[] pads=new AirlockPad[4];
         readonly List<Material> owned=new();
-        Material steel, charcoal, trim, paint, amber, cold, signal;
+        Material steel, charcoal, trim, paint, amber, cold, signal, floor;
         Transform surface, gauge, impeller;
         Mesh pressurePlate;
         PressureTransferFlow transfer;
@@ -39,6 +39,10 @@ namespace Raid.Nereid
             amber=Metal("Pump telltale",new Color(.96f,.53f,.11f),.18f,1.8f);
             cold=Metal("Deck lighting",new Color(.27f,.82f,.84f),.22f,1.5f);
             signal=Metal("Door status",new Color(.34f,.82f,.57f),.22f,1.1f);
+            floor=Metal("Flood chamber deck",new Color(.19f,.245f,.249f),.42f);
+            NereidSurfaceFinish.Apply(steel,NereidSurfaceFinish.Surface.Enamel);
+            NereidSurfaceFinish.Apply(trim,NereidSurfaceFinish.Surface.Ceramic);
+            NereidSurfaceFinish.Apply(floor,NereidSurfaceFinish.Surface.Deck);
             BuildChamber();
             BuildGate(false);BuildGate(true);
             BuildPad(0,false,-.39f,-1.92f,-1);
@@ -91,7 +95,7 @@ namespace Raid.Nereid
         {
             Lining("Pressure ceiling",new(OuterX*.5f,Height+.12f,0),new(OuterX+.32f,.26f,6.52f),steel,
                 Vector3.down,Vector3.right,Vector3.forward);
-            Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),charcoal,
+            Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),floor,
                 Vector3.up,Vector3.right,Vector3.back);
             for(int i=0;i<15;i++)Box("Floor traction strip",new Vector3(.25f+i*.58f,.025f,0),new Vector3(.09f,.025f,5.95f),trim);
             for(int side=-1;side<=1;side+=2)

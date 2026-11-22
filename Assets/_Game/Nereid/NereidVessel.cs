@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Raid.VisualSlice;
 
@@ -14,6 +15,7 @@ namespace Raid.Nereid
         [Min(0)] public float indoorWalkSpeed=4.5f;
         public Vector3[] cargoRail;
         public LineRenderer hoistCable;
+        readonly Dictionary<Material, Material> cladding = new();
         RaidWorld world;
         NereidAirlock airlock;
         internal NereidDeckExtension DeckExtension { get; private set; }
@@ -32,11 +34,21 @@ namespace Raid.Nereid
             DeckExtension=NereidDeckExtension.Install(this);
             NereidServiceFittings.Install(transform,airlock);
             gameObject.AddComponent<NereidHullLighting>();
+            if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                NereidSurfaceFinish.Clad(transform, transform.Find("Nereid_Exterior"), cladding);
+                var factory = FindAnyObjectByType<Factory.FactoryVisuals>();
+                if (factory != null) NereidSurfaceFinish.Clad(factory.transform, null, cladding);
+            }
             var reef=new GameObject("NEREID fishing grounds");
             reef.transform.SetParent(transform,true);
             reef.AddComponent<NereidReef>();
         }
-        void OnDestroy() { if(Active==this)Active=null; }
+        void OnDestroy()
+        {
+            if (Active == this) Active = null;
+            foreach (var material in cladding.Values) Destroy(material);
+        }
 
         public bool ContainsSealed(Vector3 point)
         {

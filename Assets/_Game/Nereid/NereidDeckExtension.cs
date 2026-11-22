@@ -80,6 +80,11 @@ namespace Raid.Nereid
             screen=Finish(lit,"Terminal pressure glass",new Color(.012f,.039f,.048f),.02f,.26f,.35f);
             coating=Finish(Resources.Load<Shader>("NereidHullCoating")??lit,"NEREID / saddle plate",new Color(.23f,.36f,.38f),.21f,.39f);
             ceramic=Finish(lit,"Ceramic instrument cladding",new Color(.57f,.63f,.59f),.23f,.48f);
+            NereidSurfaceFinish.Apply(enamel,NereidSurfaceFinish.Surface.Enamel);
+            NereidSurfaceFinish.Apply(gunmetal,NereidSurfaceFinish.Surface.Deck);
+            NereidSurfaceFinish.Apply(steel,NereidSurfaceFinish.Surface.Ceramic);
+            NereidSurfaceFinish.Apply(ceramic,NereidSurfaceFinish.Surface.Ceramic);
+            NereidSurfaceFinish.Apply(coating,NereidSurfaceFinish.Surface.Hull,exterior:true);
             CreateFinishes(lit);
             var originalGlass=FindMaterial(hull,"Nereid_Window");
             glass=originalGlass!=null?originalGlass:Finish(lit,"Window fallback",new Color(.18f,.37f,.41f),.08f,.49f);

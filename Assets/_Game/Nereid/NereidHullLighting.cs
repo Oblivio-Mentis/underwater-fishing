@@ -118,6 +118,13 @@ namespace Raid.Nereid
                         finish.SetColor("_BaseColor",paint);
                         finish.SetFloat("_Metallic",metal);
                         finish.SetFloat("_Smoothness",source.GetFloat("_Smoothness"));
+                        var surface=source.name switch
+                        {
+                            "Nereid_Hull"=>NereidSurfaceFinish.Surface.Hull,
+                            "Nereid_Grate"=>NereidSurfaceFinish.Surface.Deck,
+                            _=>NereidSurfaceFinish.Surface.Enamel
+                        };
+                        NereidSurfaceFinish.Apply(finish,surface,exterior:true);
                         finishes.Add(source,finish);
                         owned.Add(finish);
                     }

@@ -5,6 +5,11 @@ Shader "RAID/Nereid Hull Coating"
         _BaseColor("Marine finish", Color)=(.31,.45,.48,1)
         _Metallic("Exposed metal", Range(0,1))=.16
         _Smoothness("Smoothness", Range(0,1))=.35
+        [NoScaleOffset] _SurfaceAtlas("Panel texture atlas", 2D)="white" {}
+        _SurfaceRegion("Atlas tile", Vector)=(0,0,1,1)
+        _SurfaceTiling("Repeats per metre", Vector)=(1,1,0,0)
+        _SurfaceDetail("Average, contrast, relief, enabled", Vector)=(1,0,0,0)
+        _Marine("Exterior marine light", Range(0,1))=1
     }
     SubShader
     {
@@ -27,14 +32,26 @@ Shader "RAID/Nereid Hull Coating"
 
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
-            half _Metallic, _Smoothness;
+            half _Metallic, _Smoothness, _Marine;
+            float4 _SurfaceRegion, _SurfaceTiling, _SurfaceDetail;
             CBUFFER_END
+            TEXTURE2D(_SurfaceAtlas);
+            SAMPLER(sampler_SurfaceAtlas);
             float _NereidTurbidity, _NereidWorkLightSeabed;
             float3 _NereidReefClarity;
             float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
 
             struct Input {float3 position:POSITION;float3 normal:NORMAL;};
-            struct Varyings {float4 clip:SV_POSITION;float3 position:TEXCOORD0;half3 normal:TEXCOORD1;half fog:TEXCOORD2;half3 vertexLight:TEXCOORD3;};
+            struct Varyings
+            {
+                float4 clip:SV_POSITION;
+                float3 position:TEXCOORD0;
+                half3 normal:TEXCOORD1;
+                half fog:TEXCOORD2;
+                half3 vertexLight:TEXCOORD3;
+                float3 panelPosition:TEXCOORD4;
+                half3 panelNormal:TEXCOORD5;
+            };
             Varyings vert(Input v)
             {
                 Varyings o;
@@ -43,6 +60,11 @@ Shader "RAID/Nereid Hull Coating"
                 o.normal=TransformObjectToWorldNormal(v.normal);
                 o.fog=ComputeFogFactor(o.clip.z);
                 o.vertexLight=VertexLighting(o.position,o.normal);
+                float3x3 localToWorld=(float3x3)GetObjectToWorldMatrix();
+                float3 metres=float3(length(mul(localToWorld,float3(1,0,0))),
+                    length(mul(localToWorld,float3(0,1,0))),length(mul(localToWorld,float3(0,0,1))));
+                o.panelPosition=v.position*metres;
+                o.panelNormal=normalize(v.normal/max(metres,.0001));
                 return o;
             }
 
@@ -82,9 +104,44 @@ Shader "RAID/Nereid Hull Coating"
                 return lerp(a,b,t.y);
             }
 
+            half SamplePanel(float2 axes)
+            {
+                float2 repeated=axes*_SurfaceTiling.xy;
+                float2 uv=_SurfaceRegion.xy+frac(repeated)*_SurfaceRegion.zw;
+                float2 gradients=repeated*_SurfaceRegion.zw;
+                half3 texel=SAMPLE_TEXTURE2D_GRAD(_SurfaceAtlas,sampler_SurfaceAtlas,uv,ddx(gradients),ddy(gradients)).rgb;
+                return dot(texel,half3(.2126,.7152,.0722));
+            }
+
+            half PanelHeight(Varyings i)
+            {
+                half3 alignment=abs(i.panelNormal);
+                alignment*=alignment;
+                alignment*=alignment;
+                alignment/=max(dot(alignment,half3(1,1,1)),.001);
+                return (SamplePanel(i.panelPosition.zy)*alignment.x+
+                    SamplePanel(i.panelPosition.xz)*alignment.y+
+                    SamplePanel(i.panelPosition.xy)*alignment.z)/max(_SurfaceDetail.x,.015);
+            }
+
+            float3 ReliefNormal(float3 position,float3 normal,float height)
+            {
+                float3 dx=ddx(position),dy=ddy(position);
+                float3 right=cross(dy,normal),up=cross(normal,dx);
+                float area=dot(dx,right);
+                float3 gradient=clamp(ddx(height),-.007,.007)*right+clamp(ddy(height),-.007,.007)*up;
+                return SafeNormalize(normal*max(abs(area),.000001)-sign(area)*gradient);
+            }
+
             half4 frag(Varyings i):SV_Target
             {
                 half3 n=normalize(i.normal);
+                half plate=1;
+                if(_SurfaceDetail.w>.5)
+                {
+                    plate=clamp(PanelHeight(i),.45,2.32);
+                    n=ReliefNormal(i.position,n,plate*_SurfaceDetail.z);
+                }
                 InputData lighting=(InputData)0;
                 lighting.positionWS=i.position;
                 lighting.positionCS=i.clip;
@@ -92,7 +149,7 @@ Shader "RAID/Nereid Hull Coating"
                 lighting.viewDirectionWS=SafeNormalize(GetWorldSpaceViewDir(i.position));
                 lighting.shadowCoord=TransformWorldToShadowCoord(i.position);
                 lighting.vertexLighting=i.vertexLight;
-                lighting.bakedGI=SampleSH(n)+WaterIrradiance(i.position,n);
+                lighting.bakedGI=SampleSH(n)+(_Marine>.5 ? WaterIrradiance(i.position,n) : half3(.056,.06,.063));
                 lighting.normalizedScreenSpaceUV=GetNormalizedScreenSpaceUV(i.clip);
                 lighting.shadowMask=half4(1,1,1,1);
                 SurfaceData surface=(SurfaceData)0;
@@ -102,10 +159,11 @@ Shader "RAID/Nereid Hull Coating"
                 float broad=HullNoise(skin*.62);
                 float deposits=HullNoise(skin*float2(3.8,.31)+float2(12.8,47.));
                 float streak=smoothstep(.52,.87,deposits)*smoothstep(.29,.68,broad);
-                half coat=lerp(.87,1.10,broad)-streak*.20;
-                surface.albedo=_BaseColor.rgb*coat + half3(.019,.022,.013)*streak;
+                half coat=lerp(.87,1.10,broad)-streak*(.075+.125*_Marine);
+                half projection=lerp(1.,plate,_SurfaceDetail.y);
+                surface.albedo=_BaseColor.rgb*coat*projection + half3(.019,.022,.013)*streak*_Marine;
                 surface.metallic=_Metallic;
-                surface.smoothness=saturate(_Smoothness*(.69+.31*broad)-streak*.11);
+                surface.smoothness=saturate(_Smoothness*(.69+.31*broad)-streak*.11+(plate-1.)*.075);
                 surface.normalTS=half3(0,0,1);
                 surface.occlusion=1;
                 surface.alpha=1;
