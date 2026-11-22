@@ -119,7 +119,7 @@ namespace Raid.UI
                     return "Открывает глубину 2. Допуск давления: "+(safe+level*ctx.World.tuning.deepDepth).ToString("F0")+" → "+(safe+next*ctx.World.tuning.deepDepth).ToString("F0")+" м";
                 default:
                     float cycle=t.raisingSeconds+t.unloadingSeconds+t.returningSeconds;
-                    return "Вместимость: "+(t.cargoCapacity+level*t.cargoCapacityPerWinch)+" → "+(t.cargoCapacity+next*t.cargoCapacityPerWinch)+". Полный цикл: "+(cycle/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" → "+(cycle/(1+next*t.winchSpeedPerLevel)).ToString("F1")+" с";
+                    return "Полный цикл: "+(cycle/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" → "+(cycle/(1+next*t.winchSpeedPerLevel)).ToString("F1")+" с";
             }
         }
         public static string CurrentUpgradeBonus(Upgrade upgrade,int level,UiContext ctx)
@@ -131,7 +131,7 @@ namespace Raid.UI
                 case Upgrade.Fins: return "Скорость плавания: ×"+(1+level*t.finsSpeedPerLevel).ToString("F2");
                 case Upgrade.Tank: return "Запас кислорода: "+((ctx.Player==null?0:ctx.Player.tuning.oxygenCapacity)*(1+level*t.oxygenPerTankLevel)).ToString("F0");
                 case Upgrade.Hull: return "Глубина 2 открыта. Допуск давления: "+((ctx.Player==null?0:ctx.Player.tuning.safeDepth)+level*ctx.World.tuning.deepDepth).ToString("F0")+" м";
-                default: return "Вместимость: "+(t.cargoCapacity+level*t.cargoCapacityPerWinch)+". Полный цикл: "+((t.raisingSeconds+t.unloadingSeconds+t.returningSeconds)/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" с";
+                default: return "Полный цикл: "+((t.raisingSeconds+t.unloadingSeconds+t.returningSeconds)/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" с";
             }
         }
         public static string OverfeedingRule(int carry) => "Перекорм — избыток переносится в следующий цикл, максимум "+carry+" пищи; других бонусов нет.";
