@@ -7,6 +7,15 @@ namespace Raid
     {
         public int tier=1,scrap=2,electronics;
         public long itemId;
+        private static readonly System.Collections.Generic.List<LootActor> spawned = new();
+        private void OnEnable() => spawned.Add(this);
+        private void OnDisable() => spawned.Remove(this);
+        internal static LootActor HeldBy(DiverMotor diver)
+        {
+            foreach (var item in spawned)
+                if (item.IsVisible && item.CarrierOwnerId == diver.OwnerId) return item;
+            return null;
+        }
         private readonly SyncVar<Vector3> position=new();
         private readonly SyncVar<bool> visible=new();
         private DiverMotor carrier;
@@ -37,8 +46,17 @@ namespace Raid
         public bool Pickup(DiverMotor diver)
         {
             if(!IsServerInitialized || !enabledAtDepth || !visible.Value || carrier!=null || diver.IsHelpless || Vector3.Distance(diver.transform.position,transform.position)>3f) return false;
-            foreach(var loot in FindObjectsByType<LootActor>()) if(loot.carrier==diver) return false;
+            var tool = diver.GetComponent<HarpoonTool>();
+            if (HeldBy(diver) != null || tool == null || !tool.EquipSalvageHands()) return false;
             carrier=diver; carrierOwner.Value=diver.OwnerId; return true;
+        }
+        internal bool PutDown(DiverMotor diver, Vector3 at)
+        {
+            if (!IsServerInitialized || carrier != diver || !visible.Value) return false;
+            carrier = null; carrierOwner.Value = -1;
+            transform.position = position.Value = at;
+            shape.enabled = true;
+            return true;
         }
         public bool IsCarriedBy(DiverMotor diver)=>carrier==diver;
         public void Consume() { if(!IsServerInitialized) return; visible.Value=false; enabledAtDepth=false; carrier=null; carrierOwner.Value=-1; }
@@ -60,7 +78,7 @@ namespace Raid
         private void LateUpdate()
         {
             if(!IsClientInitialized) return;
-            body.enabled=visible.Value; shape.enabled=visible.Value && carrier==null;
+            body.enabled=visible.Value; shape.enabled=visible.Value && carrierOwner.Value<0;
             if(!IsServerInitialized) transform.position=Vector3.Lerp(transform.position,position.Value,1-Mathf.Exp(-Time.deltaTime*12));
         }
     }

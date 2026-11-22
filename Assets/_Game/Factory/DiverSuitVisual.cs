@@ -152,7 +152,8 @@ namespace Raid
             bool cuddling=RaidWorld.Instance?.IsHoldingGosha(diver)??false;
             var pocket=!ball&&!cuddling&&tool.ActiveSlot>=2?tool.FishInSlot(tool.ActiveSlot):null;
             gun.gameObject.SetActive(!diver.IsDead && !cuddling && tool.HarpoonInHands);
-            UpdateFish(pocket!=null&&!held&&!diver.IsDead?pocket.SpeciesId:null);
+            var shownFish = held ? tool.LiftedHeavy : pocket;
+            UpdateFish(!diver.IsDead && shownFish != null ? shownFish.SpeciesId : null);
             if(diver.IsDead)
             {
                 body.localPosition=Vector3.zero;body.localRotation=Quaternion.identity;

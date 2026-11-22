@@ -13,6 +13,7 @@ namespace Raid
         const string ModelName="NEREID Harpoon / presentation";
         static readonly Vector3 RestPosition=new Vector3(.29f,-.245f,.53f);
         static HarpoonPresentation active;
+        internal static HarpoonPresentation ActiveModel => active;
         readonly List<Mesh> meshes=new List<Mesh>();
         Camera view;
         DiverMotor owner;

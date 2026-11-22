@@ -33,7 +33,8 @@ namespace Raid.UI
             public bool aiming,aimQaActive,applicationFocused;
             public string team,hookedFish,hookMode;
             public string[] pockets;
-            public string heldSpecies;
+            public string heldSpecies, harpoonInstance, selectedItem, selectedInstance;
+            public DropReadout[] droppedItems;
             public bool handsFull;
             public int activeSlot, helperOwner=-1, assistedOwner=-1, cageSwimmers;
             public FishRouteState fishRoute;
@@ -52,6 +53,7 @@ namespace Raid.UI
             public float anchorTravel, anchorTipError, anchorKnotError;
             public Control[] controls;
         }
+        [Serializable] public sealed class DropReadout { public string instance, kind, species; public Vector3 position; }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
         string directory,lastId="",error="";float nextPoll,keyboardReleaseAt,mouseReleaseAt;bool releaseKeyboard,releaseMouse;
         Vector2 mousePosition;
@@ -226,6 +228,14 @@ namespace Raid.UI
                 if (!accepted) throw new InvalidOperationException("Owned fishing controls are currently unavailable");
                 return;
             }
+            if(r.action=="drop_selected" || r.action=="pickup_drop")
+            {
+                var tool=UiRoot.Instance.Context.Harpoon;
+                bool dispatched=tool!=null && (r.action=="drop_selected" ? tool.RequestDropSelected()
+                    : long.TryParse(r.value,out var id) && tool.RequestPickup(id));
+                if(!dispatched)throw new InvalidOperationException("Item action unavailable.");
+                return;
+            }
             if(r.action=="rejoin_local")
             {
                 var session=UiRoot.Instance.Context.Session;
@@ -385,6 +395,9 @@ namespace Raid.UI
                 var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;
                 snapshot.tetherOwner=tool.TetherOwner==null?-1:tool.TetherOwner.OwnerId;snapshot.tetherTarget=tool.TetherTarget==null?-1:tool.TetherTarget.OwnerId;
                 snapshot.tetherRefusal=tool.TetherOptOutRemaining;
+                snapshot.harpoonInstance = tool.HarpoonId.ToString();
+                snapshot.selectedItem = tool.SelectedItem(out long instance).ToString();
+                snapshot.selectedInstance = instance.ToString();
                 snapshot.activeSlot = tool.ActiveSlot;
                 snapshot.handsFull = tool.HandsFull;
                 snapshot.heldSpecies = tool.CarriedFish == null ? "" : tool.CarriedFish.SpeciesId;
@@ -394,6 +407,10 @@ namespace Raid.UI
             }
             if(world!=null)
             {
+                snapshot.droppedItems=Enumerable.Range(0,world.DroppedCount).Select(i=>{
+                    var item=world.DroppedAt(i);
+                    return new DropReadout {instance=item.id.ToString(),kind=item.kind.ToString(),species=item.Fish?.SpeciesId,position=item.position};
+                }).ToArray();
                 snapshot.fishRoute=world.FishRoute;snapshot.gosha=world.Gosha;
                 var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
                 if(player!=null)

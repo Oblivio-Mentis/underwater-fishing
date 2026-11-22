@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Raid
 {
     [RequireComponent(typeof(DiverMotor))]
-    public sealed class HarpoonTool : NetworkBehaviour
+    public sealed partial class HarpoonTool : NetworkBehaviour
     {
         public FishingTuning tuning;
         public FriendTetherTuning friendTetherTuning;
@@ -61,17 +61,17 @@ namespace Raid
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
-        public bool HarpoonInHands => !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
+        public bool HarpoonInHands => OwnsHarpoon && !(RaidWorld.Instance?.HasGoshaBall(Motor)??false) && ActiveSlot == 0 && !HandsFull && _assistTarget.Value == null;
         public int ShotSequence => _shotSequence.Value;
         public DiverMotor AssistTarget => MotorOf(_assistTarget.Value);
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
-        public bool HandsFull => _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
+        public bool HandsFull => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
         public int CatchCount => (HandsFull ? 1 : 0) + (_pocketA.Value.id > 0 ? 1 : 0)
             + (_pocketB.Value.id > 0 ? 1 : 0) + (_pocketC.Value.id > 0 ? 1 : 0);
         public bool HasFullCreel => _pocketA.Value.id > 0 && _pocketB.Value.id > 0 && _pocketC.Value.id > 0;
         public int SmallestCatchSize => _pocketA.Value.id > 0 || _pocketB.Value.id > 0 || _pocketC.Value.id > 0
-            ? 1 : HandsFull ? _fish.cargoSize : 0;
-        public FishActor CarriedFish => HandsFull ? _fish : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
+            ? 1 : HandsFull ? HeavySpecies.cargoSize : 0;
+        public FishActor CarriedFish => HandsFull ? HeavySpecies : FishInSlot(ActiveSlot) ?? FishInSlot(2) ?? FishInSlot(3) ?? FishInSlot(4);
 
         private SyncVar<PocketCatch> Pocket(int slot) => slot switch { 2 => _pocketA, 3 => _pocketB, 4 => _pocketC, _ => null };
 
@@ -135,6 +135,7 @@ namespace Raid
 
         public override void OnStartServer()
         {
+            _harpoonId.Value = NewToolId();
             if (!ServerTools.Contains(this)) ServerTools.Add(this);
             _friendTarget.Value = null; _friendSource.Value = null; _optOutRemaining.Value = 0;
             _impact.Value=default;
@@ -184,6 +185,8 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
+            if (Application.isFocused && !UI.UiInputGate.Blocked && Keyboard.current?.qKey.wasPressedThisFrame == true)
+                RequestDropSelected();
             bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved;
             // A pulled player can always refuse with R while focused, including from a local menu.
             // All firing/reeling/assisting remains behind the shared gameplay-input gate.
@@ -216,7 +219,7 @@ namespace Raid
         private void FireServer()
         {
             if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.HasGoshaBall(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
-            if (tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
+            if (!OwnsHarpoon || HandsFull || tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             // Sample the same pose for PhysX and the network contact even between fixed ticks.
@@ -255,7 +258,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void SetControlsServer(bool reel, bool assist)
         {
-            _reelHeld = reel && !Motor.IsHelpless && ActiveSlot == 0;
+            _reelHeld = reel && OwnsHarpoon && !HandsFull && !Motor.IsHelpless && ActiveSlot == 0;
             _assistHeld = assist && !Motor.IsHelpless && ActiveSlot <= 1;
             _lastControls = Time.unscaledTime;
         }
@@ -309,7 +312,7 @@ namespace Raid
         internal bool QaFireOwned()
         {
             if (!IsClientInitialized || !IsOwner || tuning == null || Motor == null
-                || HasBallLine || QaMenuBlocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
+                || HasBallLine || !OwnsHarpoon || HandsFull || QaMenuBlocked || UI.UiInputGate.PointerReserved || ActiveSlot != 0 || Motor.IsHelpless || AssistTarget != null || _fish != null || TetherActive) return false;
             FireServer(); return true;
         }
 
@@ -330,6 +333,7 @@ namespace Raid
         private void ReleaseAll(bool showDrops = true)
         {
             ReleaseBallLineOnServer();
+            _liftedHeavy.Value = default;
             ReleaseOutgoingFriend();
             ReleaseIncomingFriend();
             DetachGrip();
@@ -341,6 +345,7 @@ namespace Raid
         public bool DropOneCatch()
         {
             if (!IsServerInitialized) return false;
+            if (_liftedHeavy.Value.id > 0) { _liftedHeavy.Value = default; return true; }
             if (HandsFull) { _fish.ReleaseHook(this); return true; }
             return EmptyPocket(FirstOccupiedPocket(), true);
         }
@@ -371,7 +376,7 @@ namespace Raid
         public bool TakeCargo()
         {
             if (!IsServerInitialized) return false;
-            return HandsFull ? _fish.MarkTransported(this) : EmptyPocket(FirstOccupiedPocket(), false);
+            return HandsFull ? RemoveHeavy() : EmptyPocket(FirstOccupiedPocket(), false);
         }
 
         internal bool UnloadCatches(TeamProgress team, ProgressionTuning progression)
@@ -380,10 +385,10 @@ namespace Raid
             bool loaded = false;
             if (HandsFull)
             {
-                var item = _fish.ToCargo(_fish.CargoId);
+                var item = HeavySpecies.ToCargo(HeavyId);
                 if (team.LoadCargo(item, progression))
                 {
-                    loaded = _fish.MarkTransported(this);
+                    loaded = RemoveHeavy();
                     if (!loaded) team.cargo.RemoveAll(entry => entry.id == item.id);
                 }
             }
@@ -443,7 +448,7 @@ namespace Raid
 
         private void TickGrip()
         {
-            if (!_assistHeld || tuning == null || HasBallLine || TetherActive || _fish != null || ActiveSlot > 1
+            if (!_assistHeld || HandsFull || tuning == null || HasBallLine || TetherActive || _fish != null || ActiveSlot > 1
                 || Time.unscaledTime - _lastControls >= tuning.inputTimeout)
             { DetachGrip(); return; }
             var shooter = ToolOf(_assistTarget.Value);

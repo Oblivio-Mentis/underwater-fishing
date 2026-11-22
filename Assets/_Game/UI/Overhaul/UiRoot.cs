@@ -334,6 +334,7 @@ namespace Raid.UI
                     ShowPage(UiPage.Cargo);break;
                 case UiInteraction.PetGosha: Context.World.RequestGosha(GoshaAction.Pet);break;
                 case UiInteraction.PickUpBall: Context.World.RequestGosha(GoshaAction.PickUp);break;
+                case UiInteraction.DroppedItem: Context.Harpoon.RequestPickup(Context.AimedDrop.id);break;
                 case UiInteraction.Loot: Send(WorldAction.Collect); break;
             }
         }

@@ -174,6 +174,10 @@ namespace Raid.UI
                     }
                     else detail=view.cargo.Count>0?UiText.HudHoistReady:UiText.HudCargoEmpty;
                     break;
+                case UiInteraction.DroppedItem:
+                    prompt=context.AimedDrop.kind==DroppedKind.Harpoon && context.Harpoon.OwnsHarpoon
+                        ?"E — Обменять гарпун":"E — Поднять "+context.AimedDrop.Label;
+                    break;
                 case UiInteraction.Loot:
                     bool carryingLoot=false;foreach(var loot in context.Loot)if(loot!=null && loot.CarrierOwnerId==player.OwnerId){carryingLoot=true;break;}
                     prompt=carryingLoot?UiText.HudLootOccupied:UiText.HudLootPrompt;color=carryingLoot?UiTheme.Amber:UiTheme.Text;break;
@@ -196,6 +200,8 @@ namespace Raid.UI
             {
                 prompt="Держите напарника";detail=context.Harpoon.ActiveSlot==1?"Отпустите ЛКМ или E, чтобы разжать захват":"Отпустите E, чтобы разжать захват";color=UiTheme.Green;
             }
+            if (prompt.Length == 0 && context.Harpoon != null && context.Harpoon.SelectedItem(out _) != DroppedKind.None)
+                detail="Q — Положить выбранный предмет";
             var chamber=Nereid.NereidAirlock.Active;
             if(prompt.Length==0 && chamber!=null && chamber.Contains(player.transform.position) && context.World.Airlock.Busy)
             {

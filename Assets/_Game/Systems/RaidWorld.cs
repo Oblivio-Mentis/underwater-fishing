@@ -72,6 +72,7 @@ namespace Raid
         public override void OnStartClient()
         {
             if(Nereid.NereidAirlock.Active!=null)Nereid.NereidAirlock.Active.ApplyDoors(airlock.Value);
+            StartDroppedViews();
             WetCargoShoal.Attach(this);
             snapshot.OnChange+=OnSnapshot;
             OnSnapshot("",snapshot.Value,false);
@@ -82,7 +83,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; }
+        public override void OnStopClient() { StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -104,7 +105,8 @@ namespace Raid
             ApplyLocalTuning();
             if(!UI.UiInputGate.Active && localDiver!=null && interact!=null && interact.WasPressedThisFrame())
             {
-                if(CanUseTerminal)
+                if(TryAimDrop(localDiver, out var item)) localDiver.GetComponent<HarpoonTool>()?.RequestPickup(item.id);
+                else if(CanUseTerminal)
                 { ToggleTerminal(); }
                 else if(Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange)
                     Command(WorldAction.LoadCargo,0);
@@ -151,6 +153,7 @@ namespace Raid
         }
         private void LateUpdate()
         {
+            PresentDrops();
             PresentGosha();
             var state=IsServerInitialized?team:view;
             if(container==null || state==null) return;

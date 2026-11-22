@@ -26,6 +26,7 @@ namespace Raid
             public bool Active, Stowed, Startled, Coordinated, SurgeWarning, Surging;
             public int HookCount;
             public int Holder;
+            public long CaptureId;
         }
 
         private readonly SyncVar<FishSnapshot> _snapshot = new();
@@ -53,7 +54,7 @@ namespace Raid
         public bool Surging => _snapshot.Value.Surging;
         public string SpeciesId => fishId;
         public bool RequiresPartner => cargoSize > 1;
-        public long CargoId => _cargoId;
+        public long CargoId => IsServerInitialized ? _cargoId : _snapshot.Value.CaptureId;
         public CatchItem ToCargo(long id) => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier, species: SpeciesId);
         public bool IsStowed => _snapshot.Value.Stowed;
         public bool IsHeldByLocalPlayer => Mode == FishMode.Captured && IsClientInitialized
@@ -179,6 +180,7 @@ namespace Raid
             {
                 // The collecting diver is chosen by the server when its own line reaches its hands.
                 _carrier = landingTool;
+                state.CaptureId = _cargoId;
                 state.Holder = _carrier != null ? _carrier.OwnerId : -1;
                 state.Stowed = _carrier != null && _carrier.StowCapture(this);
                 foreach (var line in lines)

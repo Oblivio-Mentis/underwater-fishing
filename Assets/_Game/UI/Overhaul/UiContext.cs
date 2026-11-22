@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 namespace Raid.UI
 {
-    public enum UiInteraction { None, Rescue, Terminal, Cargo, Loot, Assist, Fish, PetGosha, PickUpBall }
+    public enum UiInteraction { None, Rescue, Terminal, Cargo, Loot, Assist, Fish, PetGosha, PickUpBall, DroppedItem }
     // Reads spawned client state; never mutates TeamProgress or server SyncVars.
     public sealed class UiContext
     {
@@ -31,6 +31,7 @@ namespace Raid.UI
         public HarpoonTool AssistTarget {get;private set;}
         public LootActor AimedLoot {get;private set;}
         public FishActor AimedFish {get;private set;}
+        public DroppedItem AimedDrop {get;private set;}
         public UiInteraction Interaction {get;private set;}
         float nextRoster;
         public void Refresh()
@@ -49,6 +50,7 @@ namespace Raid.UI
             foreach(var other in Players)if(other!=Player && other.CanBeRescued)
             {float d=Vector3.Distance(Player.transform.position,other.transform.position);if(d<range){range=d;RescueTarget=other;}}
             if(RescueTarget!=null && !Player.IsHelpless){Interaction=UiInteraction.Rescue;return;}
+            if(World!=null && World.TryAimDrop(Player,out var drop)){AimedDrop=drop;Interaction=UiInteraction.DroppedItem;return;}
             var petUse=World?.GoshaContext(Player,Player.transform.position+Vector3.up*.6f,Player.transform.forward);
             if(petUse.HasValue){Interaction=petUse==GoshaAction.Pet?UiInteraction.PetGosha:UiInteraction.PickUpBall;return;}
             AimedConsole=ShipConsole.ResolveSight(Player,Player.GetComponentInChildren<Camera>());
