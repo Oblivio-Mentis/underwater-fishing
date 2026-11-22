@@ -201,7 +201,7 @@ namespace Raid.UI
                 prompt="Держите напарника";detail=context.Harpoon.ActiveSlot==1?"Отпустите ЛКМ или E, чтобы разжать захват":"Отпустите E, чтобы разжать захват";color=UiTheme.Green;
             }
             if (prompt.Length == 0 && context.Harpoon != null && context.Harpoon.SelectedItem(out _) != DroppedKind.None)
-                detail="Q — Положить выбранный предмет";
+                prompt="Q — Положить выбранный предмет";
             var chamber=Nereid.NereidAirlock.Active;
             if(prompt.Length==0 && chamber!=null && chamber.Contains(player.transform.position) && context.World.Airlock.Busy)
             {

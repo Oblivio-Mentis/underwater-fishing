@@ -60,6 +60,8 @@ namespace Raid
             if (diver == null || dropped.Count == 0 || !diver.TryGetComponent<HarpoonTool>(out var tool)) return false;
             var eye = diver.transform.position + Vector3.up * .6f;
             var aim = diver.AimDirection;
+            if (!IsServerInitialized && diver.IsOwner && diver.GetComponentInChildren<Camera>() is Camera camera)
+                aim = camera.transform.forward;
             float best = float.PositiveInfinity;
             foreach (var candidate in dropped)
             {
