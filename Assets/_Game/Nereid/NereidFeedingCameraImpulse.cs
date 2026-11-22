@@ -16,6 +16,7 @@ namespace Raid.Nereid
         Vector3 basePosition,lastAppliedPosition,origin;
         Quaternion baseRotation,lastAppliedRotation;
         bool applied;
+        float fishingOffset;
         float swallowAt=-10,releaseAt=-10,chargeUntil=-10,chargeDuration=.44f,severity=1;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         float backgroundQaUntil;
@@ -47,7 +48,7 @@ namespace Raid.Nereid
             focused|=Time.unscaledTime<backgroundQaUntil;
 #endif
             bool permitted=valid&&ownedCamera!=null&&focused&&ui.Page==UI.UiPage.None&&!UI.UiInputGate.Modal&&!player.IsHelpless;
-            if(!permitted){Restore();return;}
+            if(!permitted){fishingOffset=0;Restore();return;}
             var cameraTransform=ownedCamera.transform;
             // The motor rewrites rotation every frame; only remove our last pose if it is still present.
             if(applied)
@@ -66,9 +67,13 @@ namespace Raid.Nereid
             float charge=chargeUntil>Time.time?1-(chargeUntil-Time.time)/chargeDuration:0;
             float distance=Mathf.Clamp01(1-Vector3.Distance(cameraTransform.position,origin)/36);
             float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance;
-            if(amplitude<.00001f)return;
+            var tool=ui.Context.Harpoon;
+            var fish=tool?.HookedFish;
+            float pull=fish!=null && fish.HookCount>0 ? (tool.LineTension*.009f+(fish.Surging?.016f:0))*ui.Settings.fishingCamera : 0;
+            fishingOffset=Mathf.Lerp(fishingOffset,pull,1-Mathf.Exp(-Time.unscaledDeltaTime*9));
+            if(amplitude<.00001f && fishingOffset<.0001f)return;
             float t=Time.time;Vector3 noise=new Vector3(Mathf.Sin(t*47)+.35f*Mathf.Sin(t*79+.3f),Mathf.Sin(t*61+.7f)+.3f*Mathf.Sin(t*97),Mathf.Sin(t*37)*.35f)/1.35f;
-            CurrentOffset=noise*amplitude;
+            CurrentOffset=noise*amplitude + baseRotation * Vector3.back * fishingOffset;
             Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*amplitude*17;
             cameraTransform.localPosition=basePosition+CurrentOffset;cameraTransform.localRotation=baseRotation*Quaternion.Euler(angles);
             lastAppliedPosition=cameraTransform.localPosition;lastAppliedRotation=cameraTransform.localRotation;applied=true;AppliedThisFrame=true;AppliedOwnerId=player.OwnerId;

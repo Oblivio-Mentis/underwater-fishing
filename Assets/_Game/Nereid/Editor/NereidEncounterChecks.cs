@@ -184,9 +184,10 @@ namespace Raid.Nereid.Editor
             foreach(var fish in catches)
             {
                 fish.SetDepthActive(true);
-                if(!fish.TryHook(tool))throw new InvalidOperationException("Fixture fish could not attach to the server tool.");
+                // This encounter fixture stages cargo directly; fishing is exercised by the two-peer trial.
                 Field(tool,"_fish").SetValue(tool,fish);
-                fish.EnterState(FishMode.Captured);
+                var stow=typeof(HarpoonTool).GetMethod("StowCapture",Private);
+                if(!(bool)stow.Invoke(tool,new object[]{fish}))throw new InvalidOperationException("Fixture pocket refused catch.");
             }
             if(!tool.HasFullCreel)throw new InvalidOperationException("Fish did not occupy three real inventory slots.");
         }

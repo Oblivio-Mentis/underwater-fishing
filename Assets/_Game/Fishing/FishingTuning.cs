@@ -22,8 +22,14 @@ namespace Raid
         public float tensionRelease = 0.5f;
         public float reelSpeed = 2.5f;
         public float escapeSpeed = 0.8f;
-        public float tugSpeed = 0.7f;
-        public float captureRange = 2.2f;
+        public float tugSpeed = 3.5f;
+        [Min(.1f)] public float tugAcceleration = 12f, maxTugSpeed = 4.5f;
+        [Min(.05f)] public float warningSeconds = .55f, minimumWindingSeconds = .4f;
+        [Min(.02f)] public float slackAllowance = .18f;
+        [Range(-1, 1)] public float pullDirectionDot = .35f;
+        [Range(0,12)] public float fightFov = 7f;
+        [Range(0,3)] public float burstFov = 2f;
+        public float captureRange = .72f;
         public float assistRange = 3f;
         public float assistBonus = 0.4f;
         public float obstructionGrace = 1.5f;

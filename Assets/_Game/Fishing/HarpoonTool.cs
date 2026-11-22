@@ -43,6 +43,21 @@ namespace Raid
         private float _friendObstructed, _friendLastPull, _friendRefuseUntil, _friendExpiresAt;
         private bool _ownsFriendTuning;
 
+        public struct LineReadout { public float length, tension; }
+        readonly SyncVar<LineReadout> _lineReadout = new();
+        public float LineLength => _lineReadout.Value.length;
+        public float LineTension => _lineReadout.Value.tension;
+        internal Vector3 HandAnchor => transform.position + Vector3.up * .6f
+            + transform.right * .16f + Motor.AimDirection * .32f;
+        internal void UpdateFishingLine(float length, float load) =>
+            _lineReadout.Value = new LineReadout { length = length, tension = load };
+        internal void FinishFishingLine()
+        {
+            _impact.Value = default;
+            _lineReadout.Value = default;
+            _reelingActive.Value = false;
+        }
+
         public DiverMotor Motor { get; private set; }
         public FishActor HookedFish => _fish;
         public int ActiveSlot => _slot.Value;
@@ -77,12 +92,14 @@ namespace Raid
         }
 
         private bool CanSelect(int slot) => slot >= 0 && slot < 5 && !Motor.IsHelpless && !HandsFull
-            && !TetherActive && _fish == null && AssistTarget == null;
+            && !TetherActive && AssistTarget == null;
 
         [ServerRpc(RequireOwnership = true)]
         private void SelectSlotServer(int slot)
         {
-            if (CanSelect(slot)) _slot.Value = slot;
+            if (!CanSelect(slot) || slot == ActiveSlot) return;
+            if (_fish != null) _fish.ReleaseHook(this);
+            _slot.Value = slot;
         }
         public bool OwnsFriendTether => _friendTarget.Value != null;
         public bool IsPulled => _friendSource.Value != null;
@@ -207,12 +224,17 @@ namespace Raid
                 if(TryHookFriend(friend.GetComponent<HarpoonTool>()))
                     contact=HarpoonContact.FromHit(friend.NetworkObject,friend.transform,false,hit,Motor.AimDirection);
             }
-            else if(fish!=null && (fish.RequiresPartner || !HasFullCreel) && fish.TryHook(this))
+            else if(fish!=null && (fish.RequiresPartner || !HasFullCreel))
             {
-                _fish=fish;
-                _fishObject.Value=fish.NetworkObject;
-                bool tail=hit.collider.transform==fish.ImpactSurface(true) && fish.ImpactSurface(true)!=fish.ImpactSurface(false);
-                contact=HarpoonContact.FromHit(fish.NetworkObject,fish.ImpactSurface(tail),tail,hit,Motor.AimDirection);
+                bool tail = hit.collider.transform == fish.ImpactSurface(true)
+                    && fish.ImpactSurface(true) != fish.ImpactSurface(false);
+                var candidate = HarpoonContact.FromHit(fish.NetworkObject,fish.ImpactSurface(tail),tail,hit,Motor.AimDirection);
+                if (fish.TryHook(this, candidate))
+                {
+                    _fish = fish;
+                    _fishObject.Value = fish.NetworkObject;
+                    contact = candidate;
+                }
             }
             else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier,hit);
             if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
@@ -370,7 +392,7 @@ namespace Raid
                 pocket.Value = new PocketCatch { species = fish.NetworkObject, id = fish.CargoId };
                 _fish = null;
                 _fishObject.Value = null;
-                _impact.Value = default;
+                FinishFishingLine();
                 return true;
             }
             return false;
@@ -383,7 +405,7 @@ namespace Raid
             {
                 _fish = null;
                 _fishObject.Value = null;
-                _impact.Value = default;
+                FinishFishingLine();
                 ToolOf(_assistant.Value)?.DetachGrip();
             }
         }

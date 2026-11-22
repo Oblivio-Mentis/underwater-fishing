@@ -181,6 +181,8 @@ namespace Raid.UI
                     {
                         if(context.AimedFish.Mode==FishMode.Roam)prompt=context.Harpoon.ActiveSlot!=0?"1 — выбрать гарпун":context.AimedFish.RequiresPartner?"ЛКМ — зацепить · нужны двое":UiText.HudFishPrompt;
                         else if(context.Harpoon!=null && context.Harpoon.HookedFish==context.AimedFish)prompt=UiText.HudReelPrompt;
+                        else if(context.AimedFish.RequiresPartner && context.AimedFish.Mode >= FishMode.Hooked && context.AimedFish.Mode <= FishMode.Tired)
+                            prompt="ЛКМ — поставить второй гарпун";
                         else {prompt=UiText.HudFishOccupied;color=UiTheme.Muted;}
                     }
                     break;

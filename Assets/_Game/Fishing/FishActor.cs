@@ -23,15 +23,16 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public float Tension, Stamina;
-            public bool Active, Stowed, Startled;
+            public bool Active, Stowed, Startled, Coordinated, SurgeWarning, Surging;
+            public int HookCount;
             public int Holder;
         }
 
         private readonly SyncVar<FishSnapshot> _snapshot = new();
         private IUniversalFsmRuntimeHandle _runtime;
-        private HarpoonTool _hooker;
+        private HarpoonTool _carrier;
         private Vector3 _origin;
-        private float _elapsed, _clock, _obstructed;
+        private float _elapsed, _clock;
         private Renderer[] _renderers;
         private GameObject _model;
         private Collider[] _colliders;
@@ -45,7 +46,11 @@ namespace Raid
         public float Tension => _snapshot.Value.Tension;
         public float Stamina => _snapshot.Value.Stamina;
         public FishMode DesiredState { get; private set; } = FishMode.Roam;
-        public HarpoonTool Hooker => _hooker;
+        public HarpoonTool Hooker => _carrier != null ? _carrier : lines.Count > 0 ? lines[0].Tool : null;
+        public int HookCount => _snapshot.Value.HookCount;
+        public bool Coordinated => _snapshot.Value.Coordinated;
+        public bool SurgeWarning => _snapshot.Value.SurgeWarning;
+        public bool Surging => _snapshot.Value.Surging;
         public string SpeciesId => fishId;
         public bool RequiresPartner => cargoSize > 1;
         public long CargoId => _cargoId;
@@ -117,8 +122,7 @@ namespace Raid
         {
             ServerSchool.Remove(this);
             arrivalPending=false;
-            if (_hooker != null) _hooker.NotifyFishLost(this);
-            _hooker = null;
+            ClearFishing();
             _runtime?.Dispose();
             _runtime = null;
         }
@@ -129,33 +133,11 @@ namespace Raid
             foreach (var body in _renderers) body.enabled = false;
         }
 
-        public bool TryHook(HarpoonTool tool)
-        {
-            if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || _hooker != null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt) return false;
-            _hooker = tool;
-            DesiredState = FishMode.Hooked;
-            var state = _snapshot.Value;
-            state.Stamina = Mathf.Max(1f, tuning.initialStamina * power);
-            state.Tension = 0.1f;
-            _snapshot.Value = state;
-            return true;
-        }
-
-        public void ReleaseHook(HarpoonTool tool)
-        {
-            if (!IsServerInitialized || tool != _hooker || DesiredState == FishMode.Transported) return;
-            FleeFromLine(tool);
-            _hooker = null;
-            tool.NotifyFishLost(this);
-            // A quick release can arrive before the FSM consumes the hook request.
-            DesiredState = Mode == FishMode.Captured || Mode == FishMode.Roam ? FishMode.Roam : FishMode.Escaped;
-        }
-
         public bool MarkTransported(HarpoonTool tool)
         {
-            if (!IsServerInitialized || tool == null || tool != _hooker || Mode != FishMode.Captured || DesiredState != FishMode.Captured) return false;
+            if (!IsServerInitialized || tool == null || tool != _carrier || Mode != FishMode.Captured || DesiredState != FishMode.Captured) return false;
             DesiredState = FishMode.Transported;
-            _hooker = null;
+            _carrier = null;
             tool.NotifyFishLost(this);
             return true;
         }
@@ -163,7 +145,7 @@ namespace Raid
         public void SetDepthActive(bool active)
         {
             if (!IsServerInitialized) return;
-            if (_hooker != null) ReleaseHook(_hooker);
+            ClearFishing();
             arrivalPending=false;
             fleeRemaining=0;
             hookAvailableAt=avoidUntil=0;
@@ -179,6 +161,8 @@ namespace Raid
             state.Stowed = false;
             state.Holder = -1;
             state.Mode = FishMode.Roam;
+            state.HookCount = 0;
+            state.Coordinated = state.SurgeWarning = state.Surging = false;
             state.Tension = state.Stamina = 0f;
             if (active) RenewCargoId();
             _snapshot.Value = state;
@@ -188,24 +172,38 @@ namespace Raid
         public void EnterState(FishMode mode)
         {
             _elapsed = 0f;
-            _obstructed = 0f;
             DesiredState = mode;
             var state = _snapshot.Value;
             state.Mode = mode;
-            state.Stowed = mode == FishMode.Captured && _hooker != null && _hooker.StowCapture(this);
-            state.Holder = mode == FishMode.Captured && _hooker != null ? _hooker.OwnerId : -1;
-            if (state.Stowed) _hooker = null;
+            if (mode == FishMode.Captured)
+            {
+                // The collecting diver is chosen by the server when its own line reaches its hands.
+                _carrier = landingTool;
+                state.Holder = _carrier != null ? _carrier.OwnerId : -1;
+                state.Stowed = _carrier != null && _carrier.StowCapture(this);
+                foreach (var line in lines)
+                {
+                    if (line.Tool != _carrier || state.Stowed) line.Tool.NotifyFishLost(this);
+                    else line.Tool.FinishFishingLine();
+                }
+                if (state.Stowed) _carrier = null;
+                lines.Clear();
+                landingTool = null;
+                state.HookCount = 0;
+                state.Coordinated = state.SurgeWarning = state.Surging = false;
+            }
+            else { state.Stowed = false; state.Holder = -1; }
             if (mode != FishMode.Roam && mode != FishMode.Escaped) {state.Startled=false;fleeRemaining=0;}
             if (mode == FishMode.Roam)
             {
                 state.Tension = 0f;
                 state.Stamina = 0f;
             }
-            if (mode == FishMode.Escaped && _hooker != null)
+            if (mode == FishMode.Escaped)
             {
-                FleeFromLine(_hooker);
-                _hooker.NotifyFishLost(this);
-                _hooker = null;
+                ClearFishing();
+                state.HookCount = 0;
+                state.Coordinated = state.SurgeWarning = state.Surging = false;
             }
             if (mode == FishMode.Transported || mode == FishMode.Captured) foreach (var fishCollider in _colliders) fishCollider.enabled = false;
             if (mode == FishMode.Roam) foreach (var fishCollider in _colliders) fishCollider.enabled = _depthActive;
@@ -246,7 +244,7 @@ namespace Raid
                     MoveTowards(patrol, tuning.roamSpeed * dt);
                     break;
                 case FishMode.Hooked:
-                    if (_hooker == null) DesiredState = FishMode.Escaped;
+                    if (lines.Count == 0) DesiredState = FishMode.Escaped;
                     else if (_elapsed >= tuning.hookSettleSeconds) DesiredState = FishMode.Struggling;
                     break;
                 case FishMode.Struggling:
@@ -255,11 +253,11 @@ namespace Raid
                     break;
                 case FishMode.Captured:
                     if (state.Stowed) DesiredState = FishMode.Transported;
-                    else if (_hooker == null) DesiredState = FishMode.Roam;
+                    else if (_carrier == null) DesiredState = FishMode.Roam;
                     else
                     {
-                        transform.position = _hooker.transform.TransformPoint(new Vector3(0, .05f, .7f));
-                        transform.rotation = _hooker.transform.rotation * Quaternion.Euler(0, 90, 0);
+                        transform.position = _carrier.transform.TransformPoint(new Vector3(0, .05f, .7f));
+                        transform.rotation = _carrier.transform.rotation * Quaternion.Euler(0, 90, 0);
                     }
                     break;
                 case FishMode.Escaped:
@@ -278,50 +276,6 @@ namespace Raid
             state.Position = transform.position;
             state.Rotation = transform.rotation;
             _snapshot.Value = state;
-        }
-
-        private void SimulateLine(ref FishSnapshot state, bool tired, float dt)
-        {
-            if (_hooker == null) { DesiredState = FishMode.Escaped; return; }
-            Vector3 anchor = _hooker.transform.position + Vector3.up * 0.6f;
-            Vector3 offset = transform.position - anchor;
-            float distance = offset.magnitude;
-            if (distance > tuning.maxRange) { DesiredState = FishMode.Escaped; return; }
-            if (Physics.Raycast(anchor, offset.normalized, out var hit, distance, tuning.hitMask, QueryTriggerInteraction.Ignore)
-                && hit.collider.GetComponentInParent<FishActor>() != this)
-                _obstructed += dt;
-            else _obstructed = 0f;
-            if (_obstructed > tuning.obstructionGrace) { DesiredState = FishMode.Escaped; return; }
-
-            bool assisted = _hooker.IsAssisted;
-            bool hasPull = !RequiresPartner || assisted;
-            float cooperation = assisted ? 1f + tuning.assistBonus : 1f;
-            float reel = Mathf.Clamp(_hooker.ReelMultiplier, 0.1f, 10f);
-            bool burst = !tired && Mathf.Repeat(_elapsed, Mathf.Max(0.1f, tuning.burstPeriod)) < tuning.burstDuration;
-            if (_hooker.Reeling && hasPull)
-            {
-                state.Tension += tuning.tensionRise * power * (burst ? tuning.burstTensionMultiplier : 1f) / (cooperation * reel) * dt;
-                state.Stamina = Mathf.Max(0f, state.Stamina - tuning.exhaustionRate * reel * cooperation * (burst ? 0.25f : 1f) * dt);
-                MoveTowards(anchor, tuning.reelSpeed * reel * cooperation * (burst ? 0.2f : 1f) * dt);
-            }
-            else
-            {
-                state.Tension -= tuning.tensionRelease * dt;
-                if (!tired)
-                {
-                    state.Stamina = Mathf.Min(tuning.initialStamina * power, state.Stamina + tuning.staminaRecovery * dt);
-                    Vector3 escape = offset.normalized + Vector3.down * (burst ? 0.5f : 0f);
-                    transform.position += escape.normalized * tuning.escapeSpeed * power * dt;
-                }
-            }
-            state.Tension = Mathf.Max(0f, state.Tension);
-            if (state.Tension >= 1f) { DesiredState = FishMode.Escaped; return; }
-            if (!tired)
-            {
-                _hooker.Motor.ApplyExternalMotion(offset.normalized * tuning.tugSpeed * power * (burst ? 1f : 0.1f) / cooperation * dt);
-                if (state.Stamina <= 0f) DesiredState = FishMode.Tired;
-            }
-            else if (hasPull && _hooker.Reeling && distance <= tuning.captureRange) DesiredState = FishMode.Captured;
         }
 
         private void MoveTowards(Vector3 target, float distance)

@@ -119,6 +119,14 @@ MonoBehaviour:
       tag_ids: []
       editor_position: {x: 3840, y: 0}
       mirror_of_id: 1
+    - id: 106
+      name: Captured (landed)
+      state_type_name: Raid.FishCapturedState, Assembly-CSharp, Version=0.0.0.0,
+        Culture=neutral, PublicKeyToken=null
+      layer_id: Default
+      tag_ids: []
+      editor_position: {x: 1920, y: -216}
+      mirror_of_id: 5
     condition_nodes:
     - node_uid: fish-1-2
       node_kind: 0
@@ -147,6 +155,20 @@ MonoBehaviour:
       timer_start_mode: 1
       timer_source_state_ids: 
       editor_position: {x: 960, y: 0}
+      has_editor_position: 1
+    - node_uid: fish-3-5
+      node_kind: 0
+      condition_id: 250
+      op: 0
+      variable_id: DesiredState
+      compare: 2
+      compare_value_source: 0
+      compare_value: 5
+      compare_variable_id: 
+      timer_duration_variable_id: 
+      timer_start_mode: 1
+      timer_source_state_ids: 
+      editor_position: {x: 1600, y: -216}
       has_editor_position: 1
     - node_uid: fish-3-4
       node_kind: 0
@@ -318,6 +340,30 @@ MonoBehaviour:
       from_exit: 0
       to_kind: 0
       to_state_id: 3
+      to_condition_uid: 
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-5-input
+      from_kind: 0
+      from_state_id: 3
+      from_condition_uid: 
+      from_exit: 0
+      to_kind: 1
+      to_state_id: -1
+      to_condition_uid: fish-3-5
+      priority: 0
+      stack_op: 1
+      consumes_buffer: 0
+      buffer_action_id: 0
+    - edge_uid: fish-3-5-output
+      from_kind: 1
+      from_state_id: -1
+      from_condition_uid: fish-3-5
+      from_exit: 0
+      to_kind: 0
+      to_state_id: 106
       to_condition_uid: 
       priority: 0
       stack_op: 1

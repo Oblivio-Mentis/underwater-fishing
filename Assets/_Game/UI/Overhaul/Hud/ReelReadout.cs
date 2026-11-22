@@ -66,7 +66,7 @@ namespace Raid.UI
             bool active=!ctx.Player.IsDead && fish!=null && fish.Mode>=FishMode.Hooked && fish.Mode<=FishMode.Tired;
             root.gameObject.SetActive(active);
             if(!active)return;
-            float t=Mathf.Clamp01(fish.Tension);
+            float t=Mathf.Clamp01(tool.LineTension);
             float energy=Mathf.Clamp01(fish.Stamina/Mathf.Max(.01f,fish.tuning.initialStamina*fish.power));
             SetTick(needle,t,new Vector2(4,18));
             for(int i=0;i<ticks.Length;i++)
@@ -77,9 +77,14 @@ namespace Raid.UI
             UiKit.Set(load,Mathf.RoundToInt(t*100)+"%");load.color=Signal(t);
             UiKit.Set(species,Species(fish.SpeciesId));
             UiKit.Set(range,Vector3.Distance(tool.transform.position,fish.transform.position).ToString("0.0")+" м");
-            UiKit.Set(strength,"Силы рыбы   "+Mathf.RoundToInt(energy*100)+"%");
+            UiKit.Set(strength, $"Гарпуны {fish.HookCount}/{(fish.RequiresPartner ? 2 : 1)}  ·  Силы {Mathf.RoundToInt(energy*100)}%");
             UiKit.Fraction(stamina,energy);
-            string action=helping?(ctx.Harpoon.ActiveSlot==1?"Отпустите ЛКМ или E, чтобы разжать захват":"Отпустите E, чтобы разжать захват"):fish.RequiresPartner&&!tool.IsAssisted?"Нужен захват напарника":t>=.82f?"Отпустите ЛКМ — обрыв близко":t>=.6f?"Ослабьте натяжение":"ЛКМ — тянуть"+(tool.IsAssisted?" вместе":"");
+            string action = fish.Surging ? "Рывок!" : fish.SurgeWarning ? "Готовьтесь к рывку"
+                : t >= .82f ? "Ослабьте леску!"
+                : fish.RequiresPartner && fish.HookCount < 2 ? "Нужно два гарпуна"
+                : fish.RequiresPartner && !fish.Coordinated ? "Тяните в одну сторону"
+                : fish.Mode == FishMode.Tired ? "Рыба устала · ЛКМ — тянуть"
+                : fish.Coordinated ? "Тянете вместе" : "ЛКМ — сматывать";
             UiKit.Set(instruction,action);instruction.color=t>=.6f?Signal(t):UiTheme.Text;
         }
     }

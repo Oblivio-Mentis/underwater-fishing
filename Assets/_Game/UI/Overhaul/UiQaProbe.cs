@@ -46,6 +46,7 @@ namespace Raid.UI
             public int harpoonShots;
             public bool harpoonAttached,harpoonSawFlight,harpoonSawAttach,harpoonSawRetract;
             public float harpoonShotAge,harpoonSpool,harpoonTipX,harpoonTipY,harpoonTipZ,harpoonEndX,harpoonEndY,harpoonEndZ;
+            public int[] activeBoltOwners;
             public int anchorOwner=-1, anchorShot, anchorFrames;
             public float anchorTravel, anchorTipError, anchorKnotError;
             public Control[] controls;
@@ -381,6 +382,9 @@ namespace Raid.UI
                 .Where(fx=>fx.VerifiedFrames>0 && fx.ShotAge<90)
                 .OrderByDescending(fx=>fx.Phase==HarpoonShotFx.CablePhase.Attached)
                 .ThenBy(fx=>fx.ShotAge).FirstOrDefault();
+            snapshot.activeBoltOwners=FindObjectsByType<HarpoonShotFx>().Where(fx=>
+                fx.HasConfirmedAttachment && fx.Phase==HarpoonShotFx.CablePhase.Attached)
+                .Select(fx=>fx.VerifiedOwner).Distinct().ToArray();
             if(measured!=null)
             {
                 snapshot.anchorOwner=measured.VerifiedOwner;snapshot.anchorShot=measured.VerifiedShot;

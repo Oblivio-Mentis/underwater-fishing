@@ -29,8 +29,16 @@ MonoBehaviour:
   tensionRelease: 0.5
   reelSpeed: 2.5
   escapeSpeed: 0.8
-  tugSpeed: 0.7
-  captureRange: 2.2
+  tugSpeed: 3.5
+  tugAcceleration: 12
+  maxTugSpeed: 4.5
+  warningSeconds: 0.55
+  minimumWindingSeconds: 0.4
+  slackAllowance: 0.18
+  pullDirectionDot: 0.35
+  fightFov: 7
+  burstFov: 2
+  captureRange: 0.72
   assistRange: 3
   assistBonus: 0.4
   obstructionGrace: 1.5

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,9 +24,22 @@ namespace Raid
         private string clientDir, reportPath;
         private RaidWorld world;
         private HarpoonTool host, helper;
-        private float nextGrip;
-        private bool refreshGrip;
+        private float nextRemoteReel;
+        private bool remoteReeling;
         private ThreatDirector pausedThreats;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void StartFromCommandLine()
+        {
+            var args = Environment.GetCommandLineArgs();
+            int peer = Array.IndexOf(args, "-raid-fishing-peer"), report = Array.IndexOf(args, "-raid-fishing-report");
+            if (peer < 0 || report < 0 || peer+1 >= args.Length || report+1 >= args.Length) return;
+            var trial = new GameObject("Two-peer fishing verification").AddComponent<FishingTrial>();
+            trial.clientDir = Path.GetFullPath(args[peer+1]);
+            trial.reportPath = Path.GetFullPath(args[report+1]);
+            Directory.CreateDirectory(Path.GetDirectoryName(trial.reportPath));
+            trial.StartCoroutine(trial.Verify());
+        }
 
         public static void Begin(string remoteProbeDirectory, string resultPath)
         {
@@ -68,7 +81,7 @@ namespace Raid
             if (host != null) host.QaHoldOwned(false, 0);
             if (helper != null)
             {
-                try { Send("fish_grip", 0); } catch (IOException) { }
+                try { Send("fish_reel", 0); } catch (IOException) { }
             }
             RestoreThreats();
             Write();
@@ -79,6 +92,9 @@ namespace Raid
         private IEnumerator Run()
         {
             Phase("Connect host and independent client");
+            yield return Wait(() => RaidWorld.Instance != null && RaidWorld.Instance.IsServerInitialized
+                && DiverMotor.ServerDivers.Count(d=>d!=null && d.IsServerInitialized)==2 && !UiInputGate.Blocked
+                && File.Exists(Path.Combine(clientDir,"state.json")),120,"Two independent connected peers did not arrive.");
             world = RaidWorld.Instance;
             Require(world != null && world.IsServerInitialized && world.IsClientInitialized, "Editor must be a network host.");
             var crew = DiverMotor.ServerDivers.Where(d => d != null && d.IsServerInitialized).ToArray();
@@ -131,6 +147,17 @@ namespace Raid
                 var fish = Fish(species);
                 yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "School did not repopulate " + species + " while the first catch was stowed.");
                 yield return Hook(fish);
+                if(host.CatchCount==0)
+                {
+                    var stand=host.transform.position;
+                    float length=host.LineLength;
+                    host.Motor.Teleport(fish.transform.position-host.Motor.AimDirection*.5f-Vector3.up*.6f);
+                    yield return Pause(.65f);
+                    Require(host.CatchCount==0 && host.HookedFish==fish && host.LineLength>=length-.01f,
+                        "Swimming to the impact wound the spool or delivered cargo.");
+                    host.Motor.Teleport(stand);
+                    Check("Approach with a slack line and no reel did not wind or collect the fish.");
+                }
                 yield return Reel(fish);
                 Require(!host.HandsFull && host.HookedFish == null && host.CarriedFish != null,
                     "Small catch was not transferred independently of the harpoon.");
@@ -148,38 +175,84 @@ namespace Raid
             yield return Wait(() => host.ActiveSlot == 0, 3, "Could not return to the harpoon.");
             Check("Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.");
 
+            var camera = host.Motor.GetComponentInChildren<Camera>();
+            float pref = UiRoot.Instance.Settings.fishingCamera;
             Phase("Heavy solo attempt");
             yield return RefillOnDeck();
             var heavy = Fish("Bristlefish");
             yield return Wait(()=>heavy.InHabitat && heavy.Mode==FishMode.Roam,65,"Heavy school did not arrive.");
             yield return Hook(heavy);
             yield return Wait(() => heavy.Mode == FishMode.Struggling, 4, "Heavy fish did not enter its struggle.");
+            var ui=UiRoot.Instance;
+            ui.Settings.fishingCamera=1;
+            yield return Wait(()=>camera.fieldOfView>ui.Settings.fov+4,3,"Owned camera did not widen after the confirmed hit.");
+            ui.Settings.fishingCamera=0;
+            yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.3f,3,"Disabling fishing camera did not restore the configured FOV.");
+            ui.Settings.fishingCamera=pref;
+            Check("Confirmed hook widened the owned camera; zero intensity restored base FOV.");
+            var beforeTug = host.transform.position;
             float initial = heavy.Stamina;
-            Require(host.QaHoldOwned(false, 2), "Host could not hold reel.");
-            yield return Pause(1.5f);
-            Require(!host.IsAssisted && host.HookedFish == heavy && heavy.Mode == FishMode.Struggling &&
-                Mathf.Abs(heavy.Stamina - initial) < .025f, "Unassisted reeling reduced heavy stamina or changed state.");
-            host.QaHoldOwned(false, 0);
-            Check("Heavy fish resisted a sustained solo reel at stamina " + initial.ToString("F2") + ".");
+            Require(host.QaHoldOwned(false, 6), "Host could not hold reel.");
+            yield return Wait(()=>heavy.Surging,6,"No solo surge.");
+            yield return Shot("catch-solo-surge.png");
+            yield return Wait(()=>Vector3.Distance(beforeTug,host.transform.position)>.45f,3,"Solo surge did not move the diver.");
+            Require(host.HookedFish==heavy && heavy.HookCount==1 && host.CatchCount==3 && heavy.Stamina>=initial-.05f,
+                "One harpoon progressed to a heavy catch.");
+            host.QaHoldOwned(false,0);
+            Check("Solo surge displaced the shooter "+Vector3.Distance(beforeTug,host.transform.position).ToString("F2")+" m.");
 
-            Phase("Remote diver grips shooter");
-            helper.Motor.Teleport(host.transform.position - host.Motor.AimDirection*1.45f);
-            Physics.SyncTransforms();
-            Send("fish_grip", 15);
-            nextGrip = Time.unscaledTime + 5;
-            refreshGrip = true;
-            yield return Wait(() => host.AssistingDiver == helper.Motor && helper.AssistTarget == host.Motor &&
-                ReadClient()?.assistedOwner == host.OwnerId, 8, "No mutually observed physical grip.");
-            Check("Remote controls initiated grip; both peers observed the same shooter.");
-            Phase("Cooperative pull and heavy carry");
-            yield return Reel(heavy);
-            refreshGrip = false;
-            Require(!host.Motor.IsDead && host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4,
-                $"Heavy carry mismatch: health {host.Motor.Health:F1}, O2 {host.Motor.Oxygen:F1}, mode {heavy.Mode}, hands {host.HandsFull}, catches {host.CatchCount}.");
-            string releaseGrip=Send("fish_grip",0);
-            yield return Wait(() => {var peer=ReadClient();return peer?.request==releaseGrip && peer.assistedOwner<0 && !host.IsAssisted;},
-                12,"The independent helper did not return to its free-hand state after capture.");
+            Phase("Two independent impacts");
+            var peerAim=helper.Motor.AimDirection;
+            // Place the second diver on its current replicated sightline until the independent owner's shot arrives.
+            Send("fire",0);
+            float timeout=Time.unscaledTime+4;
+            while(helper.HookedFish!=heavy)
+            {
+                Require(Time.unscaledTime<timeout,"Second owner's harpoon missed: "+ReadClient()?.error);
+                helper.Motor.Teleport(heavy.transform.position-peerAim*2.7f-Vector3.up*.6f);
+                Physics.SyncTransforms();
+                yield return null;
+            }
+            yield return Wait(()=>ReadClient()?.activeBoltOwners?.Distinct().Count()==2,6,"Independent view did not render both attachments.");
+            // Opposed handles stay loaded and aim away from one another.
+            var axis=(host.HandAnchor-heavy.transform.position).normalized;
+            helper.Motor.Teleport(heavy.transform.position-axis*5f-Vector3.up*.6f);
+            host.QaHoldOwned(false,1.5f);
+            Send("fish_reel",1.5f);
+            float startEnergy=heavy.Stamina;
+            yield return Pause(.85f);
+            Require(heavy.HookCount==2 && !heavy.Coordinated && heavy.Stamina>=startEnergy-.05f,
+                "Opposed reels advanced the catch.");
+            host.QaHoldOwned(false,0);
+            Send("fish_reel",0);
+            yield return Pause(.35f);
             yield return VerifyBothBolts();
+            Check("Both rendered and attached independent server-confirmed projectiles; opposing directions did not exhaust the fish.");
+
+            // Release the helper's line by switching tools, then reacquire it through another real shot.
+            Send("slot",1);
+            yield return Wait(()=>helper.ActiveSlot==1 && helper.HookedFish==null && heavy.HookCount==1 && host.HookedFish==heavy,
+                4,"Switching the partner's tool failed to remove only their line.");
+            Send("slot",0);yield return Wait(()=>helper.ActiveSlot==0,4,"Partner could not re-equip harpoon.");
+            Send("fire",0); timeout=Time.unscaledTime+4;
+            while(helper.HookedFish!=heavy)
+            {
+                Require(Time.unscaledTime<timeout,"Partner failed to rehook.");
+                helper.Motor.Teleport(heavy.transform.position-peerAim*2.7f-Vector3.up*.6f);
+                Physics.SyncTransforms();yield return null;
+            }
+            Phase("Cooperative pull and heavy carry");
+            axis=(host.HandAnchor-heavy.transform.position).normalized;
+            helper.Motor.Teleport(host.transform.position+axis*2.5f+host.transform.right*.65f);
+            Physics.SyncTransforms();
+            remoteReeling=true;
+            nextRemoteReel=0;
+            yield return Reel(heavy);
+            remoteReeling=false;
+            Send("fish_reel",0);
+            Require(!host.Motor.IsDead && host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4
+                && helper.HookedFish==null && heavy.HookCount==0,
+                $"Heavy carry mismatch: HP {host.Motor.Health:F1}, O2 {host.Motor.Oxygen:F1}, mode {heavy.Mode}, hands {host.HandsFull}, catches {host.CatchCount}.");
             Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
             yield return Pause(.5f);
             yield return Shot("catch-heavy.png");
@@ -271,11 +344,13 @@ namespace Raid
                 if (fish.Tension >= .58f) pulling = false;
                 else if (fish.Tension < .24f) pulling = true;
                 host.QaHoldOwned(false, pulling ? .6f : 0);
-                if (refreshGrip && Time.unscaledTime >= nextGrip)
+                if (remoteReeling && Time.unscaledTime >= nextRemoteReel)
                 {
-                    Send("fish_grip", 15);
-                    nextGrip = Time.unscaledTime + 5;
+                    Send("fish_reel",pulling?2:0);
+                    nextRemoteReel=Time.unscaledTime+.65f;
                 }
+                if (remoteReeling && fish.Coordinated && !File.Exists(Path.Combine(Path.GetDirectoryName(reportPath),"catch-two-harpoons.png")))
+                    yield return Shot("catch-two-harpoons.png");
                 yield return null;
             }
             host.QaHoldOwned(false, 0);
@@ -290,8 +365,9 @@ namespace Raid
             var request=Send("snapshot",0);
             yield return Wait(()=>ReadClient()?.request==request,8,"No independent bolt snapshot.");
             var peer=ReadClient();
-            Require(peer!=null && peer.anchorOwner==host.OwnerId && peer.anchorShot==host.ShotSequence
-                && peer.anchorFrames>=6 && peer.anchorTravel>.2f, "Peer did not observe the same moving hook.");
+            Require(peer!=null && peer.activeBoltOwners!=null && peer.activeBoltOwners.Contains(host.OwnerId)
+                && peer.activeBoltOwners.Contains(helper.OwnerId) && peer.anchorFrames>=6 && peer.anchorTravel>.05f,
+                "Peer did not observe the same two moving hooks.");
             Require(peer.anchorTipError<.001f && peer.anchorKnotError<.001f,"Remote bolt separated from the fish or its cable.");
             Check($"Hook #{host.ShotSequence}, host/peer frames {local.VerifiedFrames}/{peer.anchorFrames}, attached travel {local.AnchorTravel:F3}/{peer.anchorTravel:F3} m, worst tip drift {local.MaxTipError:F6}/{peer.anchorTipError:F6} m, worst nock drift {local.MaxKnotError:F6}/{peer.anchorKnotError:F6} m.");
         }
@@ -344,7 +420,8 @@ namespace Raid
             string path = Path.Combine(Path.GetDirectoryName(reportPath), filename);
             DateTime previous = File.Exists(path) ? File.GetLastWriteTimeUtc(path) : DateTime.MinValue;
             yield return null;
-            ScreenCapture.CaptureScreenshot(path);
+            if (Application.isBatchMode) UiQaProbe.CapturePeerCamera(path);
+            else ScreenCapture.CaptureScreenshot(path);
             // The screenshot is asynchronous. Keep the camera and held item in place until the frame reaches disk.
             yield return Wait(() => File.Exists(path) && File.GetLastWriteTimeUtc(path) != previous
                 && new FileInfo(path).Length > 0, 8, "Game View did not finish capture " + filename);

@@ -26,7 +26,7 @@ namespace Raid.UI
         Nereid.AirlockPad aimedPad;
         RectTransform boardPointer;
         ReticleBoardInput boardInput;
-        float desiredFov=80;
+        float desiredFov=80, fightZoom;
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;
@@ -367,10 +367,14 @@ namespace Raid.UI
             var aim=Nereid.NereidAim.Active;
             if(viewCamera!=null)
             {
-                // ADS already eases per frame; physical computer zoom keeps its existing target.
+                var fish = Page == UiPage.None && Context.Player != null && !Context.Player.IsHelpless && !computerSurface
+                    ? Context.Harpoon?.HookedFish : null;
+                bool fighting = fish != null && fish.HookCount > 0 && fish.Mode <= FishMode.Tired;
+                float target = fighting ? fish.tuning.fightFov + (fish.Surging ? fish.tuning.burstFov : 0) : 0;
+                fightZoom = Mathf.Lerp(fightZoom, target * Settings.fishingCamera, 1-Mathf.Exp(-Time.unscaledDeltaTime*6));
                 if(aim!=null&&!computerSurface&&!UiInputGate.Modal&&Nereid.NereidAim.Blend>0)
-                    viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov);
-                else viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+                    viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov) + fightZoom;
+                else viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov + fightZoom,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
             }
         }
         void OnApplicationFocus(bool focused)

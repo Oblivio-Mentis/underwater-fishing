@@ -107,10 +107,12 @@ namespace Raid.Editor
             states.Add(State(103, 1, "Roam (dropped cargo)", types[0], new Vector2(3200f, 216f)));
             states.Add(State(104, 1, "Roam (recovered)", types[0], new Vector2(2560f, 432f)));
             states.Add(State(105, 1, "Roam (respawned)", types[0], new Vector2(3840f, 0f)));
+            states.Add(State(106, 5, "Captured (landed)", types[4], new Vector2(1920f, -216f)));
             var conditions = new List<UniversalConditionDef>();
             var edges = new List<UniversalFsmGraphEdgeDef>();
             Route(1, 2, 2, new Vector2(320f, 0f), conditions, edges);
             Route(2, 3, 3, new Vector2(960f, 0f), conditions, edges);
+            Route(3, 5, 106, new Vector2(1600f, -216f), conditions, edges);
             Route(3, 4, 4, new Vector2(1600f, 0f), conditions, edges);
             Route(4, 5, 5, new Vector2(2240f, 0f), conditions, edges);
             Route(5, 6, 6, new Vector2(2880f, 0f), conditions, edges);
