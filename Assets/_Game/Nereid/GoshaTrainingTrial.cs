@@ -136,6 +136,7 @@ namespace Raid.Nereid
             Check("Fresh save starts without a tame pet",!world.Team.goshaTamed);
             world.RequestGoshaOrder(GoshaOrder.CatchFish);
             yield return Wait("Untamed pet rejects an order",()=>world.LastGoshaOrderReply?.Contains("подружитесь")==true);
+            var startingTreasury=world.Team.Treasury;
             world.PreparePetOrderTrial(host,guest);
             yield return Wait("Remote owner sees their two unlocked keys on the HUD",()=>PeerSignal()?.hint?.Contains("H —")==true);
             world.RequestGoshaOrder(GoshaOrder.CatchFish);
@@ -181,8 +182,7 @@ namespace Raid.Nereid
             Check("One pet and no cargo granted to the other player",FindObjectsByType<GoshaView>().Length==1&&!Enumerable.Range(2,host.GetComponent<HarpoonTool>().PocketCapacity).Any(i=>host.GetComponent<HarpoonTool>().CatchIdInSlot(i)==cargoId));
             var cargo=world.AttributeCatch(fish.ToCargo(cargoId));
             Check("Normal cargo attribution belongs only to the requesting saved profile",cargo.caughtBy?.Length==1 && cargo.caughtBy[0]==world.ProgressKey(guest));
-            var progress=world.Team.Player(world.ProgressKey(guest));
-            Check("Harvest alone awards no processing materials",progress.wallet.biomass==0 && progress.wallet.chitin==0 && progress.wallet.scrap==0 && progress.wallet.electronics==0);
+            Check("Harvest alone awards no processing materials",world.Team.Treasury.Subtract(startingTreasury).IsEmpty);
             Check("The same fish cannot be collected a second time",!fish.CollectForGosha(bag,world.ProgressKey(guest)));
             yield return ProcessDelivery(cargo);
         }
@@ -211,12 +211,12 @@ namespace Raid.Nereid
             var monitor=ShipConsole.Stations.First(s=>s.kind==ShipConsoleKind.Reservoir).screenAnchor;
             host.Teleport(monitor.position-monitor.forward*1.4f-Vector3.up*.45f);host.LookAtConsole(monitor.position);
             yield return Wait("Reservoir selection in range on the processing operator",()=>host.IsInside&&ShipConsole.CanUse(host,WorldAction.Process));
-            var treasury=world.Team.Treasury;var owner=world.Team.Player(world.ProgressKey(guest));var other=world.Team.Player(world.ProgressKey(host));
+            var treasury=world.Team.Treasury;
             world.Command(WorldAction.Process,cargoId);
             yield return Wait("Physical processing route consumed the exact catch",()=>!world.Team.tank.Any(x=>x.id==cargoId),35);
-            Check("Processing paid its complete base yield only to the ordering guest",
-                owner.wallet.biomass==cargo.biomass && owner.wallet.chitin==cargo.chitin && owner.wallet.scrap==cargo.scrap && owner.wallet.electronics==cargo.electronics &&
-                other.wallet.IsEmpty && world.Team.Treasury.Subtract(treasury).IsEmpty);
+            var received=world.Team.Treasury.Subtract(treasury);
+            Check("Processing paid the complete Gosha catch yield once into the shared NEREID wallet",
+                received.biomass==cargo.biomass && received.chitin==cargo.chitin && received.scrap==cargo.scrap && received.electronics==cargo.electronics);
         }
     }
 }
