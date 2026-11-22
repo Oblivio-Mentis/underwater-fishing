@@ -56,7 +56,7 @@ namespace Raid
             lastOrderAt=float.NegativeInfinity;
             ResetGosha();
         }
-        void ResetGosha()
+        internal void ResetGosha()
         {
             if(ballBody==null)return;
             ReleaseOrder();clearingSeaDoor=false;

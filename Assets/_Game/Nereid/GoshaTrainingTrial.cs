@@ -148,6 +148,9 @@ namespace Raid.Nereid
             world.RequestGoshaOrder(GoshaOrder.Come);
             yield return Wait("G1 started coming to its caller",()=>world.Gosha.Mode==GoshaMode.Coming);
             yield return Wait("G1 reached the caller on foot",()=>world.LastGoshaOrderReply=="Гоша рядом");
+            world.ResetGosha();
+            Check("Depth-transition reset puts Gosha back on board and preserves the shared cooldown",
+                world.Gosha.Mode==GoshaMode.Roaming && world.OrderRemaining(host)>0);
             world.Team.Player(world.ProgressKey(host)).skills.Add(SkillId.G2);
             result.baseRadius=world.OrderRadius(host);result.expertRadius=world.OrderRadius(guest);
             result.baseCooldown=world.OrderCooldown(host);result.expertCooldown=world.OrderCooldown(guest);
