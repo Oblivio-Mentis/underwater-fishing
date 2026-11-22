@@ -149,7 +149,17 @@ namespace Raid
                 yield return RefillOnDeck();
                 var fish = Fish(species);
                 yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "School did not repopulate " + species + " while the first catch was stowed.");
-                yield return Hook(fish);
+                bool closeShot=host.CatchCount==1;
+                int occupied=host.CatchCount;
+                yield return Hook(fish,closeShot);
+                if(closeShot)
+                {
+                    Require(host.LineLength<=host.tuning.captureRange,"Fixture failed to place the impact inside landing radius.");
+                    yield return Pause(host.tuning.hookSettleSeconds+host.tuning.minimumWindingSeconds);
+                    Require(host.HookedFish==fish && host.CatchCount==occupied,
+                        "Close shot auto-collected without any reel input.");
+                    Check("Inside the hand radius a confirmed shot alone did not collect the fish.");
+                }
                 if(host.CatchCount==0)
                 {
                     var stand=host.transform.position;
@@ -218,9 +228,13 @@ namespace Raid
             var beforeTug = host.transform.position;
             float initial = heavy.Stamina;
             Require(host.QaHoldOwned(false, 6), "Host could not hold reel.");
-            yield return Wait(()=>heavy.Surging,6,"No solo surge.");
+            yield return Wait(()=>heavy.SurgeWarning,6,"No advance warning of solo surge.");
+            yield return Shot("catch-solo-warning.png");
+            yield return Wait(()=>heavy.Surging,3,"No solo surge.");
+            yield return Pause(.12f);
             yield return Shot("catch-solo-surge.png");
             yield return Wait(()=>Vector3.Distance(beforeTug,host.transform.position)>.45f,3,"Solo surge did not move the diver.");
+            yield return Shot("catch-solo-pulled.png");
             Require(host.HookedFish==heavy && heavy.HookCount==1 && host.CatchCount==3 && heavy.Stamina>=initial-.05f,
                 "One harpoon progressed to a heavy catch.");
             host.QaHoldOwned(false,0);
@@ -350,7 +364,7 @@ namespace Raid
 
         private FishActor Fish(string species) => FindObjectsByType<FishActor>().Single(f => f.depthTier == 1 && f.SpeciesId == species);
 
-        private IEnumerator Hook(FishActor fish)
+        private IEnumerator Hook(FishActor fish,bool closeShot=false)
         {
             yield return Pause(host.tuning.fireCooldown+.12f);
             Require(fish.Mode == FishMode.Roam && !host.Motor.IsHelpless, "Fish unavailable or host incapacitated.");
@@ -360,6 +374,11 @@ namespace Raid
             Require(Physics.Raycast(host.transform.position + Vector3.up*.6f, aim, out var hit, host.tuning.maxRange,
                 host.tuning.hitMask, QueryTriggerInteraction.Ignore) && hit.collider.GetComponentInParent<FishActor>() == fish,
                 "Fixture ray blocked before " + fish.SpeciesId + ": " + (hit.collider == null ? "miss" : hit.collider.name));
+            if(closeShot)
+            {
+                host.Motor.Teleport(hit.point - aim * .65f - Vector3.up * .6f);
+                Physics.SyncTransforms();
+            }
             Require(host.QaFireOwned(), "Host owned fire request rejected.");
             yield return Wait(() => host.HookedFish == fish, 3, "Normal harpoon RPC missed " + fish.SpeciesId + ".");
         }
