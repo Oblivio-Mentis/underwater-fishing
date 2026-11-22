@@ -103,7 +103,8 @@ namespace Raid.Nereid
             yield return Await("Owned diver and world ready",()=>
             {
                 world=RaidWorld.Instance;owner=UiRoot.Instance?.Context.Player;
-                return world && world.IsServerInitialized && world.View!=null && owner && owner.IsOwner && world.TravelRemaining==0;
+                return world && world.NetworkObject && world.IsServerInitialized && world.View!=null &&
+                    owner && owner.NetworkObject && owner.IsOwner && world.TravelRemaining==0;
             },75);
             var marks=JsonUtility.FromJson<Marks>(File.ReadAllText(marksFile)).cameras;
             eye=owner.GetComponentInChildren<Camera>();
@@ -228,7 +229,7 @@ namespace Raid
             team.hungerRemaining=160;
             team.tank.Clear();
             team.tank.Add(new CatchItem(1101,4,0,2,1,1,species:"Needlefish"));
-            team.tank.Add(new CatchItem(1102,6,1,3,2,1,species:"ArmoredRay"));
+            team.tank.Add(new CatchItem(1102,6,1,3,2,1,species:"Sailray"));
             team.tank.Add(new CatchItem(1103,0,0,0,1,1,3,2));
             Publish();
         }
