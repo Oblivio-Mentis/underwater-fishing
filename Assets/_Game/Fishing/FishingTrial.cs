@@ -142,6 +142,7 @@ namespace Raid
                 pausedThreats.enabled=false;
                 Check("Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.");
             }
+            if (VerifyDropTransfers) yield return SalvageHandoff();
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Host harpoon could not be equipped.");
 
@@ -283,12 +284,14 @@ namespace Raid
             yield return Shot("catch-heavy.png");
             Check("Heavy capture completed with all three small catches intact; tool switch and fire blocked.");
 
+            long landedHeavyId = heavy.CargoId;
+            if (VerifyDropTransfers) yield return CatchHandoffs(landedHeavyId);
             Phase("Deposit and observe swimming cargo on both peers");
             host.Motor.Teleport(world.tuning.cargoPosition - host.Motor.AimDirection * 2.65f - Vector3.up * .6f);
             Physics.SyncTransforms();
             var cage = world.container.GetComponentInChildren<WetCargoShoal>();
             int before = world.Team.cargo.Count, beforeSwimmers = cage == null ? 0 : cage.Count;
-            var caughtIds = new[] { host.CatchIdInSlot(2), host.CatchIdInSlot(3), host.CatchIdInSlot(4), heavy.CargoId };
+            var caughtIds = new[] { host.CatchIdInSlot(2), host.CatchIdInSlot(3), host.CatchIdInSlot(4), landedHeavyId };
             world.Command(WorldAction.LoadCargo, 0);
             yield return Wait(() => host.CatchCount == 0 && world.Team.cargo.Count == before + 4, 6, "Server did not deposit all four catches.");
             Require(caughtIds.All(id => world.Team.cargo.Count(item => item.id == id) == 1), "Deposit lost or duplicated a catch ID.");
