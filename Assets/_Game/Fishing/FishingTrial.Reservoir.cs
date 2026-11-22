@@ -27,6 +27,8 @@ namespace Raid
                 "Owned camera could not acquire the physical aquarium computer.");
             ui.UseConsole(console);
             yield return Pause(.4f);
+            host.Motor.LookAtConsole(aim.position);
+            yield return Pause(.35f);
             yield return Shot("reservoir-select.png");
             Require(world.Team.tank.Count(x=>catches.Contains(x.id))==4 && !world.FishRoute.active,
                 "A fish was routed without choosing a destination.");

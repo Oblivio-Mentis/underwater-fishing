@@ -54,7 +54,7 @@ namespace Raid.UI
             scroll=TerminalParts.Body(layout,out content);
             footer=TerminalParts.Text(layout,"Footer","",40,19,UiTheme.Muted);
             var receiptPanel=UiKit.Panel(Root,"Processing receipt",new Color(.035f,.10f,.12f,.98f));
-            UiKit.Place(receiptPanel.rectTransform,new Vector2(1,0),new Vector2(1,0),new Vector2(-35,83),new Vector2(485,176));
+            UiKit.Place(receiptPanel.rectTransform,Vector2.one,Vector2.one,new Vector2(-35,-245),new Vector2(485,176));
             receipt=receiptPanel.rectTransform;
             receiptFade=receipt.gameObject.AddComponent<CanvasGroup>();
             receiptFade.blocksRaycasts=false;
@@ -107,6 +107,10 @@ namespace Raid.UI
                 string reason=TerminalParts.BaseReason(app);
                 UiKit.Set(footer,ctx.World.TravelRemaining>0?UiText.TravelRemaining(ctx.World.TravelRemaining):!string.IsNullOrEmpty(reason)?reason:UiText.CargoSummary(view,ctx.Tuning));
                 if(equipment&&string.IsNullOrEmpty(reason))UiKit.Set(footer,"Улучшения действуют на весь экипаж");
+                if(station?.kind==ShipConsoleKind.Reservoir && string.IsNullOrEmpty(reason))
+                    UiKit.Set(footer,view.processingRemainder.IsEmpty
+                        ?"Улов без задания остаётся в резервуаре"
+                        :"Дробный остаток переработки   "+YieldText(view.processingRemainder));
                 footer.color=string.IsNullOrEmpty(reason)?UiTheme.Muted:UiTheme.Amber;
             }
             string key=BuildKey();if(key!=builtKey){builtKey=key;Rebuild();}
@@ -209,7 +213,7 @@ namespace Raid.UI
             if(!show)return;
             float reveal=Mathf.SmoothStep(0,1,Mathf.Clamp01(elapsed/1.2f));
             receiptFade.alpha=Mathf.Clamp01(elapsed*7)*Mathf.Clamp01(6-elapsed);
-            receipt.anchoredPosition=new Vector2(-35,83+20*(1-reveal));
+            receipt.anchoredPosition=new Vector2(-35,-245+20*(1-reveal));
             receiptBar.fillAmount=reveal;
             UiKit.Set(receiptHeader,"ПЕРЕРАБОТКА · КАЗНА NEREID");
             for(int i=0;i<receiptRows.Length;i++)
