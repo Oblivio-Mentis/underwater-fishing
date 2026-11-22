@@ -185,7 +185,7 @@ namespace Raid
                 float length=Vector3.Distance(MuzzlePoint(),tip);
                 bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&!UI.UiInputGate.PointerReserved&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
                 bool reeling=confirmed && (tool.Reeling || ownerInput);
-                float tension=tool.HookedFish==null?(reeling?1:0):tool.HookedFish.Tension;
+                float tension=tool.HookedFish==null?(reeling?1:0):tool.LineTension;
                 DrawCable(MuzzlePoint(),LineKnot,now,tension,reeling);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if(settled)
@@ -225,7 +225,10 @@ namespace Raid
             Vector3 normal=Vector3.Cross(delta.normalized,Vector3.up);if(normal.sqrMagnitude<.1f)normal=Vector3.right;normal.Normalize();
             bool flying=Phase==CablePhase.Flying;
             float sag=Mathf.Lerp(Mathf.Min(.65f,.06f+delta.magnitude*.035f),.015f,Mathf.Clamp01(tension));
-            if(reeling)sag*=.35f;if(Phase==CablePhase.Retracting)sag=.2f;
+            if(reeling)sag*=.35f;
+            if(Phase==CablePhase.Attached && tool.HookedFish!=null)
+                sag+=Mathf.Min(.85f,Mathf.Max(0,tool.LineLength-delta.magnitude)*.32f);
+            if(Phase==CablePhase.Retracting)sag=.2f;
             float wave=flying?.06f:Phase==CablePhase.Retracting?.035f:.008f*(1-Mathf.Clamp01(tension));
             for(int i=0;i<points.Length;i++)
             {

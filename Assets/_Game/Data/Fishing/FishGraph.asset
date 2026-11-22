@@ -164,10 +164,10 @@ MonoBehaviour:
       compare: 2
       compare_value_source: 0
       compare_value: 5
-      compare_variable_id: 
-      timer_duration_variable_id: 
+      compare_variable_id:
+      timer_duration_variable_id:
       timer_start_mode: 1
-      timer_source_state_ids: 
+      timer_source_state_ids:
       editor_position: {x: 1600, y: -216}
       has_editor_position: 1
     - node_uid: fish-3-4
@@ -348,7 +348,7 @@ MonoBehaviour:
     - edge_uid: fish-3-5-input
       from_kind: 0
       from_state_id: 3
-      from_condition_uid: 
+      from_condition_uid:
       from_exit: 0
       to_kind: 1
       to_state_id: -1
@@ -364,7 +364,7 @@ MonoBehaviour:
       from_exit: 0
       to_kind: 0
       to_state_id: 106
-      to_condition_uid: 
+      to_condition_uid:
       priority: 0
       stack_op: 1
       consumes_buffer: 0
