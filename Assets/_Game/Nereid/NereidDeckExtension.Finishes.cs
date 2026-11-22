@@ -131,6 +131,8 @@ namespace Raid.Nereid
             OperatorDesk(new(3.05f,floor,BridgeBack+.59f));
             Wash(new(0,floor+1.84f,BridgeFront-.8f),new(-2.91f,floor+.47f,BridgeFront-2.08f),WaterFill,7.7f,145);
             Wash(new(.1f,floor+1.79f,BridgeBack+.77f),new(.1f,floor+.34f,BridgeBack+.075f),AmberFill,7.3f,220);
+            Wash(new(-2.70f,floor+1.41f,BridgeFront-1.27f),new(.30f,floor+1.95f,BridgeFront-2.89f),
+                new Color(.69f,.82f,.92f),6.8f,62);
 
             for(int s=-1;s<=1;s+=2)
             {

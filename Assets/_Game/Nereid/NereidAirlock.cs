@@ -102,6 +102,16 @@ namespace Raid.Nereid
             {
                 Lining("Pressure chamber flank",new(OuterX*.5f,Height*.5f,side*3.2f),new(OuterX+.32f,Height,.22f),
                     steel,Vector3.back*side,Vector3.left*side,Vector3.up);
+                for(int bay=0;bay<4;bay++)
+                {
+                    float center=.92f+bay*2.12f;
+                    Box("Bearing panel above waterline",new Vector3(center,2.45f,side*3.019f),
+                        new Vector3(1.90f,1.36f,.092f),steel);
+                    Box("Machined windowless pressure insert",new Vector3(center,2.47f,side*2.961f),
+                        new Vector3(1.73f,1.19f,.052f),trim);
+                    Box("High water witness line",new Vector3(center,3.05f,side*2.929f),
+                        new Vector3(1.57f,.031f,.025f),paint);
+                }
                 Box("Waist rail",new Vector3(OuterX*.5f,1.06f,side*2.97f),new Vector3(OuterX-.48f,.08f,.10f),paint);
                 Box("Flood chamber egress line",new Vector3(OuterX*.5f,.038f,side*1.69f),new Vector3(OuterX-.24f,.013f,.052f),cold);
                 for(int i=0;i<4;i++)
@@ -120,7 +130,12 @@ namespace Raid.Nereid
                     Box("Recessed inspection lens",new Vector3(x,Height-.31f,s*.47f),new Vector3(.147f,.023f,.61f),amber);
             }
             var lum=new GameObject("Amber chamber fill");lum.transform.SetParent(transform,false);lum.transform.localPosition=new Vector3(4.3f,3.25f,0);
-            var light=lum.AddComponent<Light>();light.type=LightType.Point;light.color=new Color(1,.78f,.52f);light.intensity=4;light.range=8;light.shadows=LightShadows.None;
+            var light=lum.AddComponent<Light>();light.type=LightType.Point;light.color=new Color(1,.78f,.52f);light.intensity=8;light.range=8;light.shadows=LightShadows.None;
+            var wallLight=new GameObject("Cool reflected lock light").transform;
+            wallLight.SetParent(transform,false);
+            wallLight.localPosition=new(6.68f,2.81f,-1.43f);
+            var cool=wallLight.gameObject.AddComponent<Light>();cool.type=LightType.Point;
+            cool.color=new Color(.42f,.67f,.81f);cool.intensity=3.2f;cool.range=5.6f;cool.shadows=LightShadows.None;
             // A measured column and pump on the same wall give the surface a visible reference.
             Box("Level staff",new Vector3(4.35f,2,2.99f),new Vector3(.26f,3.85f,.1f),charcoal);
             for(int i=0;i<9;i++)Box("Staff graduation",new Vector3(4.36f,.21f+i*.44f,2.932f),new Vector3(i%2==0?.18f:.10f,.024f,.018f),trim);

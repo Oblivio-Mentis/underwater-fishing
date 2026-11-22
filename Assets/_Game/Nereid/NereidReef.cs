@@ -220,6 +220,12 @@ namespace Raid.Nereid
                 float radius=(layer==0?56:88)+4*Mathf.Sin(angle*5+layer)+Range(-2.2f,2.2f);
                 float strata=Mathf.PerlinNoise(5+Mathf.Cos(angle)*(3+layer),12+Mathf.Sin(angle)*(3+layer));
                 float shelf=(layer==0?4:11)+(layer==0?30:49)*Mathf.Pow(strata,1.35f)+4*Mathf.Sin(angle*7+layer);
+                if(layer==0)
+                {
+                    // Let swimmers approach the new garden from the bow.
+                    float gap=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.13f,.37f,Mathf.Abs(angle-2.01f)));
+                    shelf=Mathf.Lerp(2.45f,shelf,gap);
+                }
                 var foot=center+outward*radius;
                 float floor=ShoalHeight(foot.x,foot.z)-1.2f;
                 points[i,0]=foot+Vector3.up*floor;

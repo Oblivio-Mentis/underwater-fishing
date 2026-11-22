@@ -194,7 +194,15 @@ namespace Raid.Nereid
             Collision(archive,"Bridge / deck collision",new(0,UpperDeck-.16f,center),new(8.67f,.32f,length+.04f),Quaternion.identity);
             Collision(archive,"Bridge / pressure crown",new(0,UpperDeck+2.14f,center),new(8.93f,.29f,length+.23f),Quaternion.identity);
             Panel("Bridge deck plate",new(0,UpperDeck-.055f,center),new(8.57f,.105f,length+.04f),gunmetal);
-            Panel("Interior crown lining",new(0,UpperDeck+2.02f,center),new(8.48f,.105f,length+.026f),enamel);
+            Panel("Interior crown lining",new(0,UpperDeck+2.02f,center),new(8.48f,.105f,length+.026f),gunmetal);
+            const float crownPanelWidth=2.66f;
+            float crownPanelLength=length/4;
+            for(int row=0;row<4;row++)
+                for(int column=-1;column<=1;column++)
+                {
+                    var seat=new Vector3(column*(crownPanelWidth+.055f),UpperDeck+1.93f,BridgeFront-(row+.5f)*crownPanelLength);
+                    TiledPanel(seat,new(crownPanelWidth,.045f,crownPanelLength-.056f),Quaternion.identity,pressedEnamel,PressedPanelUv);
+                }
             Panel("Bridge / marine equipment trunk",new(.72f,UpperDeck+2.62f,center-.83f),new(4.36f,.36f,2.70f),coating);
             Panel("Bridge / radio mast",new(.66f,UpperDeck+3.11f,center-.84f),new(.13f,1.39f,.17f),steel);
             Panel("Bridge / mast sweep",new(.66f,UpperDeck+3.72f,center-.84f),new(1.77f,.10f,.14f),steel);
@@ -207,7 +215,9 @@ namespace Raid.Nereid
                     Window(new(side*BridgeHalfWidth,UpperDeck,z),length/4,Quaternion.Euler(0,90,0));
                 }
                 float x=side*2.46f;
-                for(int i=0;i<3;i++)Panel("Reflective deck sheet",new(x,UpperDeck+.018f,BridgeFront-.9f-1.85f*i),new(3.38f,.033f,1.80f),steel);
+                for(int i=0;i<3;i++)
+                    TiledPanel(new(x,UpperDeck+.018f,BridgeFront-.9f-1.85f*i),new(3.38f,.033f,1.80f),
+                        Quaternion.identity,deckTexture,DeckPlateUv);
                 Panel("Foredeck scanner seat",new(side*2.97f,UpperDeck+.26f,BridgeBack+.69f),new(1.72f,.52f,.86f),gunmetal,true);
                 Panel("Foredeck status horizon",new(side*2.97f,UpperDeck+.52f,BridgeBack+.69f),new(1.59f,.04f,.73f),cold);
                 Panel("Exterior beam finder",new(side*3.68f,UpperDeck+1.99f,BridgeBack-.22f),new(.98f,.25f,.27f),gunmetal);
