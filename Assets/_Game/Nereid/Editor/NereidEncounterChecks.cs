@@ -52,7 +52,8 @@ namespace Raid.Nereid.Editor
             foreach(var candidate in DiverMotor.ServerDivers)
             {
                 var gear=candidate.GetComponent<HarpoonTool>();
-                if(candidate.IsHelpless || candidate.IsTrapped || gear==null || gear.CatchCount!=0 || gear.HookedFish!=null || gear.TetherActive)
+                if(candidate.IsHelpless || candidate.IsTrapped || gear==null || gear.CatchCount!=0 || gear.HookedFish!=null || gear.TetherActive ||
+                    Enumerable.Range(2,gear.PocketCapacity).Any(gear.HasBallInSlot))
                     throw new InvalidOperationException("Run the probe with living divers and empty hands and pockets.");
                 saved.Add(new SavedDiver{motor=candidate,position=candidate.transform.position,state=DiverState(candidate).Value});
             }
@@ -140,7 +141,28 @@ namespace Raid.Nereid.Editor
 
             Stage(2);
             yield return Wait("Depth two active",()=>threats.Reef.Active&&threats.Reef.Deep);
-            FillCreel();Place(threats.Reef.Eel+Vector3.forward*1.2f);
+            FillCreel(2);
+            int previousSlot=tool.ActiveSlot;
+            if(!(bool)typeof(HarpoonTool).GetMethod("StoreBall",Private).Invoke(tool,null))
+                throw new InvalidOperationException("Could not stage a ball in the remaining pocket.");
+            try
+            {
+                Place(threats.Reef.Eel+Vector3.forward*1.2f);
+                yield return Pause(1.7f);
+                if(threats.Reef.EelPhase!=0 || tool.CatchCount!=2 || !tool.HasFullCreel)
+                    throw new InvalidOperationException("Two fish and a pocketed ball must not attract an eel.");
+            }
+            finally
+            {
+                if(tool!=null && tool.IsServerInitialized)
+                {
+                    typeof(HarpoonTool).GetMethod("RemoveBall",Private).Invoke(tool,null);
+                    typeof(HarpoonTool).GetMethod("EquipSlot",Private).Invoke(tool,new object[]{previousSlot});
+                }
+            }
+            tool.DropCargo();
+            FillCreel();
+            Place(threats.Reef.Eel+Vector3.forward*1.2f);
             yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.10f);
             yield return Wait("Eel warns with three pocket fish",()=>threats.Reef.EelPhase==1&&tool.CatchCount==3);
             if(!tool.DropOneCatch())throw new InvalidOperationException("Could not drop the selected catch.");
@@ -198,10 +220,10 @@ namespace Raid.Nereid.Editor
             state.Oxygen=diver.tuning.oxygenCapacity;state.Stress=0;value.Value=state;
         }
 
-        static void FillCreel()
+        static void FillCreel(int count=3)
         {
-            var catches=UnityEngine.Object.FindObjectsByType<FishActor>().Where(f=>!f.RequiresPartner&&f.IsServerInitialized).Take(3).ToArray();
-            if(catches.Length<3)throw new InvalidOperationException("Three ordinary fish are required for full-creel fixture.");
+            var catches=UnityEngine.Object.FindObjectsByType<FishActor>().Where(f=>!f.RequiresPartner&&f.IsServerInitialized).Take(count).ToArray();
+            if(catches.Length<count)throw new InvalidOperationException("The eel fixture requires real pocket fish.");
             foreach(var fish in catches)
             {
                 fish.SetDepthActive(true);
@@ -210,7 +232,7 @@ namespace Raid.Nereid.Editor
                 var stow=typeof(HarpoonTool).GetMethod("StowCapture",Private);
                 if(!(bool)stow.Invoke(tool,new object[]{fish}))throw new InvalidOperationException("Fixture pocket refused catch.");
             }
-            if(!tool.HasFullCreel)throw new InvalidOperationException("Fish did not occupy three real inventory slots.");
+            if(tool.CatchCount!=count)throw new InvalidOperationException("Fish did not occupy the expected real pockets.");
         }
 
         static void Hoist()

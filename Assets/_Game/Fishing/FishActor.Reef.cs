@@ -235,7 +235,8 @@ namespace Raid
                 {
                     Vector3 fromSwimmer = position - swimmer.transform.position;
                     float close = RequiresPartner ? 1.9f : 2.5f;
-                    bool approachingFast = swimmer.IsSprinting && Vector3.Dot(swimmer.AimDirection,fromSwimmer.normalized) > .15f;
+                    bool approachingFast = swimmer.IsSprinting && swimmer.TryGetComponent<CharacterController>(out var controller) &&
+                        Vector3.Dot(controller.velocity,fromSwimmer.normalized) > 1.2f;
                     if ((fromSwimmer.sqrMagnitude < close * close || approachingFast) && !SolidAhead(position,swimmer.transform.position))
                         Frighten(swimmer.transform.position,2.6f);
                 }
