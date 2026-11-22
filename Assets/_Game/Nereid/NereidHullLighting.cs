@@ -53,8 +53,6 @@ namespace Raid.Nereid
                 new Color(1.0f,.71f,.45f),amberLens,480,11.5f,48,82);
             beams[4]=Fixture("Saddle-tank grazing light",new Vector3(9.53f,-.24f,-15.84f),transform.TransformPoint(new Vector3(7.50f,-.68f,-20.18f)),
                 new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
-            for(int side=-1;side<=1;side+=2)
-                foreach(float z in new[]{-20f,2.8f})Marker(side,z);
             BuildExteriorDetail();
             initialized=true;
         }
@@ -108,11 +106,11 @@ namespace Raid.Nereid
                         Color paint;float metal;
                         switch(source.name)
                         {
-                            case "Nereid_Hull":  paint=new Color(.208f,.318f,.349f);metal=.16f;break;
-                            case "Nereid_Steel": paint=new Color(.36f,.432f,.435f);metal=.36f;break;
-                            case "Nereid_Dark":  paint=new Color(.125f,.179f,.19f);metal=.24f;break;
+                            case "Nereid_Hull":  paint=new Color(.174f,.261f,.286f);metal=.23f;break;
+                            case "Nereid_Steel": paint=new Color(.488f,.547f,.548f);metal=.20f;break;
+                            case "Nereid_Dark":  paint=new Color(.093f,.128f,.143f);metal=.30f;break;
                             case "Nereid_Grate": paint=new Color(.24f,.30f,.30f);metal=.38f;break;
-                            case "Nereid_Trim":  paint=new Color(.387f,.472f,.464f);metal=.54f;break;
+                            case "Nereid_Trim":  paint=new Color(.321f,.392f,.393f);metal=.54f;break;
                             case "Nereid_Ochre": paint=new Color(.61f,.39f,.15f);metal=.15f;break;
                             default: continue;
                         }
@@ -171,9 +169,7 @@ namespace Raid.Nereid
         void BuildHullGuides()
         {
             var carrier=new ReefGeometry();
-            var deck=new ReefGeometry();
             var hatch=new ReefGeometry();
-            var cold=Finish("Ceramic approach guide",new Color(.39f,.74f,.76f),.16f,1.25f);
             var warm=Finish("Ceramic hatch guide",new Color(.95f,.63f,.35f),.16f,1.30f);
             // This bracket cantilevers from the solid header; the lamp grazes the sea-facing armour and leaves.
             carrier.Tube(new[]{new Vector3(10.28f,2.0f,-15.49f),new Vector3(10.48f,2.18f,-15.49f),new Vector3(11.54f,2.18f,-15.49f),new Vector3(11.54f,2.02f,-15.49f)},
@@ -188,13 +184,6 @@ namespace Raid.Nereid
                 Pipe(carrier,new Vector3(6.8f,-1.14f,z+.31f),new Vector3(6.8f,-2.34f,z),.06f);
             }
 
-            // Three capped armoured strips on each boarding approach. Leave gaps at the hatch and handrail.
-            foreach(float start in new[]{-22.2f,-11.6f})
-                for(int i=0;i<3;i++)
-                {
-                    float z=start+i*1.85f;
-                    Channel(carrier,deck,new Vector3(7.965f,-.09f,z),new Vector3(7.965f,-.09f,z+1.46f),Vector3.right,.032f);
-                }
             // The outboard lip is visible from below the platform, where the door face itself is foreshortened.
             for(int i=0;i<3;i++)
             {
@@ -210,7 +199,6 @@ namespace Raid.Nereid
                 Channel(carrier,hatch,new Vector3(10.405f,1.65f,z),new Vector3(10.405f,1.65f,z-side*.49f),Vector3.right,.032f);
             }
             Shape(fixtures,"Guide lamp armour and bracket",carrier,iron);
-            Shape(fixtures,"Catwalk approach strips",deck,cold);
             Shape(fixtures,"Dock lip and pressure door outline",hatch,warm);
         }
 
@@ -219,18 +207,6 @@ namespace Raid.Nereid
             var along=(to-from).normalized;
             Pipe(channel,from-along*.047f,to+along*.047f,width*1.5f);
             Pipe(lens,from+outward*width,to+outward*width,width);
-        }
-
-        void Marker(int side,float z)
-        {
-            // Hooded marker lenses do not consume realtime lights.
-            var seat=Pivot(fixtures,"Hull position marker",new Vector3(side*7.88f,.1f,z));
-            var hood=new ReefGeometry();
-            Pipe(hood,Vector3.zero,Vector3.right*side*.16f,.11f);
-            Shape(seat,"Protective rim",hood,iron);
-            var lens=new ReefGeometry();
-            Pipe(lens,Vector3.right*side*.162f,Vector3.right*side*.18f,.076f);
-            Shape(seat,"Navigation glass",lens,side>0?blueLens:amberLens);
         }
 
         static void Pipe(ReefGeometry mesh,Vector3 a,Vector3 b,float radius)
