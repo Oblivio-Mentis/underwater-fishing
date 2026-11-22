@@ -286,7 +286,7 @@ namespace Raid.Nereid
             Sign(transform,"05   МОСТИК   ↑",new(StairX,1.46f,-16.47f),Quaternion.Euler(0,180,0),2.02f,.16f);
             Sign(transform,"04   СНАРЯЖЕНИЕ",new(4.005f,2.08f,-20.61f),Quaternion.Euler(0,90,0),2.36f,.21f);
             Sign(transform,"02   ←   ШЛЮЗ",new(1.83f,2.36f,-14.35f),Quaternion.Euler(0,180,0),2.00f,.17f);
-            Sign(transform,"NEREID   /   07",new(0,UpperDeck+2.42f,BridgeBack-.124f),Quaternion.identity,5.75f,.42f);
+            Sign(transform,"NEREID   /   07",new(0,UpperDeck+.265f,BridgeBack-.124f),Quaternion.identity,5.75f,.31f);
             Sign(transform,"КОМАНДНЫЙ МОСТИК",new(1.09f,UpperDeck+1.75f,BridgeFront-.165f),Quaternion.identity,3.20f,.23f);
         }
 
