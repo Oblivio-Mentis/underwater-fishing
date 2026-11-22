@@ -38,6 +38,7 @@ namespace Raid.UI
         readonly Vector2[] positions = new Vector2[37];
         readonly TMP_Text playerLabel, teamBalance, detailTitle, detailBody, detailCost, detailState, response;
         readonly RectTransform graph, graphArea;
+        readonly MaterialStrip treasuryIcons, detailMaterials;
         readonly Button focus;
         readonly SkillWires wires;
         RaidWorld subscribed;
@@ -61,8 +62,11 @@ namespace Raid.UI
                 "СНАРЯЖЕНИЕ ЭКИПАЖА",30,Cyan);
             playerLabel = Label(heading.transform,"Viewing diver",Vector2.up,new(14,-40),new(620,25),"",17,UiTheme.Muted);
             playerLabel.overflowMode = TextOverflowModes.Overflow;
-            teamBalance = Label(heading.transform,"Ship treasury",Vector2.up,new(14,-66),new(1090,23),"",19,Gold);
-            Key(heading.transform,"ResetSkillView","Сбросить вид",new(948,-10),186,Reset);
+            teamBalance = Label(heading.transform,"Ship treasury",Vector2.up,new(14,-65),new(148,24),"КАЗНА NEREID",17,Gold);
+            treasuryIcons=new MaterialStrip(heading.transform,"Treasury resources");
+            UiKit.Place(treasuryIcons.Root,Vector2.up,Vector2.up,new(163,-58),new(568,33));
+            Key(heading.transform,"ResetSkillView","Сбросить вид",new(815,-10),185,Reset);
+            Key(heading.transform,"CloseSkillTree",UiText.CloseTerminal,new(1009,-10),125,app.ClosePanel);
 
             graphArea = Image(surface,"Skill graph viewport",Vector2.up,new(14,-114),new(1148,531),Glass,true).rectTransform;
             graphArea.gameObject.AddComponent<RectMask2D>();
@@ -100,7 +104,9 @@ namespace Raid.UI
             var info = Image(surface,"Selected skill",Vector2.up,new(14,-652),new(1148,97),Panel,true).rectTransform;
             detailTitle = Label(info,"Skill and scope",Vector2.up,new(14,-5),new(765,29),"",23,Cyan);
             detailBody = Label(info,"Skill benefit",Vector2.up,new(14,-33),new(765,26),"",17);
-            detailCost = Label(info,"Cost and prerequisite",Vector2.up,new(14,-62),new(765,28),"",15,UiTheme.Muted);
+            detailCost = Label(info,"Prerequisite",Vector2.up,new(14,-64),new(765,26),"",15,UiTheme.Muted);
+            detailMaterials=new MaterialStrip(info,"Skill cost");
+            UiKit.Place(detailMaterials.Root,Vector2.up,Vector2.up,new(14,-61),new(568,33));
             detailState = Label(info,"Skill state",Vector2.up,new(793,-48),new(340,37),"",17,UiTheme.Amber);
             focus = Key(info,"FocusSkillBranch","Фокус на ветке",new(793,-6),340,Focus);
             response = Label(surface,"Server result",Vector2.up,new(22,-774),new(1118,22),"",16,Cyan);
@@ -168,7 +174,9 @@ namespace Raid.UI
             var profile=context.World?.LocalProgress;
             var team=context.View;
             UiKit.Set(playerLabel,context.Player==null ? "" : "Водолаз "+UiText.HudPlayerName(context.Player));
-            UiKit.Set(teamBalance,team==null?"КАЗНА NEREID     Загрузка…":"КАЗНА NEREID     "+Compact(team.Treasury));
+            UiKit.Set(teamBalance,team==null?"Загрузка казны…":"КАЗНА NEREID");
+            treasuryIcons.Root.gameObject.SetActive(team!=null);
+            if(team!=null)treasuryIcons.Quote(team.Treasury,showZero:true);
 
             int playerRevision=profile?.revision ?? -1;
             int teamRevision=team?.teamRevision ?? -1;
@@ -243,6 +251,8 @@ namespace Raid.UI
         void DisplayDetails()
         {
             focus.interactable=selected!=SkillId.None;
+            detailMaterials.Root.gameObject.SetActive(selected!=SkillId.None);
+            detailCost.rectTransform.anchoredPosition=new Vector2(selected==SkillId.None?14:583,-64);
             if(selected==SkillId.None)
             {
                 UiKit.Set(detailTitle,"NEREID / Снаряжение экипажа");
@@ -259,8 +269,8 @@ namespace Raid.UI
             bool funded=(app.Context.View?.Treasury ?? default).Covers(node.Cost);
             UiKit.Set(detailTitle,node.Name+" · "+(node.Team?"Для всей команды":"Личное"));
             UiKit.Set(detailBody,(bought?"Действует · ":"После покупки · ")+node.Effect+EffectAmount(node));
-            UiKit.Set(detailCost,"Цена из казны NEREID  "+Compact(node.Cost)+
-                (conditions.Count==0?"":"    ·    Нужен "+string.Join(" или ",conditions)));
+            detailMaterials.Quote(node.Cost);
+            UiKit.Set(detailCost,conditions.Count==0?"":"Нужен "+string.Join(" или ",conditions));
             detailState.color=bought?Cyan:unlocked&&funded?UiTheme.Green:Gold;
             UiKit.Set(detailState,bought?(node.Team?"Уже улучшено экипажем":"Куплено лично"):
                 unlocked?(funded?"Доступно · ПКМ — купить":"Недостаточно материалов в казне"):"Закрыто · нужна предпосылка");
@@ -335,7 +345,6 @@ namespace Raid.UI
             UiKit.Set(response,reason);
         }
 
-        static string Compact(MaterialCost cost) => $"B {cost.biomass}    C {cost.chitin}    S {cost.scrap}    E {cost.electronics}";
         static string ShortCost(MaterialCost cost) => $"B{cost.biomass} C{cost.chitin} S{cost.scrap} E{cost.electronics}";
 
         void Reset()

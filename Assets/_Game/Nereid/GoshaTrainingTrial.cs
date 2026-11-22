@@ -216,6 +216,9 @@ namespace Raid.Nereid
             yield return Wait("Reservoir selection in range on the processing operator",()=>host.IsInside&&ShipConsole.CanUse(host,WorldAction.Process));
             var treasury=world.Team.Treasury;
             world.Command(WorldAction.Process,cargoId);
+            yield return Wait("The Gosha catch is marked for processing",()=>world.Team.tank.Any(x=>x.id==cargoId && x.destination==CatchDestination.Process));
+            yield return new WaitForSeconds(.2f);
+            world.Command(WorldAction.SendFish,FishRouteQuote.ComputeDraft(world.Team.tank));
             yield return Wait("Physical processing route consumed the exact catch",()=>!world.Team.tank.Any(x=>x.id==cargoId),35);
             var received=world.Team.Treasury.Subtract(treasury);
             Check("Processing paid the complete Gosha catch yield once into the shared NEREID wallet",

@@ -13,61 +13,36 @@ namespace Raid.UI
     {
         public RectTransform Root {get;private set;}
         readonly IUiController app;
-        readonly TMP_Text[] resources=new TMP_Text[4];
+        readonly MaterialStrip resources;
         readonly Dictionary<string,Button> tabs=new Dictionary<string,Button>();
         readonly List<Action> refreshRows=new List<Action>();
         readonly TMP_Text summary,footer,shellTitle;
-        readonly RectTransform tabRow;
+        readonly RectTransform tabRow,dispatchRow;
+        readonly Button sendFish;
+        readonly TMP_Text dispatchSummary;
         readonly RectTransform content;
         readonly ScrollRect scroll;
         string tab="catch",builtKey;
         TMP_Text feedingSummary,feedingTime,feedingState,feedingThreat,feedingLoss;
         Image feedingBar;
-        readonly RectTransform receipt;
-        readonly TMP_Text receiptHeader;
-        readonly TMP_Text[] receiptRows=new TMP_Text[4];
-        readonly Image receiptBar;
-        readonly CanvasGroup receiptFade;
-        RaidWorld observedWorld;
-        MaterialCost receiptTotal,receiptBefore,receiptAfter;
-        float receiptStarted=-100;
-        static readonly string[] MaterialNames={"Биомасса","Хитин","Лом","Электроника"};
-        static int MaterialAt(MaterialCost amount,int index) => index switch
-        {0=>amount.biomass,1=>amount.chitin,2=>amount.scrap,_=>amount.electronics};
 
         public TerminalView(Transform parent,IUiController app)
         {
             this.app=app;RectTransform root;
             var layout=TerminalParts.Shell(parent,"TerminalView",UiText.TerminalTitle,UiText.TerminalKicker,app,out root);Root=root;
             shellTitle=layout.Find("Heading/Titles/Title").GetComponent<TMP_Text>();
-            var resourceRow=UiKit.Row(layout,"Resources",12);UiKit.Size(resourceRow,66);
-            string[] names={UiText.BiomassLabel,UiText.ChitinLabel,UiText.ScrapLabel,UiText.ElectronicsLabel};
-            for(int i=0;i<4;i++)
-            {
-                var panel=UiKit.Panel(resourceRow,"Resource"+i,UiTheme.Panel);UiKit.Tile(panel);UiKit.Size(panel,66,flexibleWidth:1);
-                var body=UiKit.Column(panel.transform,"Layout",0);UiKit.Fill(body,10);
-                TerminalParts.Text(body,"Name",names[i],22,17,UiTheme.Muted);resources[i]=TerminalParts.Text(body,"Amount","—",28,26);
-            }
+            resources=new MaterialStrip(layout,"Team treasury",true);
             summary=TerminalParts.Text(layout,"Summary",UiText.NoConfirmedState,30,21,UiTheme.Muted);
             tabRow=UiKit.Row(layout,"Tabs",8);UiKit.Size(tabRow,50);
             AddTab(tabRow,"catch",UiText.CatchTab);AddTab(tabRow,"upgrades",UiText.UpgradesTab);AddTab(tabRow,"depths",UiText.DepthsTab);AddTab(tabRow,"feeding",UiText.FeedingTab);
+            dispatchRow=UiKit.Row(layout,"Dispatch controls",14);
+            UiKit.Size(dispatchRow,54);
+            dispatchSummary=UiKit.Label(dispatchRow,"Selection summary","",21);
+            UiKit.Size(dispatchSummary,50,flexibleWidth:1);
+            sendFish=UiKit.Button(dispatchRow,"SendFish","Отправить выбранную рыбу",SendSelection,true,52);
+            UiKit.Size(sendFish,52,340).flexibleWidth=0;
             scroll=TerminalParts.Body(layout,out content);
             footer=TerminalParts.Text(layout,"Footer","",40,19,UiTheme.Muted);
-            var receiptPanel=UiKit.Panel(Root,"Processing receipt",new Color(.035f,.10f,.12f,.98f));
-            UiKit.Place(receiptPanel.rectTransform,Vector2.one,Vector2.one,new Vector2(-35,-245),new Vector2(485,176));
-            receipt=receiptPanel.rectTransform;
-            receiptFade=receipt.gameObject.AddComponent<CanvasGroup>();
-            receiptFade.blocksRaycasts=false;
-            var ledger=UiKit.Column(receipt,"Resource intake",5);
-            UiKit.Fill(ledger,14);
-            receiptHeader=TerminalParts.Text(ledger,"Header","",32,23,UiTheme.Cyan);
-            for(int i=0;i<receiptRows.Length;i++)
-                receiptRows[i]=TerminalParts.Text(ledger,"Receipt "+i,"",21,19,UiTheme.Text);
-            receiptBar=UiKit.Panel(ledger,"Intake progress",UiTheme.Cyan);
-            receiptBar.type=Image.Type.Filled;
-            receiptBar.fillMethod=Image.FillMethod.Horizontal;
-            UiKit.Size(receiptBar,3);
-            receipt.gameObject.SetActive(false);
             Root.gameObject.SetActive(false);
         }
         void AddTab(Transform row,string key,string label)
@@ -94,13 +69,15 @@ namespace Raid.UI
                 bool selected=pair.Key==tab;pair.Value.GetComponent<Image>().color=selected?UiTheme.Cyan:UiTheme.Panel;
                 pair.Value.GetComponentInChildren<TMP_Text>().color=selected?UiTheme.Steel:UiTheme.Text;
             }
+            resources.Balances(view);
+            dispatchRow.gameObject.SetActive(station?.kind==ShipConsoleKind.Reservoir && (tab=="catch" || tab=="feeding"));
+            if(dispatchRow.gameObject.activeSelf)RefreshDispatch();
             if(view==null)
             {
-                foreach(var text in resources)UiKit.Set(text,"—");UiKit.Set(summary,UiText.NoConfirmedState);UiKit.Set(footer,UiText.NoConfirmedState);
+                UiKit.Set(summary,UiText.NoConfirmedState);UiKit.Set(footer,UiText.NoConfirmedState);
             }
             else
             {
-                UiKit.Set(resources[0],view.biomass.ToString());UiKit.Set(resources[1],view.chitin.ToString());UiKit.Set(resources[2],view.scrap.ToString());UiKit.Set(resources[3],view.electronics.ToString());
                 UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired,ctx.DefendingReservoir));
                 if(equipment)UiKit.Set(summary,"Бортовая мастерская · оборудование экипажа");
                 if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
@@ -117,6 +94,38 @@ namespace Raid.UI
             foreach(var update in refreshRows)update();
             RefreshFeeding();
         }
+        void RefreshDispatch()
+        {
+            var ctx=app.Context;
+            var view=ctx.View;
+            string reason=TerminalParts.BaseReason(app);
+            if(!string.IsNullOrEmpty(reason)){TerminalParts.ButtonReason(sendFish,dispatchSummary,reason,"");return;}
+            var route=ctx.World.FishRoute;
+            if(route.active || ctx.World.HasFishDispatch)
+            {
+                dispatchSummary.color=UiTheme.Cyan;
+                UiKit.Set(dispatchSummary,route.active
+                    ? $"{(route.feeding?"Кормление":"Переработка")} · {route.completed} / {route.total}"
+                    : "Подача готовится");
+                sendFish.interactable=false;
+                return;
+            }
+            int process=view.tank.Count(item=>item.destination==CatchDestination.Process);
+            int feed=view.tank.Count(item=>item.destination==CatchDestination.Feed);
+            dispatchSummary.color=UiTheme.Muted;
+            UiKit.Set(dispatchSummary,process+feed==0?"Выберите назначение для рыб":$"Переработка {process}   ·   Кормление {feed}");
+            sendFish.interactable=process+feed>0;
+            sendFish.GetComponentInChildren<TMP_Text>().color=sendFish.interactable?UiTheme.Steel:UiTheme.Text;
+        }
+
+        void SendSelection()
+        {
+            var ctx=app.Context;
+            if(ctx.View==null || ctx.World.HasFishDispatch)return;
+            long quote=FishRouteQuote.ComputeDraft(ctx.View.tank);
+            if(quote!=0)app.Send(WorldAction.SendFish,quote);
+        }
+
         string BuildKey()
         {
             var view=app.Context.View;if(view==null)return "waiting";
@@ -142,21 +151,27 @@ namespace Raid.UI
                 TerminalParts.Text(empty,"Title",foodOnly?UiText.NoFoodStock:UiText.NoStock,40,28);
                 TerminalParts.Text(empty,"Description",foodOnly?UiText.NoFoodHint:UiText.NoStockHint,66,22,UiTheme.Muted);return;
             }
-            for(int i=0;i<items.Count;i++)AddItem(items[i],i,foodOnly);
+            for(int i=0;i<items.Count;i++)AddItem(items[i]);
         }
 
-        void AddItem(CatchItem item,int index,bool feedOnly)
+        void AddItem(CatchItem item)
         {
             long id=item.id;
-            var body=TerminalParts.Card(content,"Catch_"+id,146);
-            TerminalParts.Text(body,"Title",UiText.ItemTitle(index,item),32,26);
-            var yield=TerminalParts.Text(body,"Yield","",26,19,UiTheme.Muted);
+            var body=TerminalParts.Card(content,"Catch_"+id,151);
+            var title=UiKit.Row(body,"Catch details",10);
+            UiKit.Size(title,35);
+            UiKit.Size(UiKit.Symbol(title,"Species",DiveInstruments.CatchMark(item.species),Color.white),35,40);
+            UiKit.Size(UiKit.Label(title,"Title",UiText.ItemName(item),25),35,flexibleWidth:1);
+            var food=UiKit.Label(title,"Saturation","",21,UiTheme.Amber);
+            UiKit.Size(food,35,220);
+            var forecastStrip=new MaterialStrip(body,"Processing yield");
             var row=UiKit.Row(body,"Actions",10);
-            UiKit.Size(row,45);
-            var process=UiKit.Button(row,"Process_"+id,"Переработать",()=>app.Send(WorldAction.Process,id),false,44);
+            UiKit.Size(row,44);
+            var process=UiKit.Button(row,"Process_"+id,"На переработку",()=>app.Send(WorldAction.Process,id),false,44);
             var feed=UiKit.Button(row,"Feed_"+id,"В пасть",()=>app.Send(WorldAction.Feed,id),false,44);
             var hold=UiKit.Button(row,"Hold_"+id,"Оставить",()=>app.Send(WorldAction.HoldFish,id),false,44);
-            var status=TerminalParts.Text(body,"Destination","",21,17,UiTheme.Cyan);
+            var status=UiKit.Label(row,"Destination","",18,UiTheme.Cyan);
+            UiKit.Size(status,44,240);
             refreshRows.Add(()=>
             {
                 var ctx=app.Context;
@@ -164,67 +179,28 @@ namespace Raid.UI
                 var fish=progress.tank.Find(entry=>entry.id==id);
                 if(fish==null)return;
                 var forecast=progress.ProcessPreview(fish,ctx.Tuning);
-                string resources=UiText.YieldLabel(fish);
-                bool boosted=forecast.biomass!=fish.biomass*100 || forecast.chitin!=fish.chitin*100 ||
-                    forecast.scrap!=fish.scrap*100 || forecast.electronics!=fish.electronics*100;
-                if(boosted)resources+=" → "+YieldText(forecast);
-                UiKit.Set(yield,resources+"   ·   Насыщение "+TeamProgress.FoodText(progress.FoodValue(fish,ctx.Tuning)));
-                var route=ctx.World.FishRoute;
-                bool travelling=false;
-                for(int i=route.completed;route.active && i<route.total;i++)
-                    if(ctx.World.ActiveRouteId(i)==id){travelling=true;break;}
-                bool enabled=!travelling && string.IsNullOrEmpty(TerminalParts.BaseReason(app));
+                forecastStrip.Quote(forecast,true);
+                UiKit.Set(food,"Насыщение  "+TeamProgress.FoodText(progress.FoodValue(fish,ctx.Tuning)));
+                bool travelling=ctx.World.IsInFishPipe(id);
+                bool enabled=!fish.dispatchCommitted && !travelling && string.IsNullOrEmpty(TerminalParts.BaseReason(app));
                 process.interactable=enabled && !forecast.IsEmpty && fish.destination!=CatchDestination.Process;
                 feed.interactable=enabled && fish.offering>0 && fish.destination!=CatchDestination.Feed;
                 hold.interactable=enabled && fish.destination!=CatchDestination.Hold;
-                UiKit.Set(status,travelling?"В трубе":fish.destination switch
+                var destination=fish.destination;
+                UiKit.Set(status,travelling?"В трубе":fish.dispatchCommitted?"Подача готовится":destination switch
                 {
-                    CatchDestination.Process=>"В очереди на переработку",
-                    CatchDestination.Feed=>"В очереди на кормление",
+                    CatchDestination.Process=>"Выбрана переработка",
+                    CatchDestination.Feed=>"Выбрано кормление",
                     _=>"В резервуаре"
                 });
+                process.GetComponent<Image>().color=destination==CatchDestination.Process?UiTheme.Hex("305F5D"):UiTheme.Panel;
+                feed.GetComponent<Image>().color=destination==CatchDestination.Feed?UiTheme.Hex("614A2E"):UiTheme.Panel;
             });
         }
 
         static string YieldText(MaterialCost points) =>
             TeamProgress.FoodText(points.biomass)+" Б  "+TeamProgress.FoodText(points.chitin)+" Х  "+
             TeamProgress.FoodText(points.scrap)+" Л  "+TeamProgress.FoodText(points.electronics)+" Э";
-
-        void OnProcessingFinished(MaterialCost total,MaterialCost before,MaterialCost after)
-        {
-            receiptBefore=before;receiptTotal=total;
-            receiptAfter=after;
-            receiptStarted=Time.unscaledTime;
-        }
-
-        public void UpdateReceipt()
-        {
-            var world=app.Context.World;
-            if(observedWorld!=world)
-            {
-                if(observedWorld!=null)observedWorld.ProcessingFinished-=OnProcessingFinished;
-                observedWorld=world;
-                if(world!=null)world.ProcessingFinished+=OnProcessingFinished;
-                receiptStarted=-100;
-            }
-            float elapsed=Time.unscaledTime-receiptStarted;
-            bool show=Root.gameObject.activeInHierarchy && (tab=="catch" || tab=="feeding") && elapsed<6f;
-            receipt.gameObject.SetActive(show);
-            if(!show)return;
-            float reveal=Mathf.SmoothStep(0,1,Mathf.Clamp01(elapsed/1.2f));
-            receiptFade.alpha=Mathf.Clamp01(elapsed*7)*Mathf.Clamp01(6-elapsed);
-            receipt.anchoredPosition=new Vector2(-35,-245+20*(1-reveal));
-            receiptBar.fillAmount=reveal;
-            UiKit.Set(receiptHeader,"ПЕРЕРАБОТКА · КАЗНА NEREID");
-            for(int i=0;i<receiptRows.Length;i++)
-            {
-                int old=MaterialAt(receiptBefore,i);
-                int added=MaterialAt(receiptAfter,i)-old;
-                int output=MaterialAt(receiptTotal,i);
-                int delta=Mathf.RoundToInt(added*reveal);
-                UiKit.Set(receiptRows[i],MaterialNames[i]+"  "+old+"  <color=#82E5C7>+"+delta+"</color>  →  "+(old+delta)+"   <color=#A5BBC4>из "+output+"</color>");
-            }
-        }
 
         void BuildUpgrades()
         {
@@ -243,7 +219,8 @@ namespace Raid.UI
                 if(recipe==null){TerminalParts.Text(body,"MissingRecipe",UiText.MissingRecipe,70,22,UiTheme.Amber);continue;}
                 if(maximum){TerminalParts.Text(body,"Complete",UiText.MaxUpgrade,68,22,UiTheme.Muted);continue;}
                 var cost=view.Cost(upgrade,ctx.Tuning);
-                TerminalParts.Text(body,"Cost",UiText.UpgradeCost(cost),30,21,UiTheme.Muted);
+                var costStrip=new MaterialStrip(body,"Upgrade cost");
+                costStrip.Quote(cost);
                 var row=UiKit.Row(body,"Purchase",20);UiKit.Size(row,54);
                 var status=UiKit.Label(row,"Reason","",20,UiTheme.Amber);UiKit.Size(status,54,flexibleWidth:1);
                 var buy=UiKit.Button(row,"Buy_"+upgrade,UiText.BuyUpgradeLevel(level+1),()=>ConfirmUpgrade(upgrade),true,52);UiKit.Size(buy,52,210);buy.GetComponent<LayoutElement>().flexibleWidth=0;
@@ -264,12 +241,12 @@ namespace Raid.UI
             string reason=UpgradeReason(upgrade);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
             var ctx=app.Context;var view=ctx.View;
             int quotedLevel=view.Level(upgrade);var quotedCost=view.Cost(upgrade,ctx.Tuning);
-            app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(view.Level(upgrade)+1)+"\n"+UiText.UpgradeCost(view.Cost(upgrade,ctx.Tuning))+"\n\n"+UiText.UpgradeConfirmHint,
+            app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(view.Level(upgrade)+1)+"\n\n"+UiText.UpgradeConfirmHint,
                 ()=>
                 {
                     if(ctx.View==null||ctx.View.Level(upgrade)!=quotedLevel||!ctx.View.Cost(upgrade,ctx.Tuning).Equals(quotedCost)){app.Toast(UiText.QuoteChanged,true);return;}
                     TerminalParts.Execute(app,()=>UpgradeReason(upgrade),(WorldAction)((int)WorldAction.Reel+(int)upgrade));
-                });
+                },quotedCost);
         }
         void BuildDepths()
         {
@@ -302,7 +279,7 @@ namespace Raid.UI
             var ctx=app.Context;var view=ctx.View;
             if(destination==ctx.World.CurrentDepth)return UiText.AlreadyHere;
             if(!view.CanVisitDepth(destination))return UiText.DepthLocked;
-            if(ctx.World.FishRoute.active)return UiText.RouteBusy;
+            if(ctx.World.HasFishDispatch)return UiText.RouteBusy;
             if(!ctx.AllInside)return UiText.NotAllInside;
             if(view.hoistPhase!=HoistPhase.Loading)return UiText.FinishCargoCycle;
             if(view.cargo.Count>0)return UiText.EmptyCargoBeforeTravel;

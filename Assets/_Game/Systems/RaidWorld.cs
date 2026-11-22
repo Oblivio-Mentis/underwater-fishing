@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 namespace Raid
 {
     // Command IDs are used on the wire. Value 2 belonged to a retired navigation command.
-    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding, HoldFish }
+    public enum WorldAction { DiveOne, DiveTwo, Process=3, Feed, Reel, Fins, Tank, Hull, Winch, LoadCargo, Hoist, Collect, ProcessAll, FeedAll, StopProcessing, StopFeeding, HoldFish, SendFish }
 
     public sealed partial class RaidWorld : NetworkBehaviour
     {
@@ -197,8 +197,11 @@ namespace Raid
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
             if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
-            if(FishRoute.active && (action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.DiveOne || action==WorldAction.DiveTwo || ((action==WorldAction.Process || action==WorldAction.Feed)&&IsRouting(id))))
+            if((FishRoute.active || HasCommittedDispatch) &&
+                (action is WorldAction.ProcessAll or WorldAction.FeedAll or WorldAction.SendFish or WorldAction.DiveOne or WorldAction.DiveTwo))
             {Respond(sender,requestId,false,"route_busy");return;}
+            if(action==WorldAction.SendFish && (!factory || id==0 || id!=FishRouteQuote.ComputeDraft(team.tank)))
+            {Respond(sender,requestId,false,"changed");return;}
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
             {Respond(sender,requestId,false,"changed");return;}
             if(action>=WorldAction.Reel && action<=WorldAction.Winch && expectedLevel>=0 && team.Level((Upgrade)((int)action-(int)WorldAction.Reel))!=expectedLevel)
@@ -213,6 +216,7 @@ namespace Raid
                 case WorldAction.Process: success=factory?ChooseFishRoute(id,CatchDestination.Process):ProcessDeliveredFish(id); break;
                 case WorldAction.Feed: success=factory?ChooseFishRoute(id,CatchDestination.Feed):team.Feed(id,progression); break;
                 case WorldAction.HoldFish: success=ChooseFishRoute(id,CatchDestination.Hold);break;
+                case WorldAction.SendFish: success=CommitFishDispatch();break;
                 case WorldAction.ProcessAll: success=BeginFishRoute(false); break;
                 case WorldAction.FeedAll: success=BeginFishRoute(true); break;
                 case WorldAction.StopProcessing: success=StopFishRoute(false,id); break;
@@ -277,7 +281,7 @@ namespace Raid
             int count=Mathf.Min(waveLossBudget,Mathf.Max(1,Mathf.CeilToInt(severity)));
             // Committed pipe batches are behind closed valves; only stock still
             // available in the reservoir can be stolen. Original non-batch loss is unchanged.
-            var available=team.tank.FindAll(x=>!IsRouting(x.id));
+            var available=team.tank.FindAll(x=>!x.dispatchCommitted && !IsRouting(x.id));
             count=Mathf.Min(count,available.Count);
             if(count>0)
             {

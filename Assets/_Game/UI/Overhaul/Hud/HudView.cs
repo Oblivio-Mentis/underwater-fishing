@@ -130,6 +130,8 @@ namespace Raid.UI
             cargoPhase.color=full?UiTheme.Amber:UiTheme.Muted;
         }
 
+        internal void AnimateReeling() => reel.Animate();
+
         public void UpdateScan()
         {
             var diver=app.Context.Player;

@@ -12,10 +12,11 @@ namespace Raid
         public string species;
         public string[] caughtBy;
         public CatchDestination destination;
+        public bool dispatchCommitted;
         public int biomass, chitin, offering, cargoSize, depthTier, scrap, electronics;
         public CatchItem(long id, int biomass, int chitin, int offering, int cargoSize, int depthTier, int scrap=0, int electronics=0, string species=null)
         { this.id = id; this.biomass = biomass; this.chitin = chitin; this.offering = offering; this.cargoSize = cargoSize; this.depthTier = depthTier; this.scrap=scrap; this.electronics=electronics; this.species=species; }
-        public bool IsValid => destination>=CatchDestination.Hold && destination<=CatchDestination.Feed && id > 0 && biomass >= 0 && chitin >= 0 && scrap>=0 && electronics>=0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
+        public bool IsValid => (!dispatchCommitted || destination!=CatchDestination.Hold) && destination>=CatchDestination.Hold && destination<=CatchDestination.Feed && id > 0 && biomass >= 0 && chitin >= 0 && scrap>=0 && electronics>=0 && offering >= 0 && cargoSize > 0 && depthTier > 0;
         public CatchItem Copy()
         {
             var copy=PublicCopy();
@@ -23,7 +24,7 @@ namespace Raid
             return copy;
         }
         public CatchItem PublicCopy() => new CatchItem(id, biomass, chitin, offering, cargoSize, depthTier,scrap,electronics,species)
-            {destination=destination};
+            {destination=destination,dispatchCommitted=dispatchCommitted};
     }
 
     [Serializable]

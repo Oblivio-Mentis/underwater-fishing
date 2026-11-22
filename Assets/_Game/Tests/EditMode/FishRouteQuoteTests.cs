@@ -15,6 +15,20 @@ namespace Raid.Tests
             fish.biomass=8;Assert.AreNotEqual(quote,FishRouteQuote.Compute(new[]{fish},12));
             fish.biomass=2;Assert.AreNotEqual(quote,FishRouteQuote.Compute(new[]{fish},18));
         }
+        [Test] public void DraftQuoteTracksExactDestinationsAndExcludesHoldAndCommitted()
+        {
+            var a=new CatchItem(11,2,0,3,1,1){destination=CatchDestination.Process};
+            var b=new CatchItem(12,6,1,4,1,2){destination=CatchDestination.Feed};
+            var held=new CatchItem(13,3,0,2,1,1);
+            long quote=FishRouteQuote.ComputeDraft(new[]{a,b,held});
+            Assert.AreEqual(quote,FishRouteQuote.ComputeDraft(new[]{b,a}));
+            b.destination=CatchDestination.Process;
+            Assert.AreNotEqual(quote,FishRouteQuote.ComputeDraft(new[]{a,b,held}));
+            a.dispatchCommitted=b.dispatchCommitted=true;
+            Assert.AreEqual(0,FishRouteQuote.ComputeDraft(new[]{a,b,held}));
+            Assert.IsTrue(a.PublicCopy().dispatchCommitted);
+        }
+
         [Test] public void DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation()
         {
             var a=new CatchItem(11,2,0,3,1,1);var b=new CatchItem(12,6,1,4,1,2);

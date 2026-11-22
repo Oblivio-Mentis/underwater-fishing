@@ -17,10 +17,10 @@ namespace Raid.UI
     // Local presentation state only. The server continues validating every action.
     public static class UiInputGate
     {
-        public static bool Active, Modal, AllowAssist, PointerReserved, SkillMonitorLook;
+        public static bool Active, Modal, AllowAssist, PointerReserved, MonitorLook;
         public static float ResumeAt;
         public static bool Blocked => Active && (Modal || Time.unscaledTime < ResumeAt || !Application.isFocused);
-        public static void Reset() { Active=false; Modal=false; AllowAssist=false; PointerReserved=false; SkillMonitorLook=false; ResumeAt=0; }
+        public static void Reset() { Active=false; Modal=false; AllowAssist=false; PointerReserved=false; MonitorLook=false; ResumeAt=0; }
     }
     public enum UiPage { None, Main, Connection, Crew, Terminal, Cargo, Pause, Settings, SkillTree }
     public interface IUiController

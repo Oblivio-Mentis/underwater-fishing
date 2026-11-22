@@ -67,7 +67,7 @@ namespace Raid
         [Header("Personal active skills")]
         public string hydroBinding="<Keyboard>/b";
         [Min(.1f)] public float hydroSeconds=1f,hydroCooldown=12f;
-        [Min(.1f)] public float swimStartAcceleration=34f, swimBrakingAcceleration=46f;
+        [Min(.1f)] public float swimStartAcceleration=22f, swimBrakingAcceleration=34f;
         [Min(.1f)] public float scanSeconds=3.5f,scanCooldown=5f;
 
         [Header("Skill tree overrides")]

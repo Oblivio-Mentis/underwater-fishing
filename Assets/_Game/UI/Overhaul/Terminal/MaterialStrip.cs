@@ -1,4 +1,3 @@
-using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,7 +5,7 @@ using Mark=Raid.UI.DiveInstruments.Mark;
 
 namespace Raid.UI
 {
-    // Shared visual language for the balance, confirmed gains, processing yields and quotes.
+    // Shared icons and amounts for the team balance, costs and processing forecasts.
     internal sealed class MaterialStrip
     {
         static readonly Mark[] Icons={Mark.Biomass,Mark.Chitin,Mark.Scrap,Mark.Electronics};
@@ -14,12 +13,8 @@ namespace Raid.UI
         static readonly Color[] Tints={UiTheme.Hex("B4DFB0"),UiTheme.Hex("E4C5A3"),UiTheme.Hex("C3D0DE"),UiTheme.Hex("97D9DA")};
 
         readonly TMP_Text[] amounts=new TMP_Text[4];
-        readonly TMP_Text[] deltas=new TMP_Text[4];
         readonly Image[] surfaces=new Image[4];
-        readonly int[] totals=new int[4], starts=new int[4];
-        readonly float[] creditedAt=new float[4];
         readonly bool ledger;
-        bool seenBalances;
         internal readonly RectTransform Root;
 
         internal MaterialStrip(Transform parent,string name,bool ledger=false)
@@ -46,16 +41,16 @@ namespace Raid.UI
                     label.textWrappingMode=TextWrappingModes.NoWrap;
                     amounts[i]=UiKit.Label(card.transform,"Balance","—",28);
                     amounts[i].fontStyle=FontStyles.Bold;
-                    Stretch(amounts[i].rectTransform,71,67,5,42);
-                    deltas[i]=UiKit.Label(card.transform,"Confirmed addition","",18,UiTheme.Green);
-                    var delta=deltas[i];delta.alignment=TextAlignmentOptions.MidlineRight;
-                    UiKit.Place(delta.rectTransform,new Vector2(1,.5f),new Vector2(1,.5f),new Vector2(-12,-10),new Vector2(59,29));
+                    Stretch(amounts[i].rectTransform,71,12,5,42);
                 }
                 else
                 {
                     amounts[i]=UiKit.Label(card.transform,"Amount","",17,Tints[i]);
                     Stretch(amounts[i].rectTransform,32,5,1,32);
                     amounts[i].textWrappingMode=TextWrappingModes.NoWrap;
+                    amounts[i].enableAutoSizing=true;
+                    amounts[i].fontSizeMin=13;
+                    amounts[i].fontSizeMax=17;
                 }
             }
         }
@@ -68,58 +63,27 @@ namespace Raid.UI
 
         internal static MaterialCost Yield(CatchItem item) => new(item.biomass,item.chitin,item.scrap,item.electronics);
 
-        internal void Quote(MaterialCost quote)
+        internal void Quote(MaterialCost quote,bool hundredths=false,bool showZero=false)
         {
             for(int i=0;i<4;i++)
             {
                 int value=Amount(quote,i);
-                surfaces[i].gameObject.SetActive(value>0);
-                if(value>0)UiKit.Set(amounts[i],Labels[i]+" "+value);
+                surfaces[i].gameObject.SetActive(showZero || value>0);
+                if(showZero || value>0)UiKit.Set(amounts[i],Labels[i]+" "+(hundredths?TeamProgress.FoodText(value):value.ToString()));
             }
         }
 
         internal void Balances(TeamProgress view)
         {
             if(!ledger)return;
-            if(view==null)
-            {
-                seenBalances=false;
-                foreach(var amount in amounts)UiKit.Set(amount,"—");
-                foreach(var delta in deltas)UiKit.Set(delta,"");
-                return;
-            }
-
-            var balances=new MaterialCost(view.biomass,view.chitin,view.scrap,view.electronics);
-            float now=Time.unscaledTime;
-            for(int i=0;i<4;i++)
-            {
-                int value=Amount(balances,i);
-                float t=seenBalances?now-creditedAt[i]:3;
-                if(seenBalances && value>totals[i])
-                {
-                    if(t>=1.1f)starts[i]=totals[i];
-                    creditedAt[i]=now;
-                    t=0;
-                }
-                else if(!seenBalances || value<totals[i])
-                {
-                    starts[i]=value;
-                    creditedAt[i]=now-3;
-                    t=3;
-                }
-                totals[i]=value;
-                int difference=value-starts[i];
-                bool receipt=difference>0 && t<2.4f;
-                int displayed=receipt?(int)Math.Round(starts[i]+difference*(double)Mathf.SmoothStep(0,1,t/1.1f)):value;
-                UiKit.Set(amounts[i],displayed.ToString());
-                UiKit.Set(deltas[i],receipt?"+"+difference:"");
-                var tint=UiTheme.Green;tint.a=Mathf.Clamp01((2.4f-t)/.28f);deltas[i].color=tint;
-                surfaces[i].color=Color.Lerp(TerminalParts.MonitorCard,new Color(.16f,.27f,.23f),receipt?Mathf.Clamp01(1-t/1.6f):0);
-            }
-            seenBalances=true;
+            for(int i=0;i<Icons.Length;i++)
+                UiKit.Set(amounts[i],view==null?"—":Amount(view.Treasury,i).ToString());
         }
 
-        static int Amount(MaterialCost cost,int index) => index switch
+        internal static Mark Icon(int index) => Icons[index];
+        internal static Color Tint(int index) => Tints[index];
+        internal static string Label(int index) => Labels[index];
+        internal static int Amount(MaterialCost cost,int index) => index switch
         {
             0=>cost.biomass,1=>cost.chitin,2=>cost.scrap,_=>cost.electronics
         };

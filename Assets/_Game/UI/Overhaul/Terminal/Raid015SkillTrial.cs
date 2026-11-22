@@ -179,7 +179,7 @@ namespace Raid.UI
             yield return Send("reticle_click");
             yield return Wait("Both clients see all 36 purchasable nodes",()=>Remote()?.page=="SkillTree" &&
                 Remote()?.skillTreeNodes==36 && Ui.GetComponentsInChildren<SkillPurchaseButton>().Length==36);
-            Check("Monitor reserves normal gameplay",UiInputGate.Blocked && UiInputGate.SkillMonitorLook && Remote()?.inputBlocked==true);
+            Check("Monitor reserves normal gameplay",UiInputGate.Blocked && UiInputGate.MonitorLook && Remote()?.inputBlocked==true);
             yield return Wait("Server confirms both real eye rays",()=>ShipConsole.CanUseKind(host,ShipConsoleKind.SkillTree) &&
                 ShipConsole.CanUseKind(peer,ShipConsoleKind.SkillTree));
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"skill-host-720.png"));

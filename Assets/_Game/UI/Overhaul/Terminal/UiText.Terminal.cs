@@ -57,7 +57,7 @@ namespace Raid.UI
         public const string CargoFromTerminal="Контейнер и лебёдка";
         public const string CargoFromTerminalHint="Подъём запускается у контейнера. Доставленный улов поступает в этот резервуар.";
         public const string HungerTitle="ПИТАНИЕ И ЗАЩИТА РЕЗЕРВУАРА";
-        public const string FeedingHint="Откройте клапан кормления у резервуара. Рыба засчитывается при доставке в пасть.";
+        public const string FeedingHint="Выберите рыбу для кормления и отправьте улов. Насыщение засчитывается при доставке в пасть.";
         public const string NoFoodStock="В резервуаре нет рыбы для кормления";
         public const string NoFoodHint="Доставьте биологический улов через лебёдку. Металлолом и электронику перерабатывают в материалы.";
         public const string FeedingOutcomes="ИСХОДЫ ЦИКЛА";

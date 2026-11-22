@@ -185,8 +185,8 @@ namespace Raid
                 if(controlling && CanRespawn && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)RequestRespawn();
                 return;
             }
-            bool usingSkillMonitor = UI.UiInputGate.SkillMonitorLook && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
-            if (controlling || usingSkillMonitor)
+            bool usingMonitor = UI.UiInputGate.MonitorLook && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
+            if (controlling || usingMonitor)
             {
                 Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);
@@ -267,21 +267,25 @@ namespace Raid
                 float speed = Mathf.Max(0f,tuning.swimSpeed)*(SpeedMultiplier+Personal(SkillId.F1))*
                     (_serverSprint?Mathf.Max(1f,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Personal(SkillId.C2)+Personal(SkillId.F3));
-                if(Time.time<dashUntil && Nereid.NereidAirlock.Active?.Contains(transform.position)!=true)
-                    speed*=1+Personal(SkillId.F4);
-                else if(Nereid.NereidAirlock.Active?.Contains(transform.position)==true)dashUntil=0;
+                bool inHatch=Nereid.NereidAirlock.Active?.Contains(transform.position)==true;
+                if(inHatch)dashUntil=0;
+                else if(Time.time<dashUntil)speed*=1+Personal(SkillId.F4);
                 if(state.Stress>=tuning.stressDanger) speed*=.5f;
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
                 var swimTuning=RaidWorld.Instance?.progression;
                 if(swimTuning!=null && !IsTrapped && !IsHelpless)
                 {
-                    float rate=velocity.sqrMagnitude>.002f
-                        ? swimTuning.swimStartAcceleration*(1+Personal(SkillId.F2)):swimTuning.swimBrakingAcceleration;
+                    bool accelerating=velocity.sqrMagnitude>.002f && Vector3.Dot(swimVelocity,velocity)>=0;
+                    float acceleration=swimTuning.swimStartAcceleration*(1+Personal(SkillId.F2));
+                    float rate=accelerating?acceleration:swimTuning.swimBrakingAcceleration;
+                    if(inHatch)rate=Mathf.Max(rate,accelerating?34f:46f);
                     swimVelocity=Vector3.MoveTowards(swimVelocity,velocity,rate*Time.fixedDeltaTime);
                 }
                 else swimVelocity=velocity;
-                _controller.Move(swimVelocity*Time.fixedDeltaTime);
+                var collision=_controller.Move(swimVelocity*Time.fixedDeltaTime);
+                if((swimVelocity.y>0 && (collision&CollisionFlags.Above)!=0) ||
+                   (swimVelocity.y<0 && (collision&CollisionFlags.Below)!=0))swimVelocity.y=0;
             }
             _wasWalking=walking;
             transform.rotation = Quaternion.Euler(0f, _serverYaw, 0f);
