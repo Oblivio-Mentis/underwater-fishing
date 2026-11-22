@@ -235,10 +235,10 @@ namespace Raid
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
             if (Application.isFocused && !UI.UiInputGate.Blocked && Keyboard.current?.qKey.wasPressedThisFrame == true)
                 RequestDropSelected();
-            bool gameplay = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
-            bool controlling = gameplay && !UI.UiInputGate.PointerReserved;
+            bool gameplay = Application.isFocused && !UI.UiInputGate.Blocked;
+            bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved;
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
-            bool maySelect=controlling || gameplay && RaidWorld.Instance?.GoshaBallInHands(Motor)==true;
+            bool maySelect=gameplay && (!UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
             if (maySelect && !Motor.IsHelpless)
             {
                 for (int i = 0; i < _select.Length; i++)

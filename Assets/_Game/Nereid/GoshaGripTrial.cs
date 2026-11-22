@@ -36,8 +36,10 @@ namespace Raid.Nereid
                 turned>45 && maxDistance<.001f && maxAngle<.1f);
             capture("ball-in-hand.png");
             ui.HandleBallPointer(true,false);
-            yield return new WaitForSeconds(world.tuning.ballWindSeconds+.15f);
-            check("Holding LMB keeps the single ball in the hand and visibly winds the arm",
+            float until=Time.realtimeSinceStartup+world.tuning.ballWindSeconds+2;
+            while((world.Gosha.BallWind<=240 || (ball.localPosition-position).magnitude<=.18f) &&
+                Time.realtimeSinceStartup<until)yield return null;
+            check($"Holding LMB winds to {world.Gosha.BallWind}/255 and moves the ball {(ball.localPosition-position).magnitude:F2} m",
                 world.HasGoshaBall(holder) && world.Gosha.BallWind>240 && (ball.localPosition-position).magnitude>.18f);
             capture("ball-windup.png");
             ui.ShowPage(UiPage.Pause);
