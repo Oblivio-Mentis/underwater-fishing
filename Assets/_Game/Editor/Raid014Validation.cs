@@ -75,7 +75,11 @@ namespace Raid.Editor
                     await Until(() => !Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("Running"), "reef regression", 240);
                     Check(Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("PASS"), Raid.Nereid.Editor.NereidEncounterChecks.Status);
                 }
-                else await AirAndDefense(diver);
+                else
+                {
+                    await AirAndDefense(diver);
+                    if (DiverMotor.ServerDivers.Count == 2) await ShipRegression(diver);
+                }
                 File.WriteAllLines(Path.Combine(Output, "air-defense.txt"), observations);
                 EditorApplication.Exit(0);
             }
@@ -207,6 +211,42 @@ namespace Raid.Editor
                 $"Physical contact at the tank: {t.WavePosition}");
         }
 
+        static async Awaitable ShipRegression(DiverMotor host)
+        {
+            var w = RaidWorld.Instance;
+            var peer = DiverMotor.ServerDivers.First(d => !d.IsOwner);
+            var deck = new Vector3(-3, 1.2f, 1);
+            host.Teleport(deck); peer.Teleport(deck + Vector3.right * 1.4f);
+            host.Trap();
+            await Until(() => host.IsTrapped, "staged trapped diver");
+            await PeerRequest("key", 5, 0, "F");
+            await Until(() => !host.IsTrapped, "remote F rescue", 9);
+            Check(!host.IsDead, "Remote F rescued the immobilized diver on deck");
+
+            foreach (bool feeding in new[] { false, true })
+            {
+                var action = feeding ? WorldAction.FeedAll : WorldAction.ProcessAll;
+                var station = ShipConsole.Stations.First(s => s.Supports(action));
+                bool reachable = false;
+                foreach (var side in new[] {Vector3.forward,Vector3.back,Vector3.left,Vector3.right})
+                {
+                    host.Teleport(station.transform.position + side * 1.45f + Vector3.up * .5f);
+                    Physics.SyncTransforms();
+                    if (host.IsInside && ShipConsole.CanUse(host, action)) { reachable = true; break; }
+                }
+                Check(reachable, "Reached physical station " + action);
+                long id = feeding ? 1400202 : 1400201;
+                int before = feeding ? w.Team.offering : w.Team.biomass;
+                Check(w.Team.Deposit(new CatchItem(id, 2, 0, 1, 1, 1)), "Staged one fish in the reservoir");
+                w.Command(action, 0);
+                await Until(() => w.FishRoute.active, "start " + action);
+                await Until(() => !w.FishRoute.active, "complete " + action, 30);
+                int added = (feeding ? w.Team.offering : w.Team.biomass) - before;
+                Check(!w.Team.tank.Exists(x => x.id == id) && added == (feeding ? 1 : 2),
+                    action + " consumed one fish and added " + added);
+            }
+        }
+
         static async Awaitable RemoteShot(DiverMotor host, ThreatDirector t, Vector3 point, Vector3 stopped)
         {
             var peer = DiverMotor.ServerDivers.First(d=>!d.IsOwner);
@@ -222,12 +262,12 @@ namespace Raid.Editor
             Check(t.WaveHealth == hp-1,$"Remote owner hit visible raider once: {hp:F1} -> {t.WaveHealth:F1}");
         }
 
-        [Serializable] sealed class Request { public string id, action; public float number, number2; }
+        [Serializable] sealed class Request { public string id, action, value; public float number, number2; }
         [Serializable] sealed class Response { public string request, error; }
-        static async Awaitable PeerRequest(string action, float x=0, float y=0)
+        static async Awaitable PeerRequest(string action, float x=0, float y=0, string value="")
         {
             string dir=Arg("-raid-peer");
-            var r=new Request { id=Guid.NewGuid().ToString("N"), action=action, number=x, number2=y };
+            var r=new Request { id=Guid.NewGuid().ToString("N"), action=action, number=x, number2=y, value=value };
             File.WriteAllText(Path.Combine(dir,"pending"),JsonUtility.ToJson(r));
             var p=Path.Combine(dir,"request.json"); if(File.Exists(p)) File.Delete(p);
             File.Move(Path.Combine(dir,"pending"),p);
