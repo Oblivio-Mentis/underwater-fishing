@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Fishing', 'Gosha', 'Water')][string] $Case,
+    [Parameter(Mandatory)][ValidateSet('Fishing', 'Gosha', 'Water', 'Skills')][string] $Case,
     [Parameter(Mandatory)][string] $Player,
     [Parameter(Mandatory)][string] $OutputDirectory,
     [int] $Port = 18149,
@@ -27,7 +27,7 @@ function Read-Snapshot($path) {
 }
 $common = @('-force-d3d11', '-screen-fullscreen', '0', '-raid-local-port', "$Port", '-job-worker-count', '3')
 $hostArgs = $common + @('-raid-host', '-raid-ui-probe', $hostDir, '-raid-save', $save, '-logFile', "$hostDir/player.log",
-    '-screen-width', '1280', '-screen-height', '720')
+    '-screen-width', '1280', '-screen-height', '720', '-raid-profile', '137923b3-3adf-4f24-8c1c-43dc48ee1198')
 switch ($Case) {
     'Fishing' {
         $report = "$results/fishing.json"
@@ -36,6 +36,10 @@ switch ($Case) {
     'Gosha' {
         $report = "$results/gosha-crew.json"
         $hostArgs += @('-batchmode', '-raid-gosha-trial', $results, '-raid-gosha-peer', $peerDir)
+    }
+    'Skills' {
+        $report = "$results/skill-results.json"
+        $hostArgs += @('-batchmode', '-raid-skills-trial', $results, '-raid-skills-peer', $peerDir)
     }
     'Water' {
         $report = "$results/environment.json"
@@ -53,7 +57,7 @@ try {
         if ($hostGame.HasExited -or (Get-Date) -ge $deadline) { throw "Host did not spawn; see $hostDir/player.log" }
     } until ($s -and $s.connected -and $s.players -eq 1)
     $peerArgs = $common + @('-batchmode', '-raid-client', '-screen-width', '1920', '-screen-height', '1080',
-        '-raid-ui-probe', $peerDir, '-raid-save', "$peerDir/team.json", '-logFile', "$peerDir/player.log")
+        '-raid-ui-probe', $peerDir, '-raid-profile', '86a1d665-8b18-4a02-a076-a92bb5018316', '-raid-save', "$peerDir/team.json", '-logFile', "$peerDir/player.log")
     $peerGame = Start-Player $peerArgs
     $deadline = (Get-Date).AddMinutes(10)
     do {
