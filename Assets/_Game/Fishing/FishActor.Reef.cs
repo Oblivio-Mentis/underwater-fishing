@@ -103,8 +103,8 @@ namespace Raid
         {
             if (!staggered || habitat == null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || lines.Count > 0)
                 return false;
-            if (Time.time <= departureAt || !HasRoamingReplacement()) return false;
-            leaving = NearestSwimmer(transform.position,19) == null &&
+            if (Time.time <= departureAt) return false;
+            leaving = HasRoamingReplacement() && NearestSwimmer(transform.position,19) == null &&
                 ReefHabitats.CanArrive(transform.position,19,depthTier > 1 ? 23 : 28);
             if (!leaving || fleeRemaining > 0 || Vector3.Distance(transform.position, RoutePoint(habitat,0)) > 1.8f) return false;
             nextHabitat++;
