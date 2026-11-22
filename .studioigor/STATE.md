@@ -1,12 +1,12 @@
 # studioigor - Underwater Fishing
 PROJECT: Underwater Fishing
 PHASE: 6 — Mechanics
-UPDATED: 2026-11-22 18:57
+UPDATED: 2026-11-23
 ## Now
-В ветке `raid/017-living-ocean` объединены RAID-015 с 36 навыками и общей казной, RAID-016 с визуальным обновлением и RAID-017 с изменениями ловли, фауны и мониторов. Windows x64 Release из `c1a0b34` находится в `Builds/UnderwaterFishing-RAID017-Windows.zip`. Сетевые отчёты и снимки находятся в `Builds/RAID017-Checks`.
+Ветка `raid/018-nereid-expedition` объединяет RAID-014–017, включая радиальное дерево из 36 навыков и общую кассу. В RAID-018 переработаны донные террасы, затонувший корпус и нижний разлом, на «Нереиде» появились машинный отсек и панорамный мостик. Экраны реагируют на прицел, камера сохраняет игровой угол обзора. Кнопка переработчика принимает назначения, заданные на компьютере резервуара.
 
 ## Open questions
-Second Steam account/computer available later per user's answer. Cross-account Steam and human co-op/feel acceptance NOT RUN.
+Плейтест экипажем через интернет с двух устройств и Steam-аккаунтов остаётся открытым.
 ## Session log
 | date | phase | done | next |
 |---|---|---|---|
