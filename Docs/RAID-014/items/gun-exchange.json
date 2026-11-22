@@ -1,0 +1,112 @@
+{
+  "source": "5525c0dce14fd7aa07ef2b32d9e0d98811d4f68e",
+  "before": {
+    "host": {
+      "owner": 0,
+      "activeSlot": 0,
+      "harpoonInstance": "5708318636005314911",
+      "selectedItem": "Harpoon",
+      "selectedInstance": "5708318636005314911",
+      "droppedItems": [],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    },
+    "client": {
+      "owner": 1,
+      "activeSlot": 0,
+      "harpoonInstance": "5043103761837029888",
+      "selectedItem": "Harpoon",
+      "selectedInstance": "5043103761837029888",
+      "droppedItems": [],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    }
+  },
+  "off_aim_rejected": {
+    "owner": 1,
+    "activeSlot": 0,
+    "harpoonInstance": "5043103761837029888",
+    "selectedItem": "Harpoon",
+    "selectedInstance": "5043103761837029888",
+    "droppedItems": [
+      {
+        "instance": "5708318636005314911",
+        "kind": "Harpoon",
+        "species": "",
+        "position": {
+          "x": -4.869999885559082,
+          "y": 0.17000000178813934,
+          "z": 3.0
+        }
+      }
+    ],
+    "inputBlocked": false,
+    "worldMessage": "Depth 1: catch fish and deliver cargo"
+  },
+  "remote_physical_E_swap": {
+    "host": {
+      "owner": 0,
+      "activeSlot": 0,
+      "harpoonInstance": "0",
+      "selectedItem": "None",
+      "selectedInstance": "0",
+      "droppedItems": [
+        {
+          "instance": "5043103761837029888",
+          "kind": "Harpoon",
+          "species": "",
+          "position": {
+            "x": -4.869999885559082,
+            "y": 0.17000000178813934,
+            "z": 3.0
+          }
+        }
+      ],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    },
+    "client": {
+      "owner": 1,
+      "activeSlot": 0,
+      "harpoonInstance": "5708318636005314911",
+      "selectedItem": "Harpoon",
+      "selectedInstance": "5708318636005314911",
+      "droppedItems": [
+        {
+          "instance": "5043103761837029888",
+          "kind": "Harpoon",
+          "species": "",
+          "position": {
+            "x": -4.869999885559082,
+            "y": 0.17000000178813934,
+            "z": 3.0
+          }
+        }
+      ],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    }
+  },
+  "completed": {
+    "host": {
+      "owner": 0,
+      "activeSlot": 0,
+      "harpoonInstance": "5043103761837029888",
+      "selectedItem": "Harpoon",
+      "selectedInstance": "5043103761837029888",
+      "droppedItems": [],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    },
+    "client": {
+      "owner": 1,
+      "activeSlot": 0,
+      "harpoonInstance": "5708318636005314911",
+      "selectedItem": "Harpoon",
+      "selectedInstance": "5708318636005314911",
+      "droppedItems": [],
+      "inputBlocked": false,
+      "worldMessage": "Depth 1: catch fish and deliver cargo"
+    }
+  }
+}
