@@ -48,3 +48,4 @@ The new instrument glyphs, terrain, coral, kelp settings and the adapted bubble 
 |---|---|---|
 | [Quaternius Modular Sci-Fi MegaKit](https://quaternius.itch.io/modular-sci-fi-megakit) | Access point, cargo crate and tall bulkhead frame | CC0 1.0, notice in Docs/Licenses |
 | [Low Poly Underwater Pack](https://reodesuxz.itch.io/low-poly-underwater-pack) | Optional locally imported coral fan, table coral, anemone and anchor | reodesuxz project-use license, notice in Docs/Licenses |
+| [NVJOB Simple Boids, official source](https://github.com/nvjob/nvjob-boids/tree/cfeb0fc63f9863f473c2c30ccad6731aa1ef05e8) | Fish 1 mesh normalized for the instanced deep shoal | MIT, notice in Docs/Licenses |
