@@ -38,10 +38,10 @@ namespace Raid
                 "A fish was routed without choosing a destination.");
             var food=world.Team.tank.Find(item=>item.id==catches[0]);
             int foodValue=world.Team.FoodValue(food,world.progression);
-            yield return ClickReservoirControl("Process_"+big.id,0);
+            yield return ClickReservoirControl("Process_"+big.id);
             yield return Wait(()=>!ui.CommandPending && big.destination==CatchDestination.Process,5,"Processor draft was not confirmed.");
             var obsoleteQuote=FishRouteQuote.ComputeDraft(world.Team.tank);
-            yield return ClickReservoirControl("Feed_"+food.id,1);
+            yield return ClickReservoirControl("Feed_"+food.id);
             yield return Wait(()=>!ui.CommandPending && food.destination==CatchDestination.Feed,5,"Feeding draft was not confirmed.");
             yield return Pause(1f);
             Require(!world.FishRoute.active && catches.All(id=>world.Team.tank.Exists(item=>item.id==id)) &&
@@ -72,7 +72,7 @@ namespace Raid
             host.Motor.LookAtConsole(aim.position);
             yield return Wait(()=>ui.QaPointAtMonitor() && ui.Page==UiPage.Terminal,5,"Could not return to the aquarium monitor.");
             var secondProcess=world.Team.tank.Find(item=>item.id==catches[1]);
-            yield return ClickReservoirControl("Process_"+secondProcess.id,1);
+            yield return ClickReservoirControl("Process_"+secondProcess.id);
             yield return Wait(()=>!ui.CommandPending && secondProcess.destination==CatchDestination.Process,5,"Second processing draft was not confirmed.");
             yield return ClickReservoirControl("SendFish");
             yield return Wait(()=>secondProcess.dispatchCommitted && food.dispatchCommitted && world.FishRoute.active,
@@ -88,16 +88,9 @@ namespace Raid
                 "The physical processor or mixed dispatch awarded the wrong amounts or touched an unassigned fish.");
             Check("Aquarium Send launches both draft routes once, and the unassigned fish remains in the tank.");
         }
-        IEnumerator ClickReservoirControl(string name,float? listPosition=null)
+        IEnumerator ClickReservoirControl(string name)
         {
             var ui=UiRoot.Instance;
-            if(listPosition.HasValue)
-            {
-                var list=ui.GetComponentInChildren<ScrollRect>();
-                Require(list!=null,"Aquarium has no catch list.");
-                list.StopMovement();
-                list.verticalNormalizedPosition=listPosition.Value;
-            }
             Button control=null;
             yield return Wait(()=>
             {
@@ -105,6 +98,19 @@ namespace Raid
                 return control!=null && control.interactable;
             },5,"No enabled aquarium control "+name);
             var rect=(RectTransform)control.transform;
+            var list=control.GetComponentInParent<ScrollRect>();
+            if(list!=null)
+            {
+                Canvas.ForceUpdateCanvases();
+                float overflow=list.content.rect.height-list.viewport.rect.height;
+                if(overflow>0)
+                {
+                    float depth=list.content.rect.yMax-list.content.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
+                    list.StopMovement();
+                    list.verticalNormalizedPosition=1-Mathf.Clamp01((depth-list.viewport.rect.height*.5f)/overflow);
+                }
+                Canvas.ForceUpdateCanvases();
+            }
             host.Motor.LookAtConsole(rect.TransformPoint(rect.rect.center));
             yield return Pause(.3f);
             Require(ui.QaClickReticle(),"The real reticle could not activate "+name);
