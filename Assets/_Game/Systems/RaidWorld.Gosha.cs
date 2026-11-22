@@ -53,12 +53,13 @@ namespace Raid
             var go=new GameObject("Gosha's ball (server physics)");go.transform.SetParent(transform,true);
             ballBody=go.AddComponent<GoshaBallBody>();ballBody.Initialize(this);
             gosha.UpdateSettings(new SyncTypeSettings(.05f));
+            lastOrderAt=float.NegativeInfinity;
             ResetGosha();
         }
         void ResetGosha()
         {
             if(ballBody==null)return;
-            ReleaseOrder();clearingSeaDoor=false;lastOrderAt=float.NegativeInfinity;
+            ReleaseOrder();clearingSeaDoor=false;
             ClearBallLine();
             pet=new GoshaSnapshot{Active=true,OrderOwner=-1,Rider=-1,Holder=-1,Thrower=-1,Knocked=-1,Heading=Vector3.forward,
                 Mode=team.goshaTamed?GoshaMode.Roaming:GoshaMode.Waiting,Position=deck.Mark(7)};
