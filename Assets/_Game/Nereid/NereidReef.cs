@@ -5,11 +5,14 @@ using UnityEngine.Rendering;
 namespace Raid.Nereid
 {
     [DisallowMultipleComponent]
-    public sealed class NereidReef : MonoBehaviour
+    public sealed partial class NereidReef : MonoBehaviour
     {
         readonly List<Object> owned=new();
+        readonly List<GameObject> retiredFloors=new();
         readonly System.Random random=new(17291);
-        Material rock, lightColumns;
+        Material rock, bedMaterial, basalt, bioluminescence, lightColumns;
+        GameObject shoal, abyss;
+        int shownDepth;
         float Range(float min,float max) => Mathf.Lerp(min,max,(float)random.NextDouble());
 
         void Awake()
@@ -17,19 +20,71 @@ namespace Raid.Nereid
             var reefShader=Resources.Load<Shader>("NereidReef");
             var shaftShader=Resources.Load<Shader>("NereidLightColumns");
             if(reefShader==null || shaftShader==null)return;
-            rock=new Material(reefShader){name="Basalt, sand and coral"};owned.Add(rock);
-            lightColumns=new Material(shaftShader){name="Suspended water light"};owned.Add(lightColumns);
+            rock=CreateMaterial(reefShader,"Weathered reef stone and coral");
+            bedMaterial=CreateMaterial(reefShader,"Current-washed limestone sand");
+            bedMaterial.SetFloat("_Sand",1);
+            basalt=CreateMaterial(reefShader,"Thin-bedded abyssal basalt");
+            basalt.SetFloat("_Rift",1);
+            bioluminescence=CreateMaterial(reefShader,"Abyssal cold-water polyps");
+            bioluminescence.SetFloat("_Glow",.9f);
+            lightColumns=CreateMaterial(shaftShader,"Suspended water light");
+            LoadRockForms();
 
-            var land=new ReefGeometry();
-            const int columns=91,rows=91;
-            for(int z=0;z<rows;z++) for(int x=0;x<columns;x++)
-            {
-                float wx=-142+3.6f*x,wz=-173+3.6f*z;
-                float y=BedHeight(wx,wz);
-                var grit=Color.Lerp(new Color(.033f,.085f,.099f),new Color(.157f,.19f,.138f),Mathf.PerlinNoise(wx*.29f,wz*.23f));
-                land.Add(new Vector3(wx,y,wz),grit);
-                if(x>0&&z>0){int c=z*columns+x;land.Quad(c-columns-1,c-1,c,c-columns);}
-            }
+            shoal=Region("01 / The Pale Shoals");
+            abyss=Region("02 / The Needle Rift");
+            var shallowBed=BuildShoal();
+            var deepBed=BuildRift();
+            Physics.SyncTransforms();
+            // The berth masks in RiftHeight keep salvage at the same physical elevations on both maps.
+            NereidSalvage.Place(shallowBed,rock,owned);
+            gameObject.AddComponent<NereidWaterLife>().Build(shallowBed,deepBed);
+            WaterBackground();
+            RetireFlatFloors();
+            ShowDepth(1);
+        }
+
+        Material CreateMaterial(Shader shader,string label)
+        {
+            var material=new Material(shader){name=label};
+            owned.Add(material);
+            return material;
+        }
+
+        GameObject Region(string label)
+        {
+            var region=new GameObject(label);
+            region.transform.SetParent(transform,false);
+            return region;
+        }
+
+        void RetireFlatFloors()
+        {
+            // NereidAuthoring still supplies an emergency deck-wide bed. Its flat visual
+            // and collider must not bridge the new recessed rift when this component builds.
+            var authoredBed=transform.parent.Find("Industrial fishing seabed");
+            if(authoredBed!=null && authoredBed.gameObject.activeSelf)retiredFloors.Add(authoredBed.gameObject);
+            foreach(var root in gameObject.scene.GetRootGameObjects())
+                if(root.name=="Seabed" && root.activeSelf)retiredFloors.Add(root);
+            foreach(var floor in retiredFloors)floor.SetActive(false);
+        }
+
+        void Update()
+        {
+            if(shoal==null || abyss==null)return;
+            ShowDepth(RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2?2:1);
+        }
+
+        void ShowDepth(int depth)
+        {
+            if(shownDepth==depth)return;
+            shownDepth=depth;
+            shoal.SetActive(depth==1);
+            abyss.SetActive(depth==2);
+        }
+
+        MeshCollider BuildShoal()
+        {
+            var land=Terrain(ShoalHeight,false);
             // The first pool is open from the cargo lift. A split arch marks the far haul route.
             var shelves=new[]{
                 new Vector4(30,-39,4.4f,8),new(34,-41,3.3f,4.2f),new(40,-24,4,5.5f),
@@ -38,7 +93,7 @@ namespace Raid.Nereid
                 new(42,-10,6,6),new(63,-29,5,10)
             };
             var tops=new List<Vector3>();
-            foreach(var s in shelves)tops.Add(Rock(land,new Vector3(s.x,BedHeight(s.x,s.y)-.32f,s.y),s.z,s.w));
+            foreach(var s in shelves)tops.Add(Rock(land,new Vector3(s.x,ShoalHeight(s.x,s.y)-.32f,s.y),s.z,s.w));
             var archTint=new Color(.145f,.208f,.231f);
             land.Tube(new[]{new Vector3(43,-8,-46),new(44,-5.8f,-46.5f),new(47,-4.3f,-47.2f),new(50,-4.6f,-47),new(52.8f,-6.1f,-47)},
                 new[]{1.45f,1.45f,1.25f,1.2f,1.65f},archTint,7,.84f);
@@ -47,21 +102,17 @@ namespace Raid.Nereid
                 for(int i=0;i<4;i++)
                 {
                     float x=foot.x+Range(-1.6f,1.3f),z=foot.z+Range(-1.8f,1.45f);
-                    Rock(land,new Vector3(x,BedHeight(x,z)-.28f,z),Range(1.25f,2.25f),Range(2.1f,5.2f));
+                    Rock(land,new Vector3(x,ShoalHeight(x,z)-.28f,z),Range(1.25f,2.25f),Range(2.1f,5.2f));
                 }
             Escarpment(land,0);Escarpment(land,1);
-            var ground=Publish("Basalt arch and tidal sand",land,rock,true);
-            Physics.SyncTransforms();
-            NereidSalvage.Place(ground.GetComponent<MeshCollider>(),rock,owned);
-            gameObject.AddComponent<NereidWaterLife>().Build(ground.GetComponent<MeshCollider>());
-            WaterBackground();
+            var ground=Publish("Pale sandbars, split arch and limestone shelves",land,bedMaterial,true,shoal.transform);
 
             var life=new ReefGeometry();
             for(int group=0;group<30;group++)
             {
                 float x=Range(16,60),z=Range(-65,-15);
                 if(Vector2.Distance(new Vector2(x,z),new Vector2(23,-28))<5)continue;
-                var place=new Vector3(x,BedHeight(x,z),z);
+                var place=new Vector3(x,ShoalHeight(x,z),z);
                 int fronds=random.Next(4,9);
                 for(int i=0;i<fronds;i++) Kelp(life,place+new Vector3(Range(-1.6f,1.6f),0,Range(-1.6f,1.6f)),Range(.65f,2.1f));
             }
@@ -75,9 +126,9 @@ namespace Raid.Nereid
                     float angle=Range(0,6.28f),radius=Range(.96f,1.8f)*s.z;
                     float x=s.x+Mathf.Cos(angle)*radius,z=s.y+Mathf.Sin(angle)*radius;
                     if(NereidSalvage.Reserved(x,z))continue;
-                    var p=new Vector3(x,BedHeight(x,z)-.12f,z);
-                    float pebble=Range(.27f,.97f);
-                    Rock(rubble,p,pebble*1.13f,pebble*Range(.65f,1.32f));
+                    var p=new Vector3(x,ShoalHeight(x,z)-.12f,z);
+                    float pebble=Range(.28f,1.02f);
+                    ScatterStone(rubble,p,pebble,new Color(.16f,.213f,.186f));
                     if(new Vector2(x-23,z+28).sqrMagnitude<23)continue;
                     if(k<3)
                     {
@@ -88,13 +139,16 @@ namespace Raid.Nereid
                             Sponge(life,at,Range(.4f,.94f));
                         }
                         Fan(life,p+Vector3.right*pebble*.6f,angle);
+                        if(k==1)Coral(life,p+Vector3.forward*.7f,Range(.72f,1.32f),j%2==0);
                     }
                     else for(int q=0;q<5;q++)
                         Kelp(life,p+new Vector3(Range(-.85f,.85f),.04f,Range(-.85f,.85f)),Range(.24f,.65f));
                 }
             }
-            Publish("Broken basalt skirts",rubble,rock,false);
-            Publish("Ribbon kelp and fan colonies",life,rock,false);
+            BuildCoralGarden(life,rubble);
+            Publish("Washed cobbles around the shelves",rubble,rock,false,shoal.transform);
+            Publish("Fan corals, sponges and ribbon kelp",life,rock,false,shoal.transform);
+            Publish("Broken survey skiff",SurveyWreck(),rock,true,shoal.transform);
             var beams=new ReefGeometry();
             Vector2[] pools={new(22,-34),new(29,-24),new(32,-38),new(38,-40),new(46,-46),new(52,-43),new(-19,14),new(19,10),new(14,27)};
             foreach(var pool in pools)
@@ -102,7 +156,8 @@ namespace Raid.Nereid
                 var bottom=new Vector3(pool.x,-16.3f,pool.y);
                 beams.Tube(new[]{bottom,bottom+new Vector3(-5,20,2.4f),bottom+new Vector3(-9.5f,39,4.4f)},new[]{Range(1.4f,2.2f),Range(.9f,1.55f),Range(.55f,.95f)},Color.white,12);
             }
-            Publish("Sunbeams over the fishing grounds",beams,lightColumns,false);
+            Publish("Sunbeams over the fishing grounds",beams,lightColumns,false,shoal.transform);
+            return ground.GetComponent<MeshCollider>();
         }
 
         static float BedHeight(float x,float z)
@@ -165,7 +220,7 @@ namespace Raid.Nereid
                 float strata=Mathf.PerlinNoise(5+Mathf.Cos(angle)*(3+layer),12+Mathf.Sin(angle)*(3+layer));
                 float shelf=(layer==0?4:11)+(layer==0?30:49)*Mathf.Pow(strata,1.35f)+4*Mathf.Sin(angle*7+layer);
                 var foot=center+outward*radius;
-                float floor=BedHeight(foot.x,foot.z)-1.2f;
+                float floor=ShoalHeight(foot.x,foot.z)-1.2f;
                 points[i,0]=foot+Vector3.up*floor;
                 points[i,1]=foot+outward*2.3f+Vector3.up*(floor+.38f*shelf);
                 points[i,2]=foot+outward*5.4f+Vector3.up*(floor+shelf);
@@ -233,21 +288,25 @@ namespace Raid.Nereid
         static void Fan(ReefGeometry mesh,Vector3 p,float angle)
         {
             Vector3 axis=new(Mathf.Cos(angle),0,Mathf.Sin(angle));
-            var tint=new Color(.38f,.216f,.128f);
-            for(int k=-2;k<=2;k++)
+            Vector3 curl=Vector3.Cross(axis,Vector3.up);
+            var tint=Color.Lerp(new Color(.31f,.119f,.17f),new Color(.58f,.338f,.176f),Mathf.Abs(Mathf.Sin(angle)));
+            for(int k=-4;k<=4;k++)
             {
-                Vector3 stem=p+axis*(k*.23f)+Vector3.up*(.66f-.045f*Mathf.Abs(k));
-                Vector3 tip=stem+axis*(k*.17f)+Vector3.up*.5f;
-                mesh.Tube(new[]{p,stem,tip},new[]{.068f,.054f,.012f},tint,5);
-                mesh.Tube(new[]{stem,stem+Vector3.up*.23f-axis*.2f},new[]{.041f,.015f},tint*1.16f,5);
+                float arm=k*.25f;
+                Vector3 stem=p+axis*(arm*.56f)+Vector3.up*(.67f-.10f*Mathf.Abs(arm))+curl*(arm*arm*.14f);
+                Vector3 tip=stem+axis*(arm*.48f)+Vector3.up*(.51f-.18f*Mathf.Abs(arm))+curl*.11f;
+                mesh.Tube(new[]{p,stem,tip},new[]{.046f,.031f,.009f},tint,5);
+                var from=Vector3.Lerp(stem,tip,.29f+.07f*Mathf.Sin(k*4.13f));
+                var fork=from+Vector3.up*(.16f+.035f*Mathf.Cos(k*3.2f))-axis*.145f;
+                mesh.Tube(new[]{stem,from,fork},new[]{.026f,.019f,.008f},tint*1.16f,5);
             }
         }
 
-        GameObject Publish(string label,ReefGeometry geometry,Material material,bool solid)
+        GameObject Publish(string label,ReefGeometry geometry,Material material,bool solid,Transform parent)
         {
             var piece=new GameObject(label);
             // Authored points are world-space metres, independent of the 2x vessel scale.
-            piece.transform.SetParent(transform,false);
+            piece.transform.SetParent(parent,false);
             var mesh=geometry.Mesh(label);owned.Add(mesh);
             piece.AddComponent<MeshFilter>().sharedMesh=mesh;
             var renderer=piece.AddComponent<MeshRenderer>();
@@ -257,6 +316,10 @@ namespace Raid.Nereid
             return piece;
         }
 
-        void OnDestroy(){foreach(var asset in owned)if(asset!=null)Destroy(asset);}
+        void OnDestroy()
+        {
+            foreach(var floor in retiredFloors)if(floor!=null)floor.SetActive(true);
+            foreach(var asset in owned)if(asset!=null)Destroy(asset);
+        }
     }
 }

@@ -1,6 +1,15 @@
 Shader "RAID/Nereid Reef"
 {
-    Properties { _Tint("Tint",Color)=(1,1,1,1) _Glow("Bioluminescence",Range(0,3))=0 _Hide("Wet hide",Range(0,1))=0 _BasaltLayers("Basalt layers",Range(0,1))=0 _PigmentLightCap("Matte pigment light cap",Float)=0 }
+    Properties
+    {
+        _Tint("Tint",Color)=(1,1,1,1)
+        _Glow("Bioluminescence",Range(0,3))=0
+        _Hide("Wet hide",Range(0,1))=0
+        _BasaltLayers("Basalt layers",Range(0,1))=0
+        _Sand("Current-washed sand",Float)=0
+        _Rift("Abyssal strata",Float)=0
+        _PigmentLightCap("Matte pigment light cap",Float)=0
+    }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Geometry"}
@@ -16,7 +25,7 @@ Shader "RAID/Nereid Reef"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide, _BasaltLayers, _PigmentLightCap;
+            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
@@ -87,7 +96,16 @@ Shader "RAID/Nereid Reef"
                 half sun=saturate(dot(n,normalize(half3(-.49,.84,-.21))));
                 half light=.43+.54*sun+.14*saturate(dot(n,key.direction))*key.shadowAttenuation;
                 half3 base=i.color.rgb*_Tint.rgb;
-                if (_BasaltLayers > .5)
+                if (_Rift > .5)
+                {
+                    // Inclined thin seams continue along the blade-like columns into the ravine.
+                    float2 fracture=i.pos.xz*.39+i.pos.y*float2(.12,-.21);
+                    float mineral=ReefNoise(fracture);
+                    float layer=i.pos.y*1.11+dot(i.pos.xz,float2(.16,-.10))+mineral*.57;
+                    float seam=1-smoothstep(.031,.115,abs(frac(layer)-.5));
+                    base*=(.71+.44*mineral)*(.93+.19*saturate(n.y))*(1.-.19*seam);
+                }
+                else if (_BasaltLayers > .5)
                 {
                     // World-space bedding follows the formation across its differently scaled facets.
                     float2 fracture=i.pos.xz*.27+i.pos.y*float2(.11,-.13);
@@ -98,9 +116,28 @@ Shader "RAID/Nereid Reef"
                     base=lerp(half3(.062,.099,.114),half3(.16,.21,.19),mineral)
                         *(.80+.20*saturate(n.y+.4))*(1-.13*seam);
                 }
+                if(_Sand>.5)
+                {
+                    float slope=smoothstep(.48,.97,n.y);
+                    float ripple=i.pos.x*.79+i.pos.z*.51+field*1.83+.64*sin(i.pos.z*.19);
+                    float sandBands=.57*sin(ripple*3.6)+.32*sin(ripple*6.1+field*.7);
+                    float gap=length(i.pos-GetCameraPositionWS());
+                    base*=1.+slope*sandBands*.14*(1-smoothstep(17.,41.,gap));
+                }
                 half wet=saturate(dot(reflect(-normalize(half3(-.49,.84,-.21)),n),SafeNormalize(GetWorldSpaceViewDir(i.pos))));
                 half3 rgb=base*((light+litPool*.29)*(.90+.15*grain)+_Glow);
-                rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool+half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
+                if(_Rift<.5)rgb+=half3(.078,.175,.14)*caustic(p,time)*shaft*litPool;
+                else
+                {
+                    // Local colour near the deep fissures. Their surroundings still recede into fog.
+                    float2 first=i.pos.xz-float2(41,-46.2);
+                    float2 second=i.pos.xz-float2(45.5,-58);
+                    float2 third=i.pos.xz-float2(52,-52.2);
+                    float distanceToVent=min(dot(first,first),min(dot(second,second),dot(third,third)));
+                    half vent=exp2(-distanceToVent*.23)*saturate((-i.pos.y-12.5)*.25);
+                    rgb+=half3(.013,.086,.079)*vent*(.45+.55*abs(n.y));
+                }
+                rgb+=half3(.02,.044,.05)*pow(wet,12)*key.shadowAttenuation;
                 // Wavelength-dependent extinction gives both cliff layers an underwater silhouette.
                 float range=max(0,distance(GetCameraPositionWS(),i.pos)-4);
                 half3 transmit=exp(-range*float3(.031,.019,.014));

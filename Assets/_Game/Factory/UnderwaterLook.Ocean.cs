@@ -112,7 +112,7 @@ namespace Raid
                 var waterTint=abyss?new Color(.032f,.075f,.106f):new Color(.025f,.098f,.148f);
                 // Match the reef's custom transmission to the visible range of fish and hull materials.
                 Shader.SetGlobalVector(ReefClarityShader,abyss
-                    ?new Vector4(.0072f,.82f,1f,0f)
+                    ?new Vector4(.00625f,1.04f,1f,0f)
                     :new Vector4(.00136f,1.17f,.68f,0f));
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
@@ -132,7 +132,7 @@ namespace Raid
             float breath=Mathf.Sin(breathPhase);
             if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
             {
-                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.19f:.28f,wetBlend)+fear*(.43f*breath-.06f));
+                color.postExposure.Override(Mathf.Lerp(.12f,abyss?-.045f:.28f,wetBlend)+fear*(.43f*breath-.06f));
                 color.saturation.Override(Mathf.Lerp(-5,-12,wetBlend));
                 color.contrast.Override(Mathf.Lerp(8,3,wetBlend));
             }

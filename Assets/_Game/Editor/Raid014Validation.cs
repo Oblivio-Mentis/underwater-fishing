@@ -34,10 +34,39 @@ namespace Raid.Editor
         {
             var path = Arg("-raid-exe");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions {
-                scenes = new[] { Scene }, target = BuildTarget.StandaloneWindows64,
-                locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
-            });
+            bool timing=PlayerSettings.enableFrameTimingStats, jobs=PlayerSettings.graphicsJobs;
+            bool profile=Arg("-raid-flavor")=="qa" && Arg("-raid-frame-timing")=="on";
+            const BuildTarget platform=BuildTarget.StandaloneWindows64;
+            var timer=AssetImporter.GetAtPath("Assets/Plugins/ArtTimingQA/Raid016Timing.dll") as PluginImporter;
+            bool timerCompatibility=timer!=null && timer.GetCompatibleWithPlatform(platform);
+            BuildReport report;
+            try
+            {
+                if(timer!=null && timerCompatibility!=profile)
+                {
+                    timer.SetCompatibleWithPlatform(platform,profile);
+                    timer.SaveAndReimport();
+                }
+                if(profile)
+                {
+                    PlayerSettings.enableFrameTimingStats=true;
+                    PlayerSettings.graphicsJobs=false;
+                }
+                report=BuildPipeline.BuildPlayer(new BuildPlayerOptions {
+                    scenes = new[] { Scene }, target = platform,
+                    locationPathName = path, options = Arg("-raid-flavor") == "qa" ? BuildOptions.Development : BuildOptions.None
+                });
+            }
+            finally
+            {
+                if(PlayerSettings.enableFrameTimingStats!=timing)PlayerSettings.enableFrameTimingStats=timing;
+                if(PlayerSettings.graphicsJobs!=jobs)PlayerSettings.graphicsJobs=jobs;
+                if(timer!=null && timerCompatibility!=profile)
+                {
+                    timer.SetCompatibleWithPlatform(platform,timerCompatibility);
+                    timer.SaveAndReimport();
+                }
+            }
             var s = report.summary;
             Debug.Log($"RAID014_BUILD {s.result} errors={s.totalErrors} warnings={s.totalWarnings} bytes={s.totalSize}");
             EditorApplication.Exit(s.result == BuildResult.Succeeded ? 0 : 1);
@@ -45,6 +74,14 @@ namespace Raid.Editor
 
         public static void Play()
         {
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-editor")>=0)
+            {
+                EditorSceneManager.OpenScene(Scene);
+                if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-rebuild")>=0)
+                    Nereid.Editor.NereidAuthoring.Install();
+                EditorApplication.EnterPlaymode();
+                return;
+            }
             if (string.IsNullOrEmpty(Output) || string.IsNullOrEmpty(Arg("-raid-save")))
                 throw new ArgumentException("Supply -raid-output and -raid-save for a disposable local run.");
             Directory.CreateDirectory(Output);

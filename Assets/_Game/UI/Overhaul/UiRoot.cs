@@ -44,6 +44,7 @@ namespace Raid.UI
         UiPage settingsBack=UiPage.Main;
         UiPage crewBack=UiPage.Pause;
         Action confirmAction;
+        MaterialStrip confirmMaterials;
         RaidWorld subscribedWorld;
         bool connectedBefore,overlayBefore,replyReceived,wasPulled,wasDead;
         float nextRefresh,toastUntil,pendingSince,replyAt,saveSettingsAt=-1;
@@ -105,16 +106,20 @@ namespace Raid.UI
             var dark=UiKit.Panel(transform,"Confirm veil",new Color(0,0,0,.68f),true);UiKit.Fill(dark.rectTransform);confirmation=dark.rectTransform;
             var surface=UiKit.Frame(confirmation,"Confirmation",810,490);var column=UiKit.Column(surface,"Content",18,28);UiKit.Fill(column);
             var glyph=UiKit.Symbol(column,"Confirmation instrument",DiveInstruments.Mark.Shield,UiTheme.Amber);UiKit.Size(glyph,44);
-            UiKit.Size(UiKit.Label(column,"Title","",30),48);UiKit.Size(UiKit.Label(column,"Description","",23),170);
+            UiKit.Size(UiKit.Label(column,"Title","",30),48);UiKit.Size(UiKit.Label(column,"Description","",23),138);
+            confirmMaterials=new MaterialStrip(column,"Confirmed resources");
             var row=UiKit.Row(column,"Actions");UiKit.Size(row,56);
             cancelConfirmationButton=UiKit.Button(row,"Confirm cancel",UiText.Cancel,CancelConfirmation).gameObject;
             UiKit.Button(row,"Confirm accept",UiText.Confirm,()=>{var action=confirmAction;CancelConfirmation();action?.Invoke();},true);
             confirmation.gameObject.SetActive(false);
         }
-        public void Confirm(string title,string description,Action confirmed)
+        public void Confirm(string title,string description,Action confirmed,MaterialCost? materials=null)
         {
             if(CommandPending)return;
-            confirmAction=confirmed;confirmation.gameObject.SetActive(true);
+            confirmAction=confirmed;
+            confirmMaterials.Root.gameObject.SetActive(materials.HasValue);
+            if(materials.HasValue)confirmMaterials.Quote(materials.Value);
+            confirmation.gameObject.SetActive(true);
             foreach(var group in modalGroups)group.interactable=false;
             var labels=confirmation.GetComponentsInChildren<TMP_Text>();foreach(var label in labels){if(label.name=="Title")label.text=title;if(label.name=="Description")label.text=description;}
             SetCursor();EventSystem.current?.SetSelectedGameObject(cancelConfirmationButton);

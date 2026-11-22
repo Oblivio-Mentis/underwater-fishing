@@ -134,6 +134,7 @@ namespace Raid
                     waterSkin.SetColor("_RimColor",Color.Lerp(albedo,new Color(.60f,.81f,.81f),.56f));
                     waterSkin.SetColor("_EmissionColor",lit.GetColor("_EmissionColor"));
                     waterSkin.SetFloat("_Smoothness",lit.GetFloat("_Smoothness"));
+                    waterSkin.SetFloat("_PatternStrength",i<3?(ray?.78f:.36f):0);
                     wild[i]=waterSkin;
                     loaded[i]=new Material(waterSkin){name=species+" / transported scales "+i,hideFlags=HideFlags.DontSave};
                     loaded[i].SetFloat("_CargoLighting",1);

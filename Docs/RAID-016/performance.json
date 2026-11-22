@@ -1,0 +1,169 @@
+{
+  "method": "1280x720 offscreen URP camera stack with identical scene marks, two seconds warm-up and five seconds measured per mark. CPU is wall time spent submitting the camera on the main thread. GPU is native D3D11 timestamp interval. A one-pixel readback keeps the render complete. Graphics Jobs disabled only in both profiling builds. No second game client in this timing run.",
+  "baseline": "13a3acb + matched QA fixture fbe3696",
+  "candidateQA": "5fceb7a",
+  "before": {
+    "status": "passed",
+    "phase": "13-rift",
+    "error": "",
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "api": "Direct3D11",
+    "profile": "PC",
+    "pipeline": "PC_RPAsset",
+    "width": 1280,
+    "height": 720,
+    "msaa": 1,
+    "vsync": 0,
+    "renderScale": 1.0,
+    "views": [
+      {
+        "name": "01-reef",
+        "depth": 1,
+        "samples": 3407,
+        "eye": {
+          "x": 36.0,
+          "y": -9.399999618530273,
+          "z": -42.0
+        },
+        "direction": {
+          "x": 0.6924405097961426,
+          "y": -0.35251519083976746,
+          "z": -0.6294915080070496
+        },
+        "inside": false,
+        "frameMedianMs": 1.088,
+        "frameP95Ms": 1.5762,
+        "cpuMedianMs": 0.5355,
+        "cpuP95Ms": 0.7189,
+        "gpuMedianMs": 0.403456,
+        "gpuP95Ms": 0.45568
+      },
+      {
+        "name": "07-interior",
+        "depth": 1,
+        "samples": 1419,
+        "eye": {
+          "x": 8.399999618530273,
+          "y": 1.5799998044967651,
+          "z": 2.0
+        },
+        "direction": {
+          "x": -0.670884370803833,
+          "y": 0.2795354723930359,
+          "z": -0.6868581175804138
+        },
+        "inside": true,
+        "frameMedianMs": 2.9464,
+        "frameP95Ms": 3.7677,
+        "cpuMedianMs": 2.1672,
+        "cpuP95Ms": 2.5785,
+        "gpuMedianMs": 1.585152,
+        "gpuP95Ms": 2.27328
+      },
+      {
+        "name": "13-rift",
+        "depth": 2,
+        "samples": 3459,
+        "eye": {
+          "x": 36.0,
+          "y": -9.399999618530273,
+          "z": -42.0
+        },
+        "direction": {
+          "x": 0.6924405097961426,
+          "y": -0.35251519083976746,
+          "z": -0.6294915080070496
+        },
+        "inside": false,
+        "frameMedianMs": 1.0875,
+        "frameP95Ms": 1.5177,
+        "cpuMedianMs": 0.5431,
+        "cpuP95Ms": 0.6971,
+        "gpuMedianMs": 0.438272,
+        "gpuP95Ms": 0.719872
+      }
+    ]
+  },
+  "after": {
+    "status": "passed",
+    "phase": "13-rift",
+    "error": "",
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "api": "Direct3D11",
+    "profile": "PC",
+    "pipeline": "PC_RPAsset",
+    "width": 1280,
+    "height": 720,
+    "msaa": 1,
+    "vsync": 0,
+    "renderScale": 1.0,
+    "views": [
+      {
+        "name": "01-reef",
+        "depth": 1,
+        "samples": 3624,
+        "eye": {
+          "x": 36.0,
+          "y": -9.399999618530273,
+          "z": -42.0
+        },
+        "direction": {
+          "x": 0.6924405097961426,
+          "y": -0.35251519083976746,
+          "z": -0.6294915080070496
+        },
+        "inside": false,
+        "frameMedianMs": 1.0489,
+        "frameP95Ms": 1.2756,
+        "cpuMedianMs": 0.4303,
+        "cpuP95Ms": 0.5545,
+        "gpuMedianMs": 0.499712,
+        "gpuP95Ms": 0.51712
+      },
+      {
+        "name": "07-interior",
+        "depth": 1,
+        "samples": 1672,
+        "eye": {
+          "x": 8.399999618530273,
+          "y": 1.5799998044967651,
+          "z": 2.0
+        },
+        "direction": {
+          "x": -0.670884370803833,
+          "y": 0.2795354723930359,
+          "z": -0.6868581175804138
+        },
+        "inside": true,
+        "frameMedianMs": 2.507,
+        "frameP95Ms": 2.9086,
+        "cpuMedianMs": 1.6095,
+        "cpuP95Ms": 2.0581,
+        "gpuMedianMs": 1.455104,
+        "gpuP95Ms": 1.662976
+      },
+      {
+        "name": "13-rift",
+        "depth": 2,
+        "samples": 3813,
+        "eye": {
+          "x": 36.0,
+          "y": -9.399999618530273,
+          "z": -42.0
+        },
+        "direction": {
+          "x": 0.6924405097961426,
+          "y": -0.35251519083976746,
+          "z": -0.6294915080070496
+        },
+        "inside": false,
+        "frameMedianMs": 1.0077,
+        "frameP95Ms": 1.1965,
+        "cpuMedianMs": 0.4208,
+        "cpuP95Ms": 0.5429,
+        "gpuMedianMs": 0.466944,
+        "gpuP95Ms": 0.487424
+      }
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "baseline": "13a3acb + matched QA fixture fbe3696",
+  "candidateQA": "5fceb7a",
+  "width": 1280,
+  "height": 720,
+  "pairs": [
+    {
+      "name": "01-reef",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "02-hull",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "03-survey-wreck",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "04-kelp",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "05-reef-shoal",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "06-sailray",
+      "depth": 1,
+      "eyeMetres": 4e-06,
+      "rotationDeg": 0.18699
+    },
+    {
+      "name": "07-interior",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 3e-05
+    },
+    {
+      "name": "08-reservoir-bubbles",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.29776
+    },
+    {
+      "name": "09-reservoir-monitor",
+      "depth": 1,
+      "eyeMetres": 0.014836,
+      "rotationDeg": 0.48918
+    },
+    {
+      "name": "10-workshop-monitor",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 1.69724
+    },
+    {
+      "name": "11-navigation-monitor",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.72772
+    },
+    {
+      "name": "12-ball",
+      "depth": 1,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "13-rift",
+      "depth": 2,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "14-rift-floor",
+      "depth": 2,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "15-rift-shoal",
+      "depth": 2,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "16-processing",
+      "depth": 2,
+      "eyeMetres": 0.0,
+      "rotationDeg": 0.0
+    },
+    {
+      "name": "17-sailray-close",
+      "depth": 1,
+      "eyeMetres": 2e-06,
+      "rotationDeg": 0.01677
+    }
+  ]
+}

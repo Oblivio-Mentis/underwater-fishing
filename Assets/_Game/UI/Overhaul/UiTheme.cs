@@ -12,7 +12,7 @@ namespace Raid.UI
         public static readonly Color Green = Hex("82D283");
         public static readonly Color Amber = Hex("F0BC68");
         public static readonly Color Red = Hex("F48065");
-        static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
+        internal static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
     }
     // Local presentation state only. The server continues validating every action.
     public static class UiInputGate
@@ -29,7 +29,7 @@ namespace Raid.UI
         UiSettings Settings { get; }
         bool CommandPending { get; }
         void Send(WorldAction action, long id=0);
-        void Confirm(string title, string description, System.Action confirmed);
+        void Confirm(string title, string description, System.Action confirmed, MaterialCost? materials=null);
         void ShowPage(UiPage page);
         void ClosePanel();
         void Toast(string message, bool dangerous=false);

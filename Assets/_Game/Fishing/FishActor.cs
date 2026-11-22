@@ -228,6 +228,9 @@ namespace Raid
             if(goshaRespawn>0 && Time.time>=goshaRespawn){SetDepthActive(true);return;}
             if(arrivalPending)TryArrive();
             if(!_depthActive)return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if(Mode==FishMode.Roam && HookCount==0 && Time.unscaledTime<artPoseUntil)return;
+#endif
             if(staggered && Mode==FishMode.Transported && _elapsed>=tuning.respawnSeconds)
             {
                 ScheduleAt(Time.time+2.5f);
