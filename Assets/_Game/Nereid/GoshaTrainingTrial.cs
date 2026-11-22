@@ -16,7 +16,7 @@ namespace Raid.Nereid
         {
             public string status,phase,error,species,cargoId;
             public List<string> checks=new();
-            public int innerCrossings,outerCrossings,kind;
+            public int innerCrossings,outerCrossings,closedDoorCrossings;
             public float distance,maxStep,baseRadius,expertRadius,baseCooldown,expertCooldown;
         }
         [Serializable] sealed class Signal {public string reply,hint;}
@@ -55,8 +55,8 @@ namespace Raid.Nereid
             var old=door.InverseTransformPoint(previous);var at=door.InverseTransformPoint(position);
             if(Mathf.Abs(at.z)<1.6f && at.y>0 && at.y<3.2f)
             {
-                if((old.x<0)!=(at.x<0)){result.innerCrossings++;if(world.Airlock.Inner<.97f)result.kind++;}
-                if((old.x<8.65f)!=(at.x<8.65f)){result.outerCrossings++;if(world.Airlock.Outer<.97f)result.kind++;}
+                if((old.x<0)!=(at.x<0)){result.innerCrossings++;if(world.Airlock.Inner<.97f)result.closedDoorCrossings++;}
+                if((old.x<8.65f)!=(at.x<8.65f)){result.outerCrossings++;if(world.Airlock.Outer<.97f)result.closedDoorCrossings++;}
             }
             previous=position;
         }
@@ -168,11 +168,15 @@ namespace Raid.Nereid
             foreach(var item in stock)bag.AcceptGoshaCatch(item);
             Check("All recipient pockets occupied during the return fixture",bag.HasFullCreel);
             yield return Wait("Gosha waited beside the real buyer with a full creel",()=>PeerSignal()?.reply?.Contains("освободите карман")==true,world.tuning.petOrderTimeout);
+            host.Teleport(guest.transform.position+new Vector3(-1.65f,.18f,-1.25f));
+            host.LookAtConsole((world.Gosha.Position+fish.transform.position)*.5f);
+            yield return new WaitForSeconds(.28f);
+            UiQaProbe.CapturePeerCamera(Path.Combine(path,"gosha-order-delivery.png"));
             Check("No delivery or duplicate while pockets are full",world.TrialReservedFish==fish && !Enumerable.Range(2,bag.PocketCapacity).Any(i=>bag.CatchIdInSlot(i)==cargoId));
             Check("One existing pocket catch removed to accept the delivery",bag.DropOneCatch());
             yield return Wait("Remote creel received exactly the reserved cargo ID",()=>Enumerable.Range(2,bag.PocketCapacity).Count(i=>bag.CatchIdInSlot(i)==cargoId)==1);
             track=false;
-            Check("Crossed both open pressure doors in both directions without teleporting",result.kind==0&&result.innerCrossings>=2&&result.outerCrossings>=2&&result.distance>20&&result.maxStep<.52f);
+            Check("Crossed both open pressure doors in both directions without teleporting",result.closedDoorCrossings==0&&result.innerCrossings>=2&&result.outerCrossings>=2&&result.distance>20&&result.maxStep<.52f);
             Check("One pet and no cargo granted to the other player",FindObjectsByType<GoshaView>().Length==1&&!Enumerable.Range(2,host.GetComponent<HarpoonTool>().PocketCapacity).Any(i=>host.GetComponent<HarpoonTool>().CatchIdInSlot(i)==cargoId));
             var cargo=world.AttributeCatch(fish.ToCargo(cargoId));
             Check("Normal cargo attribution belongs only to the requesting saved profile",cargo.caughtBy?.Length==1 && cargo.caughtBy[0]==world.ProgressKey(guest));

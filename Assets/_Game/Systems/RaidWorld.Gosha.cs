@@ -58,7 +58,7 @@ namespace Raid
         void ResetGosha()
         {
             if(ballBody==null)return;
-            ReleaseOrder();lastOrderAt=float.NegativeInfinity;
+            ReleaseOrder();clearingSeaDoor=false;lastOrderAt=float.NegativeInfinity;
             ClearBallLine();
             pet=new GoshaSnapshot{Active=true,OrderOwner=-1,Rider=-1,Holder=-1,Thrower=-1,Knocked=-1,Heading=Vector3.forward,
                 Mode=team.goshaTamed?GoshaMode.Roaming:GoshaMode.Waiting,Position=deck.Mark(7)};
