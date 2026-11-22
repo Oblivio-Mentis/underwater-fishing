@@ -162,6 +162,10 @@ Shader "RAID/Nereid Reef"
                     float2 gate=i.pos.xz-float2(41.5,-77);
                     half blueGlow=exp2(-min(dot(lower,lower),min(dot(crown,crown),dot(gate,gate)))*.135);
                     half violetGlow=exp2(-min(dot(fault,fault),dot(terminal,terminal))*.21);
+                    float2 portVoid=i.pos.xz-float2(-29,-35),foreVent=i.pos.xz-float2(17,30);
+                    half portGlow=exp2(-dot(portVoid,portVoid)*.091)*saturate((-i.pos.y-17)*.17);
+                    half foreGlow=exp2(-dot(foreVent,foreVent)*.112)*saturate((-i.pos.y-11)*.19);
+                    rgb+=half3(.038,.026,.096)*portGlow+half3(.012,.074,.092)*foreGlow;
                     rgb+=(blueGlow*half3(.011,.049,.110)+violetGlow*half3(.072,.020,.093))*
                         saturate((-i.pos.y-21.)*.12)*(.50+.50*abs(n.y));
                 }
