@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Raid
 {
     public enum GoshaMode : byte { Waiting, Swimming, Riding, Roaming, Resting, Petted, Fetching, Delivering, Chasing, Pouncing, Escaping }
-    public enum GoshaBallMode : byte { Deck, Held, Flying, Carried }
+    public enum GoshaBallMode : byte { Deck, Held, Flying, Carried, Tethered }
     public enum GoshaAction : byte { Pet, PickUp, Throw, WindUp, CancelWindUp }
 
     [System.Serializable]
@@ -48,6 +48,7 @@ namespace Raid
         void ResetGosha()
         {
             if(ballBody==null)return;
+            ClearBallLine();
             pet=new GoshaSnapshot{Active=true,Rider=-1,Holder=-1,Thrower=-1,Knocked=-1,Heading=Vector3.forward,
                 Mode=team.goshaTamed?GoshaMode.Roaming:GoshaMode.Waiting,Position=deck.Mark(7)};
             patrol=7;rodeThroughLock=false;knockTime=petCooldown=0;
@@ -56,6 +57,7 @@ namespace Raid
         }
         void StopGosha()
         {
+            ClearBallLine();
             if(ballBody!=null){Destroy(ballBody.gameObject);ballBody=null;}
         }
         void PresentGosha()
@@ -259,6 +261,7 @@ namespace Raid
         void TickBall(float dt)
         {
             ballAge+=dt;
+            if(pet.Ball==GoshaBallMode.Tethered){TickBallLine(dt);return;}
             if(pet.Ball==GoshaBallMode.Held)
             {
                 var holder=CrewMember(pet.Holder);

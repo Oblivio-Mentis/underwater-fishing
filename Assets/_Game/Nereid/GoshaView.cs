@@ -14,6 +14,7 @@ namespace Raid.Nereid
         Material shell;
         bool presented;
         Vector3 lastBall;
+        internal Transform BallAnchor=>ball;
         readonly Color rose=new(.49f,.21f,.42f),plates=new(.54f,.39f,.51f),ivory=new(.86f,.71f,.66f);
         Transform Node(Transform parent,string label,Vector3 offset)
         {var o=new GameObject(label).transform;o.SetParent(parent,false);o.localPosition=offset;return o;}

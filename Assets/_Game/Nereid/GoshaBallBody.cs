@@ -20,6 +20,14 @@ namespace Raid.Nereid
             body=gameObject.AddComponent<Rigidbody>();body.mass=.24f;body.linearDamping=.37f;body.angularDamping=.42f;
             Hold();
         }
+        public float Radius=>sphere.radius;
+        public void Tether()
+        {
+            Hold();
+            sphere.enabled=true;
+        }
+        public void ReelTo(Vector3 position) => body.MovePosition(position);
+
         public void Hold()
         {
             if(!body.isKinematic){body.linearVelocity=Vector3.zero;body.angularVelocity=Vector3.zero;}

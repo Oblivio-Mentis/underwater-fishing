@@ -95,7 +95,7 @@ namespace Raid
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
             Vector3 desiredSway=new Vector3(Mathf.Clamp(-look.x*.00005f,-.0035f,.0035f),Mathf.Clamp(-look.y*.00004f,-.0025f,.0025f),0);
             sway=Vector3.Lerp(sway,desiredSway,1-Mathf.Exp(-12*dt));
-            bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether;
+            bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether||viewedTool.HasBallLine;
             if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
             observedShot=viewedTool.ShotSequence;
             if(statusLamp!=null)statusLamp.enabled=hasLine;

@@ -7,7 +7,7 @@ namespace Raid
     public struct HarpoonContact
     {
         public NetworkObject target;
-        public bool tail;
+        public bool tail, ball;
         public Vector3 localPoint, localNormal, localDirection;
 
         public static HarpoonContact FromHit(NetworkObject target, Transform surface, bool tail, RaycastHit hit, Vector3 direction)
@@ -25,6 +25,14 @@ namespace Raid
         {
             surface=null;point=normal=direction=Vector3.zero;
             if(target==null)return false;
+            if(ball)
+            {
+                if(!target.TryGetComponent<RaidWorld>(out var world) || !world.TryBallAnchor(out surface,out var center))return false;
+                point=center+localPoint;
+                normal=localNormal;
+                direction=localDirection;
+                return true;
+            }
             surface=target.TryGetComponent<FishActor>(out var fish)?fish.ImpactSurface(tail):target.transform;
             if(surface==null)return false;
             ResolveOn(surface,out point,out normal,out direction);

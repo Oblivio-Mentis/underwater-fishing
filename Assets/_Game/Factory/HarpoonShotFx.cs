@@ -127,7 +127,7 @@ namespace Raid
             float now=Time.unscaledTime,dt=Mathf.Min(Time.unscaledDeltaTime,.05f);
             var hit=tool.AttachedContact;
             bool confirmed=hit.Resolve(out var target,out var targetPoint,out var targetNormal,out var targetDirection)
-                && (tool.OwnsFriendTether || tool.HookedFish!=null && tool.HookedFish.Mode>=FishMode.Hooked && tool.HookedFish.Mode<=FishMode.Tired);
+                && (tool.OwnsFriendTether || tool.HasBallLine || tool.HookedFish!=null && tool.HookedFish.Mode>=FishMode.Hooked && tool.HookedFish.Mode<=FishMode.Tired);
             if(confirmed)
             {
                 attached=target;
@@ -247,7 +247,7 @@ namespace Raid
         public void Release()
         {
             if(tool!=null)tool.ShotVisual-=OnShot;
-            Clear();if(legacy!=null)legacy.enabled=tool!=null&&tool.NetworkObject!=null&&tool.IsClientInitialized&&(tool.OwnsFriendTether||tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired);
+            Clear();if(legacy!=null)legacy.enabled=tool!=null&&tool.NetworkObject!=null&&tool.IsClientInitialized&&(tool.OwnsFriendTether||tool.HasBallLine||tool.HookedFish!=null&&tool.HookedFish.Mode>=FishMode.Hooked&&tool.HookedFish.Mode<=FishMode.Tired);
             if(material!=null){Destroy(material);material=null;}if(braid!=null){Destroy(braid);braid=null;}
             tool=null;legacy=null;
         }

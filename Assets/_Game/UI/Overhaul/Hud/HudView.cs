@@ -132,6 +132,7 @@ namespace Raid.UI
             if(player.IsHelpless)prompt=UiText.HudWaitForRescue;
             else if(context.World.HasGoshaBall(player))prompt=context.World.Gosha.Mode is GoshaMode.Chasing or GoshaMode.Pouncing?"Гоша догоняет вас!":UiRoot.Instance.WindingBall?"Отпустите ЛКМ — бросить мяч":"Удерживайте ЛКМ — замах · Q — выложить мяч";
             else if(context.World.IsHoldingGosha(player))prompt="E — опустить Гошу на палубу";
+            else if(context.Harpoon!=null && context.Harpoon.HasBallLine)prompt="ЛКМ — подтянуть мяч · R — отпустить";
             else if(UiRoot.Instance!=null && UiRoot.Instance.AimedPad!=null)
             {
                 var pad=UiRoot.Instance.AimedPad;

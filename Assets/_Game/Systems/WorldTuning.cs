@@ -20,6 +20,9 @@ namespace Raid
         [Min(1)] public float petSwimSpeed=3.8f, petCatchUpSpeed=6.2f;
         [Min(5)] public float fetchTimeout=24f, lostCompanionSeconds=32f;
         [Range(.5f,1.5f)] public float playfulFallSeconds=1.2f;
+        [Min(.1f)] public float ballReelSpeed=4f;
+        [Min(.15f)] public float ballHandReach=.42f;
+        [Min(.2f)] public float ballLineIdleSeconds=8f;
         [Min(1)] public float ballThrowSpeed=8.4f;
         [Min(.1f)] public float ballWindSeconds=.55f;
         [Min(.1f)] public float ballShortThrow=4.2f;
