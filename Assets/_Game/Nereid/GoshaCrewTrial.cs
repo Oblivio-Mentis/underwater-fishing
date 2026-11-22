@@ -120,7 +120,8 @@ namespace Raid.Nereid
             yield return Wait("Outer gate open",()=>world.Airlock.Phase==AirlockPhase.OuterOpen,30);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(10.5f,1,0)));
             yield return Wait("Gosha rides the first expedition diver",()=>world.Gosha.Mode==GoshaMode.Riding && world.Gosha.Rider==host.OwnerId,24);
-            Stage(peer,host.transform.position+new Vector3(1.5f,.1f,-1.65f));
+            yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(14.5f,2.1f,-1.5f)));
+            Stage(peer,host.transform.position+new Vector3(1.15f,.15f,-1.35f));
             yield return PeerShot("gosha-shoulder.png",world.Gosha.Position);
             Stage(peer,NereidVessel.Active.transform.TransformPoint(new Vector3(4,.55f,-14)));
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(7,1,0)));
@@ -129,6 +130,7 @@ namespace Raid.Nereid
             yield return Wait("Inner gate open after draining",()=>world.Airlock.Phase==AirlockPhase.InnerOpen,30);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(-1.25f,1,0)));
             yield return Wait("Pet returned through inner door and persisted to checksum save",()=>world.Team.goshaTamed&&TeamSave.Load(save).goshaTamed);
+            yield return Wait("Dismounted onto the interior deck",()=>Mathf.Abs(world.Gosha.Position.y-NereidVessel.Active.transform.position.y)<.4f);
             Stage(peer,world.Gosha.Position+Vector3.back*1.2f+Vector3.up*.65f);
             Stage(host,world.Gosha.Position+new Vector3(-1.4f,.7f,-1.3f));
             host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.2f);

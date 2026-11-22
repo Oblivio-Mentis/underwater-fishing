@@ -29,12 +29,19 @@ namespace Raid.Nereid
         {
             body.position=at;body.rotation=Quaternion.identity;sphere.enabled=true;
             body.isKinematic=false;body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
+            body.linearDamping=.37f;body.angularDamping=.42f;
             body.linearVelocity=speed;body.angularVelocity=Vector3.Cross(Vector3.up,speed)*3;
             body.WakeUp();
         }
         void OnCollisionEnter(Collision hit)
         {
             if(world!=null && hit.collider.TryGetComponent<DiverMotor>(out var diver))world.BallTouchedDiver(diver);
+        }
+        void OnCollisionStay(Collision contact)
+        {
+            // Rubber loses speed on the grated deck while the airborne throw retains its arc.
+            if(body.isKinematic || contact.contactCount==0 || contact.GetContact(0).normal.y<.65f)return;
+            body.linearDamping=1.75f;body.angularDamping=2.3f;
         }
         void OnDestroy(){if(rubber!=null)Destroy(rubber);}
     }

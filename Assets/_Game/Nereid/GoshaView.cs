@@ -72,7 +72,8 @@ namespace Raid.Nereid
         {
             float dt=Time.deltaTime,blend=presented?1-Mathf.Exp(-dt*16):1,t=Time.time;
             creature.gameObject.SetActive(s.Mode!=GoshaMode.Waiting);
-            Vector3 at=s.Position;var dir=s.Heading;
+            bool onFloor=s.Mode!=GoshaMode.Waiting && s.Mode!=GoshaMode.Swimming && s.Mode!=GoshaMode.Riding && s.Mode!=GoshaMode.Pouncing;
+            Vector3 at=s.Position-(onFloor?Vector3.up*.115f:Vector3.zero);var dir=s.Heading;
             var ui=UI.UiRoot.Instance;
             if(s.Mode==GoshaMode.Riding && ui!=null)
                 foreach(var d in ui.Context.Players)if(d!=null && d.OwnerId==s.Rider)

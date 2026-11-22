@@ -20,6 +20,14 @@ namespace Raid.Nereid
         public Vector3 Mark(int id)=>NereidVessel.Active.transform.TransformPoint(marks[id]);
         public int Count=>marks.Length;
 
+        public Vector3 RecoveryMark(Vector3 position)
+        {
+            Vector3 nearest=Mark(0);
+            for(int i=1;i<marks.Length;i++)
+                if((Mark(i)-position).sqrMagnitude<(nearest-position).sqrMagnitude)nearest=Mark(i);
+            return nearest;
+        }
+
         public bool Interior(Vector3 world)
         {
             var vessel=NereidVessel.Active;

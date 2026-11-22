@@ -30,7 +30,7 @@ namespace Raid
         GoshaSnapshot pet;
         float moodTime,ballAge,knockTime,petCooldown,pathClock,blockedTime;
         int patrol;
-        bool rodeThroughLock;
+        bool rodeThroughLock,relocatedThrow;
         Vector3 nextFootstep,lastRouteGoal,lastRiderPosition;
         float idleAtSea;
         public GoshaSnapshot Gosha=>gosha.Value;
@@ -157,6 +157,8 @@ namespace Raid
                 nextFootstep=deck.Next(old,ground);pathClock=.18f;lastRouteGoal=ground;
             }
             var step=Vector3.MoveTowards(old,nextFootstep,speed*dt);
+            // Dismount within one stride rather than gliding down an entire aisle.
+            step.y=Mathf.MoveTowards(old.y,deck.Ground(old).y,3.2f*dt);
             if(deck.Clear(old,step,.13f))pet.Position=step;
             Face(Vector3.ProjectOnPlane(pet.Position-old,Vector3.up));
             blockedTime=(pet.Position-old).sqrMagnitude<.0000001f?blockedTime+dt:0;
@@ -182,7 +184,11 @@ namespace Raid
                 var victim=CrewMember(pet.Holder);
                 if((chase && (!OnDeck(victim)||pet.Ball!=GoshaBallMode.Held)) || (!chase && pet.Ball!=GoshaBallMode.Deck)){CancelFetch();return;}
                 var target=chase?victim.transform.position:pet.BallPosition;
-                if(!deck.Interior(target) || moodTime<=0){CancelFetch();return;}
+                if(!deck.Interior(target) || moodTime<=0)
+                {
+                    if(!chase && RecoverFetch())return;
+                    CancelFetch();return;
+                }
                 if(!Walk(target,chase?tuning.petChaseSpeed:tuning.petFetchSpeed,dt))return;
                 if(!chase && Mathf.Abs(target.y-pet.Position.y)>.55f)return;
                 if(chase)SetMode(GoshaMode.Pouncing,.22f);
@@ -220,6 +226,14 @@ namespace Raid
                 if(OnDeck(d)){float dist=Vector3.Distance(d.transform.position,pet.Position);if(dist<range){best=d;range=dist;}}
             return best;
         }
+        bool RecoverFetch()
+        {
+            if(relocatedThrow || !team.goshaTamed || !OnDeck(CrewMember(pet.Thrower)))return false;
+            int thrower=pet.Thrower;
+            DropBall(deck.RecoveryMark(pet.BallPosition)+Vector3.up*.12f,Vector3.zero,false);
+            relocatedThrow=true;pet.Thrower=thrower;SetMode(GoshaMode.Fetching,tuning.fetchTimeout);
+            return true;
+        }
         void CancelFetch()
         {
             var at=deck.Interior(deck.Ground(pet.Position))?deck.Ground(pet.Position):deck.Mark(7);
@@ -250,7 +264,10 @@ namespace Raid
             if(pet.Ball==GoshaBallMode.Carried)return;
             pet.BallPosition=ballBody.Position;
             if(!deck.Interior(pet.BallPosition) && (pet.BallPosition.y<deck.Mark(0).y-1 || ballAge>4))
-            {DropBall(deck.Mark(7),Vector3.zero,false);if(team.goshaTamed)SetMode(GoshaMode.Roaming);return;}
+            {
+                if(RecoverFetch())return;
+                DropBall(deck.Mark(7),Vector3.zero,false);if(team.goshaTamed)SetMode(GoshaMode.Roaming);return;
+            }
             if(pet.Ball==GoshaBallMode.Flying && (ballAge>3.4f || (ballAge>.22f && ballBody.Velocity.magnitude<1.4f)))
             {
                 pet.Ball=GoshaBallMode.Deck;
@@ -303,7 +320,7 @@ namespace Raid
                 var direction=d.AimDirection.normalized;
                 var start=Hand(d)+direction*.20f;
                 if(!deck.Clear(d.transform.position+Vector3.up*.32f,start,.15f))return;
-                DropBall(start,direction*tuning.ballThrowSpeed+Vector3.up*tuning.ballThrowLift,true);pet.Thrower=d.OwnerId;d.ConfirmInteraction();
+                relocatedThrow=false;DropBall(start,direction*tuning.ballThrowSpeed+Vector3.up*tuning.ballThrowLift,true);pet.Thrower=d.OwnerId;d.ConfirmInteraction();
             }
             gosha.Value=pet;
         }
