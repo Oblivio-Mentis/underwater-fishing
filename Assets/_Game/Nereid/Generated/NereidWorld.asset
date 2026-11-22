@@ -21,3 +21,15 @@ MonoBehaviour:
   snapshotInterval: 0.25
   autoSaveInterval: 15
   rescueRange: 2.5
+  petReach: 2.05
+  patCooldown: 1.35
+  petCrawlSpeed: 1.45
+  petFetchSpeed: 4.3
+  petChaseSpeed: 5.5
+  petSwimSpeed: 3.8
+  petCatchUpSpeed: 6.2
+  fetchTimeout: 24
+  lostCompanionSeconds: 32
+  playfulFallSeconds: 1.2
+  ballThrowSpeed: 8.4
+  ballThrowLift: 1.65
