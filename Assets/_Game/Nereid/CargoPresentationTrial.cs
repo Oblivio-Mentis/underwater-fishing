@@ -142,8 +142,17 @@ namespace Raid
                 foreach(var fish in stock)
                     Check(world.Team.tank.Count(x=>x.id==fish.id && x.species==fish.species)==1 && cage.ModelFor(fish.id)==original[fish.id],
                         "Original "+fish.species+" #"+fish.id+" uses the exact same visible model in the aquarium.");
-                host.LookAtConsole(vessel.transform.TransformPoint(new Vector3(0,1.55f,-3)));
-                await Awaitable.WaitForSecondsAsync(.40f);
+                Vector3 tankCenter=vessel.transform.TransformPoint(new Vector3(0,1.54f,-3));
+                await Until(()=>stock.All(catchItem=>
+                {
+                    var model=cage.ModelFor(catchItem.id);
+                    if(model==null || !model.gameObject.activeInHierarchy || !model.GetComponent<Renderer>().enabled)return false;
+                    var delta=model.position-tankCenter;
+                    return Mathf.Abs(delta.y)<1.60f && Vector2.SqrMagnitude(new Vector2(delta.x,delta.z))<6.25f;
+                }),"All four visible models remain inside the glass tank as the cage returns",1.4f);
+                report.Checks.Add("All four active meshes remain in the aquarium while the lift returns.");
+                host.LookAtConsole(tankCenter);
+                await Awaitable.WaitForSecondsAsync(.70f);
                 ShootFrame("08-aquarium.png");
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Loading,"Winch cycles back to its original load point");
                 Check(world.Team.CargoUsed==0 && Vector3.Distance(world.container.position,center)<.12f,

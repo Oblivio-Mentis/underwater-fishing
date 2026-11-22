@@ -21,6 +21,7 @@ namespace Raid.Nereid
         TeamProgress observed;
         float seenAt,railVisual=-1;
         internal float HoistAnimation {get;private set;}
+        internal HoistPhase PresentedHoistPhase {get;private set;}
 
 
         void Awake()
@@ -78,6 +79,7 @@ namespace Raid.Nereid
             };
             duration=Mathf.Max(.01f,duration/Mathf.Max(1f,1+state.winchLevel*world.progression.winchSpeedPerLevel));
             float estimate=world.IsServerInitialized?0:Mathf.Min(world.tuning.snapshotInterval,Time.time-seenAt);
+            PresentedHoistPhase=state.hoistPhase;
             HoistAnimation=state.hoistPhase==HoistPhase.Loading?0:Mathf.Clamp01(1-(state.hoistRemaining-estimate)/duration);
             float fraction=state.hoistPhase switch {
                 HoistPhase.Raising=>Mathf.InverseLerp(.15f,.96f,HoistAnimation),

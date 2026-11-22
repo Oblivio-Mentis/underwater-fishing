@@ -25,6 +25,7 @@ namespace Raid
         Transform reservoir;
         TeamProgress manifest;
         int cageCount;
+        float deliveryProgress;
         public int Count => cageCount;
         public int TankCount => swimmers.Count-cageCount;
         public Transform ModelFor(long id) => swimmers.TryGetValue(id,out var fish)?fish.Model:null;
@@ -57,15 +58,18 @@ namespace Raid
             var state=world.View;
             if(state==null)return;
             if(state!=manifest)Reconcile(state);
-            float animation=vessel!=null ? vessel.HoistAnimation : 0;
             bool unloading=state.hoistPhase==HoistPhase.Unloading && vessel!=null;
+            // The host can already start the return while its replicated manifest still lists
+            // these fish in the cage. Do not replay the entry path when that phase clock resets.
+            deliveryProgress=unloading ? Mathf.Max(deliveryProgress,
+                vessel.PresentedHoistPhase==HoistPhase.Unloading ? vessel.HoistAnimation : 1f) : 0;
             var route=world.FishRoute;
             foreach(var entry in swimmers)
             {
                 var fish=entry.Value;
                 if(fish.InCage)
                 {
-                    if(unloading)FollowDelivery(fish,animation);
+                    if(unloading)FollowDelivery(fish,deliveryProgress);
                     else SwimInCage(fish);
                 }
                 else if(!FollowRoute(entry.Key,fish,route)) SwimInTank(fish);
