@@ -33,7 +33,6 @@ namespace Raid
             Require(!host.HasBallLine && world.Gosha.Ball==GoshaBallMode.Deck,"Wall did not occlude the server ball collider.");
             Check("The solid test partition took the first raycast hit. Ball stayed loose.");
             partition.SetActive(false);
-            Destroy(partition);
 
             yield return ShootBall();
             yield return Wait(()=>ReadClient()?.gosha.Ball==GoshaBallMode.Tethered &&
@@ -42,6 +41,17 @@ namespace Raid
             Require(host.QaReleaseOwned(),"R could not release the ball line.");
             yield return Wait(()=>!host.HasBallLine && world.Gosha.Ball==GoshaBallMode.Deck,3,"R left stale ball ownership.");
             Check("Both clients observed the ball tether. R released it onto the deck.");
+
+            yield return ShootBall();
+            var beforeBarrier=world.Gosha.BallPosition;
+            partition.SetActive(true);
+            Physics.SyncTransforms();
+            yield return Wait(()=>!host.HasBallLine && world.Gosha.Ball==GoshaBallMode.Deck,
+                3,"A new obstruction failed to release an attached line.");
+            Require(Vector3.Distance(world.Gosha.BallPosition,beforeBarrier)<.25f,"Ball crossed the obstruction.");
+            partition.SetActive(false);
+            Destroy(partition);
+            Check("A solid barrier introduced after attachment severed the line and left the ball on its original side.");
 
             yield return ShootBall();
             var target=world.Gosha.BallPosition;
@@ -77,6 +87,9 @@ namespace Raid
             yield return Pause(.3f);
             Require(!host.Motor.IsInside,"Water fixture was not submerged.");
             yield return ShootBall();
+            yield return Wait(()=>ReadClient()?.activeBoltOwners?.Contains(host.OwnerId)==true,
+                3,"The open-water attached bolt did not reach the independent view.");
+            yield return Pause(.3f);
             yield return Shot("ball-hook-water.png");
             yield return ReelBall();
             yield return Pause(.65f);
@@ -129,6 +142,9 @@ namespace Raid
             yield return Wait(()=>world.HasGoshaBall(host.Motor) && ReadClient()?.gosha.Holder==host.OwnerId &&
                 ReadClient()?.gosha.Ball==GoshaBallMode.Held,5,"Peers did not agree on the held ball.");
             host.QaHoldOwned(false,0);
+            float travel=Vector3.Distance(start,world.Gosha.BallPosition);
+            Require(travel>1,"The ball did not travel the staged distance.");
+            Check($"Reel moved the physical ball {travel:F2} m to the hands. Both peers observed the held state.");
             Require(!host.HasBallLine && !helper.HasBallLine && FindObjectsByType<GoshaBallBody>().Length==1,"A duplicate ball or cable survived pickup.");
         }
     }
