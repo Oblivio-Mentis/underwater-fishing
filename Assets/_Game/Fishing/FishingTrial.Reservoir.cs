@@ -10,6 +10,7 @@ namespace Raid
     {
         IEnumerator ChooseReservoirRoutes(long[] catches)
         {
+            var ui=UiRoot.Instance;
             Phase("Route two selected catches; leave the other two in the aquarium");
             var first=world.Team.Player(world.ProgressKey(host.Motor));
             var second=world.Team.Player(world.ProgressKey(helper.Motor));
