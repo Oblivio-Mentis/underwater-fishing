@@ -666,6 +666,26 @@ namespace Raid
             Require(false,"No clear cooperative fishing lane near "+fish.HabitatName);
         }
 
+        // The two human inputs start from the same side of the fish. If a surge
+        // leaves slack, ease away until the line takes load before winding again.
+        private static bool CooperativeSwimTarget(HarpoonTool angler,FishActor fish,out Vector3 target)
+        {
+            Vector3 centre=fish.transform.position;
+            Vector3 offset=angler.FishingAnchor-centre;
+            float distance=offset.magnitude;
+            target=centre;
+            if(distance<.01f)return false;
+            if(fish.Mode==FishMode.Tired && fish.Stamina<=0)
+            {
+                target=centre-offset/distance*3.4f;
+                return distance>1.1f;
+            }
+            if(distance>15f)return true;
+            if(distance+.38f>=angler.LineLength)return false;
+            target=angler.FishingAnchor+offset/distance*4.5f;
+            return true;
+        }
+
         private IEnumerator Reel(FishActor fish)
         {
             bool pulling = true;
@@ -691,13 +711,15 @@ namespace Raid
                 if (fish.Tension >= .58f) pulling = false;
                 else if (fish.Tension < .24f) pulling = true;
                 host.QaHoldOwned(false, pulling ? .6f : 0);
-                var fishPosition = fish.transform.position;
                 if (remoteReeling)
-                    host.Motor.QaSwimToward(fishPosition, Vector3.Distance(host.FishingAnchor, fishPosition) > 9f ? .35f : 0);
+                {
+                    bool swim=CooperativeSwimTarget(host,fish,out var target);
+                    host.Motor.QaSwimToward(target,swim ? .35f : 0);
+                }
                 if (remoteReeling && Time.unscaledTime >= nextRemoteReel)
                 {
-                    bool follow = Vector3.Distance(helper.FishingAnchor, fishPosition) > 11f;
-                    Send("fish_reel", pulling ? 2 : 0, follow ? "follow" : null, fishPosition);
+                    bool follow=CooperativeSwimTarget(helper,fish,out var target);
+                    Send("fish_reel",pulling ? 2 : 0,follow ? "follow" : null,target);
                     nextRemoteReel = Time.unscaledTime + .35f;
                 }
                 if (remoteReeling && fish.Coordinated && Vector3.Distance(host.transform.position,fish.transform.position)<6
