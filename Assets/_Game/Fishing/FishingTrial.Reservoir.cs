@@ -126,28 +126,26 @@ namespace Raid
         IEnumerator ClickReservoirControl(string name)
         {
             var ui=UiRoot.Instance;
-            Button control=null;
             yield return Wait(()=>
             {
-                control=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name==name);
-                return control!=null && control.interactable;
-            },5,"No enabled aquarium control "+name);
-            var rect=(RectTransform)control.transform;
-            var list=control.GetComponentInParent<ScrollRect>();
-            if(list!=null)
-            {
-                Canvas.ForceUpdateCanvases();
-                float overflow=list.content.rect.height-list.viewport.rect.height;
-                if(overflow>0)
+                // A delivery may replace the visible rows while the owner is turning back
+                // towards the monitor. Follow the catch ID on the current snapshot.
+                var control=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name==name && button.interactable);
+                if(!control)return false;
+                var rect=(RectTransform)control.transform;
+                var list=control.GetComponentInParent<ScrollRect>();
+                if(list)
                 {
-                    float depth=list.content.rect.yMax-list.content.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
-                    list.StopMovement();
-                    list.verticalNormalizedPosition=1-Mathf.Clamp01((depth-list.viewport.rect.height*.5f)/overflow);
+                    Canvas.ForceUpdateCanvases();
+                    float overflow=list.content.rect.height-list.viewport.rect.height;
+                    if(overflow>0)
+                    {
+                        float depth=list.content.rect.yMax-list.content.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
+                        list.StopMovement();
+                        list.verticalNormalizedPosition=1-Mathf.Clamp01((depth-list.viewport.rect.height*.5f)/overflow);
+                        Canvas.ForceUpdateCanvases();
+                    }
                 }
-                Canvas.ForceUpdateCanvases();
-            }
-            yield return Wait(()=>
-            {
                 host.Motor.LookAtConsole(rect.TransformPoint(rect.rect.center));
                 ui.QaScrollReticle(0);
                 return ui.ReticleControl==name;
