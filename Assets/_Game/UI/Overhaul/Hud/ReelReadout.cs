@@ -11,7 +11,8 @@ namespace Raid.UI
         readonly TMP_Text species, range, hookCount;
         readonly Image stamina, speciesIcon;
         FishActor lastFish;
-        float targetLoad, shownLoad, targetStamina, shownStamina;
+        HarpoonTool lineOwner;
+        float shownLoad, targetStamina, shownStamina;
         public bool Visible => root.gameObject.activeSelf;
 
         public ReelReadout(Transform parent)
@@ -80,13 +81,13 @@ namespace Raid.UI
             bool entering = active && (!Visible || lastFish != fish);
             if (Visible != active) root.gameObject.SetActive(active);
             lastFish = active ? fish : null;
+            lineOwner = active ? tool : null;
             if (!active) return;
 
-            targetLoad = Mathf.Clamp01(tool.LineTension);
             targetStamina = Mathf.Clamp01(fish.Stamina / Mathf.Max(.01f, fish.tuning.initialStamina * fish.power));
             if (entering)
             {
-                shownLoad = targetLoad;
+                shownLoad = Mathf.Clamp01(tool.LineTension);
                 shownStamina = targetStamina;
                 arc.ShowLoad(shownLoad);
                 UiKit.Fraction(stamina, shownStamina);
@@ -102,6 +103,13 @@ namespace Raid.UI
         internal void Animate()
         {
             if (!root.gameObject.activeInHierarchy) return;
+            if (!lineOwner || !lastFish || lineOwner.HookedFish != lastFish || UiInputGate.Modal ||
+                lastFish.Mode < FishMode.Hooked || lastFish.Mode > FishMode.Tired)
+            {
+                root.gameObject.SetActive(false);
+                return;
+            }
+            float targetLoad = Mathf.Clamp01(lineOwner.LineTension);
             float blend = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 24f);
             // Show danger on the first confirmed snapshot, even during a fast surge.
             shownLoad = targetLoad >= LineTensionArc.Danger && shownLoad < LineTensionArc.Danger

@@ -586,11 +586,19 @@ namespace Raid
             var camera=host.Motor.GetComponentInChildren<Camera>();
             var frame=new WaitForEndOfFrame();
             Require(host.QaHoldOwned(false,20),"Could not reel until the line breaks.");
+            var arc = FindAnyObjectByType<LineTensionArc>();
+            Require(arc != null && arc.isActiveAndEnabled, "The attached line has no visible HUD arc.");
+            bool recordedLoad = false;
             float deadline=Time.unscaledTime+18, peakTension=0;
             while(host.HookedFish==fish)
             {
                 Require(Time.unscaledTime<deadline,"Held reel did not break or lose the line.");
                 peakTension=Mathf.Max(peakTension,host.LineTension);
+                if (!recordedLoad && host.LineTension >= .36f)
+                {
+                    recordedLoad = true;
+                    yield return Shot("catch-line-load.png");
+                }
                 peakEyeOffset=Mathf.Max(peakEyeOffset,Vector3.Distance(camera.transform.position,host.FishingAnchor));
                 yield return frame;
             }
@@ -611,6 +619,9 @@ namespace Raid
                 maxBodyDrift=Mathf.Max(maxBodyDrift,Vector3.Distance(anchor,host.FishingAnchor));
                 maxDetachedEyeOffset=Mathf.Max(maxDetachedEyeOffset,Vector3.Distance(camera.transform.position,host.FishingAnchor));
             }
+            Require(!arc.isActiveAndEnabled, "The tension arc remained visible after detachment.");
+            yield return Shot("catch-line-detached.png");
+            Check("The HUD arc appeared on attachment and cleared on release.");
             string measured=$"line tension {peakTension:F2}; eye offset while hooked {peakEyeOffset:F3} m; "+
                 $"after detach {maxDetachedEyeOffset:F3} m; body drift {maxBodyDrift:F3} m; camera swept {maxYaw:F0}°.";
             Check(measured);
