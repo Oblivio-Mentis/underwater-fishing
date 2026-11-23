@@ -13,6 +13,22 @@ namespace Raid.Nereid
         public Vector3 Velocity=>body.linearVelocity;
         public bool TouchedDeck { get; private set; }
         bool underwater;
+        CharacterController thrower;
+        internal void IgnoreThrowerUntilClear(DiverMotor diver)
+        {
+            thrower=diver.GetComponent<CharacterController>();
+            if(thrower && thrower.enabled)Physics.IgnoreCollision(sphere,thrower,true);
+        }
+        void FixedUpdate()
+        {
+            if(thrower && (!thrower.enabled || thrower.bounds.SqrDistance(body.position)>Radius*Radius))
+                RestoreThrower();
+        }
+        void RestoreThrower()
+        {
+            if(thrower && thrower.enabled && sphere.enabled)Physics.IgnoreCollision(sphere,thrower,false);
+            thrower=null;
+        }
         public void SetWater(bool wet)
         {
             if(wet==underwater)return;
@@ -39,6 +55,7 @@ namespace Raid.Nereid
 
         public void Hold()
         {
+            RestoreThrower();
             if(!body.isKinematic){body.linearVelocity=Vector3.zero;body.angularVelocity=Vector3.zero;}
             body.isKinematic=true;sphere.enabled=false;
         }

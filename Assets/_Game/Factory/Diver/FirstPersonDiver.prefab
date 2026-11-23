@@ -79,6 +79,7 @@ MonoBehaviour:
   leftSleeve: {fileID: 1421253651760265266}
   rightSleeve: {fileID: 5657666711778879847}
   shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
+  shoulderReturn: {x: 0.18, y: -0.26, z: -0.235}
   shoulderTravel: 0.045
   restingWrist: {x: 0.22, y: -0.215, z: 0.37}
   supportWrist: {x: -0.126, y: 0.018, z: 0.105}
@@ -88,9 +89,11 @@ MonoBehaviour:
   harpoonHip: {x: 0.15, y: -0.17, z: 0.352}
   harpoonAim: {x: 0, y: -0.135, z: 0.35}
   ballRest: {x: 0.05, y: -0.16, z: 0.43}
-  ballWind: {x: 0.22, y: -0.065, z: 0.352}
+  ballWind: {x: 0.192, y: -0.036, z: 0.326}
+  ballRelease: {x: 0.10, y: -0.095, z: 0.575}
   ballSupportWrist: {x: -0.1395, y: -0.0603, z: -0.1433}
   ballThrowWrist: {x: 0.1283, y: -0.0555, z: -0.1318}
+  ballWindRoll: {x: -28, y: 5, z: -44}
   ballSupportAngles: {x: -26.4, y: -33.54, z: 97.94}
   ballThrowAngles: {x: -21.95, y: 35.22, z: -95.63}
   salvageScale: 0.31

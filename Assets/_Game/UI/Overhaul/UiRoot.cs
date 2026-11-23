@@ -30,8 +30,9 @@ namespace Raid.UI
         Nereid.AirlockPad aimedPad;
         RectTransform boardPointer;
         ReticleBoardInput boardInput;
-        float ballPressAt=-1;
+        float ballPressAt=-1, ballReleasedAt=-10f, releaseWind;
         public bool WindingBall => ballPressAt>=0;
+        internal float ReleasedBallWind => Time.unscaledTime-ballReleasedAt<.32f ? releaseWind : 0f;
         public float LocalBallWind => WindingBall && Context.World!=null ? Mathf.Clamp01((Time.unscaledTime-ballPressAt)/Mathf.Max(.1f,Context.World.tuning.ballWindSeconds)) : 0;
         float desiredFov=80, fightZoom, fishingPunch;
         /// <summary>Confirmed hook / tug / bite impulse on the owned camera. Decays back to the fight baseline.</summary>
@@ -299,11 +300,14 @@ namespace Raid.UI
             }
             if(pressed && !WindingBall)
             {
+                ballReleasedAt=-10f;
                 ballPressAt=Time.unscaledTime;
                 world.RequestGosha(GoshaAction.WindUp);
             }
             if(released && WindingBall)
             {
+                releaseWind=LocalBallWind;
+                ballReleasedAt=Time.unscaledTime;
                 ballPressAt=-1;
                 world.RequestGosha(GoshaAction.Throw);
             }

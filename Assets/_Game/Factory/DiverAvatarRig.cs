@@ -44,6 +44,8 @@ namespace Raid
         [Header("First-person hand targets")]
         [Tooltip("Camera-space resting position of the right shoulder. The left arm mirrors X.")]
         public Vector3 shoulderOrigin = new Vector3(.18f, -.19f, .045f);
+        [Tooltip("Back of the right suit armhole in camera space. The left mirrors X.")]
+        public Vector3 shoulderReturn = new(.18f, -.26f, -.235f);
         [Tooltip("Forward travel of the shoulder girdle when reaching for a distant target (metres).")]
         [Range(0, .08f)] public float shoulderTravel = .045f;
         [Tooltip("Camera-space resting position of the right wrist. The left wrist mirrors X.")]
@@ -56,9 +58,10 @@ namespace Raid
         public Vector3 triggerAngles = new Vector3(-37, -39, -70);
         [Header("First-person held objects (camera space)")]
         public Vector3 harpoonHip = new(.15f, -.17f, .352f), harpoonAim = new(0, -.135f, .35f);
-        public Vector3 ballRest = new(.05f, -.16f, .43f), ballWind = new(.22f, -.065f, .352f);
+        public Vector3 ballRest = new(.05f, -.16f, .43f), ballWind = new(.192f, -.036f, .326f), ballRelease = new(.10f, -.095f, .575f);
         [Tooltip("Wrist positions relative to the surface model's centre while cradling the ball.")]
         public Vector3 ballSupportWrist = new(-.1395f, -.0603f, -.1433f), ballThrowWrist = new(.1283f, -.0555f, -.1318f);
+        public Vector3 ballWindRoll = new(-28f,5f,-44f);
         public Vector3 ballSupportAngles = new(-26.4f, -33.54f, 97.94f), ballThrowAngles = new(-21.95f, 35.22f, -95.63f);
         [Range(.15f, .65f)] public float salvageScale = .31f;
         [Tooltip("Right wrist offset from the salvage socket. The left wrist mirrors X.")]

@@ -19,6 +19,7 @@ namespace Raid.Nereid
         internal bool PetVisible => creature.gameObject.activeSelf;
         internal Vector3 PetCenter => creature.position;
         Vector3 lastBall,lastPet;
+        uint lastLaunch;
         float gait;
         internal const float DeckOffset=.048f;
         internal static readonly Vector3 JawSocket=new(0,-.195f,1.69f);
@@ -190,8 +191,9 @@ namespace Raid.Nereid
                     {
                         displayHeldBall=world.GoshaBallInHands(holder);
                         float wind=GoshaBallGrip.Charge(holder);
-                        if(viewedHolder)cameraCenter=GoshaBallGrip.CameraCenter(holder.firstPersonAppearance,wind);
-                        ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(wind));
+                        float stroke=GoshaBallGrip.Stroke(world,s);
+                        if(viewedHolder)cameraCenter=GoshaBallGrip.CameraCenter(holder.firstPersonAppearance,wind,stroke);
+                        ballAt=GoshaBallGrip.WorldCenter(holder,Quaternion.Euler(holder.ViewPitch,holder.transform.eulerAngles.y,0)*Vector3.forward,wind,stroke);
                     }
                     ball.rotation=holder.transform.rotation;
                     break;
@@ -208,11 +210,14 @@ namespace Raid.Nereid
                     handBall.gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
                 }
                 handBall.localPosition=cameraCenter;
+                ballAt=camera.transform.TransformPoint(cameraCenter);
             }
             if(handBall!=null)handBall.gameObject.SetActive(inView && !UI.UiInputGate.Modal);
             worldBall.enabled=s.Ball!=GoshaBallMode.Held || displayHeldBall&&!viewedHolder;
             if(s.Ball==GoshaBallMode.Carried)ballAt=body.TransformPoint(JawSocket);
-            ball.position=s.Ball==GoshaBallMode.Held||s.Ball==GoshaBallMode.Carried?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
+            if(presented && s.Ball==GoshaBallMode.Flying && s.BallLaunch!=lastLaunch)ball.position=s.BallLaunchOrigin;
+            else ball.position=s.Ball==GoshaBallMode.Held||s.Ball==GoshaBallMode.Carried?ballAt:Vector3.Lerp(ball.position,ballAt,blend);
+            lastLaunch=s.BallLaunch;
             if(presented && (s.Ball==GoshaBallMode.Deck || s.Ball==GoshaBallMode.Flying))
             {
                 var delta=ball.position-lastBall;Vector3 axis=Vector3.Cross(Vector3.up,delta);

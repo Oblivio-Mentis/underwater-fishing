@@ -7,11 +7,11 @@ namespace Raid
     {
         sealed class Arm
         {
-            public Transform Upper,Sleeve,Wrist;
+            public Transform Upper,Sleeve,Wrist,Clavicle;
             public float UpperLength, ForearmLength;
         }
         readonly DiverAvatarRig avatar;
-        readonly FirstPersonStride stride = new FirstPersonStride();
+        readonly DiverStride stride = new DiverStride();
         readonly Transform root,fishAnchor;
         readonly Arm[] arms=new Arm[2];
         string species;
@@ -27,7 +27,7 @@ namespace Raid
         int sequence,displaySlot,targetSlot,shotSequence;
         bool displayedHeavy,targetHeavy;
         float press,switchTime,releaseStroke,shownWind,shot;
-        bool hadBall;
+        uint lastLaunch;
 
         public DiveHands(DiverAvatarRig template, Transform camera)
         {
@@ -46,6 +46,7 @@ namespace Raid
                     Upper=DiveOutfit.Pivot(root,side+" upper arm",Vector3.zero),
                     Sleeve=DiveOutfit.Pivot(root,side+" sleeve",Vector3.zero),
                     Wrist=DiveOutfit.Pivot(root,side+" glove",Vector3.zero),
+                    Clavicle=bones.upper.parent!=avatar.Arm(1-i).upper.parent?bones.upper.parent:null,
                     UpperLength=Vector3.Distance(shoulder,elbow),
                     ForearmLength=Vector3.Distance(elbow,wrist)
                 };
@@ -89,7 +90,8 @@ namespace Raid
             {
                 viewed=actor;sequence=actor.InteractionSequence;shotSequence=equipment.ShotSequence;shot=0;
                 displaySlot=targetSlot=equipment.ActiveSlot;displayedHeavy=targetHeavy=equipment.HandsFull;
-                press=switchTime=releaseStroke=shownWind=0;hadBall=false;
+                press=switchTime=releaseStroke=shownWind=0;
+                lastLaunch=RaidWorld.Instance!=null?RaidWorld.Instance.Gosha.BallLaunch:0;
                 stride.Reset();
             }
             if(targetSlot!=equipment.ActiveSlot||targetHeavy!=equipment.HandsFull)
@@ -107,15 +109,16 @@ namespace Raid
             bool grip=equipment.AssistTarget!=null;
             var world=RaidWorld.Instance;
             bool selectedBall=world?.GoshaBallInHands(actor)==true;
-            if(hadBall && !selectedBall && world!=null && world.Gosha.Ball==GoshaBallMode.Flying &&
-                world.Gosha.Thrower==actor.OwnerId)releaseStroke=.23f;
-            hadBall=selectedBall;
+            if(world!=null && world.Gosha.BallLaunch!=lastLaunch && world.Gosha.Thrower==actor.OwnerId)
+                releaseStroke=GoshaBallGrip.FollowThrough;
+            if(world!=null)lastLaunch=world.Gosha.BallLaunch;
             releaseStroke=Mathf.Max(0,releaseStroke-dt);
             bool cuddling=world?.IsHoldingGosha(actor)==true;
             bool ball=BallVisible=!cuddling && !displayedHeavy && world?.HasGoshaBall(actor)==true && equipment.HasBallInSlot(displaySlot);
             float wind=shownWind=ball ? selectedBall?GoshaBallGrip.Charge(actor):shownWind : 0;
             Vector3 stowOffset=GoshaBallGrip.Lower(stow);
-            BallCenter=GoshaBallGrip.CameraCenter(avatar,wind)+stowOffset;
+            float cast=world!=null && selectedBall?GoshaBallGrip.Stroke(world,world.Gosha):0;
+            BallCenter=GoshaBallGrip.CameraCenter(avatar,wind,cast)+stowOffset;
             bool ranged=equipment.OwnsHarpoon && !ball && !cuddling && releaseStroke==0 && displaySlot==0 && !displayedHeavy && !grip;
             var salvage=displayedHeavy?equipment.CarriedSalvage:null;
             var caught=ball||cuddling||salvage!=null?null:displayedHeavy?equipment.CarriedFish:equipment.FishInSlot(displaySlot);
@@ -153,20 +156,24 @@ namespace Raid
                 {
                     if(s>0)
                     {
-                        wrist=BallCenter+avatar.ballThrowWrist;
-                        angles=avatar.ballThrowAngles;
+                        var roll=Quaternion.Slerp(Quaternion.identity,Quaternion.Euler(avatar.ballWindRoll),wind*(1f-cast));
+                        wrist=BallCenter+roll*avatar.ballThrowWrist;
+                        angles=(roll*Quaternion.Euler(avatar.ballThrowAngles)).eulerAngles;
                     }
                     else
                     {
-                        wrist=BallCenter+Vector3.Lerp(avatar.ballSupportWrist,GoshaBallGrip.GloveOffset(s,1),wind);
+                        wrist=Vector3.Lerp(BallCenter+Vector3.Lerp(avatar.ballSupportWrist,GoshaBallGrip.GloveOffset(s,1),wind),
+                            new Vector3(-.22f,-.22f,.30f),cast);
                         angles=Quaternion.Slerp(Quaternion.Euler(avatar.ballSupportAngles),Quaternion.Euler(-22,32,48),wind).eulerAngles;
                     }
                 }
                 else if(releaseStroke>0 && s>0)
                 {
-                    float swing=1-releaseStroke/.23f;
-                    wrist=Vector3.Lerp(new Vector3(.25f,-.08f,.30f),new Vector3(.09f,-.16f,.48f),Mathf.Sin(swing*Mathf.PI*.65f));
-                    angles=new Vector3(-8,-17,-54);
+                    float swing=1-releaseStroke/GoshaBallGrip.FollowThrough;
+                    var start=avatar.ballRelease+avatar.ballThrowWrist;
+                    wrist=Vector3.Lerp(start,avatar.restingWrist,Mathf.SmoothStep(0,1,swing))+
+                        new Vector3(-.065f,-.026f,.044f)*Mathf.Sin(swing*Mathf.PI);
+                    angles=Quaternion.Slerp(Quaternion.Euler(avatar.ballThrowAngles),Quaternion.Euler(8,-18,-35),swing).eulerAngles;
                 }
                 else if(cuddling)
                 {
@@ -209,7 +216,13 @@ namespace Raid
                     wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.46f),push);
                     angles=Quaternion.Slerp(Quaternion.Euler(angles),Quaternion.Euler(-12,1,12),push).eulerAngles;
                 }
-                BendArm(arm,s,wrist);
+                if(arm.Clavicle)
+                {
+                    var back=avatar.shoulderReturn;
+                    back.x*=s;
+                    arm.Clavicle.position=root.TransformPoint(back);
+                }
+                BendArm(arm,s,wrist,ranged && s<0);
                 arm.Wrist.localRotation=Quaternion.Euler(angles);
                 avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);
             }
@@ -217,13 +230,13 @@ namespace Raid
                 cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
                 salvage!=null?Action.CarrySalvage:caught!=null?Action.CarryFish:
                 shot>0?Action.Shoot:grip||equipment.HookedFish!=null?Action.Reel:ranged?(aim>.1f?Action.Aim:Action.Harpoon):
-                !actor.IsWalking?Action.Swim:actor.IsSprinting?Action.Sprint:
+                !actor.IsWalking?Action.Swim:stride.Running>.15f?Action.Sprint:
                 stride.Moving?Action.Walk:Action.Idle;
             avatar.FinishPose(motion,dt);
             return ranged&&!panelPress;
         }
 
-        void BendArm(Arm arm,int side,Vector3 target)
+        void BendArm(Arm arm,int side,Vector3 target,bool support)
         {
             Vector3 shoulder=avatar.shoulderOrigin;
             shoulder.x*=side;
@@ -237,7 +250,7 @@ namespace Raid
             Vector3 wrist=shoulder+axis*distance;
             float along=(upper*upper-forearm*forearm+distance*distance)/(2f*distance);
             float bend=Mathf.Sqrt(Mathf.Max(0f,upper*upper-along*along));
-            var elbowDirection=Vector3.ProjectOnPlane(new Vector3(side*.75f,-1f,-.22f),axis).normalized;
+            var elbowDirection=Vector3.ProjectOnPlane(new Vector3(side*(support?.40f:.75f),support?-1.23f:-1f,-.22f),axis).normalized;
             if (elbowDirection.sqrMagnitude<.01f) elbowDirection=Vector3.Cross(axis,Vector3.right).normalized;
             var elbow=shoulder+axis*along+elbowDirection*bend;
             PoseSleeve(arm.Upper,shoulder,elbow);

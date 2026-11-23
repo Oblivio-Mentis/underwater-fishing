@@ -32,7 +32,7 @@ MonoBehaviour:
   fetchTimeout: 24
   lostCompanionSeconds: 32
   playfulFallSeconds: 1.2
-  ballThrowSpeed: 8.4
+  ballThrowSpeed: 15.6
   ballWindSeconds: 0.55
-  ballShortThrow: 4.2
-  ballThrowLift: 1.65
+  ballShortThrow: 4.6
+  ballThrowLift: 2

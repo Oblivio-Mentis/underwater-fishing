@@ -25,8 +25,9 @@ namespace Raid
         internal bool BallVisible { get; private set; }
         internal Vector3 BallCenter { get; private set; }
         internal bool Visible => body!=null && body.gameObject.activeSelf;
-        float stride,speed,swimming,kick,reach,draw,movingPhase,shownWind;
-        Vector3 previous;
+        float stride,speed,swimming,kick,reach,draw,movingPhase,shownWind,throwFollow;
+        uint lastBallLaunch;
+        readonly DiverStride gait=new();
         Renderer legacyVisor,legacyCapsule;
 
         static Vector3 V(float x,float y,float z)=>new Vector3(x,y,z);
@@ -52,7 +53,7 @@ namespace Raid
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
             fishAnchor.localScale=Vector3.one*.27f;
-            previous=transform.position;shotSequence=tool.ShotSequence;useSequence=diver.InteractionSequence;displaySlot=targetSlot=tool.ActiveSlot;
+            shotSequence=tool.ShotSequence;useSequence=diver.InteractionSequence;displaySlot=targetSlot=tool.ActiveSlot;
             body.gameObject.SetActive(false);
         }
 
@@ -79,7 +80,7 @@ namespace Raid
             bool visible=diver.IsClientInitialized&&!diver.IsConsumed&&local!=null&&local.Spectating!=diver&&(!diver.IsOwner||local.Spectating!=null);
             if(body.gameObject.activeSelf!=visible)body.gameObject.SetActive(visible);
             float dt=Mathf.Clamp(Time.deltaTime,0,.06f);
-            float rawSpeed=dt>.0001f?Vector3.Distance(transform.position,previous)/dt:0;previous=transform.position;
+            gait.Advance(diver,Time.deltaTime);
             if(tool.ShotSequence!=shotSequence){kick=1;shotSequence=tool.ShotSequence;}
             if(diver.InteractionSequence!=useSequence){reach=1;useSequence=diver.InteractionSequence;}
             if(!visible)
@@ -99,13 +100,13 @@ namespace Raid
                     cable.Initialize(tool,muzzle,bolt,drum,equipment.steel,true);
                 }
             }
-            float blend=1-Mathf.Exp(-10*dt);
-            speed=Mathf.Lerp(speed,Mathf.Min(rawSpeed,8),blend);stride=Mathf.Lerp(stride,Mathf.Clamp01(speed*.44f),blend);
-            swimming=Mathf.Lerp(swimming,diver.IsWalking?0:1,blend);
+            speed=gait.Speed;stride=gait.Weight;swimming=gait.Water;
             kick=Mathf.MoveTowards(kick,0,dt*5.3f);reach=Mathf.MoveTowards(reach,0,dt*2.1f);draw=Mathf.Max(0,draw-dt);
             if(draw<GoshaBallGrip.SwapDuration*.5f)displaySlot=targetSlot;
-            movingPhase+=dt*Mathf.Lerp(3.1f,diver.IsSprinting?12.3f:9.1f,stride);
-            float beat=Mathf.Sin(movingPhase);
+            float run=gait.Running*(1f-swimming);
+            movingPhase+=dt*Mathf.Lerp(3.1f,9.1f,stride);
+            float phase=Mathf.LerpAngle(gait.Phase*Mathf.Rad2Deg,movingPhase*Mathf.Rad2Deg,swimming)*Mathf.Deg2Rad;
+            float beat=Mathf.Sin(phase);
             float idle=Mathf.Sin(Time.time*1.85f+diver.OwnerId*.7f);
             bool held=tool.HandsFull,helper=tool.AssistTarget!=null;
             var salvage=tool.CarriedSalvage;
@@ -113,9 +114,15 @@ namespace Raid
             bool cuddling=world?.IsHoldingGosha(diver)==true;
             bool ball=BallVisible=!diver.IsDead && !held && !cuddling && world?.HasGoshaBall(diver)==true && tool.HasBallInSlot(displaySlot);
             float wind=shownWind=ball ? displaySlot==tool.ActiveSlot?GoshaBallGrip.Charge(diver):shownWind : 0;
-            BallCenter=GoshaBallGrip.ObserverCenter(wind)+GoshaBallGrip.Lower(GoshaBallGrip.Stow(draw));
+            var look=Quaternion.Euler(diver.ViewPitch,diver.transform.eulerAngles.y,0);
+            float cast=world!=null && ball?GoshaBallGrip.Stroke(world,world.Gosha):0f;
+            BallCenter=transform.InverseTransformPoint(GoshaBallGrip.WorldCenter(diver,look*Vector3.forward,wind,cast))+
+                GoshaBallGrip.Lower(GoshaBallGrip.Stow(draw));
+            if(world && lastBallLaunch!=world.Gosha.BallLaunch && world.Gosha.Thrower==diver.OwnerId)throwFollow=GoshaBallGrip.FollowThrough;
+            if(world)lastBallLaunch=world.Gosha.BallLaunch;
+            throwFollow=Mathf.Max(0,throwFollow-dt);
             var pocket=!ball&&!cuddling&&!held?tool.FishInSlot(displaySlot):null;
-            gun.gameObject.SetActive(!diver.IsDead && !cuddling && !held && !helper && tool.OwnsHarpoon && displaySlot==0);
+            gun.gameObject.SetActive(!diver.IsDead && !cuddling && !held && !helper && throwFollow<=0 && tool.OwnsHarpoon && displaySlot==0);
             var shownFish=tool.HoldingHeavyCatch?tool.LiftedHeavy:pocket;
             long shownId=tool.HoldingHeavyCatch?tool.HeldCargoId:tool.CatchIdInSlot(displaySlot);
             UpdateFish(!diver.IsDead?shownFish?.SpeciesId:null,shownFish!=null?shownId:0);
@@ -127,18 +134,20 @@ namespace Raid
                 for(int i=0;i<2;i++){int s=i==0?-1:1;Pose(arms[i],-11,0,s*(22+idle*2),-17,0,81);Pose(legs[i],s*7,0,s*6,9,0,-6);}
                 ApplyAppearance(Action.Dead,dt);return;
             }
-            float lean=Mathf.Lerp(diver.IsSprinting?9:1,Mathf.Lerp(32,71,stride),swimming);
+            float lean=Mathf.Lerp(1+run*13f,Mathf.Lerp(32,71,stride),swimming);
             fall=Mathf.MoveTowards(fall,(RaidWorld.Instance?.GoshaKnocked(diver)??false)?1:0,dt*5.5f);
-            body.localRotation=Quaternion.Euler(lean-fall*79,0,fall*13+beat*stride*(1-swimming)*2.5f);
-            body.localPosition=V(0,-fall*.53f+(1-swimming)*Mathf.Abs(beat)*.027f*stride+idle*.006f,0);
+            body.localRotation=Quaternion.Euler(lean-fall*79,beat*run*4f,fall*13+beat*stride*(1-swimming)*2.5f-gait.Lateral*run*4f);
+            body.localPosition=V(0,-fall*.53f+(1-swimming)*Mathf.Abs(beat)*(.025f+.045f*run)*stride+idle*.006f,0);
             head.localRotation=Quaternion.Euler(Mathf.Clamp(diver.ViewPitch-lean*.68f,-48,46),0,0);
             for(int i=0;i<2;i++)
             {
                 int s=i==0?-1:1;float cycle=s*beat;
-                float thigh=Mathf.Lerp(-cycle*(diver.IsSprinting?42:30)*stride,-cycle*(12+23*stride),swimming);
-                float knee=Mathf.Lerp(Mathf.Max(0,cycle)*40*stride,12+Mathf.Max(0,cycle)*38*stride,swimming);
-                Pose(legs[i],thigh,0,s*4,knee,0,-knee*.48f+swimming*18);
-                float shoulder=cycle*stride*27,elbow=-18-Mathf.Max(0,cycle)*17*stride;
+                float lift=Mathf.Max(0,s*Mathf.Cos(phase));
+                float thigh=Mathf.Lerp(-cycle*(30f+run*23f)*stride,-cycle*(12+23*stride),swimming);
+                float knee=Mathf.Lerp((6f+lift*(35f+run*43f))*stride,12+Mathf.Max(0,cycle)*38*stride,swimming);
+                float ankle=Mathf.Lerp(-knee*.47f+cycle*stride*(7f+run*8f),18-knee*.48f,swimming);
+                Pose(legs[i],thigh,0,s*4+gait.Lateral*cycle*stride*11f*(1-swimming),knee,0,ankle);
+                float shoulder=cycle*stride*(27f+run*16f),elbow=-18-run*36-Mathf.Max(0,cycle)*17*stride;
                 float roll=s*7,yaw=0,wrist=83;
                 if(held||helper||ball||cuddling)
                 {
@@ -175,12 +184,20 @@ namespace Raid
                         transform.rotation*new Vector3(side*.8f,-.65f,-.3f));
                 }
             }
+            else if(throwFollow>0f)
+            {
+                float t=1f-throwFollow/GoshaBallGrip.FollowThrough;
+                var rig=diver.firstPersonAppearance;
+                var grip=Vector3.Lerp(rig.ballRelease+rig.ballThrowWrist,rig.restingWrist,Mathf.SmoothStep(0,1,t));
+                ReachGrip(arms[1],diver.transform.position+Vector3.up*.6f+look*grip,look*Quaternion.Euler(rig.ballThrowAngles),
+                    transform.TransformDirection(new Vector3(.55f,-1,-.22f)));
+            }
             else if(gun.gameObject.activeSelf && weaponBuilt)HoldHarpoon(beat,idle);
-            var motion=fall>.1f?Action.Knockdown:reach>.01f?Action.PressPanel:draw>0?Action.SwapEquipment:
+            var motion=fall>.1f?Action.Knockdown:throwFollow>0?Action.Throw:reach>.01f?Action.PressPanel:draw>0?Action.SwapEquipment:
                 cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
                 salvage!=null?Action.CarrySalvage:shownFish!=null?Action.CarryFish:kick>.01f?Action.Shoot:
                 helper||tool.HookedFish!=null?Action.Reel:gun.gameObject.activeSelf?Action.Harpoon:
-                !diver.IsWalking?Action.Swim:diver.IsSprinting?Action.Sprint:speed>.1f?Action.Walk:Action.Idle;
+                !diver.IsWalking?Action.Swim:run>.15f?Action.Sprint:speed>.1f?Action.Walk:Action.Idle;
             ApplyAppearance(motion,dt);
         }
 
@@ -199,17 +216,18 @@ namespace Raid
         void HoldHarpoon(float beat,float idle)
         {
             var yaw=Quaternion.Euler(0,diver.transform.eulerAngles.y,0);
-            float lowered=GoshaBallGrip.Stow(draw)*32;
-            var aim=yaw*Quaternion.Euler(Mathf.Clamp(diver.ViewPitch,-80,80)+lowered-kick*5,0,0);
+            float run=gait.Running*(1-swimming);
+            float lowered=GoshaBallGrip.Stow(draw)*32+run*13f;
+            var aim=yaw*Quaternion.Euler(Mathf.Clamp(diver.ViewPitch,-80,80)+lowered-kick*5,run*-16f,run*(8f+beat*3f));
             var shoulders=(arms[0].Upper.position+arms[1].Upper.position)*.5f;
-            gun.SetPositionAndRotation(shoulders+yaw*(Vector3.right*.095f-Vector3.up*.115f)
+            gun.SetPositionAndRotation(shoulders+yaw*(Vector3.right*(.095f-run*.026f)-Vector3.up*(.115f+run*.048f))
                 +aim*new Vector3(0,beat*stride*.008f+idle*.002f,.143f-kick*.035f),aim);
             shuttle.localPosition=Vector3.back*kick*.028f;
             ReachGrip(arms[1],gun.TransformPoint(V(.022f,-.103f,-.087f)),aim*Quaternion.Euler(0,-12,-66),
                 yaw*V(.78f,-.75f,-.42f));
             if(reach<.015f)
                 ReachGrip(arms[0],gun.TransformPoint(V(-.034f,-.047f,.117f)),aim*Quaternion.Euler(-9,9,64),
-                    yaw*V(-.63f,-.93f,-.4f));
+                    yaw*V(-.41f,-1.17f,-.4f));
         }
 
         static void ReachGrip(Limb arm,Vector3 grip,Quaternion handRotation,Vector3 elbowPole)

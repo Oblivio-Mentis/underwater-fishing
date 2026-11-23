@@ -25,9 +25,9 @@ namespace Raid
         [Min(.1f)] public float ballReelSpeed=4f;
         [Min(.15f)] public float ballHandReach=.42f;
         [Min(.2f)] public float ballLineIdleSeconds=8f;
-        [Min(1)] public float ballThrowSpeed=8.4f;
+        [Min(1)] public float ballThrowSpeed=15.6f;
         [Min(.1f)] public float ballWindSeconds=.55f;
-        [Min(.1f)] public float ballShortThrow=4.2f;
-        [Min(0)] public float ballThrowLift=1.65f;
+        [Min(.1f)] public float ballShortThrow=4.6f;
+        [Min(0)] public float ballThrowLift=2f;
     }
 }
