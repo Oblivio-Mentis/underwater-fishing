@@ -26,6 +26,16 @@ namespace Raid
         private HarpoonTool host, helper;
         private float nextRemoteReel;
         private bool remoteReeling;
+        private FishActor fishToFollow;
+
+        private void LateUpdate()
+        {
+            if (fishToFollow && host && host.HookedFish == fishToFollow)
+            {
+                var target = fishToFollow.transform.position;
+                host.Motor.QaSwimToward(target, Vector3.Distance(host.FishingAnchor, target) > 6f ? .35f : 0);
+            }
+        }
         // RAID-018: fight phase sequences per landed fish (host) and what the independent client observed.
         private readonly List<string> fightSequences = new();
         private readonly HashSet<string> peerBehaviours = new();
@@ -270,6 +280,8 @@ namespace Raid
             yield return VerifySoloSurge(heavy);
 
             Phase("Two independent impacts");
+            // The host can still swim while the other client reads the impacts and changes tools.
+            fishToFollow = heavy;
             yield return HookPeer(heavy);
             yield return Wait(()=>ReadClient()?.activeBoltOwners?.Distinct().Count()==2,6,"Independent view did not render both attachments.");
             // Opposed handles stay loaded and aim away from one another.
@@ -291,9 +303,15 @@ namespace Raid
             Send("slot",1);
             yield return Wait(()=>helper.ActiveSlot==1 && helper.HookedFish==null && heavy.HookCount==1 && host.HookedFish==heavy,
                 4,"Switching the partner's tool failed to remove only their line.");
+            // Reset the fixture's shooting lane before the second shot. Waiting at the previous
+            // inspection point can put the stationary first shooter beyond the 20 m line range.
+            StageCooperativePull(heavy);
             Send("slot",0);yield return Wait(()=>helper.ActiveSlot==0,4,"Partner could not re-equip harpoon.");
             yield return HookPeer(heavy);
+            Require(host.HookedFish == heavy && heavy.HookCount == 2,
+                "Both lines must still be attached before staging the cooperative pull.");
             Phase("Cooperative pull and heavy carry");
+            fishToFollow = null;
             StageCooperativePull(heavy);
             remoteReeling=true;
             nextRemoteReel=0;
@@ -302,8 +320,9 @@ namespace Raid
             Send("fish_reel",0);
             long landedHeavyId = heavy.CargoId;
             var carrier = host.CarriedFish == heavy ? host : helper;
+            var otherDiver = carrier == host ? helper : host;
             Require(!carrier.Motor.IsDead && carrier.HandsFull && carrier.CarriedFish == heavy && host.CatchCount + helper.CatchCount == 4
-                && host.HookedFish == null && helper.HookedFish == null && heavy.HookCount == 0,
+                && otherDiver.HookedFish == null && host.LineLength == 0 && helper.LineLength == 0 && heavy.HookCount == 0,
                 $"Heavy carry mismatch: mode {heavy.Mode}, hands {host.HandsFull}/{helper.HandsFull}, catches {host.CatchCount}/{helper.CatchCount}.");
             if (carrier == host)
                 Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
