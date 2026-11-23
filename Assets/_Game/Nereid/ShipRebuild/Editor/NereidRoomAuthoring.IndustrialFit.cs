@@ -6,45 +6,7 @@ namespace Raid.Nereid.Editor
     {
         static void FitTransfer()
         {
-            var mill=Part("Twin induction mill jacket",new(-2.47f,2.0f,-13.02f));
             Vector3 x=Vector3.right,y=Vector3.up,z=Vector3.forward;
-            var carrier=new Vector3(-2.47f,2.08f,-13.43f);
-            var shield=new[]{new Vector2(-2.01f,-.72f),new Vector2(-1.52f,-.98f),new Vector2(-.54f,-.90f),
-                new Vector2(.1f,-.60f),new Vector2(1.64f,-.67f),new Vector2(2.14f,-.20f),
-                new Vector2(2.14f,.56f),new Vector2(1.78f,.84f),new Vector2(-1.67f,.84f),new Vector2(-2.10f,.52f)};
-            Casting(mill,carrier,x,y,shield,.40f,enamel,steel,dark,.92f);
-            for(int j=0;j<2;j++)
-            {
-                var center=carrier+new Vector3(-.94f+j*1.83f,.11f,.385f);
-                Band(mill,center,x,y,.82f,.52f,.16f,hull,deck,0,360,12);
-                var hub=center+z*.17f;
-                for(int k=0;k<4;k++)
-                {
-                    float rad=k*Mathf.PI*.5f;var u=new Vector3(Mathf.Cos(rad),Mathf.Sin(rad),0);var v=Vector3.Cross(z,u);
-                    var blade=new[]{new Vector2(.13f,-.02f),new Vector2(.43f,-.20f),new Vector2(.51f,-.04f),new Vector2(.24f,.13f)};
-                    Casting(mill,hub,u,v,blade,.065f,deck,steel,dark);
-                }
-                SocketBolt(mill,hub+z*.074f,x,y,.161f);
-                var rail=center+z*.29f;
-                mill.Tube(deck,rail-x*.56f-y*.31f,rail+x*.56f+y*.31f,.046f,-1,6);
-            }
-            for(int j=0;j<2;j++)
-            {
-                float sx=j==0?-1:1;
-                var top=carrier+new Vector3(sx*1.68f,.80f,-.01f);
-                mill.Beam(dark,top,top+new Vector3(sx*.23f,.58f,-.37f),.42f,.51f);
-                mill.Beam(ochre,top+z*.11f,top+new Vector3(sx*.22f,.46f,-.06f),.22f,.26f);
-            }
-            HoodedLamp(mill,carrier+new Vector3(.09f,.70f,.42f),x,y,.66f,.22f);
-            mill.Lamp("Furnace return",new Color(.90f,.83f,.74f),carrier+new Vector3(.12f,1.06f,.91f),7.5f,6.2f);
-            var hood=Part("Cyclone extraction cowl",new(-2.59f,3.29f,-11.05f));
-            var cap=new Vector3(-2.57f,3.49f,-11.19f);
-            Casting(hood,cap,x,z,Shield(4.67f,1.27f,.65f),.32f,ceramic,steel,enamel,.81f);
-            Casting(hood,cap+Vector3.down*.33f,x,z,Shield(3.26f,.66f,.62f),.085f,dark,ochre,rubber);
-            foreach(float dx in new[]{-1.02f,1.02f})
-                HoodedLamp(hood,cap+new Vector3(dx,-.422f,0),x,z,.66f,.23f);
-            Intake(hood,cap+Vector3.down*.423f,x,z,.76f,.52f);
-
             var winch=Part("Suspended twin drum drive",new(2.28f,2.94f,-14.30f));
             var drum=new Vector3(2.03f,2.88f,-14.75f);
             winch.Tube(dark,drum-x*1.31f,drum+x*1.31f,.39f,-1,12);
