@@ -89,7 +89,10 @@ MonoBehaviour:
   harpoonAim: {x: 0, y: -0.135, z: 0.35}
   ballRest: {x: 0.05, y: -0.16, z: 0.43}
   ballWind: {x: 0.22, y: -0.065, z: 0.352}
-  ballWristOffset: {x: 0.093, y: -0.025, z: -0.014}
+  ballSupportWrist: {x: -0.1395, y: -0.0603, z: -0.1433}
+  ballThrowWrist: {x: 0.1283, y: -0.0555, z: -0.1318}
+  ballSupportAngles: {x: -26.4, y: -33.54, z: 97.94}
+  ballThrowAngles: {x: -21.95, y: 35.22, z: -95.63}
   salvageScale: 0.31
   salvageWristOffset: {x: 0.072, y: 0.028, z: -0.034}
   cradleCenter: {x: 0, y: -0.235, z: 0.54}

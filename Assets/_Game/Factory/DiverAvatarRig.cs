@@ -57,8 +57,9 @@ namespace Raid
         [Header("First-person held objects (camera space)")]
         public Vector3 harpoonHip = new(.15f, -.17f, .352f), harpoonAim = new(0, -.135f, .35f);
         public Vector3 ballRest = new(.05f, -.16f, .43f), ballWind = new(.22f, -.065f, .352f);
-        [Tooltip("Right wrist offset from the ball socket. The left wrist mirrors X and releases during the wind-up.")]
-        public Vector3 ballWristOffset = new(.093f, -.025f, -.014f);
+        [Tooltip("Wrist positions relative to the surface model's centre while cradling the ball.")]
+        public Vector3 ballSupportWrist = new(-.1395f, -.0603f, -.1433f), ballThrowWrist = new(.1283f, -.0555f, -.1318f);
+        public Vector3 ballSupportAngles = new(-26.4f, -33.54f, 97.94f), ballThrowAngles = new(-21.95f, 35.22f, -95.63f);
         [Range(.15f, .65f)] public float salvageScale = .31f;
         [Tooltip("Right wrist offset from the salvage socket. The left wrist mirrors X.")]
         public Vector3 salvageWristOffset = new(.072f, .028f, -.034f);

@@ -128,10 +128,16 @@ namespace Raid
                 }
                 else if(ball)
                 {
-                    var offset=avatar.ballWristOffset;
-                    offset.x*=s;
-                    wrist=BallCenter+GoshaBallGrip.GloveOffset(s,wind)+offset*(s>0?1f:1f-wind);
-                    angles=new Vector3(-22,-s*32,-s*48);
+                    if(s>0)
+                    {
+                        wrist=BallCenter+avatar.ballThrowWrist;
+                        angles=avatar.ballThrowAngles;
+                    }
+                    else
+                    {
+                        wrist=BallCenter+Vector3.Lerp(avatar.ballSupportWrist,GoshaBallGrip.GloveOffset(s,1),wind);
+                        angles=Quaternion.Slerp(Quaternion.Euler(avatar.ballSupportAngles),Quaternion.Euler(-22,32,48),wind).eulerAngles;
+                    }
                 }
                 else if(releaseStroke>0 && s>0)
                 {
