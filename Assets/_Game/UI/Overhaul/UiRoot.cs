@@ -316,7 +316,7 @@ namespace Raid.UI
             AimedCargoDispatch=false;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
-            if(activeSkillStation!=null && (player!=skillStationPlayer || player.IsHelpless ||
+            if(activeSkillStation!=null && (player==null || player!=skillStationPlayer || player.IsHelpless ||
                 !player.IsInside || !activeSkillStation.InRange(player)))ClearSkillStation();
             if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.GoshaBallInHands(player)))CancelBallGesture();
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
