@@ -50,15 +50,25 @@ namespace Raid.Nereid
             if(!held)releaseRequired=false;
             if(player!=owned){RestoreSensitivity(player);player=owned;Clear();releaseRequired=held;}
             bool available=ui!=null&&ui.Context.Connected&&player!=null&&player.NetworkObject!=null&&player.IsOwner&&player.IsClientInitialized&&!player.IsHelpless&&!player.IsDead&&ui.Context.Harpoon!=null&&ui.Context.Harpoon.HarpoonInHands;
-            bool permitted=available&&ui.Page==UiPage.None&&!UiInputGate.Blocked&&Application.isFocused&&Cursor.lockState==CursorLockMode.Locked;
+            bool hud=ui && ui.Context.Connected && ui.Page==UiPage.None && !UiInputGate.Blocked;
+            bool input=hud && Application.isFocused && Cursor.lockState==CursorLockMode.Locked;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if(backgroundQaMouse!=null)
             {
-                if(!BackgroundQaActive||!available||ui.Page!=UiPage.None||UiInputGate.Modal)EndBackgroundQa();
-                else if(Mouse.current==backgroundQaMouse&&Time.unscaledTime>=UiInputGate.ResumeAt)
-                    permitted=true; // Explicit synthetic-device scope only. No game-input focus gate is modified.
+                if(!BackgroundQaActive || !ui || !ui.Context.Connected || ui.Page!=UiPage.None || UiInputGate.Modal)EndBackgroundQa();
+                else if(Mouse.current==backgroundQaMouse && Time.unscaledTime>=UiInputGate.ResumeAt)
+                    input=true; // Explicit synthetic-device scope only.
             }
 #endif
+            bool permitted=available && input;
+            // One secondary press has one owner. Keep it consumed until release, even if
+            // the deposited fish leaves the last pocket or the reticle moves off the opening.
+            if(input && !UiInputGate.PointerReserved && held && Mouse.current.rightButton.wasPressedThisFrame && ui.Context.Harpoon is HarpoonTool tool &&
+               tool.FishLoadTarget(out _,out _) && CargoDispatch.CanLoad(ui.Context.World,player))
+            {
+                releaseRequired=true;
+                tool.RequestLoadFish();
+            }
             if(!permitted)
             {
                 Clear();releaseRequired|=held;

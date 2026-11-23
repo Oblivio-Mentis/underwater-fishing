@@ -59,7 +59,7 @@ namespace Raid
         {
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
-            if(Nereid.NereidVessel.Active!=null && (expectedKind==DroppedKind.Catch || expectedKind==DroppedKind.Salvage) &&
+            if(Nereid.NereidVessel.Active!=null && expectedKind==DroppedKind.Salvage &&
                 CargoDispatch.CanLoad(world,Motor))
             {
                 if(world.LoadSelectedCargo(this,expectedKind,id))Motor.ConfirmInteraction();
@@ -159,12 +159,45 @@ namespace Raid
             return item.kind == DroppedKind.Harpoon || item.Fish != null && (item.Fish.RequiresPartner || FreePocket() >= 0);
         }
 
+        public bool FishLoadTarget(out FishActor fish,out long cargoId)
+        {
+            fish=null;cargoId=0;
+            if(!MayHandleItems || Motor.IsTrapped || CarriedSalvage || TetherActive || HasBallLine || AssistTarget ||
+               RaidWorld.Instance.IsHoldingGosha(Motor) || HasBallInSlot(ActiveSlot))return false;
+            if(HoldingHeavyCatch){fish=HeavySpecies;cargoId=HeavyId;}
+            else
+            {
+                if(HookedFish)return false;
+                int slot=FirstOccupiedPocket();
+                if(slot<0)return false;
+                fish=FishInSlot(slot);cargoId=CatchIdInSlot(slot);
+            }
+            return fish && cargoId>0;
+        }
+
+        public bool RequestLoadFish()
+        {
+            var world=RaidWorld.Instance;
+            if(!IsClientInitialized || !IsOwner || UI.UiInputGate.Blocked ||
+               !FishLoadTarget(out var fish,out var id) || !CargoDispatch.CanLoad(world,Motor))return false;
+            var state=world.View;
+            if(state==null || state.hoistPhase!=HoistPhase.Loading || (long)state.CargoUsed+fish.cargoSize>state.Capacity(world.progression))return false;
+            LoadFishServer(id);
+            return true;
+        }
+
+        [ServerRpc(RequireOwnership=true)]
+        void LoadFishServer(long fishId)
+        {
+            var world=RaidWorld.Instance;
+            if(CargoDispatch.CanLoad(world,Motor) && world.LoadSelectedCargo(this,DroppedKind.Catch,fishId))Motor.ConfirmInteraction();
+        }
+
         internal bool PlaceSelectedCatch(TeamProgress team,ProgressionTuning tuning,long id)
         {
-            bool heavy=HoldingHeavyCatch;
-            var fish=heavy?HeavySpecies:FishInSlot(ActiveSlot);
-            if(fish==null || !team.LoadCargo(RaidWorld.Instance.AttributeCatch(fish.ToCargo(id)),tuning))return false;
-            if(heavy?RemoveHeavy():EmptyPocket(ActiveSlot,false))return true;
+            if(!FishLoadTarget(out var fish,out var carriedId) || carriedId!=id ||
+               !team.LoadCargo(RaidWorld.Instance.AttributeCatch(fish.ToCargo(id)),tuning))return false;
+            if(HoldingHeavyCatch?RemoveHeavy():EmptyPocket(FirstOccupiedPocket(),false))return true;
             team.cargo.RemoveAll(item=>item.id==id);
             return false;
         }

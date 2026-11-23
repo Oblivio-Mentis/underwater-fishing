@@ -243,6 +243,12 @@ namespace Raid.UI
                 if (r.action == "fish_reel") tool.Motor.QaSwimToward(r.point, r.value == "follow" ? 1 : 0);
                 return;
             }
+            if(r.action=="load_fish")
+            {
+                var tool=UiRoot.Instance.Context.Harpoon;
+                if(tool==null || !tool.RequestLoadFish())throw new InvalidOperationException("Owner could not place a fish through the loading opening.");
+                return;
+            }
             if(r.action=="drop_selected" || r.action=="pickup_drop")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;

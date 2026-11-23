@@ -201,8 +201,8 @@ namespace Raid.Nereid
             var euler=Quaternion.LookRotation(cage-guest.transform.position-Vector3.up*.6f).eulerAngles;
             PeerCommand("view","",euler.y,Mathf.DeltaAngle(0,euler.x));
             yield return Wait("Real cage opening is in the buyer's drop reach",()=>CargoDispatch.CanLoad(world,guest));
-            PeerCommand("drop_selected");
-            yield return Wait("Buyer's drop placed the same ID into the physical cage",()=>bag.CatchIdInSlot(slot)==0 && world.Team.cargo.Any(x=>x.id==cargoId));
+            PeerCommand("load_fish");
+            yield return Wait("Buyer's secondary action placed the same ID into the physical cage",()=>bag.CatchIdInSlot(slot)==0 && world.Team.cargo.Any(x=>x.id==cargoId));
             var button=world.container.GetComponentInChildren<CargoDispatch>();
             host.Teleport(cage+new Vector3(3.33f,.19f,1.32f));
             yield return new WaitForSeconds(.28f);

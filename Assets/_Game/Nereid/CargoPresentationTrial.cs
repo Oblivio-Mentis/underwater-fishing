@@ -63,11 +63,11 @@ namespace Raid
                 host.LookAtConsole(center);
                 await Awaitable.WaitForSecondsAsync(.4f);
                 ShootFrame("01-empty-cage.png");
-                Check(!CargoDispatch.CanLoad(world,host),"Q outside release reach does not load the physical cage.");
+                Check(!CargoDispatch.CanLoad(world,host),"RMB outside release reach does not load the physical cage.");
                 host.Teleport(center+new Vector3(2.14f,-.18f,-.40f));
                 host.LookAtConsole(center);
                 await Awaitable.WaitForSecondsAsync(.3f);
-                Check(CargoDispatch.CanLoad(world,host),"Q from the open loading face targets the cage.");
+                Check(CargoDispatch.CanLoad(world,host),"RMB from the open loading face targets the cage.");
                 host.Teleport(center+new Vector3(0,-.17f,-2.19f));
                 host.LookAtConsole(center);
                 await Awaitable.WaitForSecondsAsync(.3f);
@@ -91,9 +91,9 @@ namespace Raid
                 await Until(()=>tool.ActiveSlot==2 && tool.HeldCargoId==pocketCatch && CargoDispatch.CanLoad(world,host),"Aim and cargo ready");
                 await Until(()=>host.GetComponentInChildren<Camera>().GetComponentsInChildren<CatchFishModel>()
                     .Any(model=>model.CargoId==pocketCatch),"Hands display this catch ID");
-                await KeyPress(Key.Q);
-                await Until(()=>tool.CatchIdInSlot(2)==0 && world.Team.cargo.Any(item=>item.id==pocketCatch),"Owned Q transfers the same pocket catch");
-                Check(world.DroppedCount==0,"Valid Q in the cage creates no duplicate world drop.");
+                await SecondaryPress();
+                await Until(()=>tool.CatchIdInSlot(2)==0 && world.Team.cargo.Any(item=>item.id==pocketCatch),"Owned RMB transfers the same pocket catch");
+                Check(world.DroppedCount==0,"Valid RMB in the cage creates no duplicate world drop.");
                 Check(world.Team.LoadCargo(stock[1],world.progression),"Staged "+stock[1].species+" #"+stock[1].id);
                 host.Teleport(start);
                 host.LookAtConsole(center+Vector3.up*.35f);
@@ -197,6 +197,13 @@ namespace Raid
                 ShootFrame($"{stage}-{i:D2}.png");
                 await Awaitable.WaitForSecondsAsync(interval);
             }
+        }
+
+        static async Awaitable SecondaryPress()
+        {
+            var mouse=Mouse.current??InputSystem.AddDevice<Mouse>();
+            InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(MouseButton.Right));await Awaitable.WaitForSecondsAsync(.14f);
+            InputSystem.QueueStateEvent(mouse,new MouseState());
         }
 
         static async Awaitable KeyPress(Key key)
