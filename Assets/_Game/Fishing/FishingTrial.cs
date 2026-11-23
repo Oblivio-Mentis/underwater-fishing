@@ -536,8 +536,10 @@ namespace Raid
             Vector3 initialAim = camera.transform.forward;
             float initialStamina = fish.Stamina;
             int initialCatches = host.CatchCount;
-            Require(host.QaHoldOwned(false, 9), "Host could not hold reel.");
             yield return Wait(() => fish.SurgeWarning && host.HookedFish == fish, 7, "No advance warning of solo surge.");
+            // Start pulling at the cue. Winding throughout a random pre-surge interval can
+            // legitimately break this single line before the camera measurement finishes.
+            Require(host.QaHoldOwned(false, 9), "Host could not hold reel at the surge warning.");
             yield return Shot("catch-solo-warning.png");
             yield return Wait(() => fish.Surging && host.HookedFish == fish, 3, "No solo surge.");
 
@@ -569,7 +571,8 @@ namespace Raid
             Require(yaw > 90f && forward > .18f && backwards < .035f && transverse < .065f && escape > .12f,
                 "Fish and diver did not follow the expected pull axes: " + measured);
             Require(host.HookedFish==fish && fish.HookCount==1 && host.CatchCount==initialCatches &&
-                fish.Stamina>=initialStamina-.05f, "One harpoon progressed to a heavy catch.");
+                fish.Stamina>=initialStamina-.05f, $"Solo surge ended with attachment={host.HookedFish==fish}, hooks={fish.HookCount}, "+
+                $"catches={initialCatches}->{host.CatchCount}, stamina={initialStamina:F2}->{fish.Stamina:F2}, tension={host.LineTension:F2}.");
             Check("Camera sweep during server surge: " + measured);
             yield return Shot("catch-solo-pulled.png");
             host.QaHoldOwned(false, 0);
