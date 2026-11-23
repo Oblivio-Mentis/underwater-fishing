@@ -324,8 +324,19 @@ namespace Raid
                 if(CargoDispatch.CanLoad(world,host.Motor)) break;
             }
             Require(CargoDispatch.CanLoad(world,host.Motor) || Time.unscaledTime<basketDeadline,"Cannot reach the basket's open face from any side.");
-            Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
-            yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"Q did not deposit the heavy catch.");
+            // The server re-checks the sightline when the owned Q arrives; keep aiming at the
+            // basket face and re-issue if the first request landed in open water.
+            for(int attempt=0;attempt<3;attempt++)
+            {
+                host.Motor.LookAtConsole(center);
+                yield return Pause(.25f);
+                Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
+                yield return Wait(()=>!host.HandsFull,"Heavy catch stayed in hand after Q.");
+                if(world.Team.cargo.Count==before+1)break;
+                // The request fell into water: recover nothing, just re-aim and try again.
+                yield return Pause(.3f);
+            }
+            Require(world.Team.cargo.Count==before+1,"Q did not deposit the heavy catch.");
             for(int slot=2;slot<5;slot++)
             {
                 Require(host.SelectSlot(slot),"Cannot select the full pocket.");
