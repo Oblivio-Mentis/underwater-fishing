@@ -8,6 +8,7 @@ namespace Raid
         sealed class Arm
         {
             public Transform Upper,Sleeve,Wrist;
+            public float UpperLength, ForearmLength;
         }
         readonly DiverAvatarRig avatar;
         readonly FirstPersonStride stride = new FirstPersonStride();
@@ -34,11 +35,17 @@ namespace Raid
             for(int i=0;i<2;i++)
             {
                 string side=i==0?"Left":"Right";
+                var bones=avatar.Arm(i);
+                var shoulder=root.InverseTransformPoint(bones.upper.position);
+                var elbow=root.InverseTransformPoint(bones.lower.position);
+                var wrist=root.InverseTransformPoint(bones.end.position);
                 arms[i]=new Arm
                 {
                     Upper=DiveOutfit.Pivot(root,side+" upper arm",Vector3.zero),
                     Sleeve=DiveOutfit.Pivot(root,side+" sleeve",Vector3.zero),
-                    Wrist=DiveOutfit.Pivot(root,side+" glove",Vector3.zero)
+                    Wrist=DiveOutfit.Pivot(root,side+" glove",Vector3.zero),
+                    UpperLength=Vector3.Distance(shoulder,elbow),
+                    ForearmLength=Vector3.Distance(elbow,wrist)
                 };
             }
             fishAnchor=DiveOutfit.Pivot(root,"Presented catch",Vector3.zero);
@@ -97,7 +104,7 @@ namespace Raid
             Vector3 lower=stowOffset+Vector3.up*breath+new Vector3(.03f,-.29f,0)*monitorRest;
             gun.localPosition+=lower+stride.Offset*freedom;
             gun.localRotation*=Quaternion.Euler(stride.Tilt*freedom+new Vector3(12*stow+15*monitorRest,0,-stow*8));
-            Vector3 fishPos=new Vector3(displayedHeavy?0:.11f,displayedHeavy?-.245f:-.207f,displayedHeavy?.67f:.51f)+stride.Offset*.55f+lower;
+            Vector3 fishPos=new Vector3(displayedHeavy?0:.11f,displayedHeavy?-.245f:-.207f,displayedHeavy?.47f:.39f)+stride.Offset*.55f+lower;
             fishAnchor.localPosition=fishPos;
             fishAnchor.localRotation=Quaternion.Euler(-8,displayedHeavy?77:57,displayedHeavy?-8:-19);
             fishAnchor.localScale=Vector3.one*(displayedHeavy?.63f:.29f);
@@ -127,14 +134,14 @@ namespace Raid
                 else if(releaseStroke>0 && s>0)
                 {
                     float swing=1-releaseStroke/.23f;
-                    wrist=Vector3.Lerp(new Vector3(.28f,-.08f,.36f),new Vector3(.09f,-.16f,.70f),Mathf.Sin(swing*Mathf.PI*.65f));
+                    wrist=Vector3.Lerp(new Vector3(.25f,-.08f,.30f),new Vector3(.09f,-.16f,.48f),Mathf.Sin(swing*Mathf.PI*.65f));
                     angles=new Vector3(-8,-17,-54);
                 }
                 else if(cuddling)
                 {
                     float stroke=.5f+.5f*Mathf.Sin(Time.time*5.6f);
-                    wrist=new Vector3(-.19f,-.28f,.76f);
-                    if(s>0)wrist=Vector3.Lerp(new Vector3(.18f,-.16f,.73f),new Vector3(.065f,-.055f,.81f),stroke);
+                    wrist=new Vector3(-.18f,-.31f,.44f);
+                    if(s>0)wrist=Vector3.Lerp(new Vector3(.17f,-.23f,.435f),new Vector3(.06f,-.14f,.48f),stroke);
                     angles=new Vector3(s>0?16:-20,-s*25,-s*52);
                 }
                 else if(salvage!=null)
@@ -153,15 +160,15 @@ namespace Raid
                     stride.FreeHand(s,out var offset,out var tilt);
                     wrist=Vector3.Scale(avatar.restingWrist,new Vector3(s,1,1))+lower+offset;
                     angles=new Vector3(8,-s*18,-s*35)+tilt;
-                    if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.6f),.85f);
+                    if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.46f),.85f);
                 }
                 if(s<0&&push>0&&!ball&&!cuddling&&!displayedHeavy)
                 {
-                    wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.596f),push);
+                    wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.46f),push);
                     angles=Quaternion.Slerp(Quaternion.Euler(angles),Quaternion.Euler(-12,1,12),push).eulerAngles;
                 }
                 BendArm(arm,s,wrist);
-                arm.Wrist.localPosition=wrist;arm.Wrist.localRotation=Quaternion.Euler(angles);
+                arm.Wrist.localRotation=Quaternion.Euler(angles);
                 avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);
             }
             var motion=push>0||panelPress?Action.PressPanel:releaseStroke>0?Action.Throw:switchTime>0?Action.SwapEquipment:
@@ -174,21 +181,26 @@ namespace Raid
             return ranged&&!panelPress;
         }
 
-        static void BendArm(Arm arm,int side,Vector3 wrist)
+        void BendArm(Arm arm,int side,Vector3 target)
         {
-            var shoulder=new Vector3(side*.22f,-.32f,-.065f);
-            var reach=wrist-shoulder;
-            float distance=Mathf.Max(.001f,reach.magnitude);
-            Vector3 axis=reach/distance;
-            // Keep the forearm, cuff and wrist computer at a constant length through the stride.
-            const float forearm=.37f;
-            float upper=Mathf.Max(.46f,distance-forearm+.012f);
+            Vector3 shoulder=avatar.shoulderOrigin;
+            shoulder.x*=side;
+            Vector3 reach=target-shoulder;
+            Vector3 axis=reach.sqrMagnitude>.000001f?reach.normalized:Vector3.forward;
+            float upper=arm.UpperLength, forearm=arm.ForearmLength;
+            float maxReach=upper+forearm-.001f;
+            float protraction=Mathf.Clamp(reach.magnitude-maxReach,0,avatar.shoulderTravel);
+            shoulder+=axis*protraction;
+            float distance=Mathf.Clamp(reach.magnitude-protraction,Mathf.Abs(upper-forearm)+.001f,maxReach);
+            Vector3 wrist=shoulder+axis*distance;
             float along=(upper*upper-forearm*forearm+distance*distance)/(2f*distance);
             float bend=Mathf.Sqrt(Mathf.Max(0f,upper*upper-along*along));
             var elbowDirection=Vector3.ProjectOnPlane(new Vector3(side*.75f,-1f,-.22f),axis).normalized;
+            if (elbowDirection.sqrMagnitude<.01f) elbowDirection=Vector3.Cross(axis,Vector3.right).normalized;
             var elbow=shoulder+axis*along+elbowDirection*bend;
             PoseSleeve(arm.Upper,shoulder,elbow);
             PoseSleeve(arm.Sleeve,elbow,wrist);
+            arm.Wrist.localPosition=wrist;
         }
 
         static void PoseSleeve(Transform sleeve,Vector3 start,Vector3 end)
@@ -196,7 +208,7 @@ namespace Raid
             Vector3 axis=end-start;
             sleeve.localPosition=start;
             sleeve.localRotation=Quaternion.LookRotation(axis,Vector3.up);
-            sleeve.localScale=new Vector3(1,1,axis.magnitude);
+
         }
 
         void UpdateSalvage(LootActor next,Vector3 at,float scale)

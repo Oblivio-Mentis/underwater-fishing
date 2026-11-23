@@ -78,6 +78,9 @@ MonoBehaviour:
     endBind: {x: 0.31199837, y: 0.48928243, z: 0.8143036, w: 0.0130211925}
   leftSleeve: {fileID: 1421253651760265266}
   rightSleeve: {fileID: 5657666711778879847}
+  shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
+  shoulderTravel: 0.045
+  restingWrist: {x: 0.22, y: -0.215, z: 0.37}
   motions:
   - action: 4
     clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
@@ -119,15 +122,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalPosition.x

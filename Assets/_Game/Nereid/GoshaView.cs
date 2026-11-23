@@ -127,7 +127,7 @@ namespace Raid.Nereid
                 {
                     var cam=eye==keeper?camera:null;
                     var anchor=cam==null?keeper.transform:cam.transform;
-                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.16f,.84f));
+                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.285f,.53f));
                     dir=anchor.rotation*Quaternion.Euler(0,cam==null?145:105,0)*Vector3.forward;
                     visualUp=anchor.up;
                     break;

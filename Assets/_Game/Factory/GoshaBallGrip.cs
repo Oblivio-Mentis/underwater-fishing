@@ -17,7 +17,7 @@ namespace Raid
         }
 
         internal static Vector3 CameraCenter(float wind) =>
-            Vector3.Lerp(new Vector3(.12f,-.20f,.49f),new Vector3(.30f,-.085f,.42f),Mathf.SmoothStep(0,1,wind));
+            Vector3.Lerp(new Vector3(.065f,-.18f,.40f),new Vector3(.245f,-.085f,.32f),Mathf.SmoothStep(0,1,wind));
 
         internal static Vector3 ObserverCenter(float wind) =>
             Vector3.Lerp(new Vector3(.17f,.25f,.43f),new Vector3(.34f,.46f,-.08f),Mathf.SmoothStep(0,1,wind));

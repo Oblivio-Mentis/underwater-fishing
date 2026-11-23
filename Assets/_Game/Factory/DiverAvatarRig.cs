@@ -42,8 +42,12 @@ namespace Raid
         public Renderer leftSleeve, rightSleeve;
 
         [Header("First-person hand targets")]
+        [Tooltip("Camera-space resting position of the right shoulder. The left arm mirrors X.")]
+        public Vector3 shoulderOrigin = new Vector3(.18f, -.19f, .045f);
+        [Tooltip("Forward travel of the shoulder girdle when reaching for a distant target (metres).")]
+        [Range(0, .08f)] public float shoulderTravel = .045f;
         [Tooltip("Camera-space resting position of the right wrist. The left wrist mirrors X.")]
-        public Vector3 restingWrist = new Vector3(.24f, -.215f, .43f);
+        public Vector3 restingWrist = new Vector3(.22f, -.215f, .37f);
         [Tooltip("Weapon-space wrist position and rotation while supporting the barrel.")]
         public Vector3 supportWrist = new Vector3(-.038f, -.057f, .116f);
         public Vector3 supportAngles = new Vector3(-14, 28, 50);
