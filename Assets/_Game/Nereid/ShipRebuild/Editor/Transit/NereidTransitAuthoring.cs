@@ -66,7 +66,7 @@ namespace Raid.Nereid.Editor
                 Stop(rig,"03 · Travel across stern",new Vector3(0,6.1f,-14)),
                 Stop(hatch,"04 · Above receiver",new Vector3(0,1.30f,0)),
                 Stop(hatch,"05 · Roof entry",new Vector3(0,0,0)),
-                Stop(hatch,"06 · Discharge and reverse",new Vector3(0,-1.38f,0))};
+                Stop(hatch,"06 · Discharge and reverse",new Vector3(0,-.10f,0))};
             rail.signalLights=new[]{hatch.Find("Port signal").GetComponent<Renderer>(),hatch.Find("Starboard signal").GetComponent<Renderer>()};
             var receiver=hatch.Find("Receiver throat");
             var inSource=Socket(PipePort.Receiver,receiver,receiver.position,Vector3.one*1.2f);

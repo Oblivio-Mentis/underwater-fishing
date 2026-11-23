@@ -245,16 +245,15 @@ namespace Raid.Nereid
             return mesh;
         }
 
-        internal void Present(TeamProgress state,float progress)
+        public void PoseMechanism(HoistPhase phase,float progress)
         {
-            bool atField=state.hoistPhase==HoistPhase.Loading;
-            float closure=state.hoistPhase switch {
+            float closure=phase switch {
                 HoistPhase.Loading=>0,
                 HoistPhase.Raising=>Ease(Mathf.InverseLerp(0,.145f,progress)),
                 HoistPhase.Returning=>1-Ease(Mathf.InverseLerp(.87f,1,progress)),
                 _=>1
             };
-            float dockOpen=state.hoistPhase==HoistPhase.Unloading
+            float dockOpen=phase==HoistPhase.Unloading
                 ? Ease(Mathf.InverseLerp(.12f,.32f,progress))*(1-Ease(Mathf.InverseLerp(.83f,1,progress))) : 0;
             loadingGate.localPosition=new Vector3(Side,2.02f*(1-closure),0);
             shockRail.localPosition=new Vector3(Side,1.02f-.17f*closure,0);
@@ -264,6 +263,12 @@ namespace Raid.Nereid
                 lids[i].localRotation=Quaternion.Euler(0,0,handed*62*(1-closure));
                 trapdoors[i].localRotation=Quaternion.Euler(0,0,-handed*71*dockOpen);
             }
+        }
+
+        internal void Present(TeamProgress state,float progress)
+        {
+            bool atField=state.hoistPhase==HoistPhase.Loading;
+            PoseMechanism(state.hoistPhase,progress);
             foreach(var part in touching)if(part.enabled!=atField)part.enabled=atField;
             float pressDepth=state.hoistPhase==HoistPhase.Raising?.092f*(1-Ease(progress/.075f)):0;
             buttonDepth=Mathf.Lerp(buttonDepth,pressDepth,1-Mathf.Exp(-Time.deltaTime*18));

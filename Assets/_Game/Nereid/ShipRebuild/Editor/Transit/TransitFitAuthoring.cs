@@ -52,6 +52,15 @@ namespace Raid.Nereid.Editor
                         break;
                 }
             }
+            if(rail.stops.Length>0)
+            {
+                var receipt=rail.stops[^1].marker;
+                if(receipt && receipt.parent==rail.hatch && (receipt.localPosition-new Vector3(0,-1.38f,0)).sqrMagnitude<.00001f)
+                {
+                    receipt.localPosition=new Vector3(0,-.10f,0);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(receipt);
+                }
+            }
             if(rail.stops.Length>1 && rail.stops[1].marker)
             {
                 var lift=rail.stops[1].marker;

@@ -53,6 +53,8 @@ namespace Raid.Nereid.Editor
                 EditorGUILayout.PropertyField(data.FindProperty("aperture"));
                 EditorGUILayout.PropertyField(data.FindProperty("cageDimensionsMetres"));
                 EditorGUILayout.PropertyField(data.FindProperty("craneAboveHatch"));
+                EditorGUILayout.PropertyField(data.FindProperty("hatchWarningDistance"));
+                EditorGUILayout.PropertyField(data.FindProperty("hatchHoldDistance"));
                 if(data.ApplyModifiedProperties())SceneView.RepaintAll();
                 if(GUILayout.Button("Select roof receiver") && rail.hatch){selected=-1;Selection.activeTransform=rail.hatch;SceneView.RepaintAll();}
             }

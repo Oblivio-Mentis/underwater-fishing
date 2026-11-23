@@ -90,6 +90,7 @@ namespace Raid.Nereid.Editor
                 foreach(var walk in walks)
                     if(walk.gameObject.scene==rail.gameObject.scene && walk.Intersects(at,half)) issues.Add("Cargo enters a crew passage · "+walk.name);
             }
+            issues.UnionWith(CargoRenderedInspection.Check(rail));
             return new List<string>(issues);
         }
     }
