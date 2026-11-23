@@ -1324,6 +1324,7 @@ Transform:
   - {fileID: 7165596065756811990}
   - {fileID: 593609085949038072}
   - {fileID: 5531356464905938380}
+  - {fileID: 1242633603946722071}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7339154180549381848
@@ -1765,4 +1766,66 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: 4964005807116565139, guid: 40d77cbc3a2d0bd41a51d1e148805dcd, type: 3}
   m_PrefabInstance: {fileID: 585718215761452895}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1469797416517750102
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3703627305859422671}
+    m_Modifications:
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7160840491676461838, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+      propertyPath: m_Name
+      value: NavigationBridge dive watch
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+--- !u!4 &1242633603946722071 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 386038924736659009, guid: 73ab53d17373c754f99dd9eb4648f76e, type: 3}
+  m_PrefabInstance: {fileID: 1469797416517750102}
   m_PrefabAsset: {fileID: 0}
