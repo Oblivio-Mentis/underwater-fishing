@@ -21,9 +21,9 @@ namespace Raid
         internal bool BallVisible { get; private set; }
         internal Vector3 BallCenter { get; private set; }
         DiverMotor viewed;
-        int sequence,displaySlot,targetSlot;
+        int sequence,displaySlot,targetSlot,shotSequence;
         bool displayedHeavy,targetHeavy;
-        float press,switchTime,releaseStroke,shownWind;
+        float press,switchTime,releaseStroke,shownWind,shot;
         bool hadBall;
 
         public DiveHands(DiverAvatarRig template, Transform camera)
@@ -58,7 +58,7 @@ namespace Raid
         {
             if(viewed!=actor)
             {
-                viewed=actor;sequence=actor.InteractionSequence;
+                viewed=actor;sequence=actor.InteractionSequence;shotSequence=equipment.ShotSequence;shot=0;
                 displaySlot=targetSlot=equipment.ActiveSlot;displayedHeavy=targetHeavy=equipment.HandsFull;
                 press=switchTime=releaseStroke=shownWind=0;hadBall=false;
                 stride.Reset();
@@ -68,6 +68,8 @@ namespace Raid
                 targetSlot=equipment.ActiveSlot;targetHeavy=equipment.HandsFull;switchTime=GoshaBallGrip.SwapDuration;
             }
             if(sequence!=actor.InteractionSequence){sequence=actor.InteractionSequence;press=.46f;}
+            if(shotSequence!=equipment.ShotSequence){shotSequence=equipment.ShotSequence;shot=.16f;}
+            shot=Mathf.Max(0,shot-dt);
             switchTime=Mathf.Max(0,switchTime-dt);press=Mathf.Max(0,press-dt);
             if(switchTime<GoshaBallGrip.SwapDuration*.5f){displaySlot=targetSlot;displayedHeavy=targetHeavy;}
             float stow=GoshaBallGrip.Stow(switchTime);
@@ -113,9 +115,9 @@ namespace Raid
                 if(ranged)
                 {
                     // Both textured gloves track the moving receiver, including its recoil and line tension.
-                    Vector3 socket=s<0?new Vector3(-.038f,-.057f,.116f):new Vector3(.055f,-.132f,-.097f);
+                    Vector3 socket=s<0?avatar.supportWrist:avatar.triggerWrist;
                     wrist=gun.localPosition+gun.localRotation*socket;
-                    angles=(gun.localRotation*(s<0?Quaternion.Euler(-14,28,50):Quaternion.Euler(-37,-39,-70))).eulerAngles;
+                    angles=(gun.localRotation*Quaternion.Euler(s<0?avatar.supportAngles:avatar.triggerAngles)).eulerAngles;
                 }
                 else if(ball)
                 {
@@ -149,7 +151,7 @@ namespace Raid
                 else
                 {
                     stride.FreeHand(s,out var offset,out var tilt);
-                    wrist=new Vector3(s*.24f,-.286f,.355f)+lower+offset;
+                    wrist=Vector3.Scale(avatar.restingWrist,new Vector3(s,1,1))+lower+offset;
                     angles=new Vector3(8,-s*18,-s*35)+tilt;
                     if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.6f),.85f);
                 }
@@ -165,7 +167,7 @@ namespace Raid
             var motion=push>0||panelPress?Action.PressPanel:releaseStroke>0?Action.Throw:switchTime>0?Action.SwapEquipment:
                 cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
                 salvage!=null?Action.CarrySalvage:caught!=null?Action.CarryFish:
-                grip||equipment.HookedFish!=null?Action.Reel:ranged?(aim>.1f?Action.Aim:Action.Harpoon):
+                shot>0?Action.Shoot:grip||equipment.HookedFish!=null?Action.Reel:ranged?(aim>.1f?Action.Aim:Action.Harpoon):
                 !actor.IsWalking?Action.Swim:actor.IsSprinting?Action.Sprint:
                 stride.Moving?Action.Walk:Action.Idle;
             avatar.FinishPose(motion,dt);

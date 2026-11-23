@@ -40,6 +40,16 @@ namespace Raid
         public Quaternion headBind = Quaternion.identity;
         public Chain leftArm, rightArm, leftLeg, rightLeg;
         public Renderer leftSleeve, rightSleeve;
+
+        [Header("First-person hand targets")]
+        [Tooltip("Camera-space resting position of the right wrist. The left wrist mirrors X.")]
+        public Vector3 restingWrist = new Vector3(.24f, -.215f, .43f);
+        [Tooltip("Weapon-space wrist position and rotation while supporting the barrel.")]
+        public Vector3 supportWrist = new Vector3(-.038f, -.057f, .116f);
+        public Vector3 supportAngles = new Vector3(-14, 28, 50);
+        [Tooltip("Weapon-space wrist position and rotation while holding the trigger grip.")]
+        public Vector3 triggerWrist = new Vector3(.055f, -.132f, -.097f);
+        public Vector3 triggerAngles = new Vector3(-37, -39, -70);
         [Tooltip("Optional local-space animation clips on the model hierarchy. Unkeyed bones follow the gameplay pose.")]
         public Motion[] motions = Array.Empty<Motion>();
 
