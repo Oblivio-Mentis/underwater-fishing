@@ -527,6 +527,111 @@
         "y": 1.1,
         "z": -8.08
       }
+    },
+    {
+      "name": "pump-overhead",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.175,
+        "y": 0.495,
+        "z": -4.43
+      },
+      "look": {
+        "x": 0,
+        "y": 2.76,
+        "z": -8.08
+      }
+    },
+    {
+      "name": "pump-reveal",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -0.625,
+        "y": 0.495,
+        "z": -6.84
+      },
+      "look": {
+        "x": 0,
+        "y": 4.1,
+        "z": -7.99
+      }
+    },
+    {
+      "name": "sea-collar-crown",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 14.085,
+        "y": 0.635,
+        "z": -14.08
+      },
+      "look": {
+        "x": 10.325,
+        "y": 1.44,
+        "z": -14
+      }
+    },
+    {
+      "name": "sea-collar-reveal",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 12.25,
+        "y": 0.72,
+        "z": -13.79
+      },
+      "look": {
+        "x": 10.325,
+        "y": 2.24,
+        "z": -13.95
+      }
+    },
+    {
+      "name": "stair-lower-landing",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -2.65,
+        "y": 1.18,
+        "z": -18.7
+      },
+      "look": {
+        "x": -2.47,
+        "y": 5.9,
+        "z": -23.84
+      }
+    },
+    {
+      "name": "stair-enclosure",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1,
+        "y": 0.48,
+        "z": -17.85
+      },
+      "look": {
+        "x": -2.13,
+        "y": 3.5,
+        "z": -22.62
+      }
+    },
+    {
+      "name": "stair-upper-landing",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -3,
+        "y": 5.33,
+        "z": -25.47
+      },
+      "look": {
+        "x": -2.35,
+        "y": 2.65,
+        "z": -20
+      }
     }
   ]
 }
