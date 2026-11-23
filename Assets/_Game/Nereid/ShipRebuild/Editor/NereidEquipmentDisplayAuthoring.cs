@@ -5,7 +5,7 @@ namespace Raid.Nereid.Editor
 {
     // Restores the native equipment exhibit when authoring an equipment room from scratch.
     // An existing exhibit belongs to the level artist and is never regenerated in place.
-    public static class NereidEquipmentDisplayAuthoring
+    public static partial class NereidEquipmentDisplayAuthoring
     {
         const string Root = "Assets/_Game/Nereid/ShipRebuild";
         const string Room = Root + "/Prefabs/Rooms/EquipmentRoom.prefab";
@@ -21,7 +21,8 @@ namespace Raid.Nereid.Editor
             {
                 var exhibit=room.transform.Find(Exhibit);
                 const string crewLockers="Second watch suit lockers";
-                if(exhibit && exhibit.Find(crewLockers)) return;
+                const string servicing="Pressure equipment service";
+                if(exhibit && exhibit.Find(crewLockers) && exhibit.Find(servicing)) return;
                 var palette=new Finishes();
                 var battery=room.transform.Find("Workshop battery cabinet");
                 if(!battery) throw new System.InvalidOperationException("The battery cabinet mount is missing.");
@@ -41,22 +42,10 @@ namespace Raid.Nereid.Editor
                     ServiceBench(exhibit,palette);
                 }
 
-                var charging=exhibit.Find("Harpoon charging cabinet");
-                var bench=exhibit.Find("Barrel inspection bench");
-                if(!charging || !bench)
-                    throw new System.InvalidOperationException("The charging rack or inspection bench is missing.");
-                // Slide only the two original factory-mounted fixtures to make room alongside the open stair.
-                if(Vector3.Distance(charging.localPosition,new Vector3(1,0,-4.60f))<.001f)
-                    charging.localPosition=new Vector3(1.60f,0,-4.60f);
-                if(Vector3.Distance(battery.localPosition,new Vector3(2.31f,.73f,-4.58f))<.001f)
-                    battery.localPosition=new Vector3(2.79f,.73f,-4.58f);
-                var secondWatch=Group(exhibit,crewLockers,Vector3.zero);
-                Suit(secondWatch,palette,-.96f,"Port relief suit locker",2);
-                Suit(secondWatch,palette,.78f,"Starboard relief suit locker",3);
-                // The rear charging panel serves two buddies per row. The bench has a spare and a service mount.
-                MountedHarpoon(charging,palette,new(.56f,.78f,.26f),7,0);
-                MountedHarpoon(charging,palette,new(.56f,1.50f,.26f),7,0);
-                MountedHarpoon(bench,palette,new(.60f,1.27f,.11f),0,-11);
+                if(!exhibit.Find(crewLockers))
+                    AddSecondWatch(exhibit,battery,palette,crewLockers);
+                if(!exhibit.Find(servicing))
+                    FitWorkshop(Group(exhibit,servicing,Vector3.zero),palette);
 
                 if (exhibit.GetComponentsInChildren<Collider>(true).Length != 0)
                     throw new System.InvalidOperationException("Equipment on display must leave the walking volume free.");
@@ -64,6 +53,26 @@ namespace Raid.Nereid.Editor
                 AssetDatabase.SaveAssets();
             }
             finally { PrefabUtility.UnloadPrefabContents(room); }
+        }
+
+        static void AddSecondWatch(Transform exhibit,Transform battery,Finishes palette,string crewLockers)
+        {
+            var charging=exhibit.Find("Harpoon charging cabinet");
+            var bench=exhibit.Find("Barrel inspection bench");
+            if(!charging || !bench)
+                throw new System.InvalidOperationException("The charging rack or inspection bench is missing.");
+            // Slide only the two original factory-mounted fixtures to make room alongside the open stair.
+            if(Vector3.Distance(charging.localPosition,new Vector3(1,0,-4.60f))<.001f)
+                charging.localPosition=new Vector3(1.60f,0,-4.60f);
+            if(Vector3.Distance(battery.localPosition,new Vector3(2.31f,.73f,-4.58f))<.001f)
+                battery.localPosition=new Vector3(2.79f,.73f,-4.58f);
+            var secondWatch=Group(exhibit,crewLockers,Vector3.zero);
+            Suit(secondWatch,palette,-.96f,"Port relief suit locker",2);
+            Suit(secondWatch,palette,.78f,"Starboard relief suit locker",3);
+            // The rear charging panel serves two buddies per row. The bench has a spare and a service mount.
+            MountedHarpoon(charging,palette,new(.56f,.78f,.26f),7,0);
+            MountedHarpoon(charging,palette,new(.56f,1.50f,.26f),7,0);
+            MountedHarpoon(bench,palette,new(.60f,1.27f,.11f),0,-11);
         }
 
         sealed class Finishes
