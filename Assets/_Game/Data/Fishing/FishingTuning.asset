@@ -48,3 +48,8 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  fightProfiles:
+  - {fileID: 11400000, guid: a1d4f27c6b3e4f0a8c9d1e2b3f4a5601, type: 2}
+  - {fileID: 11400000, guid: b2e5a38d7c4f4a1b9d0e2f3c4a5b6702, type: 2}
+  - {fileID: 11400000, guid: c3f6b49e8d5a4b2c0e1f3a4d5b6c7803, type: 2}
+  - {fileID: 11400000, guid: d4a7c50f9e6b4c3d1f2a4b5e6c7d8904, type: 2}
