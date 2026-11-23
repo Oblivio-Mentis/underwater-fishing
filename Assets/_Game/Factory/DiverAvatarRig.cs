@@ -54,6 +54,17 @@ namespace Raid
         [Tooltip("Weapon-space wrist position and rotation while holding the trigger grip.")]
         public Vector3 triggerWrist = new Vector3(.055f, -.132f, -.097f);
         public Vector3 triggerAngles = new Vector3(-37, -39, -70);
+        [Header("First-person held objects (camera space)")]
+        public Vector3 harpoonHip = new(.15f, -.17f, .352f), harpoonAim = new(0, -.135f, .35f);
+        public Vector3 ballRest = new(.05f, -.16f, .43f), ballWind = new(.22f, -.065f, .352f);
+        [Tooltip("Right wrist offset from the ball socket. The left wrist mirrors X and releases during the wind-up.")]
+        public Vector3 ballWristOffset = new(.093f, -.025f, -.014f);
+        [Range(.15f, .65f)] public float salvageScale = .31f;
+        [Tooltip("Right wrist offset from the salvage socket. The left wrist mirrors X.")]
+        public Vector3 salvageWristOffset = new(.072f, .028f, -.034f);
+        public Vector3 cradleCenter = new(0, -.235f, .54f);
+        [Range(.4f, 1f)] public float cradleScale = .64f;
+
         [Tooltip("Optional local-space animation clips on the model hierarchy. Unkeyed bones follow the gameplay pose.")]
         public Motion[] motions = Array.Empty<Motion>();
 

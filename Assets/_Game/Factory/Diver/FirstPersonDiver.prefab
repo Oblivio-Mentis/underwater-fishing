@@ -81,6 +81,19 @@ MonoBehaviour:
   shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
   shoulderTravel: 0.045
   restingWrist: {x: 0.22, y: -0.215, z: 0.37}
+  supportWrist: {x: -0.126, y: 0.018, z: 0.105}
+  supportAngles: {x: 30.55, y: 52.87, z: 157.55}
+  triggerWrist: {x: 0.059, y: -0.049, z: -0.249}
+  triggerAngles: {x: 1.9, y: -6.82, z: -90.95}
+  harpoonHip: {x: 0.15, y: -0.17, z: 0.352}
+  harpoonAim: {x: 0, y: -0.135, z: 0.35}
+  ballRest: {x: 0.05, y: -0.16, z: 0.43}
+  ballWind: {x: 0.22, y: -0.065, z: 0.352}
+  ballWristOffset: {x: 0.093, y: -0.025, z: -0.014}
+  salvageScale: 0.31
+  salvageWristOffset: {x: 0.072, y: 0.028, z: -0.034}
+  cradleCenter: {x: 0, y: -0.235, z: 0.54}
+  cradleScale: 0.64
   motions:
   - action: 4
     clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}

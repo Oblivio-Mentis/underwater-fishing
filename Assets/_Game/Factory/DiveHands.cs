@@ -92,7 +92,7 @@ namespace Raid
             bool ball=BallVisible=!cuddling && !displayedHeavy && world?.HasGoshaBall(actor)==true && equipment.HasBallInSlot(displaySlot);
             float wind=shownWind=ball ? selectedBall?GoshaBallGrip.Charge(actor):shownWind : 0;
             Vector3 stowOffset=GoshaBallGrip.Lower(stow);
-            BallCenter=GoshaBallGrip.CameraCenter(wind)+stowOffset;
+            BallCenter=GoshaBallGrip.CameraCenter(avatar,wind)+stowOffset;
             bool ranged=equipment.OwnsHarpoon && !ball && !cuddling && releaseStroke==0 && displaySlot==0 && !displayedHeavy && !grip;
             var salvage=displayedHeavy?equipment.CarriedSalvage:null;
             var caught=ball||cuddling||salvage!=null?null:displayedHeavy?equipment.CarriedFish:equipment.FishInSlot(displaySlot);
@@ -109,7 +109,7 @@ namespace Raid
             fishAnchor.localRotation=Quaternion.Euler(-8,displayedHeavy?77:57,displayedHeavy?-8:-19);
             fishAnchor.localScale=Vector3.one*(displayedHeavy?.63f:.29f);
             Vector3 salvagePos=salvage==null?Vector3.zero:LootActor.CameraCenter+lower+stride.Offset*.35f;
-            const float salvageScale=.42f;
+            float salvageScale=avatar.salvageScale;
             UpdateSalvage(salvage,salvagePos,salvageScale);
             avatar.BeginPose();
             for(int i=0;i<2;i++)
@@ -128,7 +128,9 @@ namespace Raid
                 }
                 else if(ball)
                 {
-                    wrist=BallCenter+GoshaBallGrip.GloveOffset(s,wind);
+                    var offset=avatar.ballWristOffset;
+                    offset.x*=s;
+                    wrist=BallCenter+GoshaBallGrip.GloveOffset(s,wind)+offset*(s>0?1f:1f-wind);
                     angles=new Vector3(-22,-s*32,-s*48);
                 }
                 else if(releaseStroke>0 && s>0)
@@ -146,7 +148,9 @@ namespace Raid
                 }
                 else if(salvage!=null)
                 {
-                    wrist=salvagePos+salvage.GloveOffset(s,Vector3.one*salvageScale);
+                    var offset=avatar.salvageWristOffset;
+                    offset.x*=s;
+                    wrist=salvagePos+salvage.GloveOffset(s,Vector3.one*salvageScale)+offset;
                     angles=new Vector3(-18,-s*31,-s*62);
                 }
                 else if(caught!=null)

@@ -12,7 +12,6 @@ namespace Raid
         public Material steel,amber,dark,cyan;
         [Tooltip("Shared by the owned camera, crew and dropped equipment.")] public HarpoonVisualRig weaponAppearance;
         const string ModelName="NEREID Harpoon / presentation";
-        static readonly Vector3 RestPosition=new Vector3(.15f,-.19f,.295f);
         static HarpoonPresentation active;
         internal static HarpoonPresentation ActiveModel => active;
         internal bool HasCameraOn(DiverMotor actor) => actor!=null && owner!=null
@@ -140,7 +139,7 @@ namespace Raid
                 recoilVelocity+=(-recoil*260-recoilVelocity*22)*step;recoil=Mathf.Clamp(recoil+recoilVelocity*step,-.004f,.055f);
             }
             float aim=actor==owner?Nereid.NereidAim.Blend:0;
-            Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.31f),aim);
+            Vector3 rest=Vector3.Lerp(owner.firstPersonAppearance.harpoonHip,owner.firstPersonAppearance.harpoonAim,aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
             model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick)+tugPull+Vector3.back*(tugKick*kick);
             model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,tugKick*140*kick);
@@ -151,7 +150,7 @@ namespace Raid
         void BuildModel()
         {
             hands=new DiveHands(owner.firstPersonAppearance,view.transform);
-            model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
+            model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=owner.firstPersonAppearance.harpoonHip;
             if (weaponAppearance && weaponAppearance.Ready)
             {
                 var rig=Instantiate(weaponAppearance,model,false);
