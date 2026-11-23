@@ -90,6 +90,7 @@ namespace Raid.Nereid.Editor
             Check(cargoKey.dispatchButton && cargoKey.dispatchButton.hitFace && !cargoKey.GetComponent<NereidInstrument>(),
                 "The internal hoist control has a pressable cap without a screen.");
             Physics.SyncTransforms();
+            CheckBulkheads(layout.transform,passages.Single(p=>p.passage==PassageId.Pump).transform,lockRig.transform);
             var centre=(discharge.screenAnchor.position+feeding.screenAnchor.position)*.5f;
             var operatorEye=centre-(discharge.screenAnchor.forward+feeding.screenAnchor.forward).normalized*1.25f;
             foreach(var line in new[]{discharge,feeding})
@@ -137,6 +138,33 @@ namespace Raid.Nereid.Editor
             }
             finally { EditorSceneManager.OpenScene(ScenePath);AssetDatabase.DeleteAsset(temporary); }
             Debug.Log("[NEREID MODULAR QA] PASSED");
+        }
+
+        static void CheckBulkheads(Transform hull,Transform pump,Transform sea)
+        {
+            bool Covered(Transform root,Vector3 origin,Vector3 direction,float distance)
+            {
+                return Physics.RaycastAll(origin,direction,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)
+                    .Any(hit=>hit.collider is MeshCollider solid && solid.transform.IsChildOf(root) &&
+                         solid.TryGetComponent<MeshFilter>(out var face) && face.sharedMesh && face.sharedMesh==solid.sharedMesh);
+            }
+            bool BothFaces(Transform frame,Vector3 point,Vector3 normal,float reach)
+            {
+                var p=frame.TransformPoint(point);
+                var d=frame.TransformDirection(normal);
+                return Covered(frame,p-d*reach,d,2*reach) && Covered(frame,p+d*reach,-d,2*reach);
+            }
+            var roof=from x in new[]{-10f,-7.1f,-3.7f,0,3.7f,7.1f,10f}
+                     from y in new[]{7.58f,8.2f,8.92f} select new Vector3(x,y,.10f);
+            Check(roof.All(p=>BothFaces(pump,p,Vector3.forward,1.09f)),"Pump room ceiling meets the partition on both faces.");
+            var crown=from z in new[]{-1.35f,-.68f,0,.68f,1.35f}
+                      from y in new[]{4.35f,4.57f,4.77f} select new Vector3(8.85f,y,z);
+            var cheeks=from z in new[]{-3.43f,3.43f} from y in new[]{1.62f,2.04f,2.42f} select new Vector3(8.78f,y,z);
+            Check(crown.Concat(cheeks).All(p=>BothFaces(sea,p,Vector3.right,1.20f)),"The sea gate joins the hull above and alongside the opening.");
+            var stairSides=from z in new[]{-21.38f,-22.21f,-23.03f,-23.80f,-24.50f} from sign in new[]{-1,1}
+                           let eye=hull.TransformPoint(new Vector3(-2.58f,2.86f+(-19.50f-z)*.72f,z))
+                           select Covered(hull,eye,sign*hull.right,3.25f);
+            Check(stairSides.All(p=>p),"The rising stairwell encloses both shoulders all the way to the bridge.");
         }
 
         static void Check(bool condition,string message)
