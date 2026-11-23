@@ -184,7 +184,17 @@ namespace Raid.Nereid.Editor
                     if(pair.target)AnimationMode.SampleAnimationClip(pair.target.gameObject,pair.clip,clock);
             }
             finally {AnimationMode.EndSampling();}
+            FollowLoad();
             SceneView.RepaintAll();
+        }
+
+        void FollowLoad()
+        {
+            if(!rail || !rail.davit || !rail.cageAnchor)return;
+            var cage=rail.cageAnchor.GetComponentInChildren<CargoBasket>();
+            if(cage && cage.CableSocket)
+                rail.davit.Present(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,
+                    rail.GetComponentInParent<NereidVessel>().hoistCable);
         }
 
         void StopPreview()
@@ -192,7 +202,7 @@ namespace Raid.Nereid.Editor
             if(preview && AnimationMode.InAnimationMode())AnimationMode.StopAnimationMode();
             preview=playing=false;
             foreach(var pair in clips)if(pair.clip)DestroyImmediate(pair.clip);
-            clips.Clear();SceneView.RepaintAll();
+            clips.Clear();FollowLoad();SceneView.RepaintAll();
         }
     }
 }

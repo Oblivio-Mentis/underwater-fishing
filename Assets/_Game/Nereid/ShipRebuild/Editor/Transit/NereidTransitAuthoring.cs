@@ -23,7 +23,7 @@ namespace Raid.Nereid.Editor
         public static void Install(NereidVessel vessel)
         {
             if(!vessel || Application.isPlaying) throw new InvalidOperationException("Open the rebuilt vessel in Edit Mode.");
-            if(vessel.authoredRail){TransitFitAuthoring.Fit(vessel);return;}
+            if(vessel.authoredRail){TransitFitAuthoring.Fit(vessel);NereidRoomAuthoring.FitDeckCrane(vessel);return;}
             var scene=vessel.gameObject.scene;
             FactoryVisuals factory=null; RaidWorld world=null;
             foreach(var root in scene.GetRootGameObjects())
@@ -67,33 +67,7 @@ namespace Raid.Nereid.Editor
                 Stop(hatch,"04 · Above receiver",new Vector3(0,1.30f,0)),
                 Stop(hatch,"05 · Roof entry",new Vector3(0,0,0)),
                 Stop(hatch,"06 · Discharge and reverse",new Vector3(0,-1.38f,0))};
-            rail.trackBeams=new Transform[rail.stops.Length-1]; rail.trackSupports=new Transform[rail.trackBeams.Length];
-            for(int i=0;i<rail.trackBeams.Length;i++)
-            {
-                rail.trackBeams[i]=Box(rig,"Rail web "+(i+1),Vector3.zero,Vector3.one,steel);
-                rail.trackSupports[i]=Box(rig,"Rail cap "+(i+1),Vector3.zero,Vector3.one,enamel);
-            }
-            var traveller=New("Recovery traveller",rig,Vector3.zero); rail.traveller=traveller;
-            Box(traveller,"Axle housing",Vector3.zero,new Vector3(.67f,.24f,.68f),steel);
-            Box(traveller,"Cable guide",Vector3.down*.14f,new Vector3(.3f,.36f,.35f),enamel);
-            rail.wheels=new Transform[4];
-            for(int i=0;i<4;i++)
-            {
-                var wheel=Part(PrimitiveType.Cylinder,traveller,"Guide roller",
-                    new Vector3(i%2==0?-.22f:.22f,.13f,i<2?-.26f:.26f),new Vector3(.27f,.085f,.27f),dark);
-                wheel.localRotation=Quaternion.Euler(0,0,90);rail.wheels[i]=wheel;
-            }
             rail.signalLights=new[]{hatch.Find("Port signal").GetComponent<Renderer>(),hatch.Find("Starboard signal").GetComponent<Renderer>()};
-            for(int i=0;i<2;i++)
-            {
-                var pier=New("Gantry support frame",rig,new Vector3(i==0?10.7f:-1.3f,0,-15.45f));
-                float foot=i==0?-.52f:4.5f;
-                var basePoint=new Vector3(0,foot,0);
-                var head=new Vector3(0,rail.craneAboveHatch+4.8f,0);
-                Strut(pier,"Compression column",basePoint,head,.19f,steel);
-                Strut(pier,"Cantilever",head,head+new Vector3(1.32f,0,1.46f),.16f,dark);
-                Strut(pier,"Knee brace",head-Vector3.up*1.1f,head+new Vector3(1.32f,0,1.46f),.11f,enamel);
-            }
             var receiver=hatch.Find("Receiver throat");
             var inSource=Socket(PipePort.Receiver,receiver,receiver.position,Vector3.one*1.2f);
             var inDest=AtHull(PipePort.ReservoirInlet,tankModule,vessel,new Vector3(2.26f,-.82f,-3),Vector3.one*.95f);
@@ -127,6 +101,7 @@ namespace Raid.Nereid.Editor
                 PrefabUtility.RecordPrefabInstancePropertyModifications(component);
             }
             TransitFitAuthoring.Fit(vessel);
+            NereidRoomAuthoring.FitDeckCrane(vessel);
             EditorSceneManager.MarkSceneDirty(scene);
         }
 

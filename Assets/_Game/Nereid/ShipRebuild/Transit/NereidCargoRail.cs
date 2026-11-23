@@ -16,6 +16,7 @@ namespace Raid.Nereid
         public RailStop[] stops = Array.Empty<RailStop>();
         public Transform hatch, leftDoor, rightDoor, traveller, cageAnchor;
         public ProgressionTuning timings;
+        public NereidCargoDavit davit;
         public Transform[] trackBeams = Array.Empty<Transform>();
         public Transform[] trackSupports = Array.Empty<Transform>();
         public Transform[] wheels = Array.Empty<Transform>();
