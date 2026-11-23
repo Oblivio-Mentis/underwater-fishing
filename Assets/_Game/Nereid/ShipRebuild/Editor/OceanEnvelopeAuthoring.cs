@@ -85,6 +85,8 @@ namespace Raid.Nereid.Editor
             black=Finish("Recessed acoustic rubber",new(.11f,.135f,.14f),.02f,.19f);
             amber=Finish("Amber flood lens",new(.98f,.63f,.30f),.10f,.34f,1.50f);
             Finish("Smoked service lens",new(.19f,.28f,.275f),.12f,.33f);
+            visor=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/Command laminated visor.mat");
+            if (visor && !update) return;
             visor=Finish("Command laminated visor",new(.22f,.29f,.28f,.16f),.08f,.50f);
             visor.SetFloat("_Surface",1);visor.SetFloat("_SrcBlend",5);visor.SetFloat("_DstBlend",10);
             visor.SetFloat("_SrcBlendAlpha",1);visor.SetFloat("_DstBlendAlpha",10);visor.SetFloat("_ZWrite",0);
@@ -192,7 +194,7 @@ namespace Raid.Nereid.Editor
                     }
                 }
                 Closed(Z[0],-21.85f,slate);
-                if(side<0)Window(-21.85f,-20.54f,1.58f,2.58f,4.28f);else Closed(-21.85f,-20.54f,slate);
+                Closed(-21.85f,-20.54f,slate); // The pump room sits behind a continuous pressure plate.
                 Closed(-20.54f,-15.81f,slate);
                 if(side>0)Window(-15.81f,-12.19f,-.31f,2.43f,5.94f,true);else Closed(-15.81f,-12.19f,slate);
                 Closed(-12.19f,-7.95f,slate);

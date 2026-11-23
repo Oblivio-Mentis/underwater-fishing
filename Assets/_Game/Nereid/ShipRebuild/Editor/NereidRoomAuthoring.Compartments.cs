@@ -81,7 +81,7 @@ namespace Raid.Nereid.Editor
             aft.Slab(enamel,new(0,1.74f,-24.98f),new(8.53f,3.49f,.20f));
             aft.Box(steel,new(.75f,1.62f,-24.82f),new(4.57f,.19f,.21f));
             foreach(int side in new[]{-1,1}) for(int k=0;k<2;k++)
-                WallBay((side<0?"Port":"Starboard")+" machinery lining "+k,side*4.26f,-22.66f+k*4.37f,4.38f,0,3.58f,k==0&&side<0);
+                WallBay((side<0?"Port":"Starboard")+" machinery lining "+k,side*4.26f,-22.66f+k*4.37f,4.38f,0,3.58f,false);
             Stairs("Engineering to bridge",-2.58f,1.88f,-17.65f,-24.85f,4.85f,false);
             var bench=Part("Harpoon fitter display",new(4.00f,1.03f,-18.43f));
             bench.Box(dark,new(4.03f,1.02f,-18.62f),new(.28f,1.76f,3.43f));
