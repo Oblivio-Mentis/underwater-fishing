@@ -254,11 +254,7 @@ namespace Raid
                 spare=Fish("Lanternfish");
                 yield return Wait(()=>spare.InHabitat && spare.Mode==FishMode.Roam,65,"No small fish to test full pockets.");
             }
-            host.Motor.Teleport(spare.transform.position-host.Motor.AimDirection*3.5f-Vector3.up*.6f);
-            Physics.SyncTransforms();
-            Require(Physics.Raycast(host.transform.position+Vector3.up*.6f,host.Motor.AimDirection,out var pocketHit,host.tuning.maxRange,
-                host.tuning.hitMask,QueryTriggerInteraction.Ignore) && pocketHit.collider.GetComponentInParent<FishActor>()==spare,
-                "Full creel ray did not reach the small fish.");
+            yield return SightWildCatch(spare, false);
             int shots=host.ShotSequence;
             Require(host.QaFireOwned(),"Full creel host could not fire equipped harpoon.");
             yield return Wait(()=>host.ShotSequence>shots,3,"Server did not receive full-creel shot.");
@@ -433,7 +429,7 @@ namespace Raid
                 "Heavy catch lost one of its two confirmed participants.");
             Require(caughtIds.Take(3).All(id=>world.Team.tank.Find(item=>item.id==id)?.caughtBy?.Length==1),
                 "A pocket catch lost its single owner.");
-            Check("The exact Q deposits retained all personal ownership across the real hoist.");
+            Check("The exact RMB deposits retained all personal ownership across the real hoist.");
             yield return ChooseReservoirRoutes(caughtIds);
             ui.ClosePanel();
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after closing the aquarium monitor.");
@@ -514,19 +510,41 @@ namespace Raid
         {
             yield return Pause(host.tuning.fireCooldown+.12f);
             Require(fish.Mode == FishMode.Roam && !host.Motor.IsHelpless, "Fish unavailable or host incapacitated.");
-            Vector3 aim = host.Motor.AimDirection;
-            host.Motor.Teleport(fish.transform.position - aim * 3.8f - Vector3.up * .6f);
-            Physics.SyncTransforms();
-            Require(Physics.Raycast(host.transform.position + Vector3.up*.6f, aim, out var hit, host.tuning.maxRange,
-                host.tuning.hitMask, QueryTriggerInteraction.Ignore) && hit.collider.GetComponentInParent<FishActor>() == fish,
-                "Fixture ray blocked before " + fish.SpeciesId + ": " + (hit.collider == null ? "miss" : hit.collider.name));
-            if(closeShot)
-            {
-                host.Motor.Teleport(hit.point - aim * .65f - Vector3.up * .6f);
-                Physics.SyncTransforms();
-            }
+            yield return SightWildCatch(fish, closeShot);
             Require(host.QaFireOwned(), "Host owned fire request rejected.");
             yield return Wait(() => host.HookedFish == fish, 3, "Normal harpoon RPC missed " + fish.SpeciesId + ".");
+        }
+
+        // A fresh population can put the same fish on either side of an outcrop.
+        // Place the QA diver on a clear approach and still fire the ordinary owned harpoon.
+        private IEnumerator SightWildCatch(FishActor fish, bool closeShot)
+        {
+            var forward = Vector3.ProjectOnPlane(host.Motor.AimDirection, Vector3.up).normalized;
+            if (forward.sqrMagnitude < .5f) forward = Vector3.forward;
+            var camera = host.GetComponentInChildren<Camera>();
+            var lift = Vector3.up * .6f;
+            bool ClearSight(Vector3 eye, Vector3 direction, out RaycastHit hit) =>
+                Physics.Raycast(eye, direction, out hit, host.tuning.maxRange, host.tuning.hitMask,
+                    QueryTriggerInteraction.Ignore) && hit.collider.GetComponentInParent<FishActor>() == fish;
+
+            foreach (float incline in new[] { 0f, -.55f, .35f })
+            foreach (float yaw in new[] { 0f, 45f, -45f, 90f, -90f, 135f, -135f, 180f })
+            {
+                var direction = (Quaternion.AngleAxis(yaw, Vector3.up) * forward + Vector3.up * incline).normalized;
+                var eye = fish.transform.position - direction * 3.8f;
+                if (Physics.CheckSphere(eye - lift, .48f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                    || !ClearSight(eye, direction, out _)) continue;
+                host.Motor.LookAtConsole(camera.transform.position + direction * 10f);
+                yield return Wait(() => Vector3.Dot(host.Motor.AimDirection, direction) > .999f, 3, "Cannot align the owner on the approach.");
+                direction = host.Motor.AimDirection;
+                eye = fish.transform.position - direction * 3.8f;
+                if (!ClearSight(eye, direction, out var impact)) continue;
+                if (closeShot) eye = impact.point - direction * .65f;
+                host.Motor.Teleport(eye - lift);
+                Physics.SyncTransforms();
+                if (ClearSight(eye, direction, out _)) yield break;
+            }
+            throw new InvalidOperationException("No visible firing position around " + fish.SpeciesId + " in " + fish.HabitatName);
         }
 
         private IEnumerator VerifySoloSurge(FishActor fish)
