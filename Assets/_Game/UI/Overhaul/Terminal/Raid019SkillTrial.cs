@@ -308,7 +308,7 @@ namespace Raid.UI
                 int beforeRevision=a.revision;
                 yield return ClickHost(node.Key,true);
                 if(rank==1)Ui.QaBuyReticle();
-                yield return Wait("Confirmed Cable +SkillTreeDefinition.Roman(rank),()=>a.skills.Contains(id) &&
+                yield return Wait("Confirmed Cable "+SkillTreeDefinition.Roman(rank),()=>a.skills.Contains(id) &&
                     world.LocalProgress.skills.Contains(id) && world.View.teamRevision==world.Team.teamRevision &&
                     RemoteTeam()?.teamRevision==world.Team.teamRevision);
                 before=before.Subtract(node.Cost);
