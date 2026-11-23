@@ -6041,6 +6041,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7874473868870686177}
   - component: {fileID: 7069633251593284487}
+  - component: {fileID: 4379826613084531990}
   m_Layer: 0
   m_Name: RecoveryCage
   m_TagString: Untagged
@@ -16640,3 +16641,19 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &4379826613084531990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3171573762579944588}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c209113429ea465c842a0fe16ca86af5, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  washHeight: 1.6
+  contactHeight: 0.18
+  touchdownCount: 34
+  spreadSpeed: 2.45

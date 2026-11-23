@@ -22,6 +22,8 @@ namespace Raid.Nereid
         NereidAirlock airlock;
         internal NereidDeckExtension DeckExtension { get; private set; }
         CargoBasket basket;
+        CargoLandingSilt landingSilt;
+        NereidReef grounds;
         CageReceivingHopper hopper;
         TeamProgress observed;
         float seenAt,railVisual=-1;
@@ -37,7 +39,7 @@ namespace Raid.Nereid
             if (!authoredRail) InstallLegacyDressing();
             var reef=new GameObject("NEREID fishing grounds");
             reef.transform.SetParent(transform,true);
-            reef.AddComponent<NereidReef>();
+            grounds=reef.AddComponent<NereidReef>();
         }
 
         void InstallLegacyDressing()
@@ -94,6 +96,8 @@ namespace Raid.Nereid
                 basket=CargoBasket.Install(world);
                 if(basket==null)return;
                 if(world.IsClientInitialized)WetCargoShoal.Attach(world);
+                if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    landingSilt=basket.GetComponent<CargoLandingSilt>();
                 if(!hasRail)hopper=CageReceivingHopper.Install(this,world);
             }
             if(state!=observed){observed=state;seenAt=Time.time;}
@@ -108,6 +112,8 @@ namespace Raid.Nereid
             if(hasRail) authoredRail.Present(railVisual,state.hoistPhase,HoistAnimation);
             basket.Meter(state.CargoUsed,state.Capacity(world.progression));
             basket.Present(state,HoistAnimation);
+            if(world.IsClientInitialized && landingSilt && grounds)
+                landingSilt.Present(state.hoistPhase,world.CargoLoadingPosition,grounds.Seabed);
             if(hopper!=null)hopper.Present(state,HoistAnimation);
             if(hasRail && authoredRail.davit)
                 authoredRail.davit.PresentCycle(authoredRail.TrolleyPoint(basket.CableSocket.position),basket.CableSocket.position,

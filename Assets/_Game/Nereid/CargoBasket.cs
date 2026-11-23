@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 namespace Raid.Nereid
 {
     // Dimensions are in world metres. The scene's basket root cancels its parent's nonuniform scale.
+    [RequireComponent(typeof(CargoLandingSilt))]
     public sealed class CargoBasket : MonoBehaviour
     {
         internal const float Width=3.40f, Depth=3.38f;

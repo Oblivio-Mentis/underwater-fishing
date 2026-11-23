@@ -12,6 +12,8 @@ namespace Raid.Nereid
         readonly System.Random random=new(17291);
         Material rock, bedMaterial, basalt, bioluminescence, lightColumns;
         GameObject shoal, abyss;
+        MeshCollider shallowBed,deepBed;
+        internal MeshCollider Seabed => shownDepth==2 ? deepBed : shallowBed;
         int shownDepth;
         float Range(float min,float max) => Mathf.Lerp(min,max,(float)random.NextDouble());
 
@@ -32,8 +34,8 @@ namespace Raid.Nereid
 
             shoal=Region("01 / The Pale Shoals");
             abyss=Region("02 / The Needle Rift");
-            var shallowBed=BuildShoal();
-            var deepBed=BuildRift();
+            shallowBed=BuildShoal();
+            deepBed=BuildRift();
             PopulateFlanks(false);
             PopulateFlanks(true);
             Physics.SyncTransforms();
