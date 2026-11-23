@@ -171,8 +171,7 @@ namespace Raid.Nereid.Editor
         {
             var lit=Shader.Find("Universal Render Pipeline/Lit");
             var coating=Resources.Load<Shader>("NereidHullCoating");
-            var atlas=Resources.Load<Texture2D>("NereidServiceFittings/Textures/T_Trim_01_BaseColor");
-            if(!lit||!coating||!atlas)throw new InvalidOperationException("NEREID requires URP and the imported service-fitting trim atlas.");
+            if(!lit||!coating)throw new InvalidOperationException("NEREID requires URP and the hull coating shader.");
             Material Make(string label,Color color,float metallic,float smooth,float glow=0,bool coat=false,bool floor=false,bool transparent=false)
             {
                 string path=Root+"/Materials/"+label+".mat";
@@ -181,10 +180,6 @@ namespace Raid.Nereid.Editor
                 m.SetColor("_BaseColor",color);m.SetFloat("_Metallic",metallic);m.SetFloat("_Smoothness",smooth);
                 if(coat)
                 {
-                    m.SetTexture("_SurfaceAtlas",atlas);
-                    m.SetVector("_SurfaceRegion",floor?new Vector4(.019f,.074f,.962f,.412f):new Vector4(.242f,.686f,.516f,.293f));
-                    m.SetVector("_SurfaceTiling",floor?new Vector4(.38f,.67f,0,0):new Vector4(.32f,.50f,0,0));
-                    m.SetVector("_SurfaceDetail",floor?new Vector4(.053f,.65f,.012f,1):new Vector4(.10f,.55f,.012f,1));
                     m.SetFloat("_Marine",label=="Atlantic blue pressure steel"?1:0);m.SetFloat("_DeckTread",floor?1:0);
                 }
                 if(transparent)

@@ -14,19 +14,12 @@ namespace Raid.Nereid
 
         void CreateFinishes(Shader lit)
         {
-            deckTexture=CoatedPanel(lit,"Rolled and scratched deck steel",new(.83f,.87f,.85f),"T_Trim_01_BaseColor",.22f,.34f);
-            pressedEnamel=CoatedPanel(lit,"Inset service walls",new(.87f,.92f,.91f),"T_Trim_01_BaseColor",.18f,.34f);
+            deckTexture=Finish(lit,"Graphite deck plates",new(.26f,.29f,.31f),.22f,.27f);
+            pressedEnamel=Finish(lit,"Inset service walls",new(.28f,.34f,.36f),.18f,.28f);
             centerDeckTexture=Finish(lit,"Raised non-slip bridge walkway",new(.41f,.39f,.31f),.20f,.32f);
             NereidSurfaceFinish.Apply(centerDeckTexture,NereidSurfaceFinish.Surface.Deck);
-            brushedRib=CoatedPanel(lit,"Longitudinal armour and seam tape",new(.70f,.72f,.68f),"T_Trim_02_BaseColor",.48f,.36f);
+            brushedRib=Finish(lit,"Longitudinal armour",new(.37f,.40f,.41f),.38f,.30f);
             windowBrass=Finish(lit,"Brass window trim",new(.59f,.36f,.16f),.48f,.44f);
-        }
-
-        Material CoatedPanel(Shader lit,string label,Color tint,string texture,float metal,float smooth)
-        {
-            var material=Finish(lit,label,tint,metal,smooth);
-            material.SetTexture("_BaseMap",Resources.Load<Texture2D>(Fittings+"Textures/"+texture));
-            return material;
         }
 
         void MachineryFinishes()

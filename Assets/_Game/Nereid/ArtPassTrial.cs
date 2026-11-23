@@ -116,16 +116,18 @@ namespace Raid.Nereid
             if (Array.IndexOf(Environment.GetCommandLineArgs(),"--verify-nereid-surfaces")>=0)
             {
                 var hull=NereidVessel.Active.transform;
-                var outside=hull.Find("Nereid_Exterior");
-                int CountTextured(Transform assembly) => assembly.GetComponentsInChildren<MeshRenderer>()
-                    .Count(renderer=>renderer.sharedMaterials.Any(material=>material!=null &&
-                        material.HasProperty("_SurfaceAtlas") && material.GetTexture("_SurfaceAtlas")!=null &&
-                        material.GetVector("_SurfaceDetail").w>.5f && material.shader.isSupported));
-                var exteriorCount=CountTextured(outside);
-                var vesselCount=CountTextured(hull);
+                var outside=hull.GetComponentsInChildren<Transform>().FirstOrDefault(node=>node.name=="NereidOceanEnvelope")
+                    ?? hull.Find("Nereid_Exterior");
+                if (!outside) throw new InvalidOperationException("Missing exterior assembly.");
+                int CountPainted(Transform assembly) => assembly.GetComponentsInChildren<MeshRenderer>()
+                    .Count(renderer=>renderer.enabled && renderer.sharedMaterials.Any(material=>material &&
+                        material.shader.isSupported && material.HasProperty("_BaseColor") &&
+                        (!material.HasProperty("_BumpMap") || !material.GetTexture("_BumpMap"))));
+                var exteriorCount=CountPainted(outside);
+                var vesselCount=CountPainted(hull);
                 if(exteriorCount<5 || vesselCount<30)
-                    throw new InvalidOperationException($"Incomplete vessel surfaces: {vesselCount} total meshes, {exteriorCount} exterior.");
-                Debug.Log($"[NEREID SURFACES] {vesselCount} textured meshes including {exteriorCount} exterior meshes");
+                    throw new InvalidOperationException($"Incomplete painted surfaces: {vesselCount} total meshes, {exteriorCount} exterior.");
+                Debug.Log($"[NEREID SURFACES] {vesselCount} painted meshes including {exteriorCount} exterior meshes");
             }
             var hardware=NereidVessel.Active.transform.Find("NEREID service fittings");
             result.fittings=hardware==null?0:hardware.GetComponentsInChildren<MeshRenderer>().Length;
