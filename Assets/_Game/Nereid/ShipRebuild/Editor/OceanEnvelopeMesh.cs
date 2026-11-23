@@ -6,12 +6,13 @@ using UnityEngine.Rendering;
 
 namespace Raid.Nereid.Editor
 {
-    // Rows and columns share vertices within each surface so the loft reads as continuous formed metal.
+    // Each hull plate has a single normal across its two triangles. Neighbouring plates meet at hard chines.
     // Each physical assembly is its own asset with its own pivot and materials.
     internal sealed class OceanEnvelopeMesh
     {
         readonly List<Vector3> positions = new();
         readonly List<Vector2> uv = new();
+        readonly List<Vector3> normals = new();
         readonly List<List<int>> triangles = new();
         readonly List<Material> materials = new();
         readonly Vector3 pivot;
@@ -28,37 +29,41 @@ namespace Raid.Nereid.Editor
         {
             int index=materials.IndexOf(finish);
             if(index<0){index=materials.Count;materials.Add(finish);triangles.Add(new List<int>());}
-            var tri=triangles[index];var start=positions.Count;
+            var tri=triangles[index];
+            var grid=new Vector3[rows+1,cols+1];
+            var coords=new Vector2[rows+1,cols+1];
             float along=0;
-            Vector3 lastCentre=point(0,.5f);
             for(int i=0;i<=rows;i++)
             {
-                float u=(float)i/rows;
-                Vector3 centre=point(u,.5f);
-                along+=Vector3.Distance(lastCentre,centre);
-                lastCentre=centre;
-                float cross=0;Vector3 last=point(u,0);
+                float across=0;
                 for(int j=0;j<=cols;j++)
                 {
-                    var vertex=point(u,(float)j/cols);
-                    cross+=Vector3.Distance(last,vertex);last=vertex;
-                    positions.Add(vertex-pivot);
-                    uv.Add(new Vector2(along+pivot.z*.37f,cross+pivot.x*.23f)/2.84f);
+                    var p=point((float)i/rows,(float)j/cols)-pivot;
+                    grid[i,j]=p;
+                    if(j==0&&i>0)along+=Vector3.Distance(p,grid[i-1,0]);
+                    if(j>0)across+=Vector3.Distance(p,grid[i,j-1]);
+                    coords[i,j]=new Vector2(along,across);
                 }
             }
             for(int i=0;i<rows;i++)for(int j=0;j<cols;j++)
             {
-                int a=start+i*(cols+1)+j,b=a+1,c=a+cols+1,d=c+1;
-                Vector3 n=Vector3.Cross(positions[b]-positions[a],positions[c]-positions[a]);
-                if(n.sqrMagnitude<1e-12f)n=Vector3.Cross(positions[d]-positions[c],positions[b]-positions[c]);
-                bool ccw=Vector3.Dot(n,outward((i+.5f)/rows,(j+.5f)/cols))>=0;
-                if(back)ccw=!ccw;
-                if(ccw){tri.Add(a);tri.Add(b);tri.Add(c);tri.Add(b);tri.Add(d);tri.Add(c);}
-                else {tri.Add(a);tri.Add(c);tri.Add(b);tri.Add(b);tri.Add(c);tri.Add(d);}
+                Vector3 a=grid[i,j],b=grid[i,j+1],c=grid[i+1,j],d=grid[i+1,j+1];
+                Vector3 first=Vector3.Cross(b-a,c-a),second=Vector3.Cross(d-b,c-b);
+                if(first.sqrMagnitude+second.sqrMagnitude<1e-12f)continue;
+                var n=(first+second).normalized;
+                bool reverse=Vector3.Dot(n,outward((i+.5f)/rows,(j+.5f)/cols))<0;
+                if(back)reverse=!reverse;
+                if(reverse)n=-n;
+                int start=positions.Count;
+                positions.Add(a);positions.Add(b);positions.Add(c);positions.Add(d);
+                normals.Add(n);normals.Add(n);normals.Add(n);normals.Add(n);
+                uv.Add(coords[i,j]);uv.Add(coords[i,j+1]);uv.Add(coords[i+1,j]);uv.Add(coords[i+1,j+1]);
+                if(first.sqrMagnitude>1e-12f){tri.Add(start);tri.Add(start+(reverse?2:1));tri.Add(start+(reverse?1:2));}
+                if(second.sqrMagnitude>1e-12f){tri.Add(start+1);tri.Add(start+(reverse?2:3));tri.Add(start+(reverse?3:2));}
             }
         }
 
-        internal void Ring(Material mat,Func<float,Vector3> curve,float radius,int steps,int radial=8)
+        internal void Ring(Material mat,Func<float,Vector3> curve,float radius,int steps,int radial=5)
         {
             Vector3 Spine(float t)=>curve(Mathf.Clamp01(t));
             Vector3 Direction(float t,float angle)
@@ -77,13 +82,17 @@ namespace Raid.Nereid.Editor
 
         internal void Save(string path,bool solid=false)
         {
-            var mesh=new Mesh{name=node.name,indexFormat=positions.Count>65535?IndexFormat.UInt32:IndexFormat.UInt16};
+            var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            bool create=!mesh;
+            if(create)mesh=new Mesh();
+            else mesh.Clear(false);
+            mesh.name="Faceted "+node.name;
+            mesh.indexFormat=positions.Count>65535?IndexFormat.UInt32:IndexFormat.UInt16;
             mesh.SetVertices(positions);mesh.SetUVs(0,uv);mesh.subMeshCount=triangles.Count;
             for(int i=0;i<triangles.Count;i++)mesh.SetTriangles(triangles[i],i);
-            mesh.RecalculateNormals();mesh.RecalculateBounds();mesh.RecalculateTangents();
-            var existing=AssetDatabase.LoadAssetAtPath<Mesh>(path);
-            if(existing){EditorUtility.CopySerialized(mesh,existing);UnityEngine.Object.DestroyImmediate(mesh);mesh=existing;}
-            else AssetDatabase.CreateAsset(mesh,path);
+            mesh.SetNormals(normals);mesh.RecalculateBounds();mesh.RecalculateTangents();
+            if(create)AssetDatabase.CreateAsset(mesh,path);
+            else EditorUtility.SetDirty(mesh);
             node.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
             node.gameObject.AddComponent<MeshRenderer>().sharedMaterials=materials.ToArray();
             if(solid)node.gameObject.AddComponent<MeshCollider>().sharedMesh=mesh;

@@ -11,9 +11,9 @@ namespace Raid.Nereid.Editor
                 string hand=side<0?"Port":"Starboard";
                 var optics=Part(hand+" observation lighting",new(side*6.98f,.5f,-1));
                 // A broad navigation line remains legible in the trench haze, under the real observation windows.
-                optics.Ring(black,u=>Side(side,Mix(-7.68f,7.57f,u),.36f)+Vector3.right*side*.086f,.147f,52);
+                optics.Ring(black,u=>Side(side,Mix(-7.68f,7.57f,u),.36f)+Vector3.right*side*.086f,.147f,9);
                 foreach(float station in new[]{-6.66f,5.35f})
-                    optics.Ring(amber,u=>Side(side,station+.56f*u,.36f)+Vector3.right*side*.206f,.056f,6);
+                    optics.Ring(amber,u=>Side(side,station+.56f*u,.36f)+Vector3.right*side*.206f,.056f,1);
                 foreach(float z in new[]{-6.53f,5.49f})
                 {
                     Vector3 at=Lower(side,z,.89f);
@@ -21,9 +21,9 @@ namespace Raid.Nereid.Editor
                     Vector3 across=Vector3.Cross(facing,Vector3.up).normalized;
                     Vector3 up=Vector3.Cross(across,facing);
                     Vector3 Rim(float t)=>across*.72f*Mathf.Cos(t*2*Mathf.PI)+up*.29f*Mathf.Sin(t*2*Mathf.PI);
-                    optics.Surface(black,6,28,(u,v)=>at+Rim(v)*Mix(1,.78f,u)+facing*(u*.19f),
+                    optics.Surface(black,1,8,(u,v)=>at+Rim(v)*Mix(1,.78f,u)+facing*(u*.19f),
                         (u,v)=>Rim(v)+facing*.5f);
-                    optics.Surface(amber,3,28,(u,v)=>at+Rim(v)*(.77f*u)+facing*(.19f+.065f*(1-u)),
+                    optics.Surface(amber,1,8,(u,v)=>at+Rim(v)*(.77f*u)+facing*(.19f+.065f*(1-u)),
                         (u,v)=>facing);
                     var light=new GameObject("Downward work beam").AddComponent<Light>();
                     light.transform.SetParent(optics.node,false);light.transform.localPosition=at+facing*.29f-optics.node.localPosition;
@@ -42,8 +42,8 @@ namespace Raid.Nereid.Editor
                 return new Vector3(x,Mix(8.46f,10.36f,u)-.16f*(v-.5f)*(v-.5f),z);
             }
             foreach(int side in new[]{-1,1})foreach(var band in new[]{(0f,.62f,carbon),(.62f,.83f,pearl),(.83f,.93f,orange),(.93f,1f,carbon)})
-                aerial.Surface(band.Item3,7,14,(u,v)=>Blade(side,Mix(band.Item1,band.Item2,u),v),(u,v)=>Vector3.right*side);
-            aerial.Ring(amber,t=>Blade(1,.98f,Mix(.49f,.63f,t)),.046f,10);
+                aerial.Surface(band.Item3,1,3,(u,v)=>Blade(side,Mix(band.Item1,band.Item2,u),v),(u,v)=>Vector3.right*side);
+            aerial.Ring(amber,t=>Blade(1,.98f,Mix(.49f,.63f,t)),.046f,1);
         }
 
 
@@ -60,10 +60,10 @@ namespace Raid.Nereid.Editor
                 return new Vector3(x,y,z);
             }
             foreach(var band in new[]{(0f,.13f,slate),(.13f,.65f,pearl),(.65f,.72f,orange),(.72f,.93f,slate),(.93f,1f,titanium)})
-                collar.Surface(band.Item3,8,40,(u,v)=>Shell(Mix(band.Item1,band.Item2,u),v,1),
+                collar.Surface(band.Item3,2,12,(u,v)=>Shell(Mix(band.Item1,band.Item2,u),v,1),
                     (u,v)=>new Vector3(.18f,Mathf.Sin(v*2*Mathf.PI),Mathf.Cos(v*2*Mathf.PI)));
-            collar.Surface(teal,3,40,(u,v)=>Shell(1,v,Mix(1,.91f,u)),(u,v)=>Vector3.right);
-            foreach(float start in new[]{.053f,.39f})collar.Ring(amber,v=>Shell(.91f,start+.051f*v,1.022f),.045f,5);
+            collar.Surface(teal,1,12,(u,v)=>Shell(1,v,Mix(1,.91f,u)),(u,v)=>Vector3.right);
+            foreach(float start in new[]{.053f,.39f})collar.Ring(amber,v=>Shell(.91f,start+.051f*v,1.022f),.045f,2);
         }
 
         static void PaintMark(int side)
@@ -75,7 +75,7 @@ namespace Raid.Nereid.Editor
                 float z=-10.04f+side*x;
                 return Side(side,z,1.75f+h)+Vector3.right*side*offset;
             }
-            mark.Surface(slate,18,4,(u,v)=>At(Mix(-1.86f,1.86f,u),Mix(-.48f,.48f,v),.025f),(u,v)=>Vector3.right*side);
+            mark.Surface(slate,3,1,(u,v)=>At(Mix(-1.86f,1.86f,u),Mix(-.48f,.48f,v),.025f),(u,v)=>Vector3.right*side);
             void Stroke(float x,float y,float a,float b,float width,Material mat)
             {
                 Vector2 tangent=new Vector2(a-x,b-y).normalized;

@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,20 +6,26 @@ namespace Raid.Nereid.Editor
 {
     public static partial class OceanEnvelopeAuthoring
     {
-        const string SteelFolder=Folder+"/Finishes/";
         const string RefitMarker="Port nacelle split clamps";
+
+        static bool HasFacetedPressureHull(GameObject root)
+        {
+            var clamp=root.transform.Find(RefitMarker);
+            var mesh=clamp?clamp.GetComponent<MeshFilter>()?.sharedMesh:null;
+            return mesh&&mesh.name=="Faceted "+RefitMarker;
+        }
 
         // Update the original authored meshes in place; their GUIDs, child transforms, unrelated
         // scene overrides and hand-placed decorations survive. Additional hardware is installed once.
-        [MenuItem("RAID/020/Install industrial pressure plating")]
+        [MenuItem("RAID/020/Install faceted pressure plating")]
         public static void InstallIndustrialPlating()
         {
             var template=PrefabUtility.LoadPrefabContents(Envelope);
             var generated=new GameObject("Refit source");
             try
             {
-                if(template.transform.Find(RefitMarker))return;
-                ConfigureSteelImports();Palette(true);body=generated.transform;assemblies.Clear();
+                if(HasFacetedPressureHull(template))return;
+                Palette(true);body=generated.transform;assemblies.Clear();
                 PressureForm();CommandSaddle();Wheelhouse();Propulsion();NavigationDetails();ServiceHardware();
                 foreach(var part in assemblies)
                 {
@@ -48,20 +53,6 @@ namespace Raid.Nereid.Editor
             }
         }
 
-        static void ConfigureSteelImports()
-        {
-            foreach(string name in new[]{"Rolled steel paint","Battered steel normal","Metal and roughness"})
-            {
-                var imp=(TextureImporter)AssetImporter.GetAtPath(SteelFolder+name+".png");
-                if(!imp)throw new InvalidOperationException("Missing rolled steel finish "+name);
-                imp.sRGBTexture=name=="Rolled steel paint";
-                imp.textureType=name=="Battered steel normal"?TextureImporterType.NormalMap:TextureImporterType.Default;
-                imp.alphaSource=name=="Metal and roughness"?TextureImporterAlphaSource.FromInput:TextureImporterAlphaSource.None;
-                imp.wrapMode=TextureWrapMode.Repeat;imp.anisoLevel=4;imp.mipmapEnabled=true;
-                imp.textureCompression=TextureImporterCompression.CompressedHQ;imp.SaveAndReimport();
-            }
-        }
-
         static void FlankPlates(OceanEnvelopeMesh p,int side)
         {
             var spans=side<0?new[]{(-34.4f,-29.70f),(-29.55f,-25.74f),(-25.59f,-21.99f),(-20.39f,-16.48f)}
@@ -77,26 +68,15 @@ namespace Raid.Nereid.Editor
                     float h=Mix(.07f+.85f*(1-Mathf.InverseLerp(-34.4f,-16.48f,z)),2.39f+.28f*Mathf.Sin(z*.19f),t);
                     var v=Side(side,z,h);v.x+=side*(.16f+.045f*Mathf.Sin(u*Mathf.PI)+outboard);return v;
                 }
-                p.Surface(count%3==1?slate:pearl,11,6,(u,v)=>At(u,v,0),(u,v)=>Vector3.right*side);
-                foreach(float t in new[]{0f,1f})p.Surface(t==0?carbon:titanium,11,2,(u,v)=>At(u,t,-v*.19f),(u,v)=>Vector3.up*(t==0?-1:1));
-                foreach(float u in new[]{0f,1f})p.Surface(black,2,4,(v,t)=>At(u,t,-.19f*v),(v,t)=>Vector3.forward*(u==0?-1:1));
-                foreach(float t in new[]{.13f,.84f})foreach(float u in new[]{.10f,.90f})
-                    Stud(p,At(u,t,.014f),Vector3.right*side,.060f);
+                p.Surface(count%3==1?slate:pearl,2,2,(u,v)=>At(u,v,0),(u,v)=>Vector3.right*side);
+                foreach(float t in new[]{0f,1f})p.Surface(t==0?carbon:titanium,2,1,(u,v)=>At(u,t,-v*.19f),(u,v)=>Vector3.up*(t==0?-1:1));
+                foreach(float u in new[]{0f,1f})p.Surface(black,1,2,(v,t)=>At(u,t,-.19f*v),(v,t)=>Vector3.forward*(u==0?-1:1));
                 count++;
             }
         }
 
-        static void Stud(OceanEnvelopeMesh p,Vector3 at,Vector3 outward,float radius)
-        {
-            Vector3 n=outward.normalized;Vector3 right=Vector3.Cross(n,Mathf.Abs(n.y)<.9f?Vector3.up:Vector3.forward).normalized;
-            Vector3 up=Vector3.Cross(n,right);
-            Vector3 Rim(float v)=>right*Mathf.Cos(v*Mathf.PI*2)+up*Mathf.Sin(v*Mathf.PI*2);
-            p.Surface(titanium,1,6,(u,v)=>at+Rim(v)*radius*(1-.10f*u)+n*(u*radius*.44f),(u,v)=>Rim(v));
-            p.Surface(slate,1,6,(u,v)=>at+Rim(v)*radius*.90f*u+n*radius*.44f,(u,v)=>n);
-        }
-
         static void FacedPlate(OceanEnvelopeMesh p,Vector3 at,Vector3 normal,Vector3 lengthAxis,
-            float length,float width,float rise,Material face,bool bolts=false)
+            float length,float width,float rise,Material face)
         {
             Vector3 n=normal.normalized,along=Vector3.ProjectOnPlane(lengthAxis,n).normalized,across=Vector3.Cross(n,along).normalized;
             float h=length*.5f,w=width*.5f,cut=Mathf.Min(h,w)*.26f;
@@ -108,8 +88,7 @@ namespace Raid.Nereid.Editor
                 p.Quad(carbon,at+a,at+b,at+b+n*rise,at+a+n*rise,(a+b).normalized);
                 p.Quad(face,at+a+n*rise,at+b+n*rise,at+n*rise,at+n*rise,n);
             }
-            if(bolts)foreach(int x in new[]{-1,1})foreach(int y in new[]{-1,1})
-                Stud(p,at+along*(x*(h-.14f))+across*(y*(w-.12f))+n*rise,n,.055f);
+
         }
 
         static void ServiceHardware()
@@ -121,14 +100,14 @@ namespace Raid.Nereid.Editor
                 foreach(float z in new[]{-35.34f,-30.63f,-25.49f})
                 {
                     foreach(var span in new[]{(-.20f,-.15f,black),(-.15f,.11f,titanium),(.11f,.18f,slate)})
-                        clamps.Surface(span.Item3,3,48,(u,v)=>Pod(side,z+Mix(span.Item1,span.Item2,u),v*Mathf.PI*2,1.048f),
+                        clamps.Surface(span.Item3,1,12,(u,v)=>Pod(side,z+Mix(span.Item1,span.Item2,u),v*Mathf.PI*2,1.048f),
                             (u,v)=>new Vector3(side*Mathf.Sin(v*Mathf.PI*2),Mathf.Cos(v*Mathf.PI*2),0));
-                    foreach(float edge in new[]{-.20f,.18f})clamps.Surface(black,1,48,
+                    foreach(float edge in new[]{-.20f,.18f})clamps.Surface(black,1,12,
                         (u,v)=>Pod(side,z+edge,v*Mathf.PI*2,Mix(.994f,1.048f,u)),(u,v)=>Vector3.forward*Mathf.Sign(edge));
-                    foreach(float angle in new[]{.82f,2.21f,4.54f})
+                    foreach(float angle in new[]{.82f,4.54f})
                     {
                         Vector3 n=new Vector3(side*Mathf.Sin(angle),Mathf.Cos(angle),0).normalized;
-                        FacedPlate(clamps,Pod(side,z,angle,1.03f),n,Vector3.forward,.72f,.47f,.14f,slate,true);
+                        FacedPlate(clamps,Pod(side,z,angle,1.03f),n,Vector3.forward,.78f,.53f,.16f,slate);
                     }
                 }
                 var casing=Part(hand+" armored pump service covers",new(side*7.7f,.8f,-28),true);
@@ -138,21 +117,14 @@ namespace Raid.Nereid.Editor
                     var n=new Vector3(side*Mathf.Sin(theta),Mathf.Cos(theta),0).normalized;
                     var at=Pod(side,z,theta,1.01f);
                     FacedPlate(casing,at,n,Vector3.forward,2.67f,.87f,.083f,black);
-                    FacedPlate(casing,at+n*.075f,n,Vector3.forward,2.56f,.77f,.075f,pearl,true);
-                    for(int i=-2;i<=2;i++)FacedPlate(casing,at+n*.15f+Vector3.forward*i*.25f,n,Vector3.forward,.097f,.44f,.028f,carbon);
-                }
-                for(int i=0;i<12;i++)
-                {
-                    float t=i*Mathf.PI/6+.04f;
-                    Stud(casing,Pod(side,PZ[0]-.01f,t,.94f),Vector3.back,.065f);
+                    FacedPlate(casing,at+n*.075f,n,Vector3.forward,2.56f,.77f,.075f,pearl);
+                    foreach(float offset in new[]{-.41f,.41f})FacedPlate(casing,at+n*.15f+Vector3.forward*offset,n,Vector3.forward,.23f,.46f,.032f,carbon);
                 }
                 var brows=Part(hand+" command shutter reinforcement",new(side*4.35f,7.68f,-27.46f),true);
                 foreach(float z in new[]{-29.13f,-26.68f,-24.35f})
                 {
-                    brows.Surface(titanium,2,22,(u,v)=>Crown(side,z+Mix(-.11f,.11f,u),Mix(.18f,.97f,v))+
+                    brows.Surface(titanium,1,4,(u,v)=>Crown(side,z+Mix(-.11f,.11f,u),Mix(.18f,.97f,v))+
                         new Vector3(side*.02f,.034f,0),(u,v)=>new Vector3(side*.6f,.8f,0));
-                    var p=Crown(side,z,.76f);
-                    Stud(brows,p+Vector3.up*.078f,new Vector3(side*.55f,.74f,0),.064f);
                 }
                 var lamps=Part(hand+" recessed hull work lamps",new(side*6.73f,2.5f,-3));
                 foreach(float z in new[]{-6.15f,1.72f})

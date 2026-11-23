@@ -10,7 +10,7 @@ namespace Raid.Nereid.Editor
         static readonly float[] CT={7.75f,8.06f,8.43f,8.79f,8.63f,8.36f,7.92f,6.69f,5.49f,4.99f};
         static Vector3 Crown(int side,float z,float t,float drop=0)
         {
-            float w=Spline(z,CZ,CW),rim=Spline(z,CZ,CR),top=Spline(z,CZ,CT);
+            float w=Section(z,CZ,CW),rim=Section(z,CZ,CR),top=Section(z,CZ,CT);
             float a=t*Mathf.PI*.50f;
             return new(side*w*Mathf.Sin(a),Mix(rim,top,Mathf.Cos(a))-drop,z);
         }
@@ -21,10 +21,10 @@ namespace Raid.Nereid.Editor
                 string hand=side<0?"Port":"Starboard";
                 var cap=Part(hand+" command visor",new(side*2,7.1f,-25),true);
                 foreach(var band in new[]{(0f,.41f,slate),(.41f,.83f,pearl),(.83f,.89f,orange),(.89f,1f,titanium)})
-                    cap.Surface(band.Item3,59,9,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),Mix(band.Item1,band.Item2,v)),(u,v)=>new Vector3(side*.5f,1,0));
-                cap.Surface(black,59,7,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),v,.18f),(u,v)=>Vector3.down);
-                cap.Surface(teal,59,2,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),1,.18f*v),(u,v)=>Vector3.right*side);
-                cap.Ring(black,u=>Crown(side,Mix(-31.95f,-22.1f,u),1,.12f),.033f,35);
+                    foreach(var span in Bays(CZ[0],CZ[CZ.Length-1],CZ))cap.Surface(band.Item3,1,band.Item1==0?2:1,(u,v)=>Crown(side,Mix(span.start,span.end,u),Mix(band.Item1,band.Item2,v)),(u,v)=>new Vector3(side*.5f,1,0));
+                foreach(var span in Bays(CZ[0],CZ[CZ.Length-1],CZ))cap.Surface(black,1,5,(u,v)=>Crown(side,Mix(span.start,span.end,u),v,.18f),(u,v)=>Vector3.down);
+                foreach(var span in Bays(CZ[0],CZ[CZ.Length-1],CZ))cap.Surface(teal,1,1,(u,v)=>Crown(side,Mix(span.start,span.end,u),1,.18f*v),(u,v)=>Vector3.right*side);
+                cap.Ring(black,u=>Crown(side,Mix(-31.95f,-22.1f,u),1,.12f),.033f,7);
                 var saddle=Part(hand+" pilothouse flying buttress",new(side*5.1f,5.30f,-21.8f),true);
                 // A glazed bridge floats over the pressure capsule. Aft of its glazing the saddle
                 // closes and slopes continuously into the main deck. The port companionway is inside the crown.
@@ -36,19 +36,19 @@ namespace Raid.Nereid.Editor
                     float bulge=.15f*Mathf.Sin(t*Mathf.PI);
                     return Vector3.Lerp(low,high,t)+Vector3.right*side*bulge;
                 }
-                saddle.Surface(slate,32,7,(u,v)=>S(Mix(-24.76f,-14.70f,u),v),(u,v)=>Vector3.right*side);
-                saddle.Surface(pearl,26,4,(u,v)=>{
+                saddle.Surface(slate,6,2,(u,v)=>S(Mix(-24.76f,-14.70f,u),v),(u,v)=>Vector3.right*side);
+                saddle.Surface(pearl,5,1,(u,v)=>{
                     float z=Mix(-24.34f,-16.30f,u),shape=Mathf.Sin(u*Mathf.PI);
                     float t=Mix(.28f+.29f*(1-u),.28f+.29f*(1-u)+.28f*shape,v);
                     return S(z,t)+Vector3.right*(.035f*side);
                 },(u,v)=>Vector3.right*side);
                 // Recessed window surrounds on the sides; glazing itself is part of the navigable bridge.
                 var windows=Part(hand+" bridge window recess",new(side*5.02f,6.3f,-27.8f),true);
-                windows.Surface(black,24,3,(u,v)=>{
+                windows.Surface(black,5,1,(u,v)=>{
                     float z=Mix(-30.54f,-24.76f,u);var outer=Crown(side,z,1,.17f);
                     return Vector3.Lerp(outer,new Vector3(side*4.38f,6.86f,z),v);
                 },(u,v)=>Vector3.down);
-                windows.Surface(teal,24,3,(u,v)=>{
+                windows.Surface(teal,5,1,(u,v)=>{
                     float z=Mix(-30.54f,-24.76f,u);var a=Upper(side,z,Mathf.Min(W(z),4.38f));
                     return Vector3.Lerp(a,new Vector3(side*4.41f,5.47f,z),v);
                 },(u,v)=>Vector3.right*side);
@@ -56,7 +56,7 @@ namespace Raid.Nereid.Editor
                 {
                     var top=Crown(side,station,1,.13f);
                     var foot=new Vector3(side*4.48f,5.25f,station+.13f);
-                    windows.Ring(slate,t=>Vector3.Lerp(foot,top,t),.13f,8);
+                    windows.Ring(slate,t=>Vector3.Lerp(foot,top,t),.13f,1);
                 }
                 var flank=Part(hand+" swept pressure armor",new(side*6,1.50f,-25),true);
                 FlankPlates(flank,side);
@@ -70,8 +70,12 @@ namespace Raid.Nereid.Editor
         static readonly float[] RY={1.38f,1.56f,1.71f,1.72f,1.62f,1.28f,.92f,.39f,.040f};
         static Vector3 Pod(int side,float z,float angle,float scale=1)
         {
-            return new(side*(Spline(z,PZ,PX)+Mathf.Sin(angle)*Spline(z,PZ,RX)*scale),
-                Spline(z,PZ,PY)+Mathf.Cos(angle)*Spline(z,PZ,RY)*scale,z);
+            const float step=Mathf.PI/6;
+            float index=angle/step;
+            float a=Mathf.Floor(index)*step,b=a+step,t=index-Mathf.Floor(index);
+            float x=Mix(Mathf.Sin(a),Mathf.Sin(b),t);
+            float y=Mix(Mathf.Cos(a),Mathf.Cos(b),t);
+            return new(side*(Section(z,PZ,PX)+x*Section(z,PZ,RX)*scale), Section(z,PZ,PY)+y*Section(z,PZ,RY)*scale,z);
         }
 
         static void Propulsion()
@@ -80,21 +84,25 @@ namespace Raid.Nereid.Editor
             {
                 string hand=side<0?"Port":"Starboard";
                 var pod=Part(hand+" vector pump nacelle",new(side*8.0f,.1f,-30.07f),true);
-                foreach(var band in new[]{(-1.55f,-1.18f,teal),(-1.18f,-.96f,orange),(-.96f,1.14f,pearl),
-                    (1.14f,1.31f,titanium),(1.31f,2.08f,teal),(2.08f,4.733185f,carbon)})
-                    pod.Surface(band.Item3,44,9,(u,v)=>Pod(side,Mix(PZ[0],PZ[PZ.Length-1],u),Mix(band.Item1,band.Item2,v)),
-                        (u,v)=>new Vector3(side*Mathf.Sin(Mix(band.Item1,band.Item2,v)),Mathf.Cos(Mix(band.Item1,band.Item2,v)),0));
+                Material[] jackets={pearl,pearl,slate,teal,carbon,carbon,carbon,carbon,slate,teal,orange,pearl};
+                for(int i=0;i<jackets.Length;i++)
+                {
+                    float a=i*Mathf.PI/6,b=(i+1)*Mathf.PI/6;
+                    foreach(var span in Bays(PZ[0],PZ[PZ.Length-1],PZ))
+                        pod.Surface(jackets[i],1,1,(u,v)=>Pod(side,Mix(span.start,span.end,u),Mix(a,b,v)),
+                            (u,v)=>new Vector3(side*Mathf.Sin(Mix(a,b,v)),Mathf.Cos(Mix(a,b,v)),0));
+                }
                 // The aft nozzle is hollow. The inner shroud, five rotor blades, and centre fairing
                 // are separate surfaces. A single diffused locator sits inside the nozzle lip.
                 var nozzle=Part(hand+" annular impeller",new(side*8.45f,.05f,-37.96f),true);
                 float lip=PZ[0];
-                nozzle.Surface(titanium,3,40,(u,v)=>Pod(side,lip,Mathf.PI*2*v,Mix(1,.82f,u)),(u,v)=>Vector3.back);
-                nozzle.Surface(black,6,40,(u,v)=>Pod(side,Mix(lip,-36.90f,u),Mathf.PI*2*v,.81f),
+                nozzle.Surface(titanium,1,12,(u,v)=>Pod(side,lip,Mathf.PI*2*v,Mix(1,.82f,u)),(u,v)=>Vector3.back);
+                nozzle.Surface(black,2,12,(u,v)=>Pod(side,Mix(lip,-36.90f,u),Mathf.PI*2*v,.81f),
                     (u,v)=>new Vector3(-side*Mathf.Sin(Mathf.PI*2*v),-Mathf.Cos(Mathf.PI*2*v),0));
-                nozzle.Ring(titanium,v=>Pod(side,lip+.09f,Mathf.PI*2*v,.83f),.039f,40);
+                nozzle.Ring(titanium,v=>Pod(side,lip+.09f,Mathf.PI*2*v,.83f),.039f,12);
                 const float rotorZ=-38.24f;
-                Vector3 Centre(float z)=>new(side*Spline(z,PZ,PX),Spline(z,PZ,PY),z);
-                nozzle.Surface(slate,9,28,(u,v)=>Centre(Mix(rotorZ-.56f,rotorZ+.38f,u))+
+                Vector3 Centre(float z)=>new(side*Section(z,PZ,PX),Section(z,PZ,PY),z);
+                nozzle.Surface(slate,3,10,(u,v)=>Centre(Mix(rotorZ-.56f,rotorZ+.38f,u))+
                     new Vector3(side*Mathf.Sin(v*2*Mathf.PI),Mathf.Cos(v*2*Mathf.PI),0)*(.052f+.27f*Mathf.Sin(Mathf.PI*u)),
                     (u,v)=>new Vector3(side*Mathf.Sin(v*2*Mathf.PI),Mathf.Cos(v*2*Mathf.PI),-.1f));
                 for(int blade=0;blade<5;blade++)
@@ -107,9 +115,9 @@ namespace Raid.Nereid.Editor
                         return Centre(rotorZ)+new Vector3(side*Mathf.Sin(angle)*radius,Mathf.Cos(angle)*radius,
                             -.15f+.26f*t+.16f*r+aft);
                     }
-                    nozzle.Surface(titanium,7,4,(u,v)=>Blade(u,v,0),(u,v)=>Vector3.back);
-                    nozzle.Surface(orange,3,2,(u,v)=>Blade(Mix(.63f,.87f,u),Mix(.36f,.46f,v),-.008f),(u,v)=>Vector3.back);
-                    nozzle.Surface(teal,7,4,(u,v)=>Blade(u,v,.07f),(u,v)=>Vector3.forward);
+                    nozzle.Surface(titanium,2,1,(u,v)=>Blade(u,v,0),(u,v)=>Vector3.back);
+                    nozzle.Surface(orange,1,1,(u,v)=>Blade(Mix(.63f,.87f,u),Mix(.36f,.46f,v),-.008f),(u,v)=>Vector3.back);
+                    nozzle.Surface(teal,2,1,(u,v)=>Blade(u,v,.07f),(u,v)=>Vector3.forward);
                 }
 
                 var wing=Part(hand+" swept hydroplane",new(side*6.7f,-.5f,-27),true);
@@ -125,8 +133,8 @@ namespace Raid.Nereid.Editor
                     return new(side*x,h+(top?thick:-thick*.65f),z);
                 }
                 foreach(var band in new[]{(0f,.105f,titanium),(.105f,.19f,orange),(.19f,.70f,slate),(.70f,.74f,teal),(.74f,1f,carbon)})
-                    wing.Surface(band.Item3,18,7,(u,v)=>Foil(u,Mix(band.Item1,band.Item2,v),true),(u,v)=>Vector3.up);
-                wing.Surface(carbon,18,15,(u,v)=>Foil(u,v,false),(u,v)=>Vector3.down);
+                    wing.Surface(band.Item3,4,1,(u,v)=>Foil(u,Mix(band.Item1,band.Item2,v),true),(u,v)=>Vector3.up);
+                wing.Surface(carbon,4,4,(u,v)=>Foil(u,v,false),(u,v)=>Vector3.down);
                 // Distinct wingtip fins extend the planform beyond the drive pods.
                 Vector3 Tip(float u,float v,bool top)
                 {
@@ -134,10 +142,10 @@ namespace Raid.Nereid.Editor
                     float z=Mix(Mix(-29.30f,-35.12f,u),Mix(-35.15f,-35.93f,u),v);
                     return new(side*x,h+(top?1:-.65f)*(.03f+.23f*(1-u))*Mathf.Sin(Mathf.PI*v),z);
                 }
-                wing.Surface(pearl,15,9,(u,v)=>Tip(u,v,true),(u,v)=>Vector3.up);
-                wing.Surface(slate,15,9,(u,v)=>Tip(u,v,false),(u,v)=>Vector3.down);
-                wing.Surface(orange,4,7,(u,v)=>Tip(Mix(.79f,.91f,u),v,true)+Vector3.up*.012f,(u,v)=>Vector3.up);
-                pod.Ring(amber,t=>Pod(side,Mix(-34.92f,-34.32f,t),1.34f,1.016f),.042f,26);
+                wing.Surface(pearl,2,2,(u,v)=>Tip(u,v,true),(u,v)=>Vector3.up);
+                wing.Surface(slate,2,2,(u,v)=>Tip(u,v,false),(u,v)=>Vector3.down);
+                wing.Surface(orange,1,2,(u,v)=>Tip(Mix(.79f,.91f,u),v,true)+Vector3.up*.012f,(u,v)=>Vector3.up);
+                pod.Ring(amber,t=>Pod(side,Mix(-34.92f,-34.32f,t),1.34f,1.016f),.042f,1);
             }
         }
     }
