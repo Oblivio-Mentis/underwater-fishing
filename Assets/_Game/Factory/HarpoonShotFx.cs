@@ -44,8 +44,8 @@ namespace Raid
 #endif
 
         const int Segments=25;
-        static readonly Vector3 BoltTipLocal=new Vector3(0,.025f,.48f);
-        static readonly Vector3 BoltNockLocal=new Vector3(0,.025f,.19f);
+        Vector3 BoltTipLocal=new Vector3(0,.025f,.48f);
+        Vector3 BoltNockLocal=new Vector3(0,.025f,.19f);
         readonly Vector3[] points=new Vector3[Segments];
         HarpoonTool tool;
         bool worldView;
@@ -61,6 +61,8 @@ namespace Raid
         public void Initialize(HarpoonTool source,Transform muzzleAnchor,Transform template,Transform spool,Material fallback,bool worldView=false)
         {
             this.worldView=worldView;muzzle=muzzleAnchor;loadedBolt=template;reel=spool;
+            var rig=template.GetComponentInParent<HarpoonVisualRig>(true);
+            if (rig) { BoltTipLocal=rig.boltTipLocal; BoltNockLocal=rig.boltNockLocal; }
             flightRotation=muzzle.rotation;
             flightBolt=Instantiate(template,transform,false);flightBolt.name="Accepted-shot flying bolt";flightBolt.gameObject.SetActive(false);
             var go=new GameObject("Braided harpoon cable");go.transform.SetParent(transform,false);cable=go.AddComponent<LineRenderer>();

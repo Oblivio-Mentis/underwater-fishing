@@ -10,6 +10,7 @@ namespace Raid
     public sealed class HarpoonPresentation : MonoBehaviour
     {
         public Material steel,amber,dark,cyan;
+        [Tooltip("Shared by the owned camera, crew and dropped equipment.")] public HarpoonVisualRig weaponAppearance;
         const string ModelName="NEREID Harpoon / presentation";
         static readonly Vector3 RestPosition=new Vector3(.29f,-.245f,.53f);
         static HarpoonPresentation active;
@@ -41,6 +42,11 @@ namespace Raid
         {
             if(active!=null&&active!=this){enabled=false;return;}
             active=this;
+            if (!weaponAppearance)
+            {
+                var prefab=Resources.Load<GameObject>("ExpeditionHarpoon");
+                if (prefab) weaponAppearance=prefab.GetComponent<HarpoonVisualRig>();
+            }
         }
 
         void LateUpdate()
@@ -146,6 +152,13 @@ namespace Raid
         {
             hands=new DiveHands(owner.firstPersonAppearance,view.transform);
             model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
+            if (weaponAppearance && weaponAppearance.Ready)
+            {
+                var rig=Instantiate(weaponAppearance,model,false);
+                staticHousing=rig.housing;loadedBolt=rig.bolt;reel=rig.drum;slide=rig.slide;statusLamp=rig.lineLamp;
+                BindFirstPersonShot(rig.muzzle);
+                return;
+            }
             staticHousing=DiveOutfit.Pivot(model,"Pressure assembly",Vector3.zero);
             buildParent=staticHousing;
             // Four axial rings and an eight-sided profile bevel every receiver edge.
@@ -210,6 +223,11 @@ namespace Raid
             slide=new GameObject("Spring-loaded receiver slide").transform;slide.SetParent(model,false);
             Part("Bolt shuttle",BeveledBox(new Vector3(.032f,.014f,.07f),.003f),new Vector3(0,.073f,.06f),Quaternion.identity,steel,slide);
             var muzzle=new GameObject("Harpoon muzzle anchor").transform;muzzle.SetParent(model,false);muzzle.localPosition=new Vector3(0,.025f,.34f);
+            BindFirstPersonShot(muzzle);
+        }
+
+        void BindFirstPersonShot(Transform muzzle)
+        {
             var fx=new GameObject("Owned harpoon shot presentation");fx.transform.SetParent(view.transform,false);shotFx=fx.AddComponent<HarpoonShotFx>();
             shotFx.Initialize(tool,muzzle,loadedBolt,reel,steel);tool.ShotVisual+=OnAcceptedShot;
         }
@@ -219,6 +237,13 @@ namespace Raid
         internal bool MakeWorldModel(Transform worldGun,List<Mesh> worldMeshes,out Transform bolt,out Transform drum,out Transform muzzle,out Transform shuttle)
         {
             bolt=drum=muzzle=shuttle=null;
+            if (weaponAppearance && weaponAppearance.Ready)
+            {
+                var rig=Instantiate(weaponAppearance,worldGun,false);
+                bolt=rig.bolt;drum=rig.drum;muzzle=rig.muzzle;shuttle=rig.slide;
+                if (rig.lineLamp) rig.lineLamp.enabled=false;
+                return true;
+            }
             if(staticHousing==null || loadedBolt==null || slide==null)return false;
             CopyRigidGroup(staticHousing,worldGun,worldMeshes);
             bolt=CopyRigidGroup(loadedBolt,worldGun,worldMeshes);

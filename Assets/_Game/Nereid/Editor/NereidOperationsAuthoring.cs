@@ -39,6 +39,24 @@ namespace Raid.Nereid.Editor
             Fit(layout, NereidRoomRole.Cargo, ShipConsoleKind.CargoControl);
             foreach (var station in Object.FindObjectsByType<ShipConsole>())
                 if (!station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
+            var factory = Object.FindAnyObjectByType<Factory.FactoryVisuals>();
+            if (factory)
+            {
+                foreach (var label in factory.GetComponentsInChildren<TMP_Text>(true))
+                    if (label.text == "ЦЕХ ПЕРЕРАБОТКИ" || label.text == "ПЕРЕРАБОТЧИК")
+                        label.gameObject.SetActive(false);
+            }
+            var weapon = Resources.Load<GameObject>("ExpeditionHarpoon");
+            if (weapon && weapon.TryGetComponent<HarpoonVisualRig>(out var rig))
+            {
+                var display = Object.FindAnyObjectByType<HarpoonPresentation>();
+                if (display && !display.weaponAppearance)
+                {
+                    display.weaponAppearance=rig;
+                    EditorUtility.SetDirty(display);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(display);
+                }
+            }
             var oldScreens = vessel.GetComponent<NereidShipScreens>();
             if (oldScreens) oldScreens.enabled = false;
             EditorSceneManager.MarkSceneDirty(scene);
