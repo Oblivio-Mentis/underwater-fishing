@@ -42,7 +42,7 @@ namespace Raid.Editor
                 fish.GetComponent<Renderer>().sharedMaterial=AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Materials/Tank.mat");
                 var actor=FishingAuthoring.ConfigureFish(fish,fishing,large?1.5f*tier:1f*tier);
                 actor.depthTier=tier; actor.fishId=large?"Bristlefish":"Lanternfish";
-                actor.biomass=large?6*tier:3*tier; actor.chitin=tier==2?(large?3:1):0;
+                actor.biomass=large?6*tier:3*tier; actor.chitin=large?(tier==2?3:2):1;
                 actor.offering=large?6:3; actor.cargoSize=large?3:1;
                 var tail=GameObject.CreatePrimitive(PrimitiveType.Cube);tail.name="Tail";tail.transform.SetParent(fish.transform,false);
                 tail.transform.localPosition=new Vector3(0,0,-.65f);tail.transform.localScale=new Vector3(.1f,.65f,.4f);

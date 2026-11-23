@@ -164,7 +164,7 @@ namespace Raid
                     offeringPoints == required ? FeedingOutcome.Enough : FeedingOutcome.Overfed };
             bool ready=rationCyclesUntilReady==0;
             if(!ready)rationCyclesUntilReady--;
-            if(ready && (report.outcome is FeedingOutcome.None or FeedingOutcome.Underfed) && HasTeamLine(SkillLine.PreparedRation))
+            if(ready && report.Attack && HasTeamLine(SkillLine.PreparedRation))
             {
                 report.mitigation=TeamFactor(SkillLine.PreparedRation);
                 rationCyclesUntilReady=2;
