@@ -25,7 +25,7 @@ namespace Raid.Nereid.Editor
             // The game draws rooms in half-scale hull coordinates and the operating doors in metres.
             FitBulkhead("EquipmentRoom","Machinery passage",new Vector3(0,0,3.89f),0,3.08f,5.44f,false);
             FitBulkhead("AftTransfer","Pump room passage",new Vector3(0,0,3.92f),0,3.76f,5.44f,false);
-            FitBulkhead("CompanionBerth","Berth entrance",new Vector3(-.31f,0,.31f),90,1.47f,2.78f,true);
+            FitBulkhead("CompanionBerth","Berth entrance",new Vector3(-.55f,0,.31f),90,1.47f,2.78f,true);
         }
 
         static Transform Group(Transform parent,string label)
@@ -81,7 +81,7 @@ namespace Raid.Nereid.Editor
             var existing=room.Find(label);
             if(existing)
             {
-                if(berth) BerthCanopy(existing,half,top);
+                if(berth) {existing.localPosition=offset; BerthCanopy(existing,half,top);}
                 return;
             }
             var door=Group(room,label);door.SetLocalPositionAndRotation(offset,Quaternion.Euler(0,yaw,0));
@@ -163,9 +163,11 @@ namespace Raid.Nereid.Editor
         static void BerthCanopy(Transform entry,float half,float top)
         {
             const string name="Berth shelter return";
-            if(entry.Find(name)) return;
+            var fitted=entry.Find(name);
+            if(fitted) { fitted.localScale=new Vector3(1,1,3.52f/3.04f); return; }
             var c=new ShipSectionMesh(entry,Vector3.zero,name,Vector3.zero);
             const float depth=3.04f;
+            c.node.localScale=new Vector3(1,1,3.52f/depth);
             c.Box(Blue,new(0,top+.14f,depth*.5f),new(half*2+.24f,.20f,depth),default,.16f);
             foreach(int side in new[]{-1,1})
             {

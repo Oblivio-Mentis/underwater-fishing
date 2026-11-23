@@ -48,7 +48,7 @@ namespace Raid.Nereid
         bool Occupied(RaidWorld world)
         {
             foreach (var diver in DiverMotor.ServerDivers)
-                if (diver && Approaching(diver.transform.position)) return true;
+                if (diver && !diver.IsConsumed && Approaching(diver.transform.position)) return true;
             var pet = world.Gosha;
             if (pet.Active && Approaching(pet.Position)) return true;
             return world.threats && world.threats.WaveActive && Approaching(world.threats.WavePosition);
@@ -57,7 +57,7 @@ namespace Raid.Nereid
         void Update()
         {
             var world = RaidWorld.Instance;
-            if (!world || (!world.IsServerInitialized && !world.IsClientInitialized))
+            if (world == null || world.NetworkObject == null || (!world.IsServerInitialized && !world.IsClientInitialized))
             {
                 lastApproach = double.NegativeInfinity;
                 return;
