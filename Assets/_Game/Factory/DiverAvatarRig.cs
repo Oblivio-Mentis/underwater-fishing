@@ -42,14 +42,30 @@ namespace Raid
         public Renderer leftSleeve, rightSleeve;
 
         [Header("First-person hand targets")]
+        [Tooltip("Camera-space resting position of the right shoulder. The left arm mirrors X.")]
+        public Vector3 shoulderOrigin = new Vector3(.18f, -.19f, .045f);
+        [Tooltip("Forward travel of the shoulder girdle when reaching for a distant target (metres).")]
+        [Range(0, .08f)] public float shoulderTravel = .045f;
         [Tooltip("Camera-space resting position of the right wrist. The left wrist mirrors X.")]
-        public Vector3 restingWrist = new Vector3(.24f, -.215f, .43f);
+        public Vector3 restingWrist = new Vector3(.22f, -.215f, .37f);
         [Tooltip("Weapon-space wrist position and rotation while supporting the barrel.")]
         public Vector3 supportWrist = new Vector3(-.038f, -.057f, .116f);
         public Vector3 supportAngles = new Vector3(-14, 28, 50);
         [Tooltip("Weapon-space wrist position and rotation while holding the trigger grip.")]
         public Vector3 triggerWrist = new Vector3(.055f, -.132f, -.097f);
         public Vector3 triggerAngles = new Vector3(-37, -39, -70);
+        [Header("First-person held objects (camera space)")]
+        public Vector3 harpoonHip = new(.15f, -.17f, .352f), harpoonAim = new(0, -.135f, .35f);
+        public Vector3 ballRest = new(.05f, -.16f, .43f), ballWind = new(.22f, -.065f, .352f);
+        [Tooltip("Wrist positions relative to the surface model's centre while cradling the ball.")]
+        public Vector3 ballSupportWrist = new(-.1395f, -.0603f, -.1433f), ballThrowWrist = new(.1283f, -.0555f, -.1318f);
+        public Vector3 ballSupportAngles = new(-26.4f, -33.54f, 97.94f), ballThrowAngles = new(-21.95f, 35.22f, -95.63f);
+        [Range(.15f, .65f)] public float salvageScale = .31f;
+        [Tooltip("Right wrist offset from the salvage socket. The left wrist mirrors X.")]
+        public Vector3 salvageWristOffset = new(.072f, .028f, -.034f);
+        public Vector3 cradleCenter = new(0, -.235f, .54f);
+        [Range(.4f, 1f)] public float cradleScale = .64f;
+
         [Tooltip("Optional local-space animation clips on the model hierarchy. Unkeyed bones follow the gameplay pose.")]
         public Motion[] motions = Array.Empty<Motion>();
 

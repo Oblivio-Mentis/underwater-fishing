@@ -29,7 +29,9 @@ namespace Raid.Nereid
                 LockRim(8.92f,3.58f,-1.46f,4.47f,.88f),
                 LockRim(9.71f,3.37f,-1.34f,4.31f,.82f)
             };
-            for(int i=1;i<shoulder.Length;i++)NereidFairing.Join(outer,shoulder[i-1],shoulder[i]);
+            bool castNose=authored && authored.seaAdapter;
+            int shoulderCount=castNose?shoulder.Length-1:shoulder.Length;
+            for(int i=1;i<shoulderCount;i++)NereidFairing.Join(outer,shoulder[i-1],shoulder[i]);
             NereidFairing.Seam(joining,shoulder[3],.040f);
             NereidFairing.Seam(joining,shoulder[5],.059f);
 
@@ -38,10 +40,13 @@ namespace Raid.Nereid
             var lip=LockRim(9.72f,2.80f,-.071f,4.06f,.47f);
             var back=LockRim(8.88f,2.67f,-.073f,3.92f,.36f);
             var opening=LockRim(8.87f,1.52f,-.028f,3.25f,.041f);
-            NereidFairing.Join(joining,shoulder[^1],lip);
-            NereidFairing.Join(throat,back,lip,true);
-            NereidFairing.Join(throat,back,opening);
-            NereidFairing.Seam(joining,lip,.042f);
+            if(!castNose)
+            {
+                NereidFairing.Join(joining,shoulder[^1],lip);
+                NereidFairing.Join(throat,back,lip,true);
+                NereidFairing.Join(throat,back,opening);
+                NereidFairing.Seam(joining,lip,.042f);
+            }
             foreach(int sign in new[]{-1,1})
             {
                 CollarTube(markers,new[]{new Vector3(9.69f,.63f,sign*2.91f),new Vector3(9.69f,.96f,sign*2.91f)},.034f);
@@ -69,7 +74,7 @@ namespace Raid.Nereid
             var porcelain=Metal("Silt-resistant docking ceramic",new Color(.48f,.56f,.54f),.42f);
             NereidSurfaceFinish.Apply(porcelain,NereidSurfaceFinish.Surface.Ceramic,exterior:true);
             FairingPart(hub,"Ceramic boarding surround and weld bands",joining,porcelain);
-            FairingPart(hub,"Recessed relief into the pressure doors",throat,steel);
+            if(!castNose) FairingPart(hub,"Recessed relief into the pressure doors",throat,steel);
             FairingPart(hub,"Caged amber door markers",markers,amber);
             FairingPart(hub,"Sloped dock cradle mounts",pipe,skin);
             FairingPart(hub,"Cast non-slip boarding platform",platform,skin);

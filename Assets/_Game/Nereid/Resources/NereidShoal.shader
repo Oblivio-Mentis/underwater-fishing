@@ -19,6 +19,7 @@ Shader "RAID/Nereid Decorative Shoal"
             #pragma multi_compile_instancing
             #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
@@ -64,7 +65,7 @@ Shader "RAID/Nereid Decorative Shoal"
 
             half4 Fragment(Output i):SV_Target
             {
-                half3 n=normalize(i.normal);
+                half3 n=FacetNormalWS(i.world,i.normal);
                 half3 v=SafeNormalize(GetWorldSpaceViewDir(i.world));
                 half3 overhead=half3(-.31,.91,-.26);
                 half belly=i.shade.x;

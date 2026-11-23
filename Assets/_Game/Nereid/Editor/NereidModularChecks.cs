@@ -31,6 +31,30 @@ namespace Raid.Nereid.Editor
             Check(launcher && launcher.weaponAppearance && launcher.weaponAppearance.Ready &&
                 Vector3.Distance(launcher.weaponAppearance.boltTipLocal,launcher.weaponAppearance.boltNockLocal)>.07f,
                 "First-person and world displays are bound to a prefab with a detachable spear and cable drum.");
+            var exhibit=layout.GetComponentsInChildren<Transform>().Single(t=>t.name=="Expedition equipment displays");
+            var suits=exhibit.GetComponentsInChildren<SkinnedMeshRenderer>();
+            var launchers=exhibit.GetComponentsInChildren<HarpoonVisualRig>();
+            Check(suits.Length>=4 && launchers.Length>=6,"Four crew suits and six expedition harpoons in the equipment room.");
+            Check(suits.All(s=>s.forceMeshLod>0 && s.sharedMesh.lodCount>s.forceMeshLod &&
+                  s.sharedMesh.GetIndexCount(0,s.forceMeshLod)<s.sharedMesh.GetIndexCount(0,0)),
+                "The displayed suits use a simplified rigged mesh.");
+            var paints=suits.SelectMany(s=>s.sharedMaterials).Concat(launchers.SelectMany(h=>h.GetComponentsInChildren<MeshRenderer>())
+                .SelectMany(r=>r.sharedMaterials)).Distinct();
+            Check(paints.All(m=>m && m.shader.name=="RAID/Faceted Expedition Equipment" && !m.HasProperty("_BaseMap")),
+                "Suit and harpoon surfaces are painted by solid part colours.");
+            var lockRig=layout.GetComponentInChildren<NereidPressureDoors>();
+            Check(lockRig && lockRig.controls.Length==4 && lockRig.controls.All(p=>p && p.GetComponent<Collider>()) &&
+                lockRig.controls.Select(p=>p.Id).Distinct().Count()==4 && lockRig.waterSurface &&
+                lockRig.waterSurface.GetComponent<MeshRenderer>().sharedMaterial.shader.name=="RAID/Pressure Lock Water",
+                "Editable pressure lock has four reach controls and a water surface.");
+            Check(new[]{lockRig.innerPort,lockRig.innerStarboard,lockRig.outerPort,lockRig.outerStarboard}.All(
+                t=>t && t.GetComponent<BoxCollider>() && t.GetComponent<MeshFilter>().sharedMesh),
+                "All four sliding leaves have a saved mesh and a physical seal.");
+            var passages=layout.GetComponentsInChildren<NereidPassageDoor>();
+            Check(passages.Length==2 && passages.Select(p=>p.passage).Distinct().Count()==2 &&
+                  passages.All(p=>p.portLeaf && p.starboardLeaf && p.portSeal && p.starboardSeal &&
+                                  p.portSeal.enabled && p.starboardSeal.enabled),
+                "The equipment room and pump room each have a pair of solid automatic doors.");
             var decks=Object.FindAnyObjectByType<NereidDeckNavigation>();
             Check(decks && decks.reservoirGlass && decks.reservoirGlass.enabled,"The reservoir floor has solid physical glass.");
             Check(decks.crewSpawns.All(s=>s && layout.ContainsSealed(s.position)),"Every crew spawn is in a dry compartment.");
@@ -38,6 +62,10 @@ namespace Raid.Nereid.Editor
             var rail=Object.FindAnyObjectByType<NereidCargoRail>();
             Check(rail && rail.Ready && rail.aquarium && !layout.ContainsSealed(rail.aquarium.position),"The aquarium below the floor is wet.");
             Check((rail.Point(0)-rail.Point(1)).sqrMagnitude>25,"The hoist connects distinct loading and unloading points.");
+            Check(rail.davit && rail.davit.bearing && rail.davit.innerBoom && rail.davit.flyJib && rail.davit.head &&
+                  rail.davit.drum && rail.davit.sheave, "The cargo basket is served by the articulated deck crane.");
+            var cargoClearance=TransitClearanceChecks.Cargo(rail);
+            Check(cargoClearance.Count==0,"Cargo route clearance: "+string.Join("; ",cargoClearance));
             var lines=Object.FindObjectsByType<NereidPipeRoute>();
             Check(lines.Length==3 && lines.Select(p=>p.line).Distinct().Count()==3,"Three uniquely assigned pipelines.");
             foreach(var line in lines)
@@ -46,11 +74,35 @@ namespace Raid.Nereid.Editor
                     line.line+" follows its destination socket.");
             }
             var instruments=layout.GetComponentsInChildren<NereidInstrument>();
-            Check(instruments.Length==6 && Object.FindObjectsByType<ShipConsole>().Length==6,"Six active consoles without overlapping legacy stations.");
+            var stations=Object.FindObjectsByType<ShipConsole>();
+            Check(instruments.Length==3 && instruments.All(i=>i.console && i.console.IsMonitor) &&
+                  stations.Length==6 && stations.Select(s=>s.kind).Distinct().Count()==6,
+                "Three crew displays: reservoir, navigation and upgrades. Three action keys are independent.");
+            var discharge=stations.Single(s=>s.kind==ShipConsoleKind.Process);
+            var feeding=stations.Single(s=>s.kind==ShipConsoleKind.Feed);
+            var hallRoom=layout.Socket(NereidRoomRole.Reservoir).parent;
+            var separation=Vector3.Distance(discharge.screenAnchor.position,feeding.screenAnchor.position);
+            Check(discharge.transform.IsChildOf(hallRoom) && feeding.transform.IsChildOf(hallRoom) &&
+                  separation>.15f && separation<2f && !discharge.GetComponentInParent<NereidInstrument>() &&
+                  !feeding.GetComponentInParent<NereidInstrument>(),
+                "The two physical switches are adjacent in the aquarium hall, independent of display housings.");
+            var cargoKey=stations.Single(s=>s.kind==ShipConsoleKind.CargoControl);
+            Check(cargoKey.dispatchButton && cargoKey.dispatchButton.hitFace && !cargoKey.GetComponent<NereidInstrument>(),
+                "The internal hoist control has a pressable cap without a screen.");
             Physics.SyncTransforms();
-            foreach(var instrument in instruments)
+            CheckBulkheads(layout.transform,passages.Single(p=>p.passage==PassageId.Pump).transform,lockRig.transform);
+            var centre=(discharge.screenAnchor.position+feeding.screenAnchor.position)*.5f;
+            var operatorEye=centre-(discharge.screenAnchor.forward+feeding.screenAnchor.forward).normalized*1.25f;
+            foreach(var line in new[]{discharge,feeding})
             {
-                var console=instrument.console; var face=console.screenAnchor;
+                var direction=line.screenAnchor.position-operatorEye;
+                Check(Physics.Raycast(operatorEye,direction,out var hit,direction.magnitude+.15f,
+                    Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) && hit.collider==line.dispatchButton.hitFace,
+                    "Both keys are independently reachable from the same standing position: "+line.kind);
+            }
+            foreach(var console in stations)
+            {
+                var face=console.screenAnchor;
                 var eye=face.position-face.forward*1.65f;
                 Check(layout.ContainsSealed(eye),"Dry operator position at "+console.kind);
                 bool hit=Physics.Raycast(eye,face.forward,out var contact,1.85f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
@@ -63,7 +115,7 @@ namespace Raid.Nereid.Editor
                 if(!EditorSceneManager.SaveScene(scene,temporary,true)) throw new IOException(temporary);
                 var clone=EditorSceneManager.OpenScene(temporary);
                 var copy=Object.FindAnyObjectByType<NereidShipLayout>();
-                var monitor=copy.GetComponentsInChildren<NereidInstrument>().First(s=>s.console.kind==ShipConsoleKind.Reservoir);
+                var monitor=copy.GetComponentsInChildren<NereidInstrument>().First(s=>s.console && s.console.kind==ShipConsoleKind.Reservoir);
                 monitor.transform.localPosition+=Vector3.right*.19f;
                 var p=Object.FindObjectsByType<NereidPipeRoute>().First(l=>l.line==PipeLine.Process);
                 var knot=p.knots[1];knot.position+=new Vector3(.13f,.27f,-.22f);p.knots[1]=knot;p.Rebuild();
@@ -79,13 +131,40 @@ namespace Raid.Nereid.Editor
                 EditorSceneManager.OpenScene(temporary);
                 r=Object.FindAnyObjectByType<NereidCargoRail>();
                 p=Object.FindObjectsByType<NereidPipeRoute>().First(l=>l.line==PipeLine.Process);
-                monitor=Object.FindObjectsByType<NereidInstrument>().First(s=>s.console.kind==ShipConsoleKind.Reservoir);
+                monitor=Object.FindObjectsByType<NereidInstrument>().First(s=>s.console && s.console.kind==ShipConsoleKind.Reservoir);
                 Check(Vector3.Distance(monitor.transform.position,monitorPosition)<.001f &&
                     Vector3.Distance(p.knots[1].position,knot.position)<.001f && Vector3.Distance(r.Point(0),berth)<.001f,
                     "Moved monitor, pipe bend and loading berth survived saving and reopening a scene.");
             }
             finally { EditorSceneManager.OpenScene(ScenePath);AssetDatabase.DeleteAsset(temporary); }
             Debug.Log("[NEREID MODULAR QA] PASSED");
+        }
+
+        static void CheckBulkheads(Transform hull,Transform pump,Transform sea)
+        {
+            bool Covered(Transform root,Vector3 origin,Vector3 direction,float distance)
+            {
+                return Physics.RaycastAll(origin,direction,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)
+                    .Any(hit=>hit.collider is MeshCollider solid && solid.transform.IsChildOf(root) &&
+                         solid.TryGetComponent<MeshFilter>(out var face) && face.sharedMesh && face.sharedMesh==solid.sharedMesh);
+            }
+            bool BothFaces(Transform frame,Vector3 point,Vector3 normal,float reach)
+            {
+                var p=frame.TransformPoint(point);
+                var d=frame.TransformDirection(normal);
+                return Covered(frame,p-d*reach,d,2*reach) && Covered(frame,p+d*reach,-d,2*reach);
+            }
+            var roof=from x in new[]{-10f,-7.1f,-3.7f,0,3.7f,7.1f,10f}
+                     from y in new[]{7.58f,8.2f,8.92f} select new Vector3(x,y,.10f);
+            Check(roof.All(p=>BothFaces(pump,p,Vector3.forward,1.09f)),"Pump room ceiling meets the partition on both faces.");
+            var crown=from z in new[]{-1.35f,-.68f,0,.68f,1.35f}
+                      from y in new[]{4.35f,4.57f,4.77f} select new Vector3(8.85f,y,z);
+            var cheeks=from z in new[]{-3.43f,3.43f} from y in new[]{1.62f,2.04f,2.42f} select new Vector3(8.78f,y,z);
+            Check(crown.Concat(cheeks).All(p=>BothFaces(sea,p,Vector3.right,1.20f)),"The sea gate joins the hull above and alongside the opening.");
+            var stairSides=from z in new[]{-21.38f,-22.21f,-23.03f,-23.80f,-24.50f} from sign in new[]{-1,1}
+                           let eye=hull.TransformPoint(new Vector3(-2.58f,2.86f+(-19.50f-z)*.72f,z))
+                           select Covered(hull,eye,sign*hull.right,3.25f);
+            Check(stairSides.All(p=>p),"The rising stairwell encloses both shoulders all the way to the bridge.");
         }
 
         static void Check(bool condition,string message)

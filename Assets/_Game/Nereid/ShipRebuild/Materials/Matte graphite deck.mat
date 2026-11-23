@@ -22,11 +22,7 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs:
-    - _SurfaceAtlas:
-        m_Texture: {fileID: 2800000, guid: de2bc536988c4e85a06f723ec72653c5, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
+    m_TexEnvs: []
     m_Ints: []
     m_Floats:
     - _DeckTread: 1
@@ -35,8 +31,5 @@ Material:
     - _Smoothness: 0.28
     m_Colors:
     - _BaseColor: {r: 0.25, g: 0.29, b: 0.32, a: 1}
-    - _SurfaceDetail: {r: 0.053, g: 0.65, b: 0.012, a: 1}
-    - _SurfaceRegion: {r: 0.019, g: 0.074, b: 0.962, a: 0.412}
-    - _SurfaceTiling: {r: 0.38, g: 0.67, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

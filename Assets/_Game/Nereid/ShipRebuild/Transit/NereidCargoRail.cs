@@ -16,6 +16,7 @@ namespace Raid.Nereid
         public RailStop[] stops = Array.Empty<RailStop>();
         public Transform hatch, leftDoor, rightDoor, traveller, cageAnchor;
         public ProgressionTuning timings;
+        public NereidCargoDavit davit;
         public Transform[] trackBeams = Array.Empty<Transform>();
         public Transform[] trackSupports = Array.Empty<Transform>();
         public Transform[] wheels = Array.Empty<Transform>();
@@ -23,6 +24,10 @@ namespace Raid.Nereid
         public Vector2 aperture = new(4.8f,4.8f);
         public Vector3 cageCentreMetres = new(.12f,.38f,0);
         public Vector3 cageDimensionsMetres = new(4.2f,2.97f,3.7f);
+        [Tooltip("Distance in metres between the leading cage edge and the hatch opening where the shutters start moving.")]
+        [Min(.1f)] public float hatchWarningDistance=13f;
+        [Tooltip("The aperture is fully open while any part of the cargo footprint is inside this approach margin in metres.")]
+        [Min(0)] public float hatchHoldDistance=2.4f;
         [Min(.2f)] public float craneAboveHatch = 2.4f;
         [Min(.01f)] public float beamWidth = .15f;
         public Vector3 leftClosed, rightClosed;
@@ -43,6 +48,7 @@ namespace Raid.Nereid
         }
 
         MaterialPropertyBlock block;
+        static readonly int BaseColor=Shader.PropertyToID("_BaseColor");
         static readonly int Emission = Shader.PropertyToID("_EmissionColor");
 
         public Vector3 Point(float fraction)
@@ -84,10 +90,22 @@ namespace Raid.Nereid
 
         public float DoorAmount(Vector3 cage)
         {
-            var p=hatch.InverseTransformPoint(cage);
-            float clearance=Mathf.Max(Mathf.Abs(p.x)-aperture.x*.5f,Mathf.Abs(p.z)-aperture.y*.5f);
-            float approach=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.65f,3.1f,clearance));
-            float vertical=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.5f,4.7f,Mathf.Abs(p.y)));
+            // Use metres in hatch space: the first corner of a wide load triggers the lock.
+            // Both shutters and the visible cage use the same interpolated pose on each peer.
+            var centre=cage+transform.rotation*cageCentreMetres-hatch.position;
+            var half=cageDimensionsMetres*.5f;
+            float Gap(Vector3 axis,float opening)
+            {
+                float loadExtent=half.x*Mathf.Abs(Vector3.Dot(axis,transform.right))+
+                    half.y*Mathf.Abs(Vector3.Dot(axis,transform.up))+half.z*Mathf.Abs(Vector3.Dot(axis,transform.forward));
+                return Mathf.Abs(Vector3.Dot(centre,axis))-opening*.5f-loadExtent;
+            }
+            float fore=Gap(hatch.forward,hatch.TransformVector(Vector3.forward*aperture.y).magnitude);
+            float beam=Gap(hatch.right,hatch.TransformVector(Vector3.right*aperture.x).magnitude);
+            float horizontal=Mathf.Max(fore,beam);
+            float height=Gap(hatch.up,0);
+            float approach=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(hatchHoldDistance,Mathf.Max(hatchHoldDistance+.1f,hatchWarningDistance),horizontal));
+            float vertical=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(3.5f,10f,height));
             return approach*vertical;
         }
 
@@ -107,10 +125,11 @@ namespace Raid.Nereid
             float flow=phase==HoistPhase.Unloading ? Mathf.Sin(Mathf.PI*progress) : 0;
             if(inlet) inlet.SetFlow(flow);
             block??=new MaterialPropertyBlock();
-            Color signal=phase==HoistPhase.Loading ? new Color(.08f,.65f,.43f) :
+            Color signal=opening>=.998f ? new Color(.12f,.82f,.53f) :
+                opening<=.001f ? new Color(.08f,.23f,.27f) :
                 Color.Lerp(new Color(1,.27f,.025f),new Color(1,.65f,.13f),.5f+.5f*Mathf.Sin(Time.time*7));
             foreach(var lamp in signalLights)
-                if(lamp){lamp.GetPropertyBlock(block);block.SetColor(Emission,signal*2.4f);lamp.SetPropertyBlock(block);}
+                if(lamp){lamp.GetPropertyBlock(block);block.SetColor(BaseColor,signal);block.SetColor(Emission,signal*2.4f);lamp.SetPropertyBlock(block);}
         }
 
         void Update()

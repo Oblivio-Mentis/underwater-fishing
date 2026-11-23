@@ -148,6 +148,29 @@ namespace Raid.Nereid.Editor
             lamp.shadows=LightShadows.None;lamp.renderMode=LightRenderMode.Auto;
         }
 
+        // All fittings in a room kit share one standard URP/Lit atlas, including metal and emission.
+        internal void StorePalette(string path, Material atlas, IReadOnlyDictionary<Material,Vector2> swatches)
+        {
+            var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if(!mesh)
+            {
+                var swatchUV=new Vector2[vertices.Count];
+                var triangles=new List<int>();
+                for(int i=0;i<indices.Count;i++)
+                {
+                    Vector2 sample=swatches[finishes[i]];
+                    foreach(int v in indices[i])swatchUV[v]=sample;
+                    triangles.AddRange(indices[i]);
+                }
+                mesh=new Mesh{name=node.name,indexFormat=vertices.Count>65000?IndexFormat.UInt32:IndexFormat.UInt16};
+                mesh.SetVertices(vertices);mesh.uv=swatchUV;mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();
+                AssetDatabase.CreateAsset(mesh,path);
+            }
+            node.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+            var renderer=node.gameObject.AddComponent<MeshRenderer>();renderer.sharedMaterial=atlas;
+            renderer.shadowCastingMode=ShadowCastingMode.Off;
+        }
+
         internal void Store(string path)
         {
             if(vertices.Count==0)return;

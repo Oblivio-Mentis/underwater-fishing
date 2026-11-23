@@ -66,23 +66,31 @@ namespace Raid.Nereid.Editor
             for(int i=0;i<=count;i++)
             {
                 var at=rail.Point((float)i/count)+rail.transform.rotation*rail.cageCentreMetres;
+                if(rail.davit && !rail.davit.CanReach(rail.TrolleyPoint(rail.Point((float)i/count))))
+                    issues.Add("The deck crane cannot reach this recovery path. Move the pedestal or revise the route.");
                 var local=rail.hatch.InverseTransformPoint(at);
                 if(Mathf.Abs(local.y)*Mathf.Abs(rail.hatch.lossyScale.y)<half.y && Mathf.Abs(local.x)<rail.aperture.x && Mathf.Abs(local.z)<rail.aperture.y)
                 {
                     if(Mathf.Abs(local.x)*rail.hatch.lossyScale.x+half.x>roomX*.5f || Mathf.Abs(local.z)*rail.hatch.lossyScale.z+half.z>roomZ*.5f)
                         issues.Add("The cage clips the coaming at roof entry.");
                 }
+                // The terrain can be one mesh for an entire biome. Test the actual volume
+                // above the landing feet rather than that terrain collider's global peak.
+                const float footTolerance=.075f;
+                var aboveFeet=i==0?Physics.OverlapBox(at+rail.transform.up*(footTolerance*.5f),
+                    half-Vector3.up*(footTolerance*.5f),rail.transform.rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore):null;
                 foreach(var c in Physics.OverlapBox(at,half,rail.transform.rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                 {
                     if(c.gameObject.scene!=rail.gameObject.scene || MobileActor(c) || c.transform.IsChildOf(rail.transform) ||
                        (world && world.container && c.transform.IsChildOf(world.container)) || c.transform.IsChildOf(rail.hatch))continue;
                     // The landing feet bear on the seabed at the first stop.
-                    if(i==0 && c.bounds.max.y <= at.y-half.y+.075f) continue;
+                    if(i==0 && System.Array.IndexOf(aboveFeet,c)<0)continue;
                     issues.Add("Cargo clearance intersects · "+ColliderName(c));
                 }
                 foreach(var walk in walks)
                     if(walk.gameObject.scene==rail.gameObject.scene && walk.Intersects(at,half)) issues.Add("Cargo enters a crew passage · "+walk.name);
             }
+            issues.UnionWith(CargoRenderedInspection.Check(rail));
             return new List<string>(issues);
         }
     }

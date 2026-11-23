@@ -113,7 +113,9 @@ namespace Raid.Nereid.Editor
                 finally { Object.DestroyImmediate(assembly); }
             }
             if(prefab==null)throw new InvalidOperationException("NEREID prefab save failed");
+            NereidPressureDoorAuthoring.Install();
             CompletePressureFairings();
+            OceanEnvelopeAuthoring.Install();
             RetireOldShip(vessel);
             var result=(GameObject)PrefabUtility.InstantiatePrefab(prefab,vessel.transform);
             EditorSceneManager.MarkSceneDirty(vessel.gameObject.scene);
@@ -170,8 +172,7 @@ namespace Raid.Nereid.Editor
         {
             var lit=Shader.Find("Universal Render Pipeline/Lit");
             var coating=Resources.Load<Shader>("NereidHullCoating");
-            var atlas=Resources.Load<Texture2D>("NereidServiceFittings/Textures/T_Trim_01_BaseColor");
-            if(!lit||!coating||!atlas)throw new InvalidOperationException("NEREID requires URP and the imported service-fitting trim atlas.");
+            if(!lit||!coating)throw new InvalidOperationException("NEREID requires URP and the hull coating shader.");
             Material Make(string label,Color color,float metallic,float smooth,float glow=0,bool coat=false,bool floor=false,bool transparent=false)
             {
                 string path=Root+"/Materials/"+label+".mat";
@@ -180,10 +181,6 @@ namespace Raid.Nereid.Editor
                 m.SetColor("_BaseColor",color);m.SetFloat("_Metallic",metallic);m.SetFloat("_Smoothness",smooth);
                 if(coat)
                 {
-                    m.SetTexture("_SurfaceAtlas",atlas);
-                    m.SetVector("_SurfaceRegion",floor?new Vector4(.019f,.074f,.962f,.412f):new Vector4(.242f,.686f,.516f,.293f));
-                    m.SetVector("_SurfaceTiling",floor?new Vector4(.38f,.67f,0,0):new Vector4(.32f,.50f,0,0));
-                    m.SetVector("_SurfaceDetail",floor?new Vector4(.053f,.65f,.012f,1):new Vector4(.10f,.55f,.012f,1));
                     m.SetFloat("_Marine",label=="Atlantic blue pressure steel"?1:0);m.SetFloat("_DeckTread",floor?1:0);
                 }
                 if(transparent)
@@ -195,16 +192,16 @@ namespace Raid.Nereid.Editor
                 if(glow>0){m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",new Color(color.r,color.g,color.b)*glow);}
                 AssetDatabase.CreateAsset(m,path);return m;
             }
-            hull=Make("Atlantic blue pressure steel",new(.17f,.30f,.34f),.45f,.43f,coat:true);
-            dark=Make("Graphite forged frames",new(.105f,.14f,.16f),.40f,.36f,coat:true);
-            enamel=Make("Petrol marine enamel",new(.24f,.37f,.37f),.29f,.45f,coat:true);
-            ceramic=Make("Ivory ceramic panels",new(.50f,.56f,.52f),.24f,.50f,coat:true);
+            hull=Make("Atlantic blue pressure steel",new(0.155f,0.235f,0.255f),0.49f,0.34f,coat:true);
+            dark=Make("Graphite forged frames",new(0.13f,0.15f,0.155f),0.49f,0.31f,coat:true);
+            enamel=Make("Petrol marine enamel",new(0.205f,0.265f,0.265f),0.39f,0.34f,coat:true);
+            ceramic=Make("Ivory ceramic panels",new(0.375f,0.39f,0.365f),0.23f,0.37f,coat:true);
             deck=Make("Matte graphite deck",new(.25f,.29f,.32f),.19f,.28f,coat:true,floor:true);
-            steel=Make("Machined titanium",new(.44f,.51f,.53f),.68f,.55f);
-            ochre=Make("Rescue ochre",new(.84f,.445f,.10f),.28f,.39f,coat:true);
-            warm=Make("Amber work light",new(1,.66f,.30f),.02f,.44f,2.2f);
-            cyan=Make("Reservoir teal light",new(.22f,.87f,.93f),.01f,.45f,1.9f);
-            alarm=Make("Containment signal",new(1,.23f,.075f),.05f,.37f,2.1f);
+            steel=Make("Machined titanium",new(0.365f,0.385f,0.39f),0.72f,0.42f);
+            ochre=Make("Rescue ochre",new(0.64f,0.375f,0.14f),0.3f,0.33f,coat:true);
+            warm=Make("Amber work light",new(0.97f,0.72f,0.445f),0.02f,0.44f,1.56f);
+            cyan=Make("Reservoir teal light",new(0.43f,0.68f,0.69f),0.015f,0.42f,1.18f);
+            alarm=Make("Containment signal",new(0.78f,0.24f,0.13f),0.08f,0.33f,1.46f);
             rubber=Make("Reinforced hose rubber",new(.040f,.063f,.068f),.04f,.27f);
             glass=Make("Laminated observation glass",new(.22f,.58f,.64f,.13f),.06f,.82f,transparent:true);
             water=Make("Aquarium immersion tint",new(.07f,.62f,.70f,.10f),.03f,.62f,transparent:true);

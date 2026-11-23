@@ -246,9 +246,14 @@ namespace Raid.UI
             if (prompt.Length == 0 && context.Harpoon != null && context.Harpoon.SelectedItem(out _) != DroppedKind.None)
                 prompt="Q — Положить выбранный предмет";
             var chamber=Nereid.NereidAirlock.Active;
-            if(prompt.Length==0 && chamber!=null && chamber.Contains(player.transform.position) && context.World.Airlock.Busy)
+            if(prompt.Length==0 && chamber!=null && chamber.Contains(player.transform.position))
             {
-                prompt=context.World.Airlock.Caption;detail="Вода   "+Mathf.RoundToInt(context.World.Airlock.Water*100)+"%";color=UiTheme.Cyan;
+                var lockState=context.World.Airlock;
+                prompt=lockState.Caption;
+                detail=lockState.Busy ? "Вода   "+Mathf.RoundToInt(lockState.Water*100)+"%"
+                    : lockState.Phase==AirlockPhase.InnerOpen ? "Выход в море · голубая кнопка у наружной двери"
+                    : "Возврат на борт · янтарная кнопка у внутренней двери";
+                color=UiTheme.Cyan;
             }
             float rescue=context.Rescue==null?0:context.Rescue.DisplayProgress;
             int target=context.Rescue==null?-1:context.Rescue.DisplayTargetOwnerId;

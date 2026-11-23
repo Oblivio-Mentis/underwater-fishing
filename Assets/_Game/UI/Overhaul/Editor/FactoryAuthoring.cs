@@ -64,8 +64,9 @@ namespace Raid.UI.Editor
             orange=Mat("Batch amber emission",new Color(.95f,.37f,.06f),.2f,.3f,2);
             glass=FlowMat("Process flow glass",new Color(.13f,.3f,.35f,.24f),new Color(.2f,.46f,.5f));
             feedGlass=FlowMat("Feeding flow glass",new Color(.28f,.24f,.18f,.24f),new Color(.52f,.42f,.26f));
-            steel.SetTexture("_BaseMap",Texture("Steel grain",false));rubber.SetTexture("_BaseMap",Texture("Rubber tread",true));
-            steel.SetTextureScale("_BaseMap",new Vector2(1.3f,1.3f));EditorUtility.SetDirty(steel);EditorUtility.SetDirty(rubber);
+            steel.SetTexture("_BaseMap",null);
+            rubber.SetTexture("_BaseMap",ConveyorBand());
+            EditorUtility.SetDirty(steel);EditorUtility.SetDirty(rubber);
         }
 
         static void BuildTank(Transform root,Raid.Factory.FactoryVisuals runtime)
@@ -545,19 +546,26 @@ namespace Raid.UI.Editor
             mat.SetFloat("_Smoothness",smoothness);mat.SetFloat("_DetailStrength",detail);mat.SetFloat("_CavityDepth",name=="Living mouth skin"?0:1);
             EditorUtility.SetDirty(mat);return mat;
         }
-        static Texture2D Texture(string name,bool tread)
+        public static Texture2D ConveyorBand()
         {
-            string path=AssetsPath+"/"+name.Replace(' ','_')+".asset";var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);bool create=texture==null;
-            if(create)texture=new Texture2D(64,64,TextureFormat.RGBA32,true){name=name};else texture.Reinitialize(64,64,TextureFormat.RGBA32,true);
-            texture.wrapMode=TextureWrapMode.Repeat;texture.filterMode=FilterMode.Trilinear;texture.anisoLevel=4;
-            var pixels=new Color[64*64];var random=new System.Random(117);
-            for(int y=0;y<64;y++)for(int x=0;x<64;x++)
+            const string path=AssetsPath+"/Rubber_tread.asset";
+            var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            bool create=texture==null;
+            if(create) texture=new Texture2D(1,16,TextureFormat.RGBA32,true){name="Rubber_tread"};
+            else texture.Reinitialize(1,16,TextureFormat.RGBA32,true);
+            texture.wrapMode=TextureWrapMode.Repeat;
+            texture.filterMode=FilterMode.Trilinear;
+            for(int y=0;y<16;y++)
             {
-                float v=tread?(y%16<3?.35f:.8f):.94f+Mathf.Sin(y*.7f)*.008f+((float)random.NextDouble()-.5f)*.009f;
-                pixels[y*64+x]=new Color(v,v,v,1);
+                byte shade=(byte)(y<3?155:235);
+                texture.SetPixel(0,y,new Color32(shade,shade,shade,255));
             }
-            texture.SetPixels(pixels);texture.Apply();if(create)AssetDatabase.CreateAsset(texture,path);else EditorUtility.SetDirty(texture);return texture;
+            texture.Apply();
+            if(create) AssetDatabase.CreateAsset(texture,path);
+            else EditorUtility.SetDirty(texture);
+            return texture;
         }
+
         static void EnsureFolder(string path)
         {if(AssetDatabase.IsValidFolder(path))return;string parent=System.IO.Path.GetDirectoryName(path).Replace('\\','/');EnsureFolder(parent);AssetDatabase.CreateFolder(parent,System.IO.Path.GetFileName(path));}
         static GameObject FindInScene(string name)

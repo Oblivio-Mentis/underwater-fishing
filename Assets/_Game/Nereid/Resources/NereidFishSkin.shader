@@ -20,6 +20,7 @@ Shader "RAID/Nereid Wet Fauna"
             #pragma fragment frag
             #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
@@ -37,16 +38,14 @@ Shader "RAID/Nereid Wet Fauna"
             }
             half4 frag(V i):SV_Target
             {
-                half3 n=normalize(i.normal);
+                half3 n=FacetNormalWS(i.world,i.normal);
                 half3 nOS=normalize(i.modelNormal);
                 half3 v=SafeNormalize(GetWorldSpaceViewDir(i.world));
                 Light key=GetMainLight();
                 half face=saturate(abs(dot(v,n))), edge=(1.-face)*(1.-face);
-                // Broad mottling stays attached to the fish as it banks past the lamp.
-                // It changes the scale coat only, leaving the actual body and caudal surfaces intact.
-                half field=sin(i.model.z*22+6.5*abs(i.model.x)+1.1*sin(i.model.x*17));
-                half scaleCoat=smoothstep(-.30,.82,field)*(.54+.46*saturate(n.y));
-                half3 base=_BaseColor.rgb*(1+_PatternStrength*(.27*scaleCoat-.07));
+                // Broad flank markings follow the same species through every stage of the catch.
+                half flank=smoothstep(-.18,.18,cos(i.model.z*6.5+abs(i.model.x)*1.8));
+                half3 base=_BaseColor.rgb*(1.+_PatternStrength*(.18*flank-.06));
                 // Countershading from the object normal: a cool dorsal surface, a warmer, paler underside.
                 half belly=smoothstep(-.15,.75,-nOS.y);
                 base*=lerp(half3(.88,.96,1.07),half3(1.14,1.05,.94)*(1.+.16*belly),belly);
@@ -57,7 +56,7 @@ Shader "RAID/Nereid Wet Fauna"
                 half3 beam=NereidBeam(i.world)*_NereidTurbidity*half3(.83,.95,1.);
                 // Soft wet specular: a broad sheen plus a tighter glint over the scale coat.
                 half nh=saturate(dot(n,normalize(key.direction+v)));
-                half keySheen=pow(nh,9)*.045+pow(nh,34)*(.055+.10*scaleCoat*_PatternStrength);
+                half keySheen=pow(nh,9)*.045+pow(nh,34)*(.045+.035*flank*_PatternStrength);
                 body+=_RimColor.rgb*key.color*keySheen*_Smoothness*1.6;
                 // Thin membranes and fin edges pick up a light rim where the surface turns away.
                 half finRim=pow(1.-face,3.)*saturate(.6+.4*dot(n,half3(0,1,0)));

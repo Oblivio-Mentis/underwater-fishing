@@ -12,18 +12,26 @@ namespace Raid.Nereid
         readonly Transform[,] leaves=new Transform[2,2];
         readonly AirlockPad[] pads=new AirlockPad[4];
         readonly List<Material> owned=new();
+        Light chamberKey,chamberFill;
+        static readonly Color DryKey=new(1,.78f,.52f), WetKey=new(.21f,.65f,.76f);
+        static readonly Color DryFill=new(.42f,.67f,.81f), WetFill=new(.17f,.58f,.67f);
         Material steel, charcoal, trim, paint, amber, cold, signal, floor;
         Transform surface, gauge, impeller;
+        NereidPressureDoors authored;
+        float Level => authored ? Mathf.Lerp(authored.emptyLevel,authored.fullLevel,water) : Mathf.Lerp(-.12f,Height+.05f,water);
         Mesh pressurePlate;
         PressureTransferFlow transfer;
         AirlockWaterVfx waterVfx;
         TMP_Text display;
         float water,shownInner=1,shownOuter;
-        public float WaterHeight => transform.position.y+Mathf.Lerp(-.12f,Height+.05f,water);
+        bool receivedDoorPose;
+        public float WaterHeight => transform.TransformPoint(Vector3.up*Level).y;
         public AirlockPad GetPad(int index) => index>=0&&index<pads.Length?pads[index]:null;
 
         public static NereidAirlock Install(Transform hull)
         {
+            var doors=hull.GetComponentInChildren<NereidPressureDoors>();
+            if(doors) return doors.gameObject.AddComponent<NereidAirlock>();
             var go=new GameObject("Stern pressure lock");
             go.transform.SetPositionAndRotation(hull.TransformPoint(new Vector3(5.95f,0,-14)),hull.rotation);
             go.transform.SetParent(hull,true);
@@ -44,14 +52,24 @@ namespace Raid.Nereid
             NereidSurfaceFinish.Apply(steel,NereidSurfaceFinish.Surface.Enamel);
             NereidSurfaceFinish.Apply(trim,NereidSurfaceFinish.Surface.Ceramic);
             NereidSurfaceFinish.Apply(floor,NereidSurfaceFinish.Surface.Deck);
+            authored=GetComponent<NereidPressureDoors>();
+            if(authored) authored.Bind();
             BuildChamber();
             BuildGate(false);BuildGate(true);
-            BuildPad(0,false,-.39f,-1.92f,-1);
-            BuildPad(1,false,.39f,1.92f,1);
-            BuildPad(2,true,OuterX-.39f,-1.92f,-1);
-            BuildPad(3,true,OuterX+.39f,1.92f,1);
+            if(authored)
+            {
+                foreach(var pad in authored.controls) pads[pad.Id]=pad;
+            }
+            else
+            {
+                BuildPad(0,false,-.39f,-1.92f,-1);
+                BuildPad(1,false,.39f,1.92f,1);
+                BuildPad(2,true,OuterX-.39f,-1.92f,-1);
+                BuildPad(3,true,OuterX+.39f,1.92f,1);
+            }
             BuildMarineCollar();
-            BuildWater();
+            if(authored) surface=authored.waterSurface;
+            else BuildWater();
             if(surface!=null)transfer=PressureTransferFlow.Install(transform,surface.GetComponent<MeshRenderer>(),steel,charcoal,trim);
             waterVfx=AirlockWaterVfx.Install(transform);
             ApplyDoors(AirlockSnapshot.Dry);
@@ -95,11 +113,7 @@ namespace Raid.Nereid
 
         void BuildChamber()
         {
-            var pressedSteel=Metal("Embossed pressure inserts",new Color(.84f,.91f,.91f),.30f);
-            Rect tile=NereidSurfaceFinish.PressedPanelUv;
-            pressedSteel.SetTexture("_BaseMap",Resources.Load<Texture2D>(NereidSurfaceFinish.PanelAtlasPath));
-            pressedSteel.SetTextureScale("_BaseMap",tile.size);
-            pressedSteel.SetTextureOffset("_BaseMap",tile.position);
+            var pressedSteel=Metal("Pressed steel inserts",new Color(.32f,.37f,.39f),.27f);
             Lining("Pressure ceiling",new(OuterX*.5f,Height+.12f,0),new(OuterX+.32f,.26f,6.52f),steel,
                 Vector3.down,Vector3.right,Vector3.forward);
             Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),floor,
@@ -139,12 +153,12 @@ namespace Raid.Nereid
                     Box("Recessed inspection lens",new Vector3(x,Height-.31f,s*.47f),new Vector3(.147f,.023f,.61f),amber);
             }
             var lum=new GameObject("Amber chamber fill");lum.transform.SetParent(transform,false);lum.transform.localPosition=new Vector3(4.3f,3.25f,0);
-            var light=lum.AddComponent<Light>();light.type=LightType.Point;light.color=new Color(1,.78f,.52f);light.intensity=8;light.range=8;light.shadows=LightShadows.None;
+            chamberKey=lum.AddComponent<Light>();chamberKey.type=LightType.Point;chamberKey.color=DryKey;chamberKey.intensity=8;chamberKey.range=8;chamberKey.shadows=LightShadows.None;
             var wallLight=new GameObject("Cool reflected lock light").transform;
             wallLight.SetParent(transform,false);
             wallLight.localPosition=new(6.68f,2.81f,-1.43f);
-            var cool=wallLight.gameObject.AddComponent<Light>();cool.type=LightType.Point;
-            cool.color=new Color(.42f,.67f,.81f);cool.intensity=3.2f;cool.range=5.6f;cool.shadows=LightShadows.None;
+            chamberFill=wallLight.gameObject.AddComponent<Light>();chamberFill.type=LightType.Point;
+            chamberFill.color=DryFill;chamberFill.intensity=3.2f;chamberFill.range=5.6f;chamberFill.shadows=LightShadows.None;
             // A measured column and pump on the same wall give the surface a visible reference.
             Box("Level staff",new Vector3(4.35f,2,2.99f),new Vector3(.26f,3.85f,.1f),charcoal);
             for(int i=0;i<9;i++)Box("Staff graduation",new Vector3(4.36f,.21f+i*.44f,2.932f),new Vector3(i%2==0?.18f:.10f,.024f,.018f),trim);
@@ -158,6 +172,7 @@ namespace Raid.Nereid
 
         void BuildGate(bool outer)
         {
+            if(authored && (outer ? authored.seaFrame : authored.cabinFrame)) return;
             float x=outer?OuterX:0;int gate=outer?1:0;
             for(int s=-1;s<=1;s+=2)
             {
@@ -172,6 +187,7 @@ namespace Raid.Nereid
             if(outer)Lining("Sealed header",header,span,steel,Vector3.left,Vector3.forward,Vector3.up);
             else Box("Sealed header",header,span,steel,true);
             if(!outer)Box("Hatch crown seal",new Vector3(x,5.18f,0),new Vector3(.36f,2.1f,6.56f),steel,true);
+            if(authored)return;
             for(int side=0;side<2;side++)
             {
                 float sign=side==0?-1:1;
@@ -254,20 +270,36 @@ namespace Raid.Nereid
         void Update()
         {
             var w=RaidWorld.Instance;
-            if(w==null || w.NetworkObject==null || (!w.IsClientInitialized&&!w.IsServerInitialized))return;
+            if(w==null || w.NetworkObject==null || (!w.IsClientInitialized&&!w.IsServerInitialized))
+            {receivedDoorPose=false;return;}
             var s=w.Airlock;
-            if(!w.IsServerInitialized)
+            if(!w.IsServerInitialized && (!receivedDoorPose || (s.Outer>0 && shownInner>.001f) || (s.Inner>0 && shownOuter>.001f)))
+            {
+                // Late boarding and reconnect restore one coherent seal/water state before interpolating.
+                ApplyDoors(s);
+                receivedDoorPose=true;
+            }
+            else if(!w.IsServerInitialized)
             {
                 float step=Time.deltaTime*1.2f;
                 shownInner=Mathf.MoveTowards(shownInner,s.Inner,step);shownOuter=Mathf.MoveTowards(shownOuter,s.Outer,step);
                 PositionLeaves(0,shownInner);PositionLeaves(1,shownOuter);
             }
             water=w.IsServerInitialized?s.Water:Mathf.MoveTowards(water,s.Water,Time.deltaTime*.35f);
-            if(surface!=null){surface.gameObject.SetActive(water>.006f&&water<.997f);surface.localPosition=new Vector3(OuterX*.5f,Mathf.Lerp(-.12f,Height+.05f,water),0);}
+            if(surface!=null)
+            {
+                surface.gameObject.SetActive(water>.006f && water<.997f);
+                var position=surface.localPosition;
+                position.y=Level;
+                surface.localPosition=position;
+            }
+            chamberKey.color=Color.Lerp(DryKey,WetKey,water);
+            chamberFill.color=Color.Lerp(DryFill,WetFill,water);
+            chamberFill.intensity=Mathf.Lerp(3.2f,7.8f,water);
             gauge.localPosition=new Vector3(4.34f,Mathf.Lerp(.19f,3.8f,water),2.9f);
             bool running=s.Phase==AirlockPhase.Flooding||s.Phase==AirlockPhase.Draining;
             if(transfer!=null)transfer.Present(s.Phase,surface.localPosition.y);
-            if(waterVfx!=null)waterVfx.Present(s.Phase,surface.localPosition.y);
+            if(waterVfx!=null)waterVfx.Present(s.Phase,Level);
             if(running)impeller.Rotate(0,0,Time.deltaTime*240);
             if(display!=null)
             {
@@ -283,6 +315,7 @@ namespace Raid.Nereid
         }
         void PositionLeaves(int gate,float open)
         {
+            if(authored){authored.MoveGate(gate,open);return;}
             for(int i=0;i<2;i++)leaves[gate,i].localPosition=new Vector3(gate==0?0:OuterX,1.61f,(i==0?-1:1)*(HalfDoor*.5f+open*(HalfDoor+.11f)));
         }
         Transform Box(string label,Vector3 at,Vector3 scale,Material mat,bool solid=false,Transform parent=null)

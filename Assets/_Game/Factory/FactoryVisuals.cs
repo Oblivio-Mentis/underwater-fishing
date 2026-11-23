@@ -41,6 +41,7 @@ namespace Raid.Factory
         static readonly int FlowId=Shader.PropertyToID("_FlowActive");
 
         public bool IsPlaying => batchActive;
+        public bool IsProcessing => batchActive && !batchFeeding;
         public float Elapsed => batchActive?Mathf.Max(0,Time.time-batchStarted):0;
         public float Duration => FishSeconds+Mathf.Max(0,batchCount-1)*FishInterval;
 

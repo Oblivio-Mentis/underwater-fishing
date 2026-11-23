@@ -117,7 +117,7 @@ namespace Raid
             return true;
         }
 
-        internal static readonly Vector3 CameraCenter=new(0,-.27f,.82f);
+        internal static readonly Vector3 CameraCenter=new(0,-.25f,.48f);
         internal static readonly Vector3 ObserverCenter=new(0,.17f,.54f);
         internal Bounds MeshBounds => model.sharedMesh.bounds;
         internal Vector3 GloveOffset(int side,Vector3 scale)

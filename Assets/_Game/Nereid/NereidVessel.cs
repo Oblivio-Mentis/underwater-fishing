@@ -109,7 +109,9 @@ namespace Raid.Nereid
             basket.Meter(state.CargoUsed,state.Capacity(world.progression));
             basket.Present(state,HoistAnimation);
             if(hopper!=null)hopper.Present(state,HoistAnimation);
-            if(hoistCable!=null)
+            if(hasRail && authoredRail.davit)
+                authoredRail.davit.Present(authoredRail.TrolleyPoint(basket.CableSocket.position),basket.CableSocket.position,hoistCable);
+            else if(hoistCable!=null)
             {
                 var liftingEye=basket.CableSocket.position;
                 hoistCable.positionCount=3;

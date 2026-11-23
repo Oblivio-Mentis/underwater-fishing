@@ -10,6 +10,7 @@ namespace Raid
     {
         public ShipConsoleKind kind;
         public Transform screenAnchor;
+        public Nereid.NereidDispatchButton dispatchButton;
         public float range=3.2f;
         public float screenScale=.0018f;
         [Tooltip("Visible display width and height in world metres.")]
@@ -43,6 +44,8 @@ namespace Raid
             if(!Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore))return null;
             var station=hit.collider.GetComponentInParent<ShipConsole>();
             if(station==null || station.kind==ShipConsoleKind.Workshop || !station.isActiveAndEnabled || !station.InRange(player))return null;
+            if(station.dispatchButton)
+                return hit.collider==station.dispatchButton.hitFace && Vector3.Dot(ray.direction,station.screenAnchor.forward)>.12f ? station : null;
             if(!station.IsMonitor)return station;
             var anchor=station.screenAnchor;
             if(anchor==null || Vector3.Dot(ray.direction,anchor.forward)<=.015f)return null;
@@ -58,6 +61,16 @@ namespace Raid
             var eye=diver.transform.position+Vector3.up*.6f;
             var station=ResolveSight(diver,new Ray(eye,diver.AimDirection));
             return station!=null && station.kind==kind && station.gameObject.scene==diver.gameObject.scene;
+        }
+
+        internal static bool CanPressAt(DiverMotor diver,ShipConsoleKind kind,Vector3 point)
+        {
+            if(!diver || diver.IsHelpless || diver.IsTrapped || !diver.IsInside)return false;
+            var eye=diver.transform.position+Vector3.up*.6f;
+            var offset=point-eye;
+            if(!(offset.sqrMagnitude>.0001f && offset.sqrMagnitude<16.9f))return false;
+            var station=ResolveSight(diver,new Ray(eye,offset.normalized));
+            return station && station.kind==kind && station.gameObject.scene==diver.gameObject.scene;
         }
 
         public bool Supports(WorldAction action)

@@ -189,10 +189,35 @@ namespace Raid
             Vector3 destination=state.hoistPhase==HoistPhase.Raising || state.hoistPhase==HoistPhase.Unloading?tuning.terminalPosition:CargoLoadingPosition;
             container.position=Vector3.MoveTowards(container.position,destination,Time.deltaTime*4);
         }
-        public void Command(WorldAction action,long id) { Act(action,id); }
-        public void RequestCommand(WorldAction action,long id,int requestId) { Act(action,id,requestId); }
+        static ShipConsoleKind? DispatchControl(WorldAction action) => action switch
+        {
+            WorldAction.Hoist => ShipConsoleKind.CargoControl,
+            WorldAction.SendProcessingDraft or WorldAction.StopProcessing => ShipConsoleKind.Process,
+            WorldAction.SendFeedingDraft or WorldAction.StopFeeding => ShipConsoleKind.Feed,
+            _ => null
+        };
+
+        public void Command(WorldAction action,long id) => RequestCommand(action,id,0);
+
+        public void RequestCommand(WorldAction action,long id,int requestId)
+        {
+            var pointedAt=Vector3.zero;
+            bool hasContact=false;
+            if(DispatchControl(action).HasValue)
+            {
+                var actor=NetworkManager.ClientManager.Connection?.FirstObject;
+                var camera=actor ? actor.GetComponentInChildren<Camera>() : null;
+                if(camera && Physics.Raycast(camera.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,
+                    4f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                {
+                    pointedAt=hit.point;
+                    hasContact=true;
+                }
+            }
+            Act(action,id,requestId,pointedAt,hasContact);
+        }
         [ServerRpc(RequireOwnership=false)]
-        private void Act(WorldAction action,long id,int requestId=0,NetworkConnection sender=null)
+        private void Act(WorldAction action,long id,int requestId,Vector3 pointedAt,bool hasContact,NetworkConnection sender=null)
         {
             if(sender==null || sender.FirstObject==null || team==null || !Enum.IsDefined(typeof(WorldAction),action)) return;
             if(transitionRemaining>0) { Respond(sender,requestId,false,"travel"); return; }
@@ -214,11 +239,19 @@ namespace Raid
             bool factory=Nereid.NereidVessel.Active!=null;
             if(factory && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
             {Respond(sender,requestId,false,"unavailable");return;}
-            if(factory && action==WorldAction.Hoist && !CargoDispatch.CanUse(diver) && !ShipConsole.CanUseKind(diver,ShipConsoleKind.CargoControl))
-            {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
-            if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
+            var switchKind=DispatchControl(action);
+            // A legacy hoist or the button on the submerged cage has no interior plunger to animate.
+            if(action==WorldAction.Hoist && (!factory || CargoDispatch.CanUse(diver))) switchKind=null;
+            if(switchKind.HasValue)
+            {
+                // Reliable click and its target travel together. Look/turn updates arrive on another tick.
+                if(!hasContact || !ShipConsole.CanPressAt(diver,switchKind.Value,pointedAt))
+                {Respond(sender,requestId,false,"range");return;}
+            }
+            else if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange))
+            { Respond(sender,requestId,false,"range"); return; }
             bool dispatch=action is WorldAction.SendFish or WorldAction.SendProcessingDraft or WorldAction.SendFeedingDraft;
             CatchDestination? dispatchDestination=action switch
             {
@@ -262,9 +295,23 @@ namespace Raid
                     break;
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
             }
-            if(success) { diver.ConfirmInteraction(); Publish(); Save(); }
+            if(success)
+            {
+                diver.ConfirmInteraction();
+                if(switchKind.HasValue) ShowDispatchPress(switchKind.Value,sender.ClientId);
+                Publish(); Save();
+            }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
             Respond(sender,requestId,success,success?"ok":"unavailable");
+        }
+        [ObserversRpc]
+        private void ShowDispatchPress(ShipConsoleKind kind,int operatorId)
+        {
+            // The operator starts their hand and cap together on input.
+            if(NetworkManager.ClientManager.Connection.ClientId==operatorId)return;
+            foreach(var station in ShipConsole.Stations)
+                if(station && station.kind==kind && station.gameObject.scene==gameObject.scene)
+                    station.GetComponent<Nereid.NereidDispatchButton>()?.Press(null);
         }
         [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
         internal bool LoadSelectedCargo(HarpoonTool tool,DroppedKind kind,long id)

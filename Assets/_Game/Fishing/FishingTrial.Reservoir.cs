@@ -9,7 +9,7 @@ namespace Raid
 {
     public sealed partial class FishingTrial
     {
-        IEnumerator ChooseReservoirRoutes(long[] catches)
+        IEnumerator ChooseReservoirRoutes(long[] catches,bool exerciseFeeder=false)
         {
             var ui=UiRoot.Instance;
             Phase("Stage fish through the real monitor and use the physical processor");
@@ -54,12 +54,22 @@ namespace Raid
             var processConsole=ShipConsole.Stations.First(s=>s.kind==ShipConsoleKind.Process);
             var processFace=processConsole.screenAnchor;
             host.Motor.Teleport(processFace.position-processFace.forward*1.16f-Vector3.up*.60f);
+            host.Motor.LookAtConsole(processFace.position-processFace.forward*3);
+            yield return Pause(.4f);
+            ui.Send(WorldAction.SendProcessingDraft,FishRouteQuote.ComputeDraft(world.Team.tank,CatchDestination.Process));
+            yield return Wait(()=>!ui.CommandPending,4,"Off-axis dispatch was not acknowledged.");
+            Require(!ui.LastCommandSucceeded && ui.LastCommandReason=="range" && !world.FishRoute.active,
+                "A diver looking away activated the physical processor.");
+            yield return Pause(.20f);
+            int beforePress=ReadClient().processingPresses;
             host.Motor.LookAtConsole(processFace.position);
             yield return Wait(()=>ShipConsole.ResolveSight(host.Motor,host.Motor.GetComponentInChildren<Camera>())==processConsole &&
                 ShipConsole.CanUse(host.Motor,WorldAction.SendProcessingDraft),6,"Could not aim at the physical processor button.");
             Require(ui.QaClickReticle(),"The physical processor did not react to LMB.");
-            yield return Wait(()=>big.dispatchCommitted && world.FishRoute.active && !world.FishRoute.feeding,
-                5,"The processor asked for a new selection instead of using its existing draft.");
+            yield return Wait(()=>big.dispatchCommitted || !ui.CommandPending,6,"The physical press did not receive a reply.");
+            Require(big.dispatchCommitted && world.FishRoute.active && !world.FishRoute.feeding,
+                "Processor did not use its staged fish. Server response: "+ui.LastCommandReason);
+            yield return Wait(()=>ReadClient()?.processingPresses==beforePress+1,4,"Other diver missed the physical processor press.");
             Require(!food.dispatchCommitted && food.destination==CatchDestination.Feed,
                 "The processor also dispatched the feeding draft.");
             yield return Wait(()=>!world.Team.tank.Exists(item=>item.id==big.id),30,"Assigned fish never reached the processor.");
@@ -87,32 +97,55 @@ namespace Raid
                 world.Team.tank.Exists(item=>item.id==catches[2]),
                 "The physical processor or mixed dispatch awarded the wrong amounts or touched an unassigned fish.");
             Check("Aquarium Send launches both draft routes once, and the unassigned fish remains in the tank.");
+            if(!exerciseFeeder) yield break;
+            host.Motor.Teleport(aim.position-aim.forward*1.65f-Vector3.up*.60f);
+            host.Motor.LookAtConsole(aim.position);
+            yield return Wait(()=>ui.QaPointAtMonitor() && ui.Page==UiPage.Terminal,5,"Aquarium did not regain focus.");
+            var retained=world.Team.tank.First(item=>item.id==catches[2]);
+            int finalOffer=world.Team.offeringPoints+world.Team.FoodValue(retained,world.progression);
+            yield return ClickReservoirControl("Feed_"+retained.id);
+            yield return Wait(()=>!ui.CommandPending && retained.destination==CatchDestination.Feed,5,"Feeding draft missing.");
+            var feeder=ShipConsole.Stations.First(s=>s.kind==ShipConsoleKind.Feed);
+            var face=feeder.screenAnchor;
+            host.Motor.Teleport(face.position-face.forward*1.16f-Vector3.up*.60f);
+            host.Motor.LookAtConsole(face.position);
+            yield return Wait(()=>ShipConsole.CanUseKind(host.Motor,ShipConsoleKind.Feed),5,"Feeding switch was occluded.");
+            int feedPresses=ReadClient().feedingPresses;
+            var hardware=feeder.GetComponent<Nereid.NereidDispatchButton>();
+            var released=hardware.cap.localPosition;
+            Require(ui.QaClickReticle(),"The physical feeding switch did not accept LMB.");
+            yield return Wait(()=>Vector3.Distance(hardware.cap.localPosition,released)>hardware.travel*.65f,2,"Feed switch failed to depress.");
+            yield return Shot("feeding-switch-pressed.png");
+            yield return Wait(()=>ReadClient()?.feedingPresses==feedPresses+1 && hardware.cap.localPosition==released,
+                5,"The feeding switch did not return or replicate its press.");
+            yield return Wait(()=>!world.Team.tank.Exists(x=>x.id==retained.id),30,"The physical feeder never delivered its selected fish.");
+            Require(world.Team.offeringPoints==finalOffer && world.Team.Treasury.Subtract(beforeTreasury).Equals(combined),
+                "Feeding produced the wrong reward.");
+            Check("Both physical switches activated under the reticle and replicated exactly once; the feed cap depressed and returned.");
         }
         IEnumerator ClickReservoirControl(string name)
         {
             var ui=UiRoot.Instance;
-            Button control=null;
             yield return Wait(()=>
             {
-                control=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name==name);
-                return control!=null && control.interactable;
-            },5,"No enabled aquarium control "+name);
-            var rect=(RectTransform)control.transform;
-            var list=control.GetComponentInParent<ScrollRect>();
-            if(list!=null)
-            {
-                Canvas.ForceUpdateCanvases();
-                float overflow=list.content.rect.height-list.viewport.rect.height;
-                if(overflow>0)
+                // A delivery may replace the visible rows while the owner is turning back
+                // towards the monitor. Follow the catch ID on the current snapshot.
+                var control=ui.GetComponentsInChildren<Button>().FirstOrDefault(button=>button.name==name && button.interactable);
+                if(!control)return false;
+                var rect=(RectTransform)control.transform;
+                var list=control.GetComponentInParent<ScrollRect>();
+                if(list)
                 {
-                    float depth=list.content.rect.yMax-list.content.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
-                    list.StopMovement();
-                    list.verticalNormalizedPosition=1-Mathf.Clamp01((depth-list.viewport.rect.height*.5f)/overflow);
+                    Canvas.ForceUpdateCanvases();
+                    float overflow=list.content.rect.height-list.viewport.rect.height;
+                    if(overflow>0)
+                    {
+                        float depth=list.content.rect.yMax-list.content.InverseTransformPoint(rect.TransformPoint(rect.rect.center)).y;
+                        list.StopMovement();
+                        list.verticalNormalizedPosition=1-Mathf.Clamp01((depth-list.viewport.rect.height*.5f)/overflow);
+                        Canvas.ForceUpdateCanvases();
+                    }
                 }
-                Canvas.ForceUpdateCanvases();
-            }
-            yield return Wait(()=>
-            {
                 host.Motor.LookAtConsole(rect.TransformPoint(rect.rect.center));
                 ui.QaScrollReticle(0);
                 return ui.ReticleControl==name;

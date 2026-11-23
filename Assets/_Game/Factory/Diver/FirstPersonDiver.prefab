@@ -78,6 +78,25 @@ MonoBehaviour:
     endBind: {x: 0.31199837, y: 0.48928243, z: 0.8143036, w: 0.0130211925}
   leftSleeve: {fileID: 1421253651760265266}
   rightSleeve: {fileID: 5657666711778879847}
+  shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
+  shoulderTravel: 0.045
+  restingWrist: {x: 0.22, y: -0.215, z: 0.37}
+  supportWrist: {x: -0.126, y: 0.018, z: 0.105}
+  supportAngles: {x: 30.55, y: 52.87, z: 157.55}
+  triggerWrist: {x: 0.059, y: -0.049, z: -0.249}
+  triggerAngles: {x: 1.9, y: -6.82, z: -90.95}
+  harpoonHip: {x: 0.15, y: -0.17, z: 0.352}
+  harpoonAim: {x: 0, y: -0.135, z: 0.35}
+  ballRest: {x: 0.05, y: -0.16, z: 0.43}
+  ballWind: {x: 0.22, y: -0.065, z: 0.352}
+  ballSupportWrist: {x: -0.1395, y: -0.0603, z: -0.1433}
+  ballThrowWrist: {x: 0.1283, y: -0.0555, z: -0.1318}
+  ballSupportAngles: {x: -26.4, y: -33.54, z: 97.94}
+  ballThrowAngles: {x: -21.95, y: 35.22, z: -95.63}
+  salvageScale: 0.31
+  salvageWristOffset: {x: 0.072, y: 0.028, z: -0.034}
+  cradleCenter: {x: 0, y: -0.235, z: 0.54}
+  cradleScale: 0.64
   motions:
   - action: 4
     clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
@@ -119,15 +138,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.x
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.y
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalScale.z
-      value: 1.219774
+      value: 1.7596723
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: b27f755ca96c52b4193dc5e753686fef, type: 3}
       propertyPath: m_LocalPosition.x

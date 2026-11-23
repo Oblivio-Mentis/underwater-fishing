@@ -127,7 +127,7 @@ namespace Raid.Nereid
                 {
                     var cam=eye==keeper?camera:null;
                     var anchor=cam==null?keeper.transform:cam.transform;
-                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):new Vector3(0,-.16f,.84f));
+                    at=anchor.TransformPoint(cam==null?new Vector3(0,.18f,.48f):keeper.firstPersonAppearance.cradleCenter);
                     dir=anchor.rotation*Quaternion.Euler(0,cam==null?145:105,0)*Vector3.forward;
                     visualUp=anchor.up;
                     break;
@@ -150,6 +150,7 @@ namespace Raid.Nereid
             // Use the displayed position and the actual first-person camera, including when spectating.
             // Explicitly holding Gosha remains a framed first-person animation.
             bool cradledByViewer=s.Mode==GoshaMode.Cradled && eye!=null && s.Rider==eye.OwnerId;
+            creature.localScale=Vector3.one*(cradledByViewer?eye.firstPersonAppearance.cradleScale:1f);
             float cameraClearance=.85f+RaidWorld.Instance.tuning.petScale*1.6f;
             bool tooClose=camera!=null && !cradledByViewer &&
                 (s.Mode is GoshaMode.Swimming or GoshaMode.Riding) &&
@@ -189,7 +190,7 @@ namespace Raid.Nereid
                     {
                         displayHeldBall=world.GoshaBallInHands(holder);
                         float wind=GoshaBallGrip.Charge(holder);
-                        cameraCenter=GoshaBallGrip.CameraCenter(wind);
+                        if(viewedHolder)cameraCenter=GoshaBallGrip.CameraCenter(holder.firstPersonAppearance,wind);
                         ballAt=holder.transform.TransformPoint(GoshaBallGrip.ObserverCenter(wind));
                     }
                     ball.rotation=holder.transform.rotation;

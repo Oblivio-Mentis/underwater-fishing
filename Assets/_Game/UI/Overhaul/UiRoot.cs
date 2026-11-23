@@ -427,10 +427,10 @@ namespace Raid.UI
             if(station==null&&ShipConsole.Stations.Count>0)return;
             if(station!=null && !station.IsMonitor)
             {
+                station.dispatchButton?.Press(Context.Player);
                 if(station.kind==ShipConsoleKind.CargoControl)
                     Send(WorldAction.Hoist);
-                else
-                    ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
+                else ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
                 return;
             }
             Context.SelectedConsole=station;

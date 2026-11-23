@@ -36,15 +36,8 @@ Shader "RAID011/Living Tissue"
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             struct Varyings {float4 positionCS:SV_POSITION;float3 positionWS:TEXCOORD0;float3 positionOS:TEXCOORD1;half3 normalWS:TEXCOORD2;half fog:TEXCOORD3;};
-            float TissueHash(float3 p) {p=frac(p*.1031);p+=dot(p,p.yzx+33.33);return frac((p.x+p.y)*p.z);}
-            float TissueNoise(float3 p)
-            {
-                float3 i=floor(p),f=frac(p);f=f*f*(3-2*f);
-                float lo=lerp(lerp(TissueHash(i),TissueHash(i+float3(1,0,0)),f.x),lerp(TissueHash(i+float3(0,1,0)),TissueHash(i+float3(1,1,0)),f.x),f.y);
-                float hi=lerp(lerp(TissueHash(i+float3(0,0,1)),TissueHash(i+float3(1,0,1)),f.x),lerp(TissueHash(i+float3(0,1,1)),TissueHash(i+float3(1,1,1)),f.x),f.y);
-                return lerp(lo,hi,f.z);
-            }
             Varyings vert(Attributes input)
             {
                 Varyings output;VertexPositionInputs p=GetVertexPositionInputs(input.positionOS.xyz);
@@ -54,13 +47,10 @@ Shader "RAID011/Living Tissue"
             half4 frag(Varyings input):SV_Target
             {
                 float3 p=input.positionOS;
-                half broad=TissueNoise(p*3.3),fine=TissueNoise(p*13+float3(broad,broad*2,broad));
-                half veins=smoothstep(.64,.86,TissueNoise(p*7+float3(0,broad*1.7,0)));
-                half3 smallNormal=half3(TissueNoise(p*10+11),TissueNoise(p*10+29),TissueNoise(p*10+47))-.5;
-                half3 normal=normalize(input.normalWS+smallNormal*_DetailStrength*.5);
+                half3 normal=FacetNormalWS(input.positionWS,input.normalWS);
                 half cavity=saturate((p.z+.05)*.6)*_CavityDepth;
                 // Slow breathing: a faint flush drifting through the hide, well under the mesh pulse already driven from C#.
-                half breath=.5+.5*sin(_Time.y*.9+broad*2.4);
+                half breath=.5+.5*sin(_Time.y*.9+p.z*1.4);
                 half3 viewDir=SafeNormalize(GetWorldSpaceViewDir(input.positionWS));
                 InputData lighting=(InputData)0;
                 lighting.positionWS=input.positionWS;lighting.positionCS=input.positionCS;lighting.normalWS=normal;
@@ -70,22 +60,21 @@ Shader "RAID011/Living Tissue"
                 // Hide sits between the two burgundy bible tones; the authored tint only shifts hue within that band.
                 half3 dark=half3(.0437,.0056,.0144),light=half3(.1022,.0144,.0382); // #3A1220 -> #5A2036 in linear
                 half3 tintShift=_BaseColor.rgb/max(dot(_BaseColor.rgb,half3(.2126,.7152,.0722)),.01);
-                half3 hide=lerp(dark,light,saturate(broad*.8+fine*.3-.05+breath*.05))*lerp(half3(1,1,1),tintShift,.35);
-                // Vascular network reads as a slightly darker, cooler tracing, never a highlight.
-                hide=lerp(hide,hide*half3(.70,.62,.78),veins*.45);
+                half fold=saturate(.46+.29*normal.y+breath*.055);
+                half3 hide=lerp(dark,light,fold)*lerp(half3(1,1,1),tintShift,.35);
+                hide=lerp(hide,_VeinColor.rgb,_DetailStrength*(1.-fold));
                 SurfaceData surface=(SurfaceData)0;
                 surface.albedo=hide*(1-cavity*.67);
-                // Broken specular: a wet dull hide with a broad lobe and sparse tighter beads where mucus pools.
-                half bead=smoothstep(.58,.80,fine)*smoothstep(.35,.65,broad);
-                surface.metallic=0;surface.specular=half3(.055,.05,.05)+bead*.035;
-                surface.smoothness=saturate(min(_Smoothness,.42)*(.72+.28*broad)-.08+bead*.22);
+                surface.metallic=0;
+                surface.smoothness=min(_Smoothness,.40);
+                surface.specular=half3(.055,.05,.05);
                 surface.normalTS=half3(0,0,1);surface.occlusion=.9-cavity*.45;surface.alpha=1;
                 half4 color=UniversalFragmentPBR(lighting,surface);
                 // Shallow red transmission where light grazes thin tissue: a wrap term in red only, no emission.
                 Light key=GetMainLight(lighting.shadowCoord);
                 half wrap=saturate((dot(normal,key.direction)+.9)/1.9);
                 half thin=pow(1-saturate(dot(normal,viewDir)),2.5);
-                color.rgb+=half3(.085,.012,.018)*key.color*(wrap*wrap*.5+thin*.35)*(1-cavity*.8)*(1-veins*.5);
+                color.rgb+=half3(.085,.012,.018)*key.color*(wrap*wrap*.5+thin*.35)*(1-cavity*.8)*(.88+.12*fold);
                 // Second, very wide lobe: the dull sheen of a wet hide that never resolves into a mirror highlight.
                 half nh=saturate(dot(normal,normalize(key.direction+viewDir)));
                 color.rgb+=key.color*key.shadowAttenuation*pow(nh,5)*.028*(1-cavity);

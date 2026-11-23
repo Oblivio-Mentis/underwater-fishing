@@ -1,6 +1,96 @@
 {
   "cameras": [
     {
+      "name": "exterior-drives",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 16.8,
+        "y": 7.3,
+        "z": -44.4
+      },
+      "look": {
+        "x": 0,
+        "y": 2.5,
+        "z": -23.2
+      }
+    },
+    {
+      "name": "exterior-starboard",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 20.4,
+        "y": 4.45,
+        "z": -34.1
+      },
+      "look": {
+        "x": 0,
+        "y": 1.9,
+        "z": -16.6
+      }
+    },
+    {
+      "name": "exterior-outer-lock",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 15.45,
+        "y": 3.2,
+        "z": -17.77
+      },
+      "look": {
+        "x": 1.8,
+        "y": 1.3,
+        "z": -11
+      }
+    },
+    {
+      "name": "outer-lock-inset",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 11,
+        "y": 2.4,
+        "z": -16.1
+      },
+      "look": {
+        "x": 5.4,
+        "y": 1.5,
+        "z": -12.8
+      }
+    },
+    {
+      "name": "aft-drive-service",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 9.6,
+        "y": 3.2,
+        "z": -35.8
+      },
+      "look": {
+        "x": 3.5,
+        "y": 2.1,
+        "z": -28.7
+      }
+    },
+    {
+      "name": "side-pressure-band",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -10,
+        "y": 1.8,
+        "z": -2.4
+      },
+      "look": {
+        "x": -3.2,
+        "y": 1.1,
+        "z": -12
+      }
+    },
+    {
       "name": "exterior-bow",
       "depth": 1,
       "feet": {
@@ -14,6 +104,86 @@
         "z": -3
       },
       "shipLocal": true
+    },
+    {
+      "name": "equipment-cells",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.31,
+        "y": 0.65,
+        "z": -18.5
+      },
+      "look": {
+        "x": -0.9,
+        "y": 0.4,
+        "z": -19.31
+      },
+      "station": ""
+    },
+    {
+      "name": "repair-bench",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 2.32,
+        "y": 0.65,
+        "z": -20.14
+      },
+      "look": {
+        "x": 3.93,
+        "y": 0.69,
+        "z": -20.68
+      },
+      "station": ""
+    },
+    {
+      "name": "chart-table",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.14,
+        "y": 5.46,
+        "z": -26.88
+      },
+      "look": {
+        "x": 1.71,
+        "y": 5.7,
+        "z": -25.43
+      },
+      "station": ""
+    },
+    {
+      "name": "watch-bridge",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -2.61,
+        "y": 5.46,
+        "z": -25.24
+      },
+      "look": {
+        "x": 0.15,
+        "y": 5.89,
+        "z": -28.9
+      },
+      "station": ""
+    },
+    {
+      "name": "science-station",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 3.18,
+        "y": 0.68,
+        "z": -6.35
+      },
+      "look": {
+        "x": 5.05,
+        "y": 1.03,
+        "z": -4.97
+      },
+      "station": ""
     },
     {
       "name": "exterior",
@@ -52,14 +222,14 @@
       "depth": 1,
       "shipLocal": true,
       "feet": {
-        "x": 0.9,
-        "y": 0.55,
-        "z": -19.4
+        "x": 0.66,
+        "y": 0.19,
+        "z": -22.3
       },
       "look": {
-        "x": 3.3,
-        "y": 1,
-        "z": -22.4
+        "x": 0.35,
+        "y": 0.05,
+        "z": -25.6
       },
       "station": ""
     },
@@ -84,14 +254,14 @@
       "depth": 1,
       "shipLocal": true,
       "feet": {
-        "x": -1.4,
-        "y": 0.54,
-        "z": -8.8
+        "x": 0.49,
+        "y": 0.63,
+        "z": -14.39
       },
       "look": {
-        "x": -4.85,
-        "y": 0.9,
-        "z": -10
+        "x": -2.62,
+        "y": 1.06,
+        "z": -12.24
       },
       "station": ""
     },
@@ -267,6 +437,201 @@
       },
       "shipLocal": true,
       "prop": "crew"
+    },
+    {
+      "name": "aquarium-dispatch",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.58,
+        "y": 0.48,
+        "z": 0.26
+      },
+      "look": {
+        "x": 3.41,
+        "y": 0.65,
+        "z": -0.13
+      }
+    },
+    {
+      "name": "aquarium-switches",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.98,
+        "y": 0.49,
+        "z": 0.84
+      },
+      "look": {
+        "x": 3.11,
+        "y": 0.6,
+        "z": 0.53
+      }
+    },
+    {
+      "name": "processor-infeed",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.5,
+        "y": 0.61,
+        "z": -9.79
+      },
+      "look": {
+        "x": -2.55,
+        "y": 1.04,
+        "z": -11.97
+      }
+    },
+    {
+      "name": "deck-crane",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 25,
+        "y": 13.6,
+        "z": -26.3
+      },
+      "look": {
+        "x": 3.9,
+        "y": 6.55,
+        "z": -9.24
+      }
+    },
+    {
+      "name": "engineering-door",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.58,
+        "y": 0.66,
+        "z": -13.72
+      },
+      "look": {
+        "x": 0,
+        "y": 1.06,
+        "z": -16.11
+      }
+    },
+    {
+      "name": "pump-door",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.52,
+        "y": 0.66,
+        "z": -5.51
+      },
+      "look": {
+        "x": 0,
+        "y": 1.1,
+        "z": -8.08
+      }
+    },
+    {
+      "name": "pump-overhead",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.175,
+        "y": 0.495,
+        "z": -4.43
+      },
+      "look": {
+        "x": 0,
+        "y": 2.76,
+        "z": -8.08
+      }
+    },
+    {
+      "name": "pump-reveal",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -0.625,
+        "y": 0.495,
+        "z": -6.84
+      },
+      "look": {
+        "x": 0,
+        "y": 4.1,
+        "z": -7.99
+      }
+    },
+    {
+      "name": "sea-collar-crown",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 14.085,
+        "y": 0.635,
+        "z": -14.08
+      },
+      "look": {
+        "x": 10.325,
+        "y": 1.44,
+        "z": -14
+      }
+    },
+    {
+      "name": "sea-collar-reveal",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 12.25,
+        "y": 0.72,
+        "z": -13.79
+      },
+      "look": {
+        "x": 10.325,
+        "y": 2.24,
+        "z": -13.95
+      }
+    },
+    {
+      "name": "stair-lower-landing",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -2.65,
+        "y": 1.18,
+        "z": -18.7
+      },
+      "look": {
+        "x": -2.47,
+        "y": 5.9,
+        "z": -23.84
+      }
+    },
+    {
+      "name": "stair-enclosure",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1,
+        "y": 0.48,
+        "z": -17.85
+      },
+      "look": {
+        "x": -2.13,
+        "y": 3.5,
+        "z": -22.62
+      }
+    },
+    {
+      "name": "stair-upper-landing",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -3,
+        "y": 5.33,
+        "z": -25.47
+      },
+      "look": {
+        "x": -2.35,
+        "y": 2.65,
+        "z": -20
+      }
     }
   ]
 }

@@ -34,11 +34,11 @@ namespace Raid.Nereid.Editor
             Fit(layout, NereidRoomRole.Reservoir, ShipConsoleKind.Reservoir);
             Fit(layout, NereidRoomRole.Command, ShipConsoleKind.Depths);
             Fit(layout, NereidRoomRole.Equipment, ShipConsoleKind.SkillTree);
-            Fit(layout, NereidRoomRole.Workshop, ShipConsoleKind.Process);
-            Fit(layout, NereidRoomRole.Feeding, ShipConsoleKind.Feed);
             Fit(layout, NereidRoomRole.Cargo, ShipConsoleKind.CargoControl);
+            NereidDispatchAuthoring.Install();
+            AlignOperatorStations(layout);
             foreach (var station in Object.FindObjectsByType<ShipConsole>())
-                if (!station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
+                if (!station.dispatchButton && !station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
             var factory = Object.FindAnyObjectByType<Factory.FactoryVisuals>();
             if (factory)
             {
@@ -62,6 +62,116 @@ namespace Raid.Nereid.Editor
             EditorSceneManager.MarkSceneDirty(scene);
             if (!EditorSceneManager.SaveScene(scene)) throw new IOException("Unable to save modular vessel scene.");
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("Tools/NEREID/Fit standing monitor positions")]
+        public static void FitOperationalMonitors()
+        {
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play Mode before mounting monitors.");
+            var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if(scene.isDirty)throw new InvalidOperationException("Save current changes before mounting monitors.");
+            if(scene.path!=ScenePath)scene=EditorSceneManager.OpenScene(ScenePath);
+            var layout=Object.FindAnyObjectByType<NereidShipLayout>();
+            if(!layout)throw new InvalidOperationException("Install the modular ship before its monitors.");
+            if(AlignOperatorStations(layout))
+            {
+                EditorSceneManager.MarkSceneDirty(scene);
+                if(!EditorSceneManager.SaveScene(scene))throw new IOException("Unable to save the monitor positions.");
+            }
+            AssetDatabase.SaveAssets();
+        }
+
+        // Socket-local offsets only. Original sockets also own crew spawns, pipe anchors and navigation markers.
+        static (Vector3 position,float yaw) Mount(ShipConsoleKind kind)=>kind switch
+        {
+            ShipConsoleKind.CargoControl=>(new(2.20f,0,-9.75f),142),     // Across from the outer airlock apron
+            ShipConsoleKind.Reservoir=>(new(.33f,0,.22f),-19),            // Stand on the solid starboard aisle
+            ShipConsoleKind.SkillTree=>(new(.22f,0,-.29f),22),           // Readable from the equipment-room entrance
+            ShipConsoleKind.Depths=>(new(-.15f,0,.59f),-16),             // Turned toward the bridge landing
+            _=>(Vector3.zero,0)
+        };
+
+        static void PlaceStation(Transform station,ShipConsoleKind kind)
+        {
+            var pose=Mount(kind);
+            station.SetLocalPositionAndRotation(pose.position,Quaternion.Euler(0,pose.yaw,0));
+            PrefabUtility.RecordPrefabInstancePropertyModifications(station);
+        }
+
+        static bool AlignOperatorStations(NereidShipLayout layout)
+        {
+            NereidHoistSwitchAuthoring.Upgrade(Stations + "/CargoControl.prefab");
+            bool changed = false;
+            // The original mouth lamps were mounted on the old bulkhead. Their loose
+            // covers sit in the operator's sightline to the new containment-room jaws.
+            var vessel = layout.GetComponentInParent<NereidVessel>();
+            if (vessel)
+            {
+                foreach (Transform part in vessel.transform)
+                {
+                    if (part.name is not ("Mouth inspection lamp casing" or "Mouth inspection lamp lens")) continue;
+                    if (!part.gameObject.activeSelf) continue;
+                    part.gameObject.SetActive(false);
+                    changed = true;
+                }
+            }
+            foreach (var instrument in layout.GetComponentsInChildren<NereidInstrument>(true))
+            {
+                if (instrument.Kind is not (ShipConsoleKind.Process or ShipConsoleKind.Feed)) continue;
+                var legacyPath = Stations + "/" + instrument.Kind + ".prefab";
+                if (PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instrument) != legacyPath) continue;
+                Object.DestroyImmediate(instrument.gameObject);
+                changed = true;
+            }
+            foreach (var station in layout.GetComponentsInChildren<ShipConsole>(true))
+            {
+                if (!station.IsMonitor && station.kind != ShipConsoleKind.CargoControl) continue;
+                var t=station.transform;
+                bool atSocket=layout.stations.Any(s=>s.anchor==t.parent);
+                // A previous factory install attached each console flush to its socket. Hand-aligned
+                // transforms and added stations belong to the level artist and retain their poses.
+                if(atSocket && t.localPosition.sqrMagnitude<.000001f && Quaternion.Angle(t.localRotation,Quaternion.identity)<.05f)
+                {
+                    PlaceStation(t,station.kind);
+                    changed=true;
+                }
+                if(!station.IsMonitor)continue;
+                string path=Stations+"/"+station.kind+".prefab";
+                var source=AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if(!source || source.transform.Find(DisplayCarrier))continue;
+                var host=PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    MountDisplay(host.GetComponent<ShipConsole>());
+                    PrefabUtility.SaveAsPrefabAsset(host,path);
+                }
+                finally {PrefabUtility.UnloadPrefabContents(host);}
+            }
+            return changed;
+        }
+
+        const string DisplayCarrier="Articulated display carrier";
+        static void MountDisplay(ShipConsole station)
+        {
+            if(!station.IsMonitor)return;
+            var pivot=station.screenAnchor.localPosition;
+            var carrier=Child(station.transform,DisplayCarrier,pivot);
+            var components=station.transform.Cast<Transform>().Where(t=>t==station.screenAnchor||
+                t.name is "Pressure casing" or "Recessed display" or "Machined vertical edge" or "Edge guard"
+                    or "Display seal" or "Angled instrument wing" or "Line indicator").ToArray();
+            foreach(var piece in components)
+            {
+                Vector3 relative=piece.localPosition-pivot;
+                piece.SetParent(carrier,false);piece.localPosition=relative;
+            }
+            (float elevation,float pitch)=station.kind switch
+            {
+                ShipConsoleKind.Reservoir=>(1.58f,2f), // Bottom row clears the keyboard on the tall panel
+                ShipConsoleKind.SkillTree=>(1.52f,4f),
+                _=>(1.50f,4f)
+            };
+            carrier.localPosition=new Vector3(pivot.x,elevation,pivot.z);
+            carrier.localRotation=Quaternion.Euler(pitch,0,0);
         }
 
         static void InstallNavigation(NereidVessel vessel,NereidShipLayout layout)
@@ -107,7 +217,7 @@ namespace Raid.Nereid.Editor
         static void Fit(NereidShipLayout layout, NereidRoomRole room, ShipConsoleKind kind)
         {
             // An existing instrument can be moved or replaced in Unity; installation preserves its placement.
-            if (layout.GetComponentsInChildren<NereidInstrument>(true).Any(i => i.console && i.console.kind == kind)) return;
+            if (layout.GetComponentsInChildren<ShipConsole>(true).Any(station => station.kind == kind)) return;
             var socket = layout.Socket(room);
             if (!socket) throw new InvalidOperationException("Missing room socket for " + room);
             string path = Stations + "/" + kind + ".prefab";
@@ -119,8 +229,7 @@ namespace Raid.Nereid.Editor
                 finally { Object.DestroyImmediate(master); }
             }
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab,socket);
-            instance.transform.localPosition = Vector3.zero;
-            instance.transform.localRotation = Quaternion.identity;
+            PlaceStation(instance.transform,kind);
             var scale = socket.lossyScale;
             instance.transform.localScale = new Vector3(1f/scale.x,1f/scale.y,1f/scale.z);
             PrefabUtility.RecordPrefabInstancePropertyModifications(instance.transform);
@@ -152,6 +261,11 @@ namespace Raid.Nereid.Editor
             var station = go.AddComponent<ShipConsole>();
             station.kind = kind;
             station.range = 3.75f;
+            if (kind == ShipConsoleKind.CargoControl)
+            {
+                NereidHoistSwitchAuthoring.Build(station);
+                return go;
+            }
             float w = kind == ShipConsoleKind.Reservoir ? 3.32f : 2.64f;
             float h = kind == ShipConsoleKind.Reservoir ? 1.98f : 1.75f;
             float y = 1.57f;
@@ -196,6 +310,7 @@ namespace Raid.Nereid.Editor
             var strip=Child(go.transform,"Line indicator",new Vector3(-.62f,y-h*.5f-.045f,-.196f));
             Block(strip,"Active signal",new Vector3(.62f,0,0),new Vector3(1.24f,.027f,.015f),"Lamp");
             instrument.gauge=strip;
+            MountDisplay(station);
             return go;
         }
     }

@@ -5,10 +5,6 @@ Shader "RAID/Nereid Hull Coating"
         _BaseColor("Marine finish", Color)=(.31,.45,.48,1)
         _Metallic("Exposed metal", Range(0,1))=.16
         _Smoothness("Smoothness", Range(0,1))=.35
-        [NoScaleOffset] _SurfaceAtlas("Panel texture atlas", 2D)="white" {}
-        _SurfaceRegion("Atlas tile", Vector)=(0,0,1,1)
-        _SurfaceTiling("Repeats per metre", Vector)=(1,1,0,0)
-        _SurfaceDetail("Average, contrast, relief, enabled", Vector)=(1,0,0,0)
         _Marine("Exterior marine light", Range(0,1))=1
         _DeckTread("Modular deck panels", Range(0,1))=0
         _DeckPlateSize("Deck panel width and length (metres)", Vector)=(2.4,3.6,0,0)
@@ -30,15 +26,14 @@ Shader "RAID/Nereid Hull Coating"
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             #include "NereidWaterColumn.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
             half _Metallic, _Smoothness, _Marine, _DeckTread;
-            float4 _SurfaceRegion, _SurfaceTiling, _SurfaceDetail, _DeckPlateSize;
+            float4 _DeckPlateSize;
             CBUFFER_END
-            TEXTURE2D(_SurfaceAtlas);
-            SAMPLER(sampler_SurfaceAtlas);
             float _NereidTurbidity, _NereidWorkLightSeabed;
             float3 _NereidReefClarity;
             float4 _NereidWorkLightPositions[3], _NereidWorkLightDirections[3], _NereidWorkLightRadiance[3];
@@ -90,51 +85,6 @@ Shader "RAID/Nereid Hull Coating"
                 return light;
             }
 
-            float HullHash(float2 p)
-            {
-                float3 q=frac(float3(p.xyx)*.1031);
-                q+=dot(q,q.yzx+33.33);
-                return frac((q.x+q.y)*q.z);
-            }
-
-            float HullNoise(float2 p)
-            {
-                float2 id=floor(p), t=frac(p);
-                t=t*t*(3.-2.*t);
-                float a=lerp(HullHash(id),HullHash(id+float2(1,0)),t.x);
-                float b=lerp(HullHash(id+float2(0,1)),HullHash(id+1.),t.x);
-                return lerp(a,b,t.y);
-            }
-
-            half SamplePanel(float2 axes)
-            {
-                float2 repeated=axes*_SurfaceTiling.xy;
-                float2 cell=frac(repeated);
-                float2 uv=_SurfaceRegion.xy+cell*_SurfaceRegion.zw;
-                float2 gradients=repeated*_SurfaceRegion.zw;
-                half3 texel=SAMPLE_TEXTURE2D_GRAD(_SurfaceAtlas,sampler_SurfaceAtlas,uv,ddx(gradients),ddy(gradients)).rgb;
-                float2 edge=min(cell,1.-cell);
-                float2 aa=clamp(fwidth(repeated),.001,.024);
-                float2 borders=1.-smoothstep(float2(.013,.014)-aa,float2(.021,.028)+aa,edge);
-                float joint=max(borders.x,borders.y);
-                float lip=(1.-smoothstep(.057-aa.x,.072+aa.x,min(edge.x,edge.y)))*(1.-joint);
-                float2 studDist=(edge-float2(.075,.087))*float2(1.05,1);
-                float fastener=1.-smoothstep(.012,.025+max(aa.x,aa.y),length(studDist));
-                float panel=dot(texel,half3(.2126,.7152,.0722))/max(_SurfaceDetail.x,.015);
-                return panel*(1.-joint*.44)+lip*.26+fastener*.40;
-            }
-
-            half PanelHeight(Varyings i)
-            {
-                half3 alignment=abs(i.panelNormal);
-                alignment*=alignment;
-                alignment*=alignment;
-                alignment/=max(dot(alignment,half3(1,1,1)),.001);
-                return (SamplePanel(i.panelPosition.zy)*alignment.x+
-                    SamplePanel(i.panelPosition.xz)*alignment.y+
-                    SamplePanel(i.panelPosition.xy)*alignment.z);
-            }
-
             half DeckJoint(float2 metres)
             {
                 float2 size = max(_DeckPlateSize.xy, .25);
@@ -146,24 +96,9 @@ Shader "RAID/Nereid Hull Coating"
                 return max(seam.x, seam.y);
             }
 
-            float3 ReliefNormal(float3 position,float3 normal,float height)
-            {
-                float3 dx=ddx(position),dy=ddy(position);
-                float3 right=cross(dy,normal),up=cross(normal,dx);
-                float area=dot(dx,right);
-                float3 gradient=clamp(ddx(height),-.007,.007)*right+clamp(ddy(height),-.007,.007)*up;
-                return SafeNormalize(normal*max(abs(area),.000001)-sign(area)*gradient);
-            }
-
             half4 frag(Varyings i):SV_Target
             {
-                half3 n=normalize(i.normal);
-                half plate=1;
-                if(_DeckTread < .5 && _SurfaceDetail.w > .5)
-                {
-                    plate=clamp(PanelHeight(i),.45,2.32);
-                    n=ReliefNormal(i.position,n,plate*_SurfaceDetail.z);
-                }
+                half3 n = FacetNormalWS(i.position, i.normal);
                 InputData lighting=(InputData)0;
                 lighting.positionWS=i.position;
                 lighting.positionCS=i.clip;
@@ -175,39 +110,10 @@ Shader "RAID/Nereid Hull Coating"
                 lighting.normalizedScreenSpaceUV=GetNormalizedScreenSpaceUV(i.clip);
                 lighting.shadowMask=half4(1,1,1,1);
                 SurfaceData surface=(SurfaceData)0;
-                // Pressure enamel collects oxidation along vertical water flow.
-                // Broad marks remain visible at expedition distances, fine scratches emerge up close.
-                float2 skin=float2(dot(i.position,float3(.46,0.,.89)),i.position.y);
-                float broad=HullNoise(skin*.62);
-                float deposits=HullNoise(skin*float2(3.8,.31)+float2(12.8,47.));
-                float streak=smoothstep(.52,.87,deposits)*smoothstep(.29,.68,broad);
-                // Grime runs down in world space below seams and fasteners, inside and out.
-                float runoff=HullNoise(float2(skin.x*5.1,skin.y*.42)+float2(71.,3.))*HullNoise(skin*1.3+float2(9.,21.));
-                float grime=smoothstep(.30,.62,runoff)*(.55+.45*smoothstep(.25,.70,broad));
-                half coat=lerp(.87,1.10,broad)-streak*(.075+.125*_Marine)-grime*.09;
-                half projection=lerp(1.,plate,_SurfaceDetail.y);
-                // Metre-scale patches of polished and chalked finish keep the plating from reading as one sheet.
-                float polish=HullNoise(skin*.21+float2(5.3,2.1));
-                half gloss=lerp(.35,.65,smoothstep(.22,.78,polish))+(_Smoothness-.40)*.6;
-                // Worn rims: handling scuffs at grazing angles, and the raised lips and studs of the pressed panels.
-                half grazing=1.-saturate(dot(n,lighting.viewDirectionWS));
-                half scuff=smoothstep(.42,.84,HullNoise(skin*4.7+float2(31.,7.)));
-                half relief=saturate((plate-1.)*2.4);
-                half wear=saturate(grazing*grazing*grazing*scuff*1.5+relief*(.35+.65*scuff)*.9);
-                half3 paint=_BaseColor.rgb*coat*projection + half3(.019,.022,.013)*streak*_Marine;
-                // Safety ochre keeps its chroma: worn rims only brighten it, the grey chalking is for steel.
-                half peakTint=max(_BaseColor.r,max(_BaseColor.g,_BaseColor.b));
-                half chroma=saturate((peakTint-min(_BaseColor.r,min(_BaseColor.g,_BaseColor.b)))/max(peakTint,.01)*1.6);
-                surface.albedo=lerp(paint,paint*1.45+half3(.028,.036,.040)*(1.-chroma),wear*.42);
-                surface.metallic=saturate(_Metallic+wear*.35);
-                surface.smoothness=saturate(gloss-streak*.10-grime*.07+(plate-1.)*.075+wear*.14);
-                if (_DeckTread > .5)
-                {
-                    half joint = i.panelNormal.y > .65 ? DeckJoint(i.position.xz) : 0;
-                    surface.albedo = _BaseColor.rgb * (1. - .17 * joint);
-                    surface.metallic = _Metallic;
-                    surface.smoothness = _Smoothness * (1. - .12 * joint);
-                }
+                half joint = _DeckTread > .5 && i.panelNormal.y > .65 ? DeckJoint(i.panelPosition.xz) : 0;
+                surface.albedo = _BaseColor.rgb * (1. - .14 * joint);
+                surface.metallic = _Metallic;
+                surface.smoothness = _Smoothness;
                 surface.normalTS=half3(0,0,1);
                 surface.occlusion=1;
                 surface.alpha=1;
