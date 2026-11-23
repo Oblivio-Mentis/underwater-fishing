@@ -193,7 +193,7 @@ namespace Raid
             state.Holder = -1;
             state.Mode = FishMode.Roam;
             state.HookCount = 0;
-            state.Coordinated = state.SurgeWarning = state.Surging = false;
+            state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.None;
             state.Tension = state.Stamina = 0f;
             _snapshot.Value = state;
             if (active) RenewCargoId();
@@ -225,7 +225,7 @@ namespace Raid
                 lines.Clear();
                 landingTool = null;
                 state.HookCount = 0;
-                state.Coordinated = state.SurgeWarning = state.Surging = false;
+                state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Carried;
             }
             else { state.Stowed = false; state.Holder = -1; }
             if (mode != FishMode.Roam && mode != FishMode.Escaped) {state.Startled=false;fleeRemaining=0;}
@@ -238,7 +238,7 @@ namespace Raid
             {
                 ClearFishing();
                 state.HookCount = 0;
-                state.Coordinated = state.SurgeWarning = state.Surging = false;
+                state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Flee;
             }
             if (mode == FishMode.Transported || mode == FishMode.Captured) foreach (var fishCollider in _colliders) fishCollider.enabled = false;
             if (mode == FishMode.Roam) foreach (var fishCollider in _colliders) fishCollider.enabled = _depthActive;

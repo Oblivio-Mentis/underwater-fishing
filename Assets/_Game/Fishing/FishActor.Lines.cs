@@ -23,7 +23,12 @@ namespace Raid
 
         readonly CrewHooks lines = new();
         HarpoonTool landingTool;
-        float fightClock;
+        FishFightBrain fight;
+        FishFightInput fightInput;
+        Vector3 fightHeading;
+        int fightSeed;
+
+        public FishFightBrain FightBrain => fight;
 
         internal bool TryHook(HarpoonTool tool, HarpoonContact contact)
         {
@@ -41,11 +46,20 @@ namespace Raid
             if (first)
             {
                 DesiredState = FishMode.Hooked;
-                fightClock = 0;
+                // One brain per fight: seeded from the catch so a replay with the same cargo id fights the same way.
+                fightSeed = unchecked((int)_cargoId ^ (int)(_cargoId >> 32));
+                var profile = tuning.FightProfile(SpeciesId);
+                if (fight == null || fight.Profile != profile) fight = new FishFightBrain(profile, fightSeed);
+                else fight.Reset(fightSeed);
+                fightHeading = transform.forward;
                 state.Stamina = Mathf.Max(1, tuning.initialStamina * power);
                 state.Tension = .1f;
+                state.Behaviour = FishBehaviour.HookShock;
+                state.TugStrength = 0;
             }
+            else fight?.Shock();
             state.HookCount = lines.Count;
+            state.HookSequence++;
             _snapshot.Value = state;
             return true;
         }
@@ -184,11 +198,37 @@ namespace Raid
             state.Coordinated = false;
             if (lines.Count == 0) { DesiredState = FishMode.Escaped; return; }
             if (tired && RequiresPartner && lines.Count >= 2 && GripTiredFish()) return;
-            fightClock += dt;
-            float period = Mathf.Max(tuning.warningSeconds + tuning.burstDuration + .1f, tuning.burstPeriod);
-            float untilSurge = period - Mathf.Repeat(fightClock, period);
-            state.SurgeWarning = !tired && untilSurge <= tuning.warningSeconds;
-            state.Surging = !tired && fightClock >= period && Mathf.Repeat(fightClock, period) < tuning.burstDuration;
+            if (fight == null) fight = new FishFightBrain(tuning.FightProfile(SpeciesId), fightSeed);
+            var profile = fight.Profile;
+
+            // Decide the sub-phase first; every rule below reads the brain, never the clock.
+            float maxStamina = Mathf.Max(1, tuning.initialStamina * power);
+            float nearest = float.MaxValue;
+            bool anyReeling = false, anyBlocked = false, anyPaired = false;
+            foreach (var line in lines)
+            {
+                nearest = Mathf.Min(nearest, line.Distance);
+                anyReeling |= line.Tool.Reeling;
+                anyBlocked |= line.BlockedTime > 0;
+                anyPaired |= line.Paired;
+            }
+            fightInput.Dt = dt;
+            fightInput.Stamina01 = Mathf.Clamp01(state.Stamina / maxStamina);
+            fightInput.Distance01 = Mathf.Clamp01(nearest / Mathf.Max(1, tuning.maxRange));
+            fightInput.Hooks = lines.Count;
+            fightInput.Coordinated = anyPaired;
+            fightInput.Obstructed = anyBlocked;
+            fightInput.Reeling = anyReeling;
+            fightInput.NearHand = nearest <= tuning.captureRange * profile.lastEscapeRange;
+            fightInput.Exhausted = tired || state.Stamina <= 0;
+            fight.Tick(in fightInput);
+            state.Behaviour = fight.CurrentPhase;
+            state.SurgeWarning = !tired && fight.SurgeWarning;
+            state.Surging = !tired && fight.Surging;
+            state.TugStrength = tired ? 0 : fight.TugStrength;
+            if (fight.SurgeStarted && !tired) state.TugSequence++;
+            bool weakened = fight.Weakened;
+
             HookLine leader = null;
             state.Tension = 0;
             foreach (var line in lines)
@@ -198,7 +238,7 @@ namespace Raid
                 float teamTiming=line.Paired?(world?.SkillFactor(line.Tool.Motor,SkillId.H4)??0):0;
                 float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,10);
                 float lineStrength=1+(world?.SkillFactor(line.Tool.Motor,SkillId.H2)??0);
-                float resistance = state.Surging ? tuning.burstTensionMultiplier : 1;
+                float resistance = state.Surging ? Mathf.Lerp(1, tuning.burstTensionMultiplier, state.TugStrength) : weakened ? profile.weakenedTension : 1;
                 if (working)
                 {
                     line.Spool.Wind(line.Distance, tuning.slackAllowance, tuning.reelSpeed * reel, dt);
@@ -213,8 +253,9 @@ namespace Raid
                 line.Tension = Mathf.Clamp01(line.Tension);
                 state.Tension = Mathf.Max(state.Tension, line.Tension);
                 line.Tool.UpdateFishingLine(line.Spool.PaidOut, line.Tension);
+                // Two hooks share the body's pull: weaker per diver, never zero (the brain scales TugStrength).
                 float tug = state.Surging && line.BlockedTime == 0 && line.Spool.Loaded(line.Distance, tuning.slackAllowance)
-                    ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * (line.Paired ? .24f : 1)) : 0;
+                    ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
                 line.TugSpeed = Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt);
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
                 {
@@ -226,10 +267,18 @@ namespace Raid
                 }
             }
 
+            var lead = leader ?? lines.At(0);
+            Vector3 away = -lead.PullDirection;
+            if (away.sqrMagnitude < .01f) away = transform.forward;
+            Vector3 side = Vector3.Cross(Vector3.up, away);
+            if (side.sqrMagnitude < .01f) side = transform.right;
+            side.Normalize();
+
             if (leader != null)
             {
                 float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier, .1f, 10)
-                    * (state.Surging ? .25f : 1) * (leader.Paired ? 1 + tuning.assistBonus + (RaidWorld.Instance?.SkillFactor(leader.Tool.Motor,SkillId.H4)??0) : 1);
+                    * (state.Surging ? Mathf.Lerp(1, .25f, state.TugStrength) : weakened ? 1.35f : 1)
+                    * (leader.Paired ? 1 + tuning.assistBonus + (RaidWorld.Instance?.SkillFactor(leader.Tool.Motor,SkillId.H4)??0) : 1);
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
                 // Once exhausted, tow the body rather than steering on the off-centre
@@ -237,12 +286,10 @@ namespace Raid
                 Vector3 pull=tired?leader.PullDirection:leader.TowardHand.normalized;
                 Vector3 motion = pull * Mathf.Min(excess, speed * dt);
                 if (!SolidAhead(transform.position, transform.position + motion)) transform.position += motion;
-                if (Nereid.NereidVessel.Active != null)
-                {
-                    Vector3 away = -leader.PullDirection;
-                    Vector3 lateral = Vector3.Cross(Vector3.up,away);
-                    FaceSwim(away + lateral * Mathf.Sin(fightClock * (state.Surging ? 8 : 4)) * (state.Surging ? .45f : .16f),dt,1.5f);
-                }
+                // Lateral arcs under the reel: sideways within the paid-out line, so the fish
+                // swings across the diver instead of walking straight to the hand.
+                if (!tired && Nereid.NereidVessel.Active != null) StruggleSideways(leader, side, dt);
+                if (!tired) StruggleFace(away, side, dt);
                 state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * dt * (leader.Paired ? 1 + tuning.assistBonus : 1));
                 bool partnerReady = !RequiresPartner;
                 foreach (var other in lines)
@@ -258,21 +305,42 @@ namespace Raid
             }
             else
             {
-                var lead = lines.At(0);
-                float escape = tuning.escapeSpeed * power * (state.Surging ? 2 : tired ? .10f : 1);
-                Vector3 away = -lead.PullDirection;
-                if (away.sqrMagnitude < .01f) away = transform.forward;
-                if (Nereid.NereidVessel.Active != null)
-                {
-                    Vector3 lateral = Vector3.Cross(Vector3.up,away);
-                    away += lateral * Mathf.Sin(fightClock * 3.8f) * (state.Surging ? .48f : .17f);
-                }
-                Vector3 dir = ClearHeading(transform.position, away.normalized, 1);
-                Vector3 move = dir * (escape * dt);
+                float escape = tuning.escapeSpeed * power * (tired ? .10f
+                    : state.Surging ? Mathf.Lerp(1, profile.surgeSpeedMultiplier, state.TugStrength)
+                    : weakened ? profile.weakenedSpeedMultiplier : 1);
+                Vector3 desired = away;
+                if (Nereid.NereidVessel.Active != null && !tired) desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
+                Vector3 dir = ClearHeading(transform.position, desired, 1);
+                if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) fight.Deflect();
+                // Turn inertia: heavy species carry their heading into the next arc.
+                fightHeading = Vector3.RotateTowards(fightHeading.sqrMagnitude < .01f ? dir : fightHeading, dir, profile.turnRate * dt, 0);
+                Vector3 move = fightHeading * (escape * dt);
                 if (!SolidAhead(transform.position, transform.position + move)) transform.position += move;
-                FaceSwim(dir,dt,1.75f);
-                if (!tired) state.Stamina = Mathf.Min(tuning.initialStamina * power, state.Stamina + tuning.staminaRecovery * dt);
+                else fight.Deflect();
+                FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
+                // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
+                if (!tired) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
             }
+        }
+
+        // Sideways drift while being wound in. Bounded by the paid-out line and the reef.
+        void StruggleSideways(HookLine leader, Vector3 side, float dt)
+        {
+            float lateral = fight.Lateral * fight.Profile.lateralStrength * (Behaviour == FishBehaviour.Surge ? 1.4f : 1);
+            if (Mathf.Abs(lateral) < .01f) return;
+            Vector3 step = side * (lateral * dt);
+            Vector3 next = transform.position + step;
+            // The line is a leash: never swing further from the hand than the spool allows.
+            if ((leader.Tool.HandAnchor - next).magnitude > leader.Spool.PaidOut + tuning.slackAllowance) { fight.Deflect(); return; }
+            if (SolidAhead(transform.position, next)) { fight.Deflect(); return; }
+            transform.position = next;
+        }
+
+        void StruggleFace(Vector3 away, Vector3 side, float dt)
+        {
+            Vector3 face = away + side * fight.Lateral * (Behaviour == FishBehaviour.Surge ? .6f : .35f);
+            fightHeading = Vector3.RotateTowards(fightHeading.sqrMagnitude < .01f ? face.normalized : fightHeading, face.normalized, fight.Profile.turnRate * dt, 0);
+            FaceSwim(fightHeading, dt, fight.Profile.turnRate);
         }
     }
 }

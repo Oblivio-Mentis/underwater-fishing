@@ -6,14 +6,7 @@ namespace Raid
 {
     public enum FishMode { Roam = 1, Hooked, Struggling, Tired, Captured, Transported, Escaped }
 
-    // Readable behaviour under the system mode: what the body is doing right now.
-    // Free swimming: Cruise..Recover. Hooked fight sub-phases: HookShock..LastEscape.
-    public enum FishBehaviour : byte
-    {
-        None = 0,
-        Cruise, Hover, Forage, Alert, Flee, Recover,
-        HookShock, Lateral, SurgeWindup, Surge, Weakened, LastEscape, Carried
-    }
+    // FishBehaviour lives in Raid.Progression (FishFightBrain.cs) so the fight brain and its tests can use it.
 
     public sealed class FishContext
     {

@@ -12,6 +12,7 @@ namespace Raid
         public float hookSettleSeconds = 0.3f;
         public float swimRadius = 3f;
         public float roamSpeed = 1.45f;
+        // Deprecated since RAID-018: surge timing is per species in FishFightProfile. Kept so old assets load.
         public float burstPeriod = 3f;
         public float burstDuration = 0.8f;
         public float initialStamina = 7f;
@@ -37,5 +38,17 @@ namespace Raid
         public float respawnSeconds = 10f;
         public float snapshotInterval = 0.05f;
         public LayerMask hitMask = ~0;
+        [Tooltip("One fight profile per species; matched by speciesId. Missing species fall back to the first entry.")]
+        public FishFightProfile[] fightProfiles = System.Array.Empty<FishFightProfile>();
+
+        static FishFightProfile fallbackFight;
+        public FishFightProfile FightProfile(string species)
+        {
+            foreach (var profile in fightProfiles)
+                if (profile != null && profile.speciesId == species) return profile;
+            if (fightProfiles.Length > 0 && fightProfiles[0] != null) return fightProfiles[0];
+            if (fallbackFight == null) fallbackFight = CreateInstance<FishFightProfile>();
+            return fallbackFight;
+        }
     }
 }
