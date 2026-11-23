@@ -12,7 +12,7 @@ namespace Raid.Nereid
 {
     // Optional paired Windows-player observation of a real replicated lift.
     [DefaultExecutionOrder(1500)]
-    internal sealed class CargoReceiverTrial:MonoBehaviour
+    internal sealed partial class CargoReceiverTrial:MonoBehaviour
     {
         // InverseLerp is clamped. Only 1.0 is greater than the immediately preceding float.
         const float SeatedThreshold=.99999994f;
@@ -77,6 +77,7 @@ namespace Raid.Nereid
                     if(!w.StartFilmHoist())throw new Exception("Host refused staged cage");
                 }
                 var phase=NereidVessel.Active.PresentedHoistPhase;float progress=NereidVessel.Active.HoistAnimation;
+                ObserveDavit(phase, progress);
                 if(!seenRaise && phase!=HoistPhase.Raising)return;
                 if(!seenRaise){startedAt=Time.realtimeSinceStartup;seenRaise=true;}
                 elapsed=Time.realtimeSinceStartup-startedAt;
