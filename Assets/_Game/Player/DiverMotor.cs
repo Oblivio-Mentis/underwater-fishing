@@ -20,6 +20,9 @@ namespace Raid
             public float Yaw;
             public float Oxygen;
             public float Health, HypoxicSeconds;
+            public float AirCapacity, ReserveAir;
+            public bool ReserveSpent;
+            public int ReserveCooldown;
             public float Stress;
             public bool Inside;
             public bool Trapped;
@@ -43,6 +46,7 @@ namespace Raid
         private bool _serverJumpHeld, _serverJumpQueued, _localJumpQueued, _wasWalking;
 
         public float Oxygen => _state.Value.Oxygen;
+        public float AirCapacity => _state.Value.AirCapacity > 0 ? _state.Value.AirCapacity : Mathf.Max(1f,tuning.oxygenCapacity*OxygenMultiplier);
         public float LocalLookMultiplier {get;set;} = 1f;
         public void LookAtConsole(Vector3 point)
         {
@@ -83,7 +87,7 @@ namespace Raid
         {
             ServerDivers.Add(this);
             departureAir = default;
-            usedReserve=false;reserveSeconds=dashUntil=dashReadyAt=dryDuration=0;
+            usedReserve=false;reserveSeconds=reserveReadyAt=dashUntil=dashReadyAt=dryDuration=0;
             rearmedAtDeck=false;swimVelocity=Vector3.zero;
             _controller.enabled = true;
             _previousPosition = transform.position;
@@ -97,6 +101,7 @@ namespace Raid
                 Yaw = _serverYaw,
                 BodyRotation = transform.rotation,
                 Oxygen = tuning.oxygenCapacity,
+                AirCapacity = tuning.oxygenCapacity,
                 Health = 100f,
                 Inside = IsSealedInterior(transform.position)
             };
@@ -252,7 +257,7 @@ namespace Raid
                 _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
                 Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
                 float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
-                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Personal(SkillId.C2));
+                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 if(state.Stress>=tuning.stressDanger)speed*=.5f;
                 var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
                 if((collision&CollisionFlags.Above)!=0&&_indoorVerticalVelocity>0)_indoorVerticalVelocity=0;
@@ -264,11 +269,11 @@ namespace Raid
                 // Previous scenes and open water retain their original pitch-driven swimming.
                 Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
                 direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-                float speed = Mathf.Max(0f,tuning.swimSpeed)*(SpeedMultiplier+Personal(SkillId.F1))*
+                float speed = Mathf.Max(0f,tuning.swimSpeed)*(SpeedMultiplier+Mathf.Clamp(Personal(SkillLine.Fins),0,.45f))*
                     (_serverSprint?Mathf.Max(1f,tuning.sprintMultiplier):1);
-                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Personal(SkillId.C2)+Personal(SkillId.F3));
+                if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 if(Time.time<dashUntil && Nereid.NereidAirlock.Active?.Contains(transform.position)!=true)
-                    speed*=1+Personal(SkillId.F4);
+                    speed*=1+Mathf.Clamp(Personal(SkillLine.HydroDash),0,.35f);
                 else if(Nereid.NereidAirlock.Active?.Contains(transform.position)==true)dashUntil=0;
                 if(state.Stress>=tuning.stressDanger) speed*=.5f;
                 Vector3 velocity = direction * speed;
@@ -276,11 +281,18 @@ namespace Raid
                 var swimTuning=RaidWorld.Instance?.progression;
                 if(swimTuning!=null && !IsTrapped && !IsHelpless)
                 {
-                    float rate=velocity.sqrMagnitude>.002f
-                        ? swimTuning.swimStartAcceleration*(1+Personal(SkillId.F2)):swimTuning.swimBrakingAcceleration;
+                    bool braking=velocity.sqrMagnitude<swimVelocity.sqrMagnitude;
+                    float rate=(braking?swimTuning.swimBrakingAcceleration:swimTuning.swimStartAcceleration)*
+                        (1+Mathf.Clamp(Personal(SkillLine.SwimStart),0,.60f));
+                    if(velocity.sqrMagnitude>.002f && swimVelocity.sqrMagnitude>.002f)
+                    {
+                        float turnRate=Mathf.Clamp(Personal(SkillLine.SwimmingTurn),0,.50f)*rate/Mathf.Max(.5f,swimVelocity.magnitude);
+                        swimVelocity=Vector3.RotateTowards(swimVelocity,velocity,turnRate*Time.fixedDeltaTime,0);
+                    }
                     swimVelocity=Vector3.MoveTowards(swimVelocity,velocity,rate*Time.fixedDeltaTime);
                 }
                 else swimVelocity=velocity;
+                swimVelocity.y=Mathf.Clamp(swimVelocity.y,-verticalLimit,verticalLimit);
                 _controller.Move(swimVelocity*Time.fixedDeltaTime);
             }
             _wasWalking=walking;
@@ -299,14 +311,16 @@ namespace Raid
             bool wetInLock = !state.Inside && lockRoom != null && world != null && lockRoom.Contains(state.Position);
             float drainSeconds = departureAir.DrainSeconds(Time.fixedDeltaTime, wetInLock,
                 wetInLock ? world.Airlock : default, tuning.airlockBreathingWindow);
-            state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery * Time.fixedDeltaTime : -drainSeconds),
-                0f, Mathf.Max(1f, tuning.oxygenCapacity * OxygenMultiplier));
+            float recovery=state.Inside?1+(world?.TeamSkillFactor(SkillLine.Medical)??0)+(world?.TeamSkillFactor(SkillLine.DeepVessel)??0):1;
+            state.AirCapacity=Mathf.Max(1f,tuning.oxygenCapacity*OxygenMultiplier);
+            state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery * recovery * Time.fixedDeltaTime : -drainSeconds),
+                0f, state.AirCapacity);
             float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
             float verticalExcess = walking?0:Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
-            float stressChange = state.Inside ? -1f : depthExcess + verticalExcess;
+            float stressChange = state.Inside ? -1f : (depthExcess + verticalExcess)*(1-Mathf.Clamp(Personal(SkillLine.ExpeditionSuit),0,.55f));
             state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
             if(!state.Inside && state.Stress>=tuning.stressDanger)
-                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*drainSeconds);
+                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*drainSeconds*(1-Mathf.Clamp(Personal(SkillLine.Seal),0,.75f)));
             _previousPosition = state.Position;
             var vesselHere=Nereid.NereidVessel.Active;
             if(vesselHere!=null)
@@ -320,8 +334,11 @@ namespace Raid
                 else
                 {
                     state.HypoxicSeconds=0;
-                    if(state.Inside)state.Health=Mathf.Min(100,state.Health+tuning.onboardHealingPerSecond*Time.fixedDeltaTime);
+                    if(state.Inside)state.Health=Mathf.Min(100,state.Health+tuning.onboardHealingPerSecond*recovery*Time.fixedDeltaTime);
                 }
+                state.ReserveAir=state.Oxygen<=0?reserveSeconds:0;
+                state.ReserveSpent=usedReserve;
+                state.ReserveCooldown=usedReserve?Mathf.CeilToInt(Mathf.Max(0,reserveReadyAt-Time.time)):0;
                 _state.Value=state;
                 bool swallowed=vesselHere.InsideJaws(state.Position+Vector3.up*.35f);
                 if(swallowed || state.Health<=0f){BeginDeath(swallowed);return;}
@@ -364,8 +381,14 @@ namespace Raid
 
         public void DamageOxygen(float amount)
         {
-            if (!IsServerInitialized || IsDead) return;
-            var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)*(1-Personal(SkillId.S3))); _state.Value=state;
+            if (!IsServerInitialized || IsDead || !Finite(amount)) return;
+            var state=_state.Value; state.Oxygen=Mathf.Max(0,state.Oxygen-Mathf.Max(0,amount)); _state.Value=state;
+        }
+
+        internal void DamageFromCreature(float amount)
+        {
+            if(!IsServerInitialized)return;
+            DamageOxygen(amount*(1-Mathf.Clamp(Personal(SkillLine.Armor),0,.70f)));
         }
 
         public void Trap() { if(IsServerInitialized && !IsDead) _trappedTime=tuning.trappedDuration; }

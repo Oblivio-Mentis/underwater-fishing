@@ -36,14 +36,18 @@ namespace Raid.Nereid
             return danger;
         }
 
-        public Vector3 Step(Vector3 from,Vector3 goal,float distance,bool detour,bool cautious)
+        internal static float RiskLimit(float caution)=>.805f-.40f*Mathf.Clamp01(caution);
+
+        public Vector3 Step(Vector3 from,Vector3 goal,float distance,bool detour,float caution)
         {
             var delta=goal-from;
             if(delta.sqrMagnitude<.000001f)return from;
             var towards=delta.normalized;
             float step=Mathf.Min(distance,delta.magnitude);
             float ahead=detour?Mathf.Min(delta.magnitude,3f):step;
+            bool cautious=caution>0;
             float startingRisk=cautious?Risk(from):0;
+            float riskLimit=RiskLimit(caution);
             bool Open(Vector3 direction)
             {
                 var end=from+direction*ahead;
@@ -53,7 +57,7 @@ namespace Raid.Nereid
                 if(!cautious)return true;
                 float risk=Mathf.Max(Risk(Vector3.Lerp(from,end,.5f)),Risk(end));
                 // If a predator swims up to Gosha, let him escape to a safer position.
-                return risk<.68f || risk<startingRisk-.004f;
+                return risk<riskLimit || risk<startingRisk-.004f;
             }
             if(Time.time<keepHeadingUntil && detour && Open(avoiding))return from+avoiding*step;
             if(Open(towards))return from+towards*step;
@@ -74,7 +78,7 @@ namespace Raid.Nereid
                     var candidate=towards*Mathf.Cos(angle)+side*Mathf.Sin(angle);
                     if(!Open(candidate))continue;
                     float score=Vector3.Dot(towards,candidate)+candidate.y*.035f;
-                    if(cautious)score-=Risk(from+candidate*ahead)*.9f;
+                    if(cautious)score-=Risk(from+candidate*ahead)*caution*2.25f;
                     if(score>best){best=score;chosen=candidate;}
                 }
                 if(best>float.NegativeInfinity)break;

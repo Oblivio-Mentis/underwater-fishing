@@ -112,7 +112,7 @@ namespace Raid
             }
             main.PredatorPosition=Swim(main.PredatorPosition,anglerTarget.transform.position,5.9f*dt,anglerTarget);
             if(Vector3.Distance(main.PredatorPosition,anglerTarget.transform.position)>1.35f)return;
-            anglerTarget.DamageOxygen(tuning.attackDamage*Strength);
+            anglerTarget.DamageFromCreature(tuning.attackDamage*Strength);
             var anglerInventory=anglerTarget.GetComponent<HarpoonTool>();
             if(anglerInventory!=null && !anglerInventory.ResistPocketTheft())anglerInventory.DropOneCatch();
             predatorCooldown=Mathf.Max(3,tuning.attackInterval);anglerTarget=null;
@@ -169,10 +169,11 @@ namespace Raid
             if(eelTarget!=null && reef.EelPhase==2 && Vector3.Distance(step,goal)<1.5f && ClearTo(step,eelTarget))
             {
                 var eelInventory=eelTarget.GetComponent<HarpoonTool>();
-                if(eelInventory!=null && !eelInventory.ResistPocketTheft())eelInventory.DropOneCatch();
-                eelTarget.DamageOxygen(7);
+                bool protectedCatch=eelInventory!=null && eelInventory.ResistPocketTheft();
+                if(eelInventory!=null && !protectedCatch)eelInventory.DropOneCatch();
+                eelTarget.DamageFromCreature(7);
                 eelTarget=null;eelDecoy=goal;eelCooldown=7;reef.EelPhase=3;
-                main.Message="Сетевик сорвал рыбу и отвлёкся на добычу.";
+                main.Message=protectedCatch?"Крепление удержало рыбу.":"Сетевик сорвал рыбу и отвлёкся на добычу.";
             }
         }
 
@@ -194,7 +195,7 @@ namespace Raid
             {
                 foreach(var diver in DiverMotor.ServerDivers)
                     if(CanHunt(diver) && Vector3.Distance(diver.transform.position,reef.Sweep)<3.7f && ClearTo(Rift+Vector3.up*2,diver))
-                    {diver.DamageOxygen(26);diver.ApplyExternalMotion((diver.transform.position-Rift).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
+                    {diver.DamageFromCreature(26);diver.ApplyExternalMotion((diver.transform.position-Rift).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
                 reef.KrakenPhase=2;krakenClock=.85f;
             }
             else if(reef.KrakenPhase==2){reef.KrakenPhase=3;krakenClock=6;}
