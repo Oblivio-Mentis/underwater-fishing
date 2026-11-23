@@ -33,15 +33,16 @@ Shader "RAID/Suspended water fines"
                 float dist = distance(GetCameraPositionWS(),p);
                 float weight = 1-smoothstep(.38,.5,max(max(abs(q.x),abs(q.y)),abs(q.z)));
                 weight *= smoothstep(.28,.75,dist)*(1-smoothstep(14.,24.,dist))*step(p.y,_Waterline)*step(v.seed.z,_Density);
-                float3 light = lerp(float3(.157,.233,.224),float3(.096,.159,.179),_DeepWater);
-                light+=NereidBeam(p)*lerp(float3(.23,.28,.19),float3(.24,.39,.48),_DeepWater);
+                // Open-water fines sit back (x.8); inside the helmet and hull cones they read x1.5 brighter.
+                float3 light = lerp(float3(.126,.186,.179),float3(.077,.127,.143),_DeepWater);
+                light+=NereidBeam(p)*lerp(float3(.345,.42,.285),float3(.36,.585,.72),_DeepWater);
                 [unroll] for(int j=0;j<3;j++)
                 {
                     float4 source = _NereidWorkLightPositions[j], axis = _NereidWorkLightDirections[j], lamp = _NereidWorkLightRadiance[j];
                     float3 ray=p-source.xyz; float sq=max(dot(ray,ray),.001);
                     float cone=saturate((dot(axis.xyz,ray*rsqrt(sq))-axis.w)*lamp.w);
                     float falloff=saturate(1.-sq*source.w);
-                    light+=lamp.rgb*(.13*cone*cone*falloff*falloff/max(8.,sq));
+                    light+=lamp.rgb*(.195*cone*cone*falloff*falloff/max(8.,sq));
                 }
                 float3 view = TransformWorldToView(p);
                 // Keep distant lit debris subpixel with a faint, anti-aliased footprint.
