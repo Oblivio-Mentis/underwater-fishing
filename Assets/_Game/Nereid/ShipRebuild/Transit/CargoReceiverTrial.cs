@@ -74,6 +74,12 @@ namespace Raid.Nereid
                 if(host && !started && (!controls || (inputDone && File.Exists(Path.Combine(directory,"peer","input-pass")))) && DiverMotor.ServerDivers.Count>=2 && File.Exists(Path.Combine(directory,"peer","ready")))
                 {
                     if(!controls)w.PrepareTransitFilm(First,Second);
+                    else
+                    {
+                        int crew=0;
+                        foreach(var diver in DiverMotor.ServerDivers)
+                            diver.Teleport(w.CargoLoadingPosition+new Vector3(12f+2f*crew++,1f,8f));
+                    }
                     started=true;startedAt=Time.realtimeSinceStartup;
                 }
                 var a=shoal.ModelFor(First);var b=shoal.ModelFor(Second);
@@ -190,7 +196,8 @@ namespace Raid.Nereid
             if(seabed)
             {
                 var berth=rail.stops[0].marker.position;
-                view.transform.position=berth+new Vector3(7.3f,3.15f,6.7f);
+                var angle=host?new Vector3(5.9f,2.15f,-5.5f):new Vector3(-5.8f,3.3f,-5.3f);
+                view.transform.position=berth+angle;
                 view.transform.LookAt(berth+Vector3.up*.75f);
             }
             var prev=RenderTexture.active;
