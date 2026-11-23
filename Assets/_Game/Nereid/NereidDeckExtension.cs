@@ -27,6 +27,14 @@ namespace Raid.Nereid
 
         internal static NereidDeckExtension Install(NereidVessel vessel)
         {
+            if (vessel.GetComponentInChildren<NereidShipLayout>() != null)
+            {
+                // The authored prefab supplies the decks and fixtures. Old companion navigation
+                // still queries this component for the ground height on the bridge companionway.
+                var ground = vessel.gameObject.AddComponent<NereidDeckExtension>();
+                ground.enabled = false;
+                return ground;
+            }
             var expansion=Node(vessel.transform,"NEREID / machinery deck and bridge",Vector3.zero).gameObject.AddComponent<NereidDeckExtension>();
             expansion.Build(vessel.transform);
             return expansion;
