@@ -144,7 +144,7 @@ namespace Raid
 
         void BuildModel()
         {
-            hands=new DiveHands(this,view.transform);
+            hands=new DiveHands(owner.firstPersonAppearance,view.transform);
             model=new GameObject(ModelName).transform;model.SetParent(view.transform,false);model.localPosition=RestPosition;
             staticHousing=DiveOutfit.Pivot(model,"Pressure assembly",Vector3.zero);
             buildParent=staticHousing;
@@ -207,15 +207,6 @@ namespace Raid
             for(int i=0;i<3;i++)
                 Box("Foregrip rib "+i,new Vector3(0,-.018f,.117f+i*.025f),new Vector3(.066f,.045f,.014f),.005f,dark);
             buildParent=model;
-            // The articulated sleeve meets this cuff; the trigger fingers stay on the grip.
-            Tube("Sealed glove cuff",new[]{new Vector3(.057f,-.14f,-.101f),new Vector3(.04f,-.103f,-.083f)},.043f,dark,10,null,.037f);
-            Box("Glove palm",new Vector3(.030f,-.091f,-.063f),new Vector3(.053f,.065f,.067f),.012f,dark,Quaternion.Euler(-13,0,-12));
-            for(int i=0;i<4;i++)
-            {
-                float y=-.071f-i*.015f;
-                Box("Glove finger "+i,new Vector3(-.008f,y,-.041f),new Vector3(.048f,.013f,.028f),.004f,dark,Quaternion.Euler(-8,0,8));
-            }
-            Tube("Glove thumb",new[]{new Vector3(.039f,-.064f,-.07f),new Vector3(.017f,-.051f,-.04f),new Vector3(-.002f,-.06f,-.031f)},.012f,dark,7);
             slide=new GameObject("Spring-loaded receiver slide").transform;slide.SetParent(model,false);
             Part("Bolt shuttle",BeveledBox(new Vector3(.032f,.014f,.07f),.003f),new Vector3(0,.073f,.06f),Quaternion.identity,steel,slide);
             var muzzle=new GameObject("Harpoon muzzle anchor").transform;muzzle.SetParent(model,false);muzzle.localPosition=new Vector3(0,.025f,.34f);

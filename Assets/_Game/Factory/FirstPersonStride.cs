@@ -15,6 +15,7 @@ namespace Raid
         float phase, weight, run, water, side;
         bool tracking;
 
+        public bool Moving => weight > .04f;
         public Vector3 Offset { get; private set; }
         public Vector3 Tilt { get; private set; }
 

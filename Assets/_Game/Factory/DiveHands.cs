@@ -1,5 +1,5 @@
 using UnityEngine;
-using static Raid.DiveOutfit.Surface;
+using Action = Raid.DiverAvatarRig.Action;
 
 namespace Raid
 {
@@ -9,7 +9,7 @@ namespace Raid
         {
             public Transform Upper,Sleeve,Wrist;
         }
-        readonly DiveOutfit outfit;
+        readonly DiverAvatarRig avatar;
         readonly FirstPersonStride stride = new FirstPersonStride();
         readonly Transform root,fishAnchor;
         readonly Arm[] arms=new Arm[2];
@@ -26,32 +26,22 @@ namespace Raid
         float press,switchTime,releaseStroke,shownWind;
         bool hadBall;
 
-        public DiveHands(HarpoonPresentation source,Transform camera)
+        public DiveHands(DiverAvatarRig template, Transform camera)
         {
-            outfit=new DiveOutfit(source);root=DiveOutfit.Pivot(camera,"Diver's hands",Vector3.zero);
+            root=DiveOutfit.Pivot(camera,"Diver's hands",Vector3.zero);
+            avatar=Object.Instantiate(template,root,false);
+            avatar.Prepare();
             for(int i=0;i<2;i++)
             {
-                int s=i==0?-1:1;var arm=arms[i]=new Arm();
-                arm.Upper=DiveOutfit.Pivot(root,s<0?"Left upper arm":"Right upper arm",Vector3.zero);
-                outfit.Bind(arm.Upper);
-                outfit.Oval(Fabric,new Vector3(0,0,.51f),new Vector3(.147f,.143f,1.05f));
-                outfit.Oval(Rubber,new Vector3(0,0,.91f),new Vector3(.119f,.122f,.25f));
-                arm.Sleeve=DiveOutfit.Pivot(root,s<0?"Left sleeve":"Right sleeve",Vector3.zero);
-                outfit.Bind(arm.Sleeve);
-                outfit.Oval(Fabric,new Vector3(0,0,.4f),new Vector3(.119f,.115f,1.03f));
-                outfit.Pipe(Rubber,new Vector3(0,0,.70f),new Vector3(0,0,.94f),.097f);
-                outfit.Pipe(Metal,new Vector3(0,0,.851f),new Vector3(0,0,.885f),.099f);
-                if(s<0)
+                string side=i==0?"Left":"Right";
+                arms[i]=new Arm
                 {
-                    outfit.Block(Metal,new Vector3(0,.044f,.67f),new Vector3(.061f,.025f,.17f));
-                    outfit.Block(Glass,new Vector3(0,.059f,.67f),new Vector3(.048f,.009f,.12f));
-                    for(int j=0;j<3;j++)outfit.Block(Lamp,new Vector3(-.012f+j*.012f,.065f,.668f),new Vector3(.006f,.003f,.055f));
-                }
-                arm.Wrist=DiveOutfit.Pivot(root,s<0?"Left glove":"Right glove",Vector3.zero);
-                outfit.Glove(arm.Wrist,s,1.05f);
+                    Upper=DiveOutfit.Pivot(root,side+" upper arm",Vector3.zero),
+                    Sleeve=DiveOutfit.Pivot(root,side+" sleeve",Vector3.zero),
+                    Wrist=DiveOutfit.Pivot(root,side+" glove",Vector3.zero)
+                };
             }
             fishAnchor=DiveOutfit.Pivot(root,"Presented catch",Vector3.zero);
-            outfit.Flush();
         }
 
         public void SetVisible(bool value)
@@ -112,20 +102,20 @@ namespace Raid
             Vector3 salvagePos=salvage==null?Vector3.zero:LootActor.CameraCenter+lower+stride.Offset*.35f;
             const float salvageScale=.42f;
             UpdateSalvage(salvage,salvagePos,salvageScale);
+            avatar.BeginPose();
             for(int i=0;i<2;i++)
             {
                 int s=i==0?-1:1;var arm=arms[i];
                 bool visible=!panelPress||s<0;
-                arm.Upper.gameObject.SetActive(visible);arm.Sleeve.gameObject.SetActive(visible);
-                arm.Wrist.gameObject.SetActive(visible&&(!ranged||s<0));
+                (i==0?avatar.leftSleeve:avatar.rightSleeve).enabled=visible;
                 if(!visible)continue;
                 Vector3 wrist,angles;
                 if(ranged)
                 {
-                    // The trigger glove is built around the receiver. Both sleeves follow their grips.
+                    // Both textured gloves track the moving receiver, including its recoil and line tension.
                     Vector3 socket=s<0?new Vector3(-.038f,-.057f,.116f):new Vector3(.055f,-.132f,-.097f);
                     wrist=gun.localPosition+gun.localRotation*socket;
-                    angles=(gun.localRotation*Quaternion.Euler(-14,28,50)).eulerAngles;
+                    angles=(gun.localRotation*(s<0?Quaternion.Euler(-14,28,50):Quaternion.Euler(-37,-39,-70))).eulerAngles;
                 }
                 else if(ball)
                 {
@@ -170,7 +160,15 @@ namespace Raid
                 }
                 BendArm(arm,s,wrist);
                 arm.Wrist.localPosition=wrist;arm.Wrist.localRotation=Quaternion.Euler(angles);
+                avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);
             }
+            var motion=push>0||panelPress?Action.PressPanel:releaseStroke>0?Action.Throw:switchTime>0?Action.SwapEquipment:
+                cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
+                salvage!=null?Action.CarrySalvage:caught!=null?Action.CarryFish:
+                grip||equipment.HookedFish!=null?Action.Reel:ranged?(aim>.1f?Action.Aim:Action.Harpoon):
+                !actor.IsWalking?Action.Swim:actor.IsSprinting?Action.Sprint:
+                stride.Moving?Action.Walk:Action.Idle;
+            avatar.FinishPose(motion,dt);
             return ranged&&!panelPress;
         }
 
@@ -220,6 +218,6 @@ namespace Raid
             if(species!=null)fish=CatchFishModel.Create(fishAnchor,species,catchId);
         }
 
-        public void Release(){if(root!=null)Object.Destroy(root.gameObject);outfit.Release();}
+        public void Release(){if(root!=null)Object.Destroy(root.gameObject);}
     }
 }

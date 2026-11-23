@@ -70,6 +70,8 @@ namespace Raid.Editor
             var controller=diver.AddComponent<CharacterController>(); controller.height=1.8f; controller.radius=.35f;
             diver.AddComponent<NetworkObject>();
             var motor=diver.AddComponent<DiverMotor>(); motor.tuning=tuning;
+            motor.crewAppearance=AssetDatabase.LoadAssetAtPath<DiverAvatarRig>("Assets/_Game/Factory/Diver/CrewDiver.prefab");
+            motor.firstPersonAppearance=AssetDatabase.LoadAssetAtPath<DiverAvatarRig>("Assets/_Game/Factory/Diver/FirstPersonDiver.prefab");
             var body=GameObject.CreatePrimitive(PrimitiveType.Capsule); body.name="Diver body"; body.transform.SetParent(diver.transform,false);
             Object.DestroyImmediate(body.GetComponent<Collider>()); body.GetComponent<Renderer>().sharedMaterial=orange;
             var visor=GameObject.CreatePrimitive(PrimitiveType.Cube); visor.name="Visor"; visor.transform.SetParent(diver.transform,false);

@@ -10,6 +10,9 @@ namespace Raid
     {
         public static readonly System.Collections.Generic.List<DiverMotor> ServerDivers = new();
         public DiverTuning tuning;
+        [Header("Diver presentation")]
+        public DiverAvatarRig crewAppearance;
+        public DiverAvatarRig firstPersonAppearance;
         public float SpeedMultiplier = 1f, OxygenMultiplier = 1f, SafeDepthBonus, DepthOffset;
         private float _helplessTime, _trappedTime;
         private DepartureAir departureAir;
