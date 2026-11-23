@@ -8,6 +8,7 @@ namespace Raid
     {
         // Watching = patrol. Investigate/Circle/Overshoot were added for the full hunt; Display/Pursuit/Recovery keep their meaning.
         public enum HuntStage : byte { Watching, Display, Pursuit, Recovery, Investigate, Circle, Overshoot }
+        [System.Serializable]
         public struct ReefSnapshot
         {
             public bool Active,Deep,ClamClosed,HasClam,HasKraken,HasEel;
