@@ -16,6 +16,7 @@ namespace Raid.Nereid
         Transform surface, gauge, impeller;
         Mesh pressurePlate;
         PressureTransferFlow transfer;
+        AirlockWaterVfx waterVfx;
         TMP_Text display;
         float water,shownInner=1,shownOuter;
         public float WaterHeight => transform.position.y+Mathf.Lerp(-.12f,Height+.05f,water);
@@ -52,6 +53,7 @@ namespace Raid.Nereid
             BuildMarineCollar();
             BuildWater();
             if(surface!=null)transfer=PressureTransferFlow.Install(transform,surface.GetComponent<MeshRenderer>(),steel,charcoal,trim);
+            waterVfx=AirlockWaterVfx.Install(transform);
             ApplyDoors(AirlockSnapshot.Dry);
         }
 
@@ -263,6 +265,7 @@ namespace Raid.Nereid
             gauge.localPosition=new Vector3(4.34f,Mathf.Lerp(.19f,3.8f,water),2.9f);
             bool running=s.Phase==AirlockPhase.Flooding||s.Phase==AirlockPhase.Draining;
             if(transfer!=null)transfer.Present(s.Phase,surface.localPosition.y);
+            if(waterVfx!=null)waterVfx.Present(s.Phase,surface.localPosition.y);
             if(running)impeller.Rotate(0,0,Time.deltaTime*240);
             if(display!=null)
             {

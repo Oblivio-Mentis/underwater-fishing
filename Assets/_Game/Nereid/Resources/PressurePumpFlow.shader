@@ -45,16 +45,19 @@ Shader "RAID/Pressure pump flow"
                     if(spray<.5)
                     {
                         p=center+float3(v.shape.x*radius,v.shape.z*radius*normal.x,v.shape.z*radius*normal.y);
-                        float stripe=pow(saturate(.54+.48*v.shape.x+.18*shimmer),4.);
-                        col=half4(lerp(half3(.066,.26,.33),half3(.63,.88,.89),stripe),lerp(.76,.38,beneath));
+                        // A braided, aerated core: bright threads twist down the jet and it whitens where it tears.
+                        float twist=.5+.5*sin(s*38.-time*21.+v.shape.x*3.);
+                        float stripe=pow(saturate(.5+.48*v.shape.x+.26*twist),3.);
+                        float tear=smoothstep(.55,1.,s)*(.4+.6*shimmer);
+                        col=half4(lerp(lerp(half3(.07,.27,.34),half3(.66,.9,.91),stripe),half3(.9,.97,.98),tear*.55),lerp(.86,.42,beneath));
                     }
                     else
                     {
                         float3 impact=float3(_Outlet.x,h,_Outlet.z-zSpeed*_Transfer.z);
-                        float reach=(.19+.47*hash(seed+13.))*phase;
+                        float reach=(.26+.62*hash(seed+13.))*phase;
                         float3 drop=impact+float3(axis.x*reach,.028+4.*phase*(1.-phase)*(.12+.24*hash(seed+8.)),axis.y*reach);
                         float3 bubble=_Outlet.xyz+float3(axis.x*(.11+phase*.24),phase*min(.85,max(.18,h-_Outlet.y+.04)),-.18-.64*phase+axis.y*phase*.19);
-                        float size=(.012+.021*hash(seed))*sin(phase*3.14159);
+                        float size=(.014+.026*hash(seed))*sin(phase*3.14159);
                         p=lerp(drop,bubble,beneath)+v.shape*float3(size,size*1.35,size);
                         // Submerged bubbles catch a glint on their upper shoulder. Keep the
                         // jet legible through the bulk water without adding a second emitter.

@@ -45,6 +45,7 @@ namespace Raid
                     var data=camera.GetUniversalAdditionalCameraData();data.renderPostProcessing=true;data.antialiasing=AntialiasingMode.FastApproximateAntialiasing;
                     CreateBubbles(camera.transform);
                     BindDiveLamp(camera.transform);
+                    WaterlineLens.Attach(camera);
                 }
             }
             viewed=player!=null && player.Spectating!=null?player.Spectating:player;
