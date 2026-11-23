@@ -4,32 +4,16 @@
       "name": "exterior-bow",
       "depth": 1,
       "feet": {
-        "x": 8.8,
-        "y": 2.5,
-        "z": 15.3
+        "x": 18,
+        "y": 4,
+        "z": 12
       },
       "look": {
         "x": 0,
-        "y": 2.1,
-        "z": 8
+        "y": 2,
+        "z": -3
       },
       "shipLocal": true
-    },
-    {
-      "name": "crew-harpoon",
-      "depth": 1,
-      "feet": {
-        "x": 0,
-        "y": 0.6,
-        "z": 1.5
-      },
-      "look": {
-        "x": 0.15,
-        "y": 0.6,
-        "z": -0.45
-      },
-      "shipLocal": true,
-      "prop": "crew"
     },
     {
       "name": "exterior",
@@ -52,14 +36,14 @@
       "depth": 1,
       "shipLocal": true,
       "feet": {
-        "x": 3.35,
-        "y": 0.54,
-        "z": 1.5
+        "x": -1.6,
+        "y": 0.7,
+        "z": 2.4
       },
       "look": {
-        "x": -0.6,
-        "y": -0.95,
-        "z": -3.6
+        "x": 0.2,
+        "y": 1,
+        "z": -7
       },
       "station": ""
     },
@@ -222,6 +206,67 @@
         "z": 0
       },
       "station": "Depths"
+    },
+    {
+      "name": "roof-and-lift",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 14,
+        "y": 13,
+        "z": -7
+      },
+      "look": {
+        "x": 0,
+        "y": 1,
+        "z": -8
+      }
+    },
+    {
+      "name": "central-glass",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0,
+        "y": 0.64,
+        "z": 1.4
+      },
+      "look": {
+        "x": 0,
+        "y": -0.65,
+        "z": -3.1
+      }
+    },
+    {
+      "name": "keel",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -12,
+        "y": -2,
+        "z": 7
+      },
+      "look": {
+        "x": 0,
+        "y": 0.9,
+        "z": -5
+      }
+    },
+    {
+      "name": "crew-harpoon",
+      "depth": 1,
+      "feet": {
+        "x": 0,
+        "y": 0.6,
+        "z": 1.5
+      },
+      "look": {
+        "x": 0.15,
+        "y": 0.6,
+        "z": -0.45
+      },
+      "shipLocal": true,
+      "prop": "crew"
     }
   ]
 }
