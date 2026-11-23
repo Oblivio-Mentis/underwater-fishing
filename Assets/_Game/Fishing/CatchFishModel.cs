@@ -77,8 +77,8 @@ namespace Raid
         public Vector3 Displace(Vector3 local)
         {
             float t = Mathf.Clamp01((HeadZ - local.z) / (HeadZ - TailZ));
-            float envelope = t * t * (.2f + .8f * t);
-            float wave = Mathf.Sin(wavePhase - t * 2.6f) * waveAmplitude * envelope;
+            float envelope = .08f + t * t * (.3f + .7f * t);
+            float wave = Mathf.Sin(wavePhase - t * 3.1f) * waveAmplitude * envelope;
             float bend = bendCurve * t * t;
             if (ray)
             {
@@ -166,8 +166,10 @@ namespace Raid
             float flinch=hitRecoil>0?Mathf.Sin(hitRecoil*Mathf.PI)*Mathf.Sin(hitRecoil*22f)*28f:0;
             // Spine wave: faster and larger with effort; bend follows the measured turn rate.
             wavePhase = Mathf.Lerp(cruise, sprint, strokeWeight) - .9f;
-            waveAmplitude = Mathf.Lerp(ray ? .035f : .045f, ray ? .07f : .11f, Mathf.Max(strokeWeight, speedWeight)) * amplitude + Mathf.Abs(flinch) * .0025f;
-            float targetBend = Mathf.Clamp(-yawRate / 160f, -1, 1) * (ray ? .10f : .16f);
+            // Readable at a glance: a resting Lanternfish swings its tail root ~6 cm, a bolting one ~16 cm.
+            float effort = Mathf.Max(strokeWeight, speedWeight);
+            waveAmplitude = Mathf.Lerp(ray ? .05f : .075f, ray ? .11f : .19f, effort) + Mathf.Abs(flinch) * .003f;
+            float targetBend = Mathf.Clamp(-yawRate / 90f, -1, 1) * (ray ? .16f : .26f);
             bendCurve = Mathf.Lerp(bendCurve, targetBend, 1 - Mathf.Exp(-dt * 8));
             DeformSpine();
             tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,(ray?whip*.42f:whip)*.55f+flinch+tailSlope,0);
