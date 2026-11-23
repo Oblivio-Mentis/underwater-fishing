@@ -6,7 +6,7 @@
 
 ## Игровая сборка NEREID
 
-[Управление монитором прокачки](Docs/RAID-019/SKILLS.md) · [Каталог навыков](Docs/RAID-019/CATALOG.md) · [Кадры и запись из игры](Docs/RAID-019/VERIFICATION.md)
+[Объединённая сборка NEREID Expedition](Docs/RAID-019/INTEGRATION.md) · [Управление монитором прокачки](Docs/RAID-019/SKILLS.md) · [Каталог навыков](Docs/RAID-019/CATALOG.md)
 
 ## Концепция и жанр
 

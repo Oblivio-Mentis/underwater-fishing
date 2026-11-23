@@ -318,9 +318,13 @@ namespace Raid
             foreach(var offset in new[]{new Vector3(2.14f,-.18f,-.4f),new Vector3(2.14f,-.18f,-.92f),new Vector3(1.12f,-.30f,-.35f)})
             {
                 host.Motor.Teleport(control.Frame.TransformPoint(offset));
-                host.Motor.LookAtConsole(center);
+                yield return Pause(.18f);
                 float attempt=Time.unscaledTime+.9f;
-                while(!CargoDispatch.CanLoad(world,host.Motor) && Time.unscaledTime<attempt) yield return null;
+                do
+                {
+                    host.Motor.LookAtConsole(center);
+                    yield return null;
+                } while(!CargoDispatch.CanLoad(world,host.Motor) && Time.unscaledTime<attempt);
                 if(CargoDispatch.CanLoad(world,host.Motor)) break;
                 var eye=host.Motor.transform.position+Vector3.up*.6f;
                 string obstruction=Physics.Raycast(eye,host.Motor.AimDirection,out var obstructionHit,1.6f,
@@ -348,9 +352,24 @@ namespace Raid
             Phase("Hoist cargo into reservoir");
             yield return Pause(.3f);
             var button=control.transform.position;
-            host.Motor.Teleport(button+new Vector3(1.6f,-.6f,0));
-            host.Motor.LookAtConsole(button);
-            yield return Wait(()=>CargoDispatch.CanUse(host.Motor),5,"Actual dispatch button is not on the server sightline.");
+            string buttonDiagnostics="";
+            foreach(var offset in new[]{new Vector3(1.05f,-.60f,0),new Vector3(.85f,-.60f,-.72f),new Vector3(.9f,-.05f,-.45f)})
+            {
+                host.Motor.Teleport(button+control.Frame.TransformDirection(offset));
+                yield return Pause(.18f);
+                float attempt=Time.unscaledTime+.90f;
+                do
+                {
+                    host.Motor.LookAtConsole(button);
+                    yield return null;
+                } while(!CargoDispatch.CanUse(host.Motor) && Time.unscaledTime<attempt);
+                if(CargoDispatch.CanUse(host.Motor))break;
+                var eye=host.Motor.transform.position+Vector3.up*.6f;
+                string obstruction=Physics.Raycast(eye,host.Motor.AimDirection,out var obstructionHit,2.65f,
+                    Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)?obstructionHit.collider.name:"open water";
+                buttonDiagnostics+=$" {control.Frame.InverseTransformPoint(eye)} insideShip={host.Motor.IsInside} {obstruction};";
+            }
+            Require(CargoDispatch.CanUse(host.Motor),"Actual dispatch button is not on the server sightline."+buttonDiagnostics);
             var walletBeforeHoist=world.Team.Treasury;
             world.Command(WorldAction.Hoist,0);
             yield return Wait(() => world.Team.hoistPhase != HoistPhase.Loading, 4, "Winch command refused.");

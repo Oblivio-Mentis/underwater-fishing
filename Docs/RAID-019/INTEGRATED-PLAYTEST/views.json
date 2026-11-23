@@ -1,0 +1,127 @@
+{
+    "status": "passed",
+    "phase": "13-rift",
+    "error": "",
+    "gpu": "NVIDIA GeForce RTX 4070",
+    "api": "Direct3D11",
+    "profile": "PC",
+    "pipeline": "PC_RPAsset",
+    "width": 1280,
+    "height": 720,
+    "msaa": 1,
+    "vsync": 0,
+    "fittings": 21,
+    "renderScale": 1.0,
+    "views": [
+        {
+            "name": "02-hull",
+            "depth": 1,
+            "samples": 0,
+            "eye": {
+                "x": 27.0,
+                "y": -4.900000095367432,
+                "z": -35.0
+            },
+            "direction": {
+                "x": -0.7264204025268555,
+                "y": 0.1800260841846466,
+                "z": 0.6632527112960815
+            },
+            "inside": false,
+            "frameMedianMs": 0.0,
+            "frameP95Ms": 0.0,
+            "cpuMedianMs": 0.0,
+            "cpuP95Ms": 0.0,
+            "gpuMedianMs": 0.0,
+            "gpuP95Ms": 0.0
+        },
+        {
+            "name": "03-survey-wreck",
+            "depth": 1,
+            "samples": 0,
+            "eye": {
+                "x": 31.0,
+                "y": -10.699999809265137,
+                "z": -17.399999618530275
+            },
+            "direction": {
+                "x": -0.6674383282661438,
+                "y": -0.7208335399627686,
+                "z": 0.18688245117664338
+            },
+            "inside": false,
+            "frameMedianMs": 0.0,
+            "frameP95Ms": 0.0,
+            "cpuMedianMs": 0.0,
+            "cpuP95Ms": 0.0,
+            "gpuMedianMs": 0.0,
+            "gpuP95Ms": 0.0
+        },
+        {
+            "name": "07-interior",
+            "depth": 1,
+            "samples": 0,
+            "eye": {
+                "x": 8.399999618530274,
+                "y": 1.5799998044967652,
+                "z": 2.0
+            },
+            "direction": {
+                "x": -0.6702345609664917,
+                "y": 0.2827112674713135,
+                "z": -0.6861922740936279
+            },
+            "inside": true,
+            "frameMedianMs": 0.0,
+            "frameP95Ms": 0.0,
+            "cpuMedianMs": 0.0,
+            "cpuP95Ms": 0.0,
+            "gpuMedianMs": 0.0,
+            "gpuP95Ms": 0.0
+        },
+        {
+            "name": "11-navigation-monitor",
+            "depth": 1,
+            "samples": 0,
+            "eye": {
+                "x": -0.7599998712539673,
+                "y": 11.279999732971192,
+                "z": -55.209999084472659
+            },
+            "direction": {
+                "x": -8.703813136889949e-8,
+                "y": -0.09370341897010803,
+                "z": -0.9956002235412598
+            },
+            "inside": true,
+            "frameMedianMs": 0.0,
+            "frameP95Ms": 0.0,
+            "cpuMedianMs": 0.0,
+            "cpuP95Ms": 0.0,
+            "gpuMedianMs": 0.0,
+            "gpuP95Ms": 0.0
+        },
+        {
+            "name": "13-rift",
+            "depth": 2,
+            "samples": 0,
+            "eye": {
+                "x": 36.0,
+                "y": -9.399999618530274,
+                "z": -42.0
+            },
+            "direction": {
+                "x": 0.6924405097961426,
+                "y": -0.35251519083976748,
+                "z": -0.6294915080070496
+            },
+            "inside": false,
+            "frameMedianMs": 0.0,
+            "frameP95Ms": 0.0,
+            "cpuMedianMs": 0.0,
+            "cpuP95Ms": 0.0,
+            "gpuMedianMs": 0.0,
+            "gpuP95Ms": 0.0
+        }
+    ]
+}

@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="61" result="Passed" total="61" passed="61" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:34Z" duration="9,7411598">
+  <test-suite type="TestSuite" id="1000" name="Underwater Fishing" fullname="Underwater Fishing" runstate="Runnable" testcasecount="61" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:34Z" duration="9.741160" total="61" passed="61" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1075" name="Raid.Progression.Tests.dll" fullname="E:/Development/Projects/RAID-Integrated/Library/ScriptAssemblies/Raid.Progression.Tests.dll" runstate="Runnable" testcasecount="61" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:34Z" duration="9.734038" total="61" passed="61" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="38368" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1076" name="Raid" fullname="Raid" runstate="Runnable" testcasecount="61" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:34Z" duration="9.733198" total="61" passed="61" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1077" name="Tests" fullname="Raid.Tests" runstate="Runnable" testcasecount="61" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:34Z" duration="9.732328" total="61" passed="61" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1002" name="AirlockCycleTests" fullname="Raid.Tests.AirlockCycleTests" classname="Raid.Tests.AirlockCycleTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.029948" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1003" name="DoorsInterlockThroughoutFloodAndPumpOut" fullname="Raid.Tests.AirlockCycleTests.DoorsInterlockThroughoutFloodAndPumpOut" methodname="DoorsInterlockThroughoutFloodAndPumpOut" classname="Raid.Tests.AirlockCycleTests" runstate="Runnable" seed="739001303" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.013531" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="FloodingRetainsExistingAirOnlyUntilOpeningOrTimeout" fullname="Raid.Tests.AirlockCycleTests.FloodingRetainsExistingAirOnlyUntilOpeningOrTimeout" methodname="FloodingRetainsExistingAirOnlyUntilOpeningOrTimeout" classname="Raid.Tests.AirlockCycleTests" runstate="Runnable" seed="1276799693" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000494" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1005" name="OccupiedThresholdKeepsPressureOnCurrentSide" fullname="Raid.Tests.AirlockCycleTests.OccupiedThresholdKeepsPressureOnCurrentSide" methodname="OccupiedThresholdKeepsPressureOnCurrentSide" classname="Raid.Tests.AirlockCycleTests" runstate="Runnable" seed="1018118292" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000333" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1006" name="CrewProgressTests" fullname="Raid.Tests.CrewProgressTests" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.058276" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1013" name="FoodAndFourYieldsUseTheHighestOwnedRankAndPreserveRemainder" fullname="Raid.Tests.CrewProgressTests.FoodAndFourYieldsUseTheHighestOwnedRankAndPreserveRemainder" methodname="FoodAndFourYieldsUseTheHighestOwnedRankAndPreserveRemainder" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="2066213923" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.026813" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1012" name="HoistReservesRealTankSpaceAndKeepsEachCatch" fullname="Raid.Tests.CrewProgressTests.HoistReservesRealTankSpaceAndKeepsEachCatch" methodname="HoistReservesRealTankSpaceAndKeepsEachCatch" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="1082782970" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.003547" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1010" name="InsufficientResourcesAndFailedWriteLeaveBalancesRanksAndClocksIntact" fullname="Raid.Tests.CrewProgressTests.InsufficientResourcesAndFailedWriteLeaveBalancesRanksAndClocksIntact" methodname="InsufficientResourcesAndFailedWriteLeaveBalancesRanksAndClocksIntact" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="880780801" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.003462" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1011" name="RoundTripKeepsPersonalAndTeamRanksWithoutPublishingProfileKeys" fullname="Raid.Tests.CrewProgressTests.RoundTripKeepsPersonalAndTeamRanksWithoutPublishingProfileKeys" methodname="RoundTripKeepsPersonalAndTeamRanksWithoutPublishingProfileKeys" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="1617530474" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.018689" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1014" name="SatietyScalesCurrentCycleAndCarryoverStaysCapped" fullname="Raid.Tests.CrewProgressTests.SatietyScalesCurrentCycleAndCarryoverStaysCapped" methodname="SatietyScalesCurrentCycleAndCarryoverStaysCapped" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="974464807" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.001094" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="ThreeCableRanksHaveSequentialDependenciesAndConfirmedExactPrices" fullname="Raid.Tests.CrewProgressTests.ThreeCableRanksHaveSequentialDependenciesAndConfirmedExactPrices" methodname="ThreeCableRanksHaveSequentialDependenciesAndConfirmedExactPrices" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="1283902594" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000677" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1008" name="TwoBuyersCanOnlyPurchaseOneSharedCageRank" fullname="Raid.Tests.CrewProgressTests.TwoBuyersCanOnlyPurchaseOneSharedCageRank" methodname="TwoBuyersCanOnlyPurchaseOneSharedCageRank" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="777774856" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000788" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1009" name="WrongProfileReferenceAndStaleRevisionsCannotSpend" fullname="Raid.Tests.CrewProgressTests.WrongProfileReferenceAndStaleRevisionsCannotSpend" methodname="WrongProfileReferenceAndStaleRevisionsCannotSpend" classname="Raid.Tests.CrewProgressTests" runstate="Runnable" seed="15598428" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000690" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1015" name="FishFightBrainTests" fullname="Raid.Tests.FishFightBrainTests" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.012865" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1021" name="ExhaustedFishGoesWeakenedAndStopsSurging" fullname="Raid.Tests.FishFightBrainTests.ExhaustedFishGoesWeakenedAndStopsSurging" methodname="ExhaustedFishGoesWeakenedAndStopsSurging" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="2063401371" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.002241" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1017" name="FiveFightsVaryAndCoverEveryPhase" fullname="Raid.Tests.FishFightBrainTests.FiveFightsVaryAndCoverEveryPhase" methodname="FiveFightsVaryAndCoverEveryPhase" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="1489951893" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.003647" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1016" name="SameSeedProducesTheSameFight" fullname="Raid.Tests.FishFightBrainTests.SameSeedProducesTheSameFight" methodname="SameSeedProducesTheSameFight" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="1093324845" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000838" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1018" name="SurgesNeverStartInsideTheCooldown" fullname="Raid.Tests.FishFightBrainTests.SurgesNeverStartInsideTheCooldown" methodname="SurgesNeverStartInsideTheCooldown" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="1504548972" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.002795" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1020" name="TwoHooksWeakenButDoNotSilenceTheTug" fullname="Raid.Tests.FishFightBrainTests.TwoHooksWeakenButDoNotSilenceTheTug" methodname="TwoHooksWeakenButDoNotSilenceTheTug" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="303717909" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000624" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1019" name="WindupAlwaysPrecedesASurgeAndTugFollowsIt" fullname="Raid.Tests.FishFightBrainTests.WindupAlwaysPrecedesASurgeAndTugFollowsIt" methodname="WindupAlwaysPrecedesASurgeAndTugFollowsIt" classname="Raid.Tests.FishFightBrainTests" runstate="Runnable" seed="1058623671" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.001241" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1022" name="FishFlowStopTests" fullname="Raid.Tests.FishFlowStopTests" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.002645" total="10" passed="10" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="1032" name="ClosingValveReservesOnlyFishAlreadyInsidePipe" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.001544" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1023" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.0f,16,0)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="659181667" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000382" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1024" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.899f,16,0)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="1275078376" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000084" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1025" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(0.9f,16,1)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="921867217" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000053" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1026" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(1.079f,16,1)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.079f,16,1)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="1463127616" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000057" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.08f,16,2)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="1086988899" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000037" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(1.26f,16,3)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="1624661171" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000029" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(3.6f,16,16)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="1303397664" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000029" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1030" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,16,16)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="5159613" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000028" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)" fullname="Raid.Tests.FishFlowStopTests.ClosingValveReservesOnlyFishAlreadyInsidePipe(100.0f,0,0)" methodname="ClosingValveReservesOnlyFishAlreadyInsidePipe" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="2119984163" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000028" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1033" name="InvalidAgeCannotReserveStock" fullname="Raid.Tests.FishFlowStopTests.InvalidAgeCannotReserveStock" methodname="InvalidAgeCannotReserveStock" classname="Raid.Tests.FishFlowStopTests" runstate="Runnable" seed="364507618" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000161" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1039" name="FishingLineTests" fullname="Raid.Tests.FishingLineTests" classname="Raid.Tests.FishingLineTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:33Z" duration="9.491339" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1040" name="DistinctConnectionsShareOneFishUpToTheCrewLimit" fullname="Raid.Tests.FishingLineTests.DistinctConnectionsShareOneFishUpToTheCrewLimit" methodname="DistinctConnectionsShareOneFishUpToTheCrewLimit" classname="Raid.Tests.FishingLineTests" runstate="Runnable" seed="1914921252" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.003218" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1045" name="EvenAtContactLandingRequiresTimeUnderLoad" fullname="Raid.Tests.FishingLineTests.EvenAtContactLandingRequiresTimeUnderLoad" methodname="EvenAtContactLandingRequiresTimeUnderLoad" classname="Raid.Tests.FishingLineTests" runstate="Runnable" seed="245383952" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:24Z" duration="0.000478" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1043" name="ShippedGraphCanLandFromEitherFightState" fullname="Raid.Tests.FishingLineTests.ShippedGraphCanLandFromEitherFightState" classname="Raid.Tests.FishingLineTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:33Z" duration="9.486454" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1041" name="ShippedGraphCanLandFromEitherFightState(&quot;Struggling&quot;)" fullname="Raid.Tests.FishingLineTests.ShippedGraphCanLandFromEitherFightState(&quot;Struggling&quot;)" methodname="ShippedGraphCanLandFromEitherFightState" classname="Raid.Tests.FishingLineTests" runstate="Runnable" seed="2107092150" result="Passed" start-time="2026-11-23 16:32:24Z" end-time="2026-11-23 16:32:33Z" duration="9.485535" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1042" name="ShippedGraphCanLandFromEitherFightState(&quot;Tired&quot;)" fullname="Raid.Tests.FishingLineTests.ShippedGraphCanLandFromEitherFightState(&quot;Tired&quot;)" methodname="ShippedGraphCanLandFromEitherFightState" classname="Raid.Tests.FishingLineTests" runstate="Runnable" seed="1774469063" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000359" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1044" name="SwimmingToTheHookCannotWindOrLandIt" fullname="Raid.Tests.FishingLineTests.SwimmingToTheHookCannotWindOrLandIt" methodname="SwimmingToTheHookCannotWindOrLandIt" classname="Raid.Tests.FishingLineTests" runstate="Runnable" seed="1685620745" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000201" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1034" name="FishRouteQuoteTests" fullname="Raid.Tests.FishRouteQuoteTests" classname="Raid.Tests.FishRouteQuoteTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.005017" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1038" name="DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation" fullname="Raid.Tests.FishRouteQuoteTests.DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation" methodname="DisplayOrderAndUnrelatedTechnicalStockDoNotInvalidateFishConfirmation" classname="Raid.Tests.FishRouteQuoteTests" runstate="Runnable" seed="1929066380" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.002390" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1037" name="DraftQuoteTracksExactDestinationsAndExcludesHoldAndCommitted" fullname="Raid.Tests.FishRouteQuoteTests.DraftQuoteTracksExactDestinationsAndExcludesHoldAndCommitted" methodname="DraftQuoteTracksExactDestinationsAndExcludesHoldAndCommitted" classname="Raid.Tests.FishRouteQuoteTests" runstate="Runnable" seed="2074348566" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.001107" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1035" name="EqualCountReplacementInvalidatesFishConfirmation" fullname="Raid.Tests.FishRouteQuoteTests.EqualCountReplacementInvalidatesFishConfirmation" methodname="EqualCountReplacementInvalidatesFishConfirmation" classname="Raid.Tests.FishRouteQuoteTests" runstate="Runnable" seed="391433741" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000218" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1036" name="YieldChangeAndNewFoodRequirementInvalidateConfirmation" fullname="Raid.Tests.FishRouteQuoteTests.YieldChangeAndNewFoodRequirementInvalidateConfirmation" methodname="YieldChangeAndNewFoodRequirementInvalidateConfirmation" classname="Raid.Tests.FishRouteQuoteTests" runstate="Runnable" seed="1302521956" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000218" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1046" name="RadialCatalogTests" fullname="Raid.Tests.RadialCatalogTests" classname="Raid.Tests.RadialCatalogTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.008259" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1049" name="CapstonesRequireAllSpecifiedMilestonesWithoutExhaustingTheSector" fullname="Raid.Tests.RadialCatalogTests.CapstonesRequireAllSpecifiedMilestonesWithoutExhaustingTheSector" methodname="CapstonesRequireAllSpecifiedMilestonesWithoutExhaustingTheSector" classname="Raid.Tests.RadialCatalogTests" runstate="Runnable" seed="1266979280" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.001259" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1047" name="CatalogHasEightSectorsAndStableRankIds" fullname="Raid.Tests.RadialCatalogTests.CatalogHasEightSectorsAndStableRankIds" methodname="CatalogHasEightSectorsAndStableRankIds" classname="Raid.Tests.RadialCatalogTests" runstate="Runnable" seed="192646291" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.005955" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1048" name="SuccessiveRanksRequireTheDirectParent" fullname="Raid.Tests.RadialCatalogTests.SuccessiveRanksRequireTheDirectParent" methodname="SuccessiveRanksRequireTheDirectParent" classname="Raid.Tests.RadialCatalogTests" runstate="Runnable" seed="733793697" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000331" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1050" name="TeamProgressTests" fullname="Raid.Tests.TeamProgressTests" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" testcasecount="22" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:34Z" duration="0.121177" total="22" passed="22" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1055" name="CargoCapacityAndDuplicateIdentityAreEnforced" fullname="Raid.Tests.TeamProgressTests.CargoCapacityAndDuplicateIdentityAreEnforced" methodname="CargoCapacityAndDuplicateIdentityAreEnforced" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="83892831" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.001118" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1074" name="CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved" fullname="Raid.Tests.TeamProgressTests.CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved" methodname="CorruptOrUnsupportedSaveIsReportedAndOriginalIsPreserved" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="747634567" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.030488" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1068" name="CrewPetSurvivesRestartOnlyAfterReturningAboard" fullname="Raid.Tests.TeamProgressTests.CrewPetSurvivesRestartOnlyAfterReturningAboard" methodname="CrewPetSurvivesRestartOnlyAfterReturningAboard" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1507219748" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.018850" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1054" name="DeliverySnapshotsItemAndCountsLifetimeOnlyOnce" fullname="Raid.Tests.TeamProgressTests.DeliverySnapshotsItemAndCountsLifetimeOnlyOnce" methodname="DeliverySnapshotsItemAndCountsLifetimeOnlyOnce" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1255190337" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000625" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1065" name="FailedDefenseLimitsStockLossAndPreservesPermanentProgress" fullname="Raid.Tests.TeamProgressTests.FailedDefenseLimitsStockLossAndPreservesPermanentProgress" methodname="FailedDefenseLimitsStockLossAndPreservesPermanentProgress" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1360246836" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000781" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1063" name="FeedingHasFourOutcomesAndBoundedCarry" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.003316" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1058" name="FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(0,None,1.0f)" methodname="FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1851405957" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.001369" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1059" name="FeedingHasFourOutcomesAndBoundedCarry(1,Underfed,0.9166667f)" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(1,Underfed,0.9166667f)" methodname="FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1454943432" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000276" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1060" name="FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(6,Underfed,0.5f)" methodname="FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1071162346" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000212" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1061" name="FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(12,Enough,0.0f)" methodname="FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="610038507" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000292" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1062" name="FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)" fullname="Raid.Tests.TeamProgressTests.FeedingHasFourOutcomesAndBoundedCarry(20,Overfed,0.0f)" methodname="FeedingHasFourOutcomesAndBoundedCarry" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1269508861" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000207" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1072" name="FifteenCatchesOfOneSpeciesRetainEachIdentityAcrossTwoFullCrewDeliveries" fullname="Raid.Tests.TeamProgressTests.FifteenCatchesOfOneSpeciesRetainEachIdentityAcrossTwoFullCrewDeliveries" methodname="FifteenCatchesOfOneSpeciesRetainEachIdentityAcrossTwoFullCrewDeliveries" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="593363035" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.009705" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1053" name="FishCanBeConsumedOnlyOnce" fullname="Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.001641" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1051" name="FishCanBeConsumedOnlyOnce(True)" fullname="Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(True)" methodname="FishCanBeConsumedOnlyOnce" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1388972488" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000833" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1052" name="FishCanBeConsumedOnlyOnce(False)" fullname="Raid.Tests.TeamProgressTests.FishCanBeConsumedOnlyOnce(False)" methodname="FishCanBeConsumedOnlyOnce" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1632150263" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000268" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1056" name="HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn" fullname="Raid.Tests.TeamProgressTests.HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn" methodname="HoistDeliversOnlyAfterUnloadingAndUnlocksAfterReturn" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="856486665" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000747" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1064" name="LastSecondMealProtectsOnlyTheDeadlineItReaches" fullname="Raid.Tests.TeamProgressTests.LastSecondMealProtectsOnlyTheDeadlineItReaches" methodname="LastSecondMealProtectsOnlyTheDeadlineItReaches" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1010265644" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:33Z" duration="0.000544" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1073" name="MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce" fullname="Raid.Tests.TeamProgressTests.MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce" methodname="MixedHoistDeliversAllResourceYieldsAndCountsLifetimeOnce" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="646191312" result="Passed" start-time="2026-11-23 16:32:33Z" end-time="2026-11-23 16:32:34Z" duration="0.000745" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1071" name="NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch" fullname="Raid.Tests.TeamProgressTests.NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch" methodname="NamedCatchSurvivesBasketSaveAndHoistAlongsideLegacyCatch" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1525072211" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.008872" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1070" name="NamedFishWithOnlyMineralYieldRemainsFishAfterSaveAndCannotBeFed" fullname="Raid.Tests.TeamProgressTests.NamedFishWithOnlyMineralYieldRemainsFishAfterSaveAndCannotBeFed" methodname="NamedFishWithOnlyMineralYieldRemainsFishAfterSaveAndCannotBeFed" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1928893364" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.010133" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1069" name="SalvageHoistsWithAFullReservoirAndCreditsOnceAfterReload" fullname="Raid.Tests.TeamProgressTests.SalvageHoistsWithAFullReservoirAndCreditsOnceAfterReload" methodname="SalvageHoistsWithAFullReservoirAndCreditsOnceAfterReload" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1162439067" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.011010" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1067" name="SaveRoundTripPreservesProgressFeedingAndMidHoistCargo" fullname="Raid.Tests.TeamProgressTests.SaveRoundTripPreservesProgressFeedingAndMidHoistCargo" methodname="SaveRoundTripPreservesProgressFeedingAndMidHoistCargo" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1743888556" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.018939" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1066" name="StockLossAlsoObeysFractionalCapForSmallStock" fullname="Raid.Tests.TeamProgressTests.StockLossAlsoObeysFractionalCapForSmallStock" methodname="StockLossAlsoObeysFractionalCapForSmallStock" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="426255606" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.000490" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1057" name="WinchUpgradeKeepsCapacityAndShortensCycle" fullname="Raid.Tests.TeamProgressTests.WinchUpgradeKeepsCapacityAndShortensCycle" methodname="WinchUpgradeKeepsCapacityAndShortensCycle" classname="Raid.Tests.TeamProgressTests" runstate="Runnable" seed="1704937944" result="Passed" start-time="2026-11-23 16:32:34Z" end-time="2026-11-23 16:32:34Z" duration="0.000407" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[<b><color=#2EA3FF>MCP-FOR-UNITY</color></b>: [TestRunnerNoThrottle] Restored Interaction Mode after test run.
+Saving results to: C:/Users/caiii/AppData/LocalLow/Oblivio Mentis/Underwater Fishing\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
