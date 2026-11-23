@@ -13,6 +13,7 @@ namespace Raid
         public UniversalFsmDefinitionAsset fsmDefinition;
         public FishFsmProfile fsmProfile;
         public FsmPresentationProfile presentationProfile;
+        public FishSpeciesProfile speciesProfile;
         public string fishId = "shallow-small";
         public int biomass = 2, chitin, offering = 1, cargoSize = 1, depthTier = 1;
         [Min(0.1f)] public float power = 1f;
@@ -176,9 +177,7 @@ namespace Raid
             ClearFishing();
             arrivalPending=false;
             fleeRemaining=0;
-            habitat=null;
-            leaving=false;
-            bank=0;
+            ResetSteering();
             hookAvailableAt=avoidUntil=0;
             _depthActive = active;
             transform.position = _origin;
@@ -195,6 +194,7 @@ namespace Raid
             state.HookCount = 0;
             state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.None;
             state.Tension = state.Stamina = 0f;
+            state.Behaviour = FishBehaviour.None;
             _snapshot.Value = state;
             if (active) RenewCargoId();
             foreach (var fishCollider in _colliders) fishCollider.enabled = active;
@@ -275,6 +275,7 @@ namespace Raid
                 case FishMode.Roam:
                     if(Nereid.NereidVessel.Active!=null || fleeRemaining>0){SwimReef(dt,ref state);break;}
                     state.Startled=false;
+                    state.Behaviour=FishBehaviour.Cruise;
                     Vector3 patrol = _origin + new Vector3(Mathf.Sin(_clock * tuning.roamSpeed), Mathf.Sin(_clock * tuning.roamSpeed * 0.5f) * 0.25f, Mathf.Cos(_clock * tuning.roamSpeed)) * tuning.swimRadius;
                     MoveTowards(patrol, tuning.roamSpeed * dt);
                     break;

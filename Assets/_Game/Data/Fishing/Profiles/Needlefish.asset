@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c894d9b7c43a403bb49490c1f8250682, type: 3}
+  m_Name: Needlefish
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishSpeciesProfile
+  habitat: {fileID: 11400000, guid: 25e40febe2a440ae86354050a37bef93, type: 2}
+  preferredHabitat: 0
+  arrivalDelay: 1.5
+  dwellSeconds: 63
+  patrolRadius: 2.0
+  returnDistance: 11
+  floorClearanceMin: 0.9
+  floorClearanceMax: 3.2
+  cruiseSpeed: 1.9
+  hoverSpeed: 0.3
+  forageSpeed: 0.8
+  fleeSpeed: 6.4
+  acceleration: 3.6
+  turnRate: 230
+  turnRadius: 0.55
+  bankStrength: 18
+  bodyRadiusMultiplier: 1
+  senseDistance: 5.0
+  closeDistance: 2.9
+  perceptionDelay: 0.18
+  fleeDuration: 3.0
+  shotFleeDuration: 3.6
+  hidingPreference: 0.55
+  recoverSeconds: 2.4
+  hoverProbability: 0.35
+  hoverDurationMin: 0.8
+  hoverDurationMax: 2.2
+  forageProbability: 0.15
+  forageDurationMin: 1.5
+  forageDurationMax: 3.0
+  stuckSeconds: 1.4

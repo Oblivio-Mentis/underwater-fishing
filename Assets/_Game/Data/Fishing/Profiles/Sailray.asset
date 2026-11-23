@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c894d9b7c43a403bb49490c1f8250682, type: 3}
+  m_Name: Sailray
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishSpeciesProfile
+  habitat: {fileID: 11400000, guid: 25e40febe2a440ae86354050a37bef93, type: 2}
+  preferredHabitat: 2
+  arrivalDelay: 19
+  dwellSeconds: 63
+  patrolRadius: 2.8
+  returnDistance: 13
+  floorClearanceMin: 1.4
+  floorClearanceMax: 4.2
+  cruiseSpeed: 1.5
+  hoverSpeed: 0.45
+  forageSpeed: 0.7
+  fleeSpeed: 5.2
+  acceleration: 1.9
+  turnRate: 65
+  turnRadius: 2.6
+  bankStrength: 34
+  bodyRadiusMultiplier: 1.2
+  senseDistance: 3.4
+  closeDistance: 2.0
+  perceptionDelay: 0.45
+  fleeDuration: 2.8
+  shotFleeDuration: 3.4
+  hidingPreference: 0.3
+  recoverSeconds: 2.6
+  hoverProbability: 0.25
+  hoverDurationMin: 1.5
+  hoverDurationMax: 3.0
+  forageProbability: 0.2
+  forageDurationMin: 2.0
+  forageDurationMax: 4.0
+  stuckSeconds: 1.4
