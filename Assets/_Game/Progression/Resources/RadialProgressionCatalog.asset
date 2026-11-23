@@ -1,0 +1,1183 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58718e16922f4edbbf119ce013996830, type: 3}
+  m_Name: RadialProgressionCatalog
+  m_EditorClassIdentifier:
+  lines:
+  - line: 0
+    key: harpoon.reel
+    title: "Сервокатушка"
+    effect: "Скорость активной смотки"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 35
+      note: ""
+    - magnitude: 40
+      note: ""
+    - magnitude: 45
+      note: ""
+    - magnitude: 50
+      note: ""
+    - magnitude: 54
+      note: ""
+    - magnitude: 58
+      note: ""
+    firstCost: {biomass: 8, chitin: 0, scrap: 0, electronics: 0}
+    growthPercent: 37
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 1
+    key: harpoon.cable
+    title: "Усиленный трос"
+    effect: "Эффективная прочность троса"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 10
+      note: ""
+    - magnitude: 22
+      note: ""
+    - magnitude: 36
+      note: ""
+    - magnitude: 52
+      note: ""
+    - magnitude: 70
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 0, electronics: 0}
+    growthPercent: 45
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 2
+    key: harpoon.damper
+    title: "Гаситель рывков"
+    effect: "Смещение водолаза при рывке"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 23
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 38
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 0
+      rank: 4
+  - line: 3
+    key: harpoon.tip
+    title: "Улучшенный наконечник"
+    effect: "Меньше натяжение в повороте, выше усталость рыбы"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 5
+      note: ""
+    - magnitude: 10
+      note: ""
+    - magnitude: 15
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 25
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 4
+    key: harpoon.sync-pull
+    title: "Синхронная тяга"
+    effect: "Сила одновременной тяги двух водолазов"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 10, chitin: 2, scrap: 2, electronics: 0}
+    growthPercent: 41
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 5
+    key: harpoon.module
+    title: "Глубинный гарпунный модуль"
+    effect: "При опасном рывке сбрасывает натяжение до 65%. Время перезарядки"
+    team: 0
+    unit: 3
+    ranks:
+    - magnitude: 45
+      note: ""
+    firstCost: {biomass: 58, chitin: 23, scrap: 26, electronics: 8}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 0
+      rank: 8
+    - atRank: 1
+      line: 1
+      rank: 4
+    - atRank: 1
+      line: 2
+      rank: 4
+  - line: 6
+    key: suit.oxygen
+    title: "Увеличенные баллоны"
+    effect: "Ёмкость баллонов O₂"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 20
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 36
+      note: ""
+    - magnitude: 44
+      note: ""
+    - magnitude: 52
+      note: ""
+    - magnitude: 60
+      note: ""
+    - magnitude: 68
+      note: ""
+    - magnitude: 76
+      note: ""
+    - magnitude: 84
+      note: ""
+    - magnitude: 92
+      note: ""
+    firstCost: {biomass: 8, chitin: 0, scrap: 0, electronics: 0}
+    growthPercent: 36
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 7
+    key: suit.seal
+    title: "Герметизация"
+    effect: "Дополнительный расход O₂ от стресса"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 0, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 8
+    key: suit.pressure
+    title: "Компенсатор давления"
+    effect: "Допустимая глубина давления"
+    team: 0
+    unit: 2
+    ranks:
+    - magnitude: 4
+      note: ""
+    - magnitude: 8
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 20
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 6
+      rank: 4
+  - line: 9
+    key: suit.armor
+    title: "Защитные пластины"
+    effect: "Урон от укусов и ударов"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 9, chitin: 3, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 10
+    key: suit.emergency-air
+    title: "Аварийный резерв"
+    effect: "Резерв при нулевом O₂. Восстанавливается за 30 с после возвращения на сухую палубу"
+    team: 0
+    unit: 3
+    ranks:
+    - magnitude: 2
+      note: ""
+    - magnitude: 3
+      note: ""
+    - magnitude: 4
+      note: ""
+    - magnitude: 5
+      note: ""
+    - magnitude: 6
+      note: ""
+    firstCost: {biomass: 10, chitin: 2, scrap: 2, electronics: 0}
+    growthPercent: 45
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 11
+    key: suit.expedition
+    title: "Экспедиционный костюм"
+    effect: "Накопление стресса при давлении и всплытии"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 12
+      note: ""
+    firstCost: {biomass: 58, chitin: 26, scrap: 23, electronics: 8}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 6
+      rank: 8
+    - atRank: 1
+      line: 7
+      rank: 4
+    - atRank: 1
+      line: 8
+      rank: 4
+  - line: 12
+    key: mobility.fins
+    title: "Усиленные ласты"
+    effect: "Максимальная скорость плавания"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 10
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 22
+      note: ""
+    - magnitude: 26
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 34
+      note: ""
+    - magnitude: 38
+      note: ""
+    - magnitude: 42
+      note: ""
+    firstCost: {biomass: 8, chitin: 0, scrap: 0, electronics: 0}
+    growthPercent: 36
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 13
+    key: mobility.start
+    title: "Уверенный старт"
+    effect: "Скорость разгона и торможения под водой"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 10
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 40
+      note: ""
+    - magnitude: 50
+      note: ""
+    firstCost: {biomass: 8, chitin: 0, scrap: 2, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 14
+    key: mobility.turn
+    title: "Поворотливость"
+    effect: "Смена направления при сохранённой скорости"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 12
+      rank: 4
+  - line: 15
+    key: mobility.cargo
+    title: "Работа с грузом"
+    effect: "Штраф к скорости с тяжёлым грузом"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 16
+    key: mobility.tug-stability
+    title: "Устойчивость под тягой"
+    effect: "Сила бокового рывка"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 45
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 17
+    key: mobility.hydro-dash
+    title: "Гидрорывок"
+    effect: "Бонус скорости во время рывка · B"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 55, chitin: 20, scrap: 28, electronics: 9}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 12
+      rank: 8
+    - atRank: 1
+      line: 13
+      rank: 4
+    - atRank: 1
+      line: 14
+      rank: 4
+  - line: 18
+    key: nereid.hull
+    title: "Прочность корпуса"
+    effect: "Общий запас по глубине давления"
+    team: 1
+    unit: 2
+    ranks:
+    - magnitude: 5
+      note: "Открывает экспедицию на глубину II."
+    - magnitude: 8
+      note: ""
+    - magnitude: 11
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 17
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 23
+      note: ""
+    - magnitude: 26
+      note: ""
+    - magnitude: 29
+      note: ""
+    - magnitude: 32
+      note: ""
+    firstCost: {biomass: 14, chitin: 3, scrap: 2, electronics: 0}
+    growthPercent: 36
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 19
+    key: nereid.searchlights
+    title: "Прожекторы"
+    effect: "Дальность бортового освещения"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 7
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 35
+      note: ""
+    firstCost: {biomass: 7, chitin: 0, scrap: 3, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 20
+    key: nereid.airlock
+    title: "Быстрый шлюз"
+    effect: "Длительность штатного цикла шлюза"
+    team: 1
+    unit: 1
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 8, chitin: 1, scrap: 2, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 18
+      rank: 4
+  - line: 21
+    key: nereid.scanner
+    title: "Экспедиционный сканер"
+    effect: "Радиус сканирования · V"
+    team: 0
+    unit: 5
+    ranks:
+    - magnitude: 12
+      note: "Отмечает рыбу на личном сканере."
+    - magnitude: 14
+      note: "Добавляет данные о ценности рыбы."
+    - magnitude: 16
+      note: "Показывает близкий утиль."
+    - magnitude: 18
+      note: "Делится метками с экипажем при каждом втором сканировании."
+    - magnitude: 24
+      note: "Продлевает действие меток на 50%."
+    firstCost: {biomass: 7, chitin: 0, scrap: 2, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 1}
+    milestones: []
+  - line: 22
+    key: nereid.medical
+    title: "Бортовая поддержка"
+    effect: "Скорость восстановления здоровья и O₂ на борту"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 10
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 40
+      note: ""
+    - magnitude: 50
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 23
+    key: nereid.deep-vessel
+    title: "Глубинная модификация NEREID"
+    effect: "Дальность прожекторов и скорость бортового восстановления"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 12
+      note: ""
+    firstCost: {biomass: 65, chitin: 30, scrap: 30, electronics: 9}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 18
+      rank: 8
+    - atRank: 1
+      line: 19
+      rank: 4
+    - atRank: 1
+      line: 20
+      rank: 4
+  - line: 24
+    key: cargo.cage
+    title: "Вместимость клети"
+    effect: "Дополнительные единицы вместимости клети"
+    team: 1
+    unit: 4
+    ranks:
+    - magnitude: 4
+      note: ""
+    - magnitude: 8
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 38
+      note: ""
+    - magnitude: 46
+      note: ""
+    - magnitude: 54
+      note: ""
+    - magnitude: 62
+      note: ""
+    firstCost: {biomass: 10, chitin: 0, scrap: 4, electronics: 0}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 25
+    key: cargo.winch
+    title: "Скорость лебёдки"
+    effect: "Скорость подъёма, разгрузки и возврата клети"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 10
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 40
+      note: ""
+    - magnitude: 50
+      note: ""
+    firstCost: {biomass: 8, chitin: 0, scrap: 3, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 26
+    key: cargo.reservoir
+    title: "Расширение резервуара"
+    effect: "Дополнительные места для рыбы в резервуаре"
+    team: 1
+    unit: 4
+    ranks:
+    - magnitude: 4
+      note: ""
+    - magnitude: 8
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 20
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 2, electronics: 0}
+    growthPercent: 44
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 24
+      rank: 4
+  - line: 27
+    key: cargo.defense
+    title: "Защита улова"
+    effect: "Потери рыбы из резервуара во время атаки"
+    team: 1
+    unit: 1
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 28
+    key: cargo.pockets
+    title: "Подсумки и крепления"
+    effect: "Дополнительные карманы для улова"
+    team: 0
+    unit: 4
+    ranks:
+    - magnitude: 1
+      note: ""
+    - magnitude: 2
+      note: ""
+    - magnitude: 2
+      note: "Фиксирует одну рыбу от кражи за вылазку."
+    - magnitude: 3
+      note: "Сохраняет защиту от кражи."
+    - magnitude: 4
+      note: "Сохраняет защиту от кражи."
+    firstCost: {biomass: 8, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 45
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 29
+    key: cargo.industrial
+    title: "Промышленная логистика"
+    effect: "Меньше время возврата клети перед следующей загрузкой"
+    team: 1
+    unit: 1
+    ranks:
+    - magnitude: 25
+      note: ""
+    firstCost: {biomass: 62, chitin: 22, scrap: 32, electronics: 8}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 24
+      rank: 8
+    - atRank: 1
+      line: 25
+      rank: 4
+    - atRank: 1
+      line: 26
+      rank: 4
+  - line: 30
+    key: processing.separator
+    title: "Калибровка сепаратора"
+    effect: "Выход всех материалов при переработке"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 5
+      note: ""
+    - magnitude: 9
+      note: ""
+    - magnitude: 13
+      note: ""
+    - magnitude: 17
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 25
+      note: ""
+    - magnitude: 29
+      note: ""
+    - magnitude: 33
+      note: ""
+    - magnitude: 37
+      note: ""
+    - magnitude: 41
+      note: ""
+    firstCost: {biomass: 10, chitin: 1, scrap: 2, electronics: 0}
+    growthPercent: 39
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 31
+    key: processing.biomass
+    title: "Биофильтр биомассы"
+    effect: "Выход биомассы"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 7
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 35
+      note: ""
+    firstCost: {biomass: 8, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 32
+    key: processing.chitin
+    title: "Хитиновый экстрактор"
+    effect: "Выход хитина"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 7
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 35
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 30
+      rank: 4
+  - line: 33
+    key: processing.scrap
+    title: "Магнитная сепарация"
+    effect: "Выход металлолома"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 7
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 35
+      note: ""
+    firstCost: {biomass: 8, chitin: 1, scrap: 2, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 34
+    key: processing.electronics
+    title: "Точная электронная разборка"
+    effect: "Выход электроники"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 7
+      note: ""
+    - magnitude: 14
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 28
+      note: ""
+    - magnitude: 35
+      note: ""
+    firstCost: {biomass: 10, chitin: 2, scrap: 3, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 1}
+    milestones: []
+  - line: 35
+    key: processing.waste-free
+    title: "Безотходная линия"
+    effect: "Дополнительный выход всех материалов"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 12
+      note: ""
+    firstCost: {biomass: 60, chitin: 24, scrap: 30, electronics: 10}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 30
+      rank: 8
+    - atRank: 1
+      line: 31
+      rank: 4
+    - atRank: 1
+      line: 32
+      rank: 4
+  - line: 36
+    key: feeding.nutrition
+    title: "Питательность"
+    effect: "Насыщение от каждой рыбы"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 5
+      note: ""
+    - magnitude: 9
+      note: ""
+    - magnitude: 13
+      note: ""
+    - magnitude: 17
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 25
+      note: ""
+    - magnitude: 29
+      note: ""
+    - magnitude: 33
+      note: ""
+    - magnitude: 37
+      note: ""
+    - magnitude: 41
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 0, electronics: 0}
+    growthPercent: 38
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 37
+    key: feeding.small-ration
+    title: "Рацион мелкой рыбы"
+    effect: "Насыщение от порций до двух единиц"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 4
+      note: ""
+    - magnitude: 8
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 20
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 0, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 38
+    key: feeding.large-ration
+    title: "Рацион крупной рыбы"
+    effect: "Насыщение от порций больше двух единиц"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 5
+      note: ""
+    - magnitude: 10
+      note: ""
+    - magnitude: 15
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 25
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 36
+      rank: 4
+  - line: 39
+    key: feeding.satiety
+    title: "Длительная сытость"
+    effect: "Время до следующей проверки голода"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 40
+    key: feeding.carryover
+    title: "Сохранение избытка"
+    effect: "Доля перекорма, перенесённая в следующий цикл"
+    team: 1
+    unit: 0
+    ranks:
+    - magnitude: 15
+      note: ""
+    - magnitude: 30
+      note: ""
+    - magnitude: 45
+      note: ""
+    - magnitude: 60
+      note: ""
+    - magnitude: 75
+      note: ""
+    firstCost: {biomass: 9, chitin: 1, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 41
+    key: feeding.prepared-ration
+    title: "Подготовленный рацион"
+    effect: "Уменьшение тяжести атаки после каждого третьего недокорма"
+    team: 1
+    unit: 1
+    ranks:
+    - magnitude: 25
+      note: ""
+    firstCost: {biomass: 64, chitin: 29, scrap: 21, electronics: 8}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 36
+      rank: 8
+    - atRank: 1
+      line: 37
+      rank: 4
+    - atRank: 1
+      line: 38
+      rank: 4
+  - line: 42
+    key: gosha.speed
+    title: "Скорость Гоши"
+    effect: "Скорость Гоши при команде игрока"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 5
+      note: ""
+    - magnitude: 9
+      note: ""
+    - magnitude: 13
+      note: ""
+    - magnitude: 17
+      note: ""
+    - magnitude: 21
+      note: ""
+    - magnitude: 25
+      note: ""
+    - magnitude: 29
+      note: ""
+    - magnitude: 33
+      note: ""
+    - magnitude: 37
+      note: ""
+    - magnitude: 41
+      note: ""
+    firstCost: {biomass: 7, chitin: 1, scrap: 0, electronics: 0}
+    growthPercent: 36
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 43
+    key: gosha.recall
+    title: "Знакомый сигнал"
+    effect: "Перезарядка команд Гоши"
+    team: 0
+    unit: 1
+    ranks:
+    - magnitude: 5
+      note: "Открывает команду «Ко мне» · G."
+    - magnitude: 10
+      note: ""
+    - magnitude: 15
+      note: ""
+    - magnitude: 20
+      note: ""
+    - magnitude: 25
+      note: ""
+    firstCost: {biomass: 7, chitin: 1, scrap: 0, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 44
+    key: gosha.fetch
+    title: "Принеси рыбку"
+    effect: "Радиус поиска мелкой рыбы для Гоши"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 8
+      note: "Открывает команду «Принеси рыбку» · H."
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 0, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 4
+      line: 42
+      rank: 4
+  - line: 45
+    key: gosha.safe-swim
+    title: "Осторожный пловец"
+    effect: "Избегание опасности на маршруте Гоши"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 8
+      note: ""
+    - magnitude: 16
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 32
+      note: ""
+    - magnitude: 40
+      note: ""
+    firstCost: {biomass: 8, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 42
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
+    milestones: []
+  - line: 46
+    key: gosha.delivery
+    title: "Ловкий добытчик"
+    effect: "Скорость доставки и запас времени при полных карманах"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 6
+      note: ""
+    - magnitude: 12
+      note: ""
+    - magnitude: 18
+      note: ""
+    - magnitude: 24
+      note: ""
+    - magnitude: 30
+      note: ""
+    firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
+    growthPercent: 43
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
+    milestones: []
+  - line: 47
+    key: gosha.faithful
+    title: "Верный помощник"
+    effect: "Открывает сопровождение · J. Гоша следует за вами 24 с"
+    team: 0
+    unit: 0
+    ranks:
+    - magnitude: 20
+      note: ""
+    firstCost: {biomass: 54, chitin: 24, scrap: 21, electronics: 7}
+    growthPercent: 40
+    stageGrowthPercent: 9
+    extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 1
+      line: 42
+      rank: 8
+    - atRank: 1
+      line: 43
+      rank: 4
+    - atRank: 1
+      line: 44
+      rank: 4
