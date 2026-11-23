@@ -26,6 +26,10 @@ namespace Raid
         private HarpoonTool host, helper;
         private float nextRemoteReel;
         private bool remoteReeling;
+        // RAID-018: fight phase sequences per landed fish (host) and what the independent client observed.
+        private readonly List<string> fightSequences = new();
+        private readonly HashSet<string> peerBehaviours = new();
+        private List<FishBehaviour> currentFight;
         private ThreatDirector pausedThreats;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -198,6 +202,7 @@ namespace Raid
                 }
                 Check(species + " captured and stowed by one diver.");
             }
+            RequireFightVariety();
             Require(host.FishInSlot(2)?.SpeciesId == "Needlefish" && host.FishInSlot(3)?.SpeciesId == "Lanternfish"
                 && host.FishInSlot(4)?.SpeciesId == "Needlefish" && host.HasFullCreel && host.CatchIdInSlot(2) != host.CatchIdInSlot(4),
                 "All three pockets must preserve independent identities, including two catches from the same shoal.");
@@ -295,6 +300,8 @@ namespace Raid
             yield return Pause(.5f);
             yield return Shot("catch-heavy.png");
             Check("Heavy capture completed with all three small catches intact; tool switch and fire blocked.");
+            Require(peerBehaviours.Count >= 2, "Independent client did not observe replicated fight behaviours: " + string.Join(",", peerBehaviours));
+            Check("Independent client observed replicated fight behaviours: " + string.Join(",", peerBehaviours) + ".");
 
             Vector3 fishingAim=host.Motor.AimDirection;
             long landedHeavyId = heavy.CargoId;
@@ -501,9 +508,19 @@ namespace Raid
             bool pulling = true;
             float deadline = Time.unscaledTime + 65;
             long capturedId = fish.CargoId;
+            currentFight = new List<FishBehaviour>();
+            float nextPeerSample = 0;
             while (fish.RequiresPartner ? fish.Mode != FishMode.Captured :
                 host.CatchIdInSlot(2) != capturedId && host.CatchIdInSlot(3) != capturedId && host.CatchIdInSlot(4) != capturedId)
             {
+                var phase = fish.Behaviour;
+                if (phase != FishBehaviour.None && (currentFight.Count == 0 || currentFight[currentFight.Count-1] != phase)) currentFight.Add(phase);
+                if (Time.unscaledTime >= nextPeerSample)
+                {
+                    nextPeerSample = Time.unscaledTime + .5f;
+                    var peerView = ReadClient();
+                    if (peerView != null && !string.IsNullOrEmpty(peerView.fishBehaviour)) peerBehaviours.Add(peerView.fishBehaviour);
+                }
                 Require(Time.unscaledTime < deadline && host.HookedFish == fish && !host.Motor.IsHelpless,
                     $"Landing lost or expired at {fish.HabitatName}: {fish.SpeciesId} / {fish.Mode}, stamina {fish.Stamina:F2}, "+
                     $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.HandAnchor,fish.transform.position):F2} m, "+
@@ -533,6 +550,20 @@ namespace Raid
                 yield return null;
             }
             host.QaHoldOwned(false, 0);
+            fightSequences.Add(string.Join(">", currentFight));
+            Check($"{fish.SpeciesId} fight phases: {fightSequences[fightSequences.Count-1]}");
+        }
+
+        private void RequireFightVariety()
+        {
+            // Acceptance 2: several admissible phases, sequences differ, and a calm wind-in, a lateral arc and a telegraphed surge all occurred.
+            Require(fightSequences.Count >= 3, "Fewer than three recorded fights.");
+            var all = new HashSet<string>();
+            foreach (var sequence in fightSequences) foreach (var phase in sequence.Split('>')) all.Add(phase);
+            Require(new HashSet<string>(fightSequences).Count >= 2, "All recorded fights followed the same phase sequence: " + string.Join(" | ", fightSequences));
+            Require(all.Contains("Lateral") && all.Contains("SurgeWindup") && all.Contains("Surge") && (all.Contains("Weakened") || all.Contains("HookShock")),
+                "Recorded fights lacked a lateral arc, a telegraphed surge or a calm phase: " + string.Join(",", all));
+            Check($"Fight variety over {fightSequences.Count} fights: {new HashSet<string>(fightSequences).Count} distinct sequences, phases {string.Join(",", all)}.");
         }
 
         private IEnumerator VerifyBothBolts()
