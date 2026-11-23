@@ -38,7 +38,7 @@ namespace Raid.Nereid
             amberLens=Finish("Amber work glass",new Color(1f,.68f,.36f),.12f,2.8f);
             // Ship coordinates are in hull units (2 metres). The cage lamp hangs clear of the dock overhang.
             beams[0]=Fixture("Cargo cradle searchlight",new Vector3(10.41f,-.24f,-16.03f),landing+Vector3.up*.65f,
-                new Color(1f,.77f,.49f),amberLens,2100,27,42,60);
+                new Color(1f,.77f,.49f),amberLens,1890,27,42,60);
             cradle=beams[0].transform.parent;
             beams[1]=Fixture("Starboard approach flood",new Vector3(6.8f,-2.37f,-7.8f),transform.TransformPoint(new Vector3(9.8f,-8.62f,-7.3f)),
                 new Color(.68f,.87f,1f),blueLens,1550,23,43,67);
@@ -50,9 +50,9 @@ namespace Raid.Nereid
             cargo.GetUniversalAdditionalLightData().additionalLightsShadowResolutionTier=UniversalAdditionalLightData.AdditionalLightsShadowResolutionTierLow;
             BuildHullGuides();
             beams[3]=Fixture("Outer hatch wall wash",new Vector3(11.54f,2.02f,-15.49f),transform.TransformPoint(new Vector3(10.30f,.55f,-13.71f)),
-                new Color(1.0f,.72f,.47f),amberLens,250,11.5f,52,88);
+                new Color(1.0f,.72f,.47f),amberLens,225,11.5f,52,88);
             beams[4]=Fixture("Saddle-tank grazing light",new Vector3(9.53f,-.24f,-15.84f),transform.TransformPoint(new Vector3(7.50f,-.68f,-20.18f)),
-                new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
+                new Color(.54f,.82f,1.0f),blueLens,1755,19,52,80);
             BuildExteriorDetail();
             initialized=true;
         }

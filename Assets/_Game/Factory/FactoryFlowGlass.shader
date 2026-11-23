@@ -40,8 +40,10 @@ Shader "RAID011/Factory Flow Glass"
                 half rim=pow(saturate(1-abs(dot(normal,view))),1.45);
                 float moving=frac(input.uv.y*.75-_Time.y*(.25+_FlowActive*.6));
                 half band=(1-smoothstep(.035,.075,abs(moving-.5)))*_FlowActive*.075;
-                half3 color=_BaseColor.rgb*(.85+rim*.35)+half3(.24,.31,.33)*rim*.32+_FlowColor.rgb*band;
-                return half4(MixFog(color,input.fog),saturate(_BaseColor.a+rim*.3+band*.12));
+                // Thin glass: nearly clear face-on so the fish inside read, with an instrument-cyan Fresnel at the edges.
+                half3 cyan=half3(.196,.722,.773);
+                half3 color=_BaseColor.rgb*(.70+rim*.30)+cyan*rim*rim*.22+half3(.24,.31,.33)*rim*.14+_FlowColor.rgb*band;
+                return half4(MixFog(color,input.fog),saturate(_BaseColor.a*.72+rim*rim*.34+band*.12));
             }
             ENDHLSL
         }

@@ -58,6 +58,12 @@ namespace Raid.Nereid
             var tint = material.GetColor("_BaseColor");
             var metal = material.GetFloat("_Metallic");
             var smoothness = material.GetFloat("_Smoothness");
+            if (surface == Surface.Enamel && !exterior && tint.maxColorComponent - Mathf.Min(tint.r, Mathf.Min(tint.g, tint.b)) < .15f)
+            {
+                // Interior enamel: matte working paint rather than a glowing white panel. Ochre marks keep their value.
+                tint = new Color(tint.r * .85f, tint.g * .85f, tint.b * .85f, tint.a);
+                smoothness = Mathf.Max(0, smoothness - .06f);
+            }
             material.shader = coating;
             material.SetColor("_BaseColor", tint);
             material.SetFloat("_Metallic", metal);
