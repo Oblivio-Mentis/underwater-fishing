@@ -29,8 +29,8 @@ MonoBehaviour:
     contrastBottom: 8
     vignette: 0.16
     oceanFill: 1.5
-    bloom: 0.24
-    bloomThreshold: 1.05
+    bloom: 0.16
+    bloomThreshold: 1.22
     clarityTop: {x: 0.00136, y: 1.17, z: 0.68, w: 0}
     clarityBottom: {x: 0.0023, y: 1.17, z: 0.68, w: 0}
   airlock:

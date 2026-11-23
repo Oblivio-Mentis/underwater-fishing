@@ -35,7 +35,7 @@ namespace Raid
             exposureTop=.12f,exposureBottom=.12f,
             saturationTop=-5f,saturationBottom=-5f,
             contrastTop=8f,contrastBottom=8f,
-            vignette=.16f,oceanFill=1.5f
+            vignette=.16f,oceanFill=1.5f,bloom=.16f,bloomThreshold=1.22f
         };
         public State airlock=new()
         {
