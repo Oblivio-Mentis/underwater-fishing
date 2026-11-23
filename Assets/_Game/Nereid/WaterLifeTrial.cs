@@ -28,7 +28,7 @@ namespace Raid.Nereid
             public float scale, nearestPassMetres;
             public bool drySuppressed, wetVisible, wetChamberVisible, deepWaterVisible;
             public float chamberFill;
-            public bool drySeal, floodingSeal, wetSeal, drainingSeal, returnedDry;
+            public bool drySeal, floodingSeal, wetSeal, drainingSeal, returnedDry, innerDoorWaitedForPeer, outerDoorWaitedForPeer;
             public List<Sample> samples=new();
         }
         string folder;
@@ -204,9 +204,15 @@ namespace Raid.Nereid
             }
             report.drySeal=!Blocks(doors.innerPort) && Blocks(doors.outerPort);
             if(!report.drySeal)throw new InvalidOperationException("Dry door colliders disagree with the physical passage.");
+            peer.Teleport(chamber.transform.TransformPoint(new Vector3(0,1,0)));
+            yield return new WaitForFixedUpdate();
             pad.Press(host);
             double pressLimit=Time.realtimeSinceStartupAsDouble+3;
             while(!world.Airlock.Busy && Time.realtimeSinceStartupAsDouble<pressLimit)yield return null;
+            yield return new WaitForSecondsRealtime(.55f);
+            report.innerDoorWaitedForPeer=world.Airlock.Phase==AirlockPhase.ClosingInner && world.Airlock.Inner>.98f && world.Airlock.Water==0;
+            if(!report.innerDoorWaitedForPeer)throw new InvalidOperationException("Inner gate released pressure with a teammate in the doorway.");
+            peer.Teleport(chamber.transform.TransformPoint(new Vector3(-2.3f,1,0)));
             host.LookAtConsole(chamber.transform.TransformPoint(new Vector3(1,1.5f,0)));
             double floodLimit=Time.realtimeSinceStartupAsDouble+12;
             while(world.Airlock.Water<.97f && Time.realtimeSinceStartupAsDouble<floodLimit)
@@ -238,9 +244,15 @@ namespace Raid.Nereid
             host.LookAtConsole(drain.transform.position);
             yield return new WaitForSecondsRealtime(.35f);
             if(AirlockPad.Aimed(host,cam)!=drain)throw new InvalidOperationException("Cabin return pad is occluded.");
+            peer.Teleport(chamber.transform.TransformPoint(new Vector3(doors.outerPort.localPosition.x,1,0)));
+            yield return new WaitForFixedUpdate();
             drain.Press(host);
             pressLimit=Time.realtimeSinceStartupAsDouble+3;
             while(!world.Airlock.Busy && Time.realtimeSinceStartupAsDouble<pressLimit)yield return null;
+            yield return new WaitForSecondsRealtime(.55f);
+            report.outerDoorWaitedForPeer=world.Airlock.Phase==AirlockPhase.ClosingOuter && world.Airlock.Outer>.98f && world.Airlock.Water==1;
+            if(!report.outerDoorWaitedForPeer)throw new InvalidOperationException("Outer gate drained with a swimmer in the doorway.");
+            peer.Teleport(chamber.transform.TransformPoint(new Vector3(doors.outerPort.localPosition.x+3,1,0)));
             host.LookAtConsole(chamber.transform.TransformPoint(new Vector3(6.5f,1.4f,0)));
             double drainLimit=Time.realtimeSinceStartupAsDouble+14;
             while(world.Airlock.Phase!=AirlockPhase.InnerOpen && Time.realtimeSinceStartupAsDouble<drainLimit)

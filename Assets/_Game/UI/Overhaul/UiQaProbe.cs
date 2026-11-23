@@ -24,7 +24,7 @@ namespace Raid.UI
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
             public float health,hypoxia,airlockWater,innerDoor,outerDoor;
             public string airlockPhase,reticleControl;
-            public int processingPresses,feedingPresses;
+            public int processingPresses,feedingPresses,hoistPresses;
             public GoshaSnapshot gosha;
             public bool goshaModelVisible;
             public int watchedOwner=-1,depthTier;
@@ -447,6 +447,7 @@ namespace Raid.UI
                     if(!button) continue;
                     if(station.kind==ShipConsoleKind.Process) snapshot.processingPresses=button.PressCount;
                     if(station.kind==ShipConsoleKind.Feed) snapshot.feedingPresses=button.PressCount;
+                    if(station.kind==ShipConsoleKind.CargoControl) snapshot.hoistPresses=button.PressCount;
                 }
                 snapshot.droppedItems=Enumerable.Range(0,world.DroppedCount).Select(i=>{
                     var item=world.DroppedAt(i);
