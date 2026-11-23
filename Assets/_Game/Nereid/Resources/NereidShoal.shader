@@ -20,9 +20,11 @@ Shader "RAID/Nereid Decorative Shoal"
             #pragma multi_compile_fog
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "NereidDiveLamp.hlsl"
+            #include "NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
             half4 _Back,_Belly,_Fin;
             CBUFFER_END
+            float3 _NereidReefClarity;
 
             struct Input
             {
@@ -38,6 +40,7 @@ Shader "RAID/Nereid Decorative Shoal"
                 half3 normal:TEXCOORD1;
                 half3 pigment:TEXCOORD2;
                 half fog:TEXCOORD3;
+                half2 shade:TEXCOORD4; // belly weight, fin membrane
             };
 
             Output Vertex(Input i)
@@ -51,7 +54,10 @@ Shader "RAID/Nereid Decorative Shoal"
                 o.world=TransformObjectToWorld(i.position);
                 o.clip=TransformWorldToHClip(o.world);
                 o.normal=TransformObjectToWorldNormal(i.normal);
-                o.pigment=i.uv.x<.33?_Back.rgb:i.uv.x<.66?_Belly.rgb:_Fin.rgb;
+                bool fin=i.uv.x>=.66;
+                o.pigment=i.uv.x<.33?_Back.rgb:fin?_Fin.rgb:_Belly.rgb;
+                // Countershading from the object normal, same logic as the catchable fish but per vertex.
+                o.shade=half2(smoothstep(-.15,.75,-normalize(i.normal).y),fin?1:0);
                 o.fog=ComputeFogFactor(o.clip.z);
                 return o;
             }
@@ -61,15 +67,24 @@ Shader "RAID/Nereid Decorative Shoal"
                 half3 n=normalize(i.normal);
                 half3 v=SafeNormalize(GetWorldSpaceViewDir(i.world));
                 half3 overhead=half3(-.31,.91,-.26);
-                half sky=saturate(dot(n,overhead));
-                half sheen=pow(saturate(dot(n,normalize(overhead+v))),22);
-                half edge=1-saturate(abs(dot(n,v)));
-                half3 body=i.pigment*(.50+sky*.53);
-                body+=half3(.25,.36,.36)*(sheen*.46+edge*.18);
+                half belly=i.shade.x;
+                half3 pigment=i.pigment*lerp(half3(.88,.96,1.07),half3(1.14,1.05,.94)*(1.+.16*belly),belly);
+                half wrapped=saturate((dot(n,overhead)+.55)/1.55);
+                half nh=saturate(dot(n,normalize(overhead+v)));
+                half sheen=pow(nh,9)*.04+pow(nh,30)*.07;
+                half face=saturate(abs(dot(n,v)));
+                half edge=1-face;
+                half3 body=pigment*(.42+wrapped*wrapped*.66);
+                body+=half3(.25,.36,.36)*(sheen*2.2+edge*.16);
+                // Fin membranes take a thin pale rim along their edge.
+                body+=half3(.30,.42,.42)*pow(edge,3.)*(.25+.45*i.shade.y);
                 half crossing=saturate(dot(n,normalize(overhead-v)));
                 body+=half3(.12,.18,.17)*crossing*crossing*.35;
-                body+=i.pigment*NereidBeam(i.world)*.48;
-                return half4(MixFog(body,i.fog),1);
+                body+=pigment*NereidBeam(i.world)*(.42+.30*face);
+                float3 delta=i.world-GetCameraPositionWS();
+                float transmission=exp2(-dot(delta,delta)*_NereidReefClarity.x);
+                half3 submerged=lerp(WaterColumnColor(-v),body,transmission);
+                return half4(lerp(MixFog(body,i.fog),submerged,_NereidTurbidity),1);
             }
             ENDHLSL
         }

@@ -181,11 +181,26 @@ Shader "RAID/Nereid Hull Coating"
                 float broad=HullNoise(skin*.62);
                 float deposits=HullNoise(skin*float2(3.8,.31)+float2(12.8,47.));
                 float streak=smoothstep(.52,.87,deposits)*smoothstep(.29,.68,broad);
-                half coat=lerp(.87,1.10,broad)-streak*(.075+.125*_Marine);
+                // Grime runs down in world space below seams and fasteners, inside and out.
+                float runoff=HullNoise(float2(skin.x*5.1,skin.y*.42)+float2(71.,3.))*HullNoise(skin*1.3+float2(9.,21.));
+                float grime=smoothstep(.30,.62,runoff)*(.55+.45*smoothstep(.25,.70,broad));
+                half coat=lerp(.87,1.10,broad)-streak*(.075+.125*_Marine)-grime*.09;
                 half projection=lerp(1.,plate,_SurfaceDetail.y);
-                surface.albedo=_BaseColor.rgb*coat*projection + half3(.019,.022,.013)*streak*_Marine;
-                surface.metallic=_Metallic;
-                surface.smoothness=saturate(_Smoothness*(.69+.31*broad)-streak*.11+(plate-1.)*.075);
+                // Metre-scale patches of polished and chalked finish keep the plating from reading as one sheet.
+                float polish=HullNoise(skin*.21+float2(5.3,2.1));
+                half gloss=lerp(.35,.65,smoothstep(.22,.78,polish))+(_Smoothness-.40)*.6;
+                // Worn rims: handling scuffs at grazing angles, and the raised lips and studs of the pressed panels.
+                half grazing=1.-saturate(dot(n,lighting.viewDirectionWS));
+                half scuff=smoothstep(.42,.84,HullNoise(skin*4.7+float2(31.,7.)));
+                half relief=saturate((plate-1.)*2.4);
+                half wear=saturate(grazing*grazing*grazing*scuff*1.5+relief*(.35+.65*scuff)*.9);
+                half3 paint=_BaseColor.rgb*coat*projection + half3(.019,.022,.013)*streak*_Marine;
+                // Safety ochre keeps its chroma: worn rims only brighten it, the grey chalking is for steel.
+                half peakTint=max(_BaseColor.r,max(_BaseColor.g,_BaseColor.b));
+                half chroma=saturate((peakTint-min(_BaseColor.r,min(_BaseColor.g,_BaseColor.b)))/max(peakTint,.01)*1.6);
+                surface.albedo=lerp(paint,paint*1.9+half3(.035,.048,.052)*(1.-chroma),wear*.55);
+                surface.metallic=saturate(_Metallic+wear*.35);
+                surface.smoothness=saturate(gloss-streak*.10-grime*.07+(plate-1.)*.075+wear*.14);
                 surface.normalTS=half3(0,0,1);
                 surface.occlusion=1;
                 surface.alpha=1;
