@@ -31,6 +31,8 @@ namespace Raid.Editor
                 var meshes=root.GetComponentsInChildren<MeshFilter>(true).Select(r=>r.sharedMesh)
                     .Concat(root.GetComponentsInChildren<SkinnedMeshRenderer>(true).Select(r=>r.sharedMesh));
                 foreach(var mesh in meshes.Where(m=>m).Distinct()) Paint(mesh,pixels,source.width,source.height,weapon);
+                if(assetPath==Diver)
+                    foreach(var renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true)) renderer.forceMeshLod=3;
             }
             finally { UnityEngine.Object.DestroyImmediate(source); }
         }

@@ -31,6 +31,17 @@ namespace Raid.Nereid.Editor
             Check(launcher && launcher.weaponAppearance && launcher.weaponAppearance.Ready &&
                 Vector3.Distance(launcher.weaponAppearance.boltTipLocal,launcher.weaponAppearance.boltNockLocal)>.07f,
                 "First-person and world displays are bound to a prefab with a detachable spear and cable drum.");
+            var exhibit=layout.GetComponentsInChildren<Transform>().Single(t=>t.name=="Expedition equipment displays");
+            var suits=exhibit.GetComponentsInChildren<SkinnedMeshRenderer>();
+            var launchers=exhibit.GetComponentsInChildren<HarpoonVisualRig>();
+            Check(suits.Length>=4 && launchers.Length>=6,"Four crew suits and six expedition harpoons in the equipment room.");
+            Check(suits.All(s=>s.forceMeshLod>0 && s.sharedMesh.lodCount>s.forceMeshLod &&
+                  s.sharedMesh.GetIndexCount(0,s.forceMeshLod)<s.sharedMesh.GetIndexCount(0,0)),
+                "The displayed suits use a simplified rigged mesh.");
+            var paints=suits.SelectMany(s=>s.sharedMaterials).Concat(launchers.SelectMany(h=>h.GetComponentsInChildren<MeshRenderer>())
+                .SelectMany(r=>r.sharedMaterials)).Distinct();
+            Check(paints.All(m=>m && m.shader.name=="RAID/Faceted Expedition Equipment" && !m.HasProperty("_BaseMap")),
+                "Suit and harpoon surfaces are painted by solid part colours.");
             var decks=Object.FindAnyObjectByType<NereidDeckNavigation>();
             Check(decks && decks.reservoirGlass && decks.reservoirGlass.enabled,"The reservoir floor has solid physical glass.");
             Check(decks.crewSpawns.All(s=>s && layout.ContainsSealed(s.position)),"Every crew spawn is in a dry compartment.");
