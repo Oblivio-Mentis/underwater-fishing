@@ -21,6 +21,9 @@ namespace Raid.Nereid.Editor
             if(rail.davit)foreach(var t in rail.davit.GetComponentsInChildren<Transform>(true))Save(t);
             try
             {
+                // Batch scene validation runs before ExecuteAlways.Update constructs the live pipe skin.
+                foreach(var pipe in rail.GetComponentsInChildren<NereidPipeRoute>())
+                    if(!pipe.GetComponent<MeshFilter>().sharedMesh)pipe.Rebuild();
                 var inspector=new CargoMeshClearance(rail);
                 bool lateGate=false;
                 int steps=Mathf.Max(160,Mathf.CeilToInt(rail.Length()/.18f));
@@ -37,7 +40,7 @@ namespace Raid.Nereid.Editor
                         rail.rightDoor.localPosition=rail.DoorPosition(false,open);
                         cage.PoseMechanism(phase,t);
                         if(rail.davit)rail.davit.Present(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,null);
-                        if(!lateGate && open<.998f && CargoMeshClearance.OccupiesAperture(rail,inspector.VisibleCargoBounds(),.65f,out _))
+                        if(!lateGate && open<1f && CargoMeshClearance.OccupiesAperture(rail,inspector.VisibleCargoBounds(),.65f,out _))
                         {issues.Add("The receiver leaves must clear the first cargo edge by at least 0.65 m and hold until the last edge leaves.");lateGate=true;}
                         inspector.Sample($"{phase} {t:F3} ({rail.transform.InverseTransformPoint(position):F2})");
                     }
