@@ -50,6 +50,7 @@ namespace Raid.Nereid.Editor
                 finally { UnityEngine.Object.DestroyImmediate(assembly); }
             }
             FitDoorFrames();
+            FitPressureTransitions();
             var room=PrefabUtility.LoadPrefabContents(Room);
             try
             {
