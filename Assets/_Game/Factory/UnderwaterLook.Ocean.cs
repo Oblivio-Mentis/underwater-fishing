@@ -13,7 +13,10 @@ namespace Raid
         Color initialColor;
         UnityEngine.Rendering.AmbientMode deckAmbientMode;
         Color deckSky,deckHorizon,deckGround;
-        float shallowFill;
+        UnderwaterGrading grading;
+        Light oceanFill;
+        float oceanFillBase=1.5f;
+        int shownState;
         float predatorProximity, breathPhase;
         const float BeamCandela=245f;
         bool lampOn;
@@ -39,16 +42,19 @@ namespace Raid
             deckSky=RenderSettings.ambientSkyColor;
             deckHorizon=RenderSettings.ambientEquatorColor;
             deckGround=RenderSettings.ambientGroundColor;
+            grading=UnderwaterGrading.Active;
+            foreach(var light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+                if(light!=null && light.name=="Ocean reflected fill"){oceanFill=light;oceanFillBase=light.intensity;break;}
         }
 
-        void ApplyShallowFill(float blend)
+        // The dry ship and the airlock keep their authored ambience; the sea states replace it.
+        void ApplyAmbient(UnderwaterGrading.State state,float blend)
         {
-            if(Mathf.Approximately(shallowFill,blend))return;
-            shallowFill=blend;
             RenderSettings.ambientMode=blend>0?UnityEngine.Rendering.AmbientMode.Trilight:deckAmbientMode;
-            RenderSettings.ambientSkyColor=Color.Lerp(deckSky,new Color(.49f,.65f,.72f),blend);
-            RenderSettings.ambientEquatorColor=Color.Lerp(deckHorizon,new Color(.34f,.44f,.46f),blend);
-            RenderSettings.ambientGroundColor=Color.Lerp(deckGround,new Color(.27f,.35f,.33f),blend);
+            if(blend<=0)return;
+            RenderSettings.ambientSkyColor=Color.Lerp(deckSky,state.sky,blend);
+            RenderSettings.ambientEquatorColor=Color.Lerp(deckHorizon,state.equator,blend);
+            RenderSettings.ambientGroundColor=Color.Lerp(deckGround,state.ground,blend);
         }
 
         void BindDiveLamp(Transform eye)
@@ -98,10 +104,17 @@ namespace Raid
 
         bool IsEyeUnderwater()
         {
-            if(camera==null || viewed==null)return false;
+            if(camera==null || viewed==null) return false;
             var chamber=Nereid.NereidAirlock.Active;
             var eye=camera.transform.position;
             return chamber!=null && chamber.Contains(eye)?chamber.IsSubmerged(eye):!viewed.IsInside;
+        }
+
+        bool InAirlock()
+        {
+            if(camera==null)return false;
+            var chamber=Nereid.NereidAirlock.Active;
+            return chamber!=null && chamber.Contains(camera.transform.position);
         }
 
         void LateUpdate()
@@ -110,28 +123,26 @@ namespace Raid
             bool wet=IsEyeUnderwater();
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
-            if(wetBlend<=0 && !appliedFog)return;
+            if(wetBlend<=0 && !appliedFog && !InAirlock())return;
             UpdateDiveLamp(wet);
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
+            bool inLock=InAirlock();
             float height=camera!=null?camera.transform.position.y:0f;
             float belowShelf=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-13f,-24f,height));
             float belowRift=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-24f,-40f,height));
             float lowerWater=abyss?belowRift:belowShelf;
-            ApplyShallowFill(abyss?0f:wetBlend);
+            var state=!wet&&inLock?grading.Airlock:abyss?grading.Abyss:grading.Shallow;
+            float gradeBlend=wet?wetBlend:inLock?.65f:0f;
+            ApplyAmbient(wet?state:grading.Deck,gradeBlend);
             if(wetBlend>0)
             {
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
-                float density=abyss?Mathf.Lerp(.108f,.139f,lowerWater):Mathf.Lerp(.038f,.048f,lowerWater);
+                float density=Mathf.Lerp(state.fogTop,state.fogBottom,lowerWater);
                 RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density,wetBlend);
-                var waterTint=abyss
-                    ?Color.Lerp(new Color(.032f,.075f,.106f),new Color(.034f,.042f,.096f),lowerWater)
-                    :Color.Lerp(new Color(.024f,.118f,.154f),new Color(.027f,.076f,.123f),lowerWater);
+                var waterTint=Color.Lerp(state.tintTop,state.tintBottom,lowerWater);
                 // Custom reef and hull transmission follows the camera through the same layers.
-                var clarity=abyss
-                    ?new Vector4(Mathf.Lerp(.00625f,.0094f,lowerWater),1.04f,1f,0f)
-                    :new Vector4(Mathf.Lerp(.00136f,.0023f,lowerWater),1.17f,.68f,0f);
-                Shader.SetGlobalVector(ReefClarityShader,clarity);
+                Shader.SetGlobalVector(ReefClarityShader,Vector4.Lerp(state.clarityTop,state.clarityBottom,lowerWater));
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
                 RenderSettings.fogColor=Color.Lerp(initialColor,fogTint,wetBlend);
@@ -140,6 +151,13 @@ namespace Raid
             }
             else ResetFog();
             Shader.SetGlobalFloat(WaterShader,wetBlend);
+            if(oceanFill!=null)
+            {
+                // A flat 1.5-intensity fill erased every form in the shallows. On deck it stays;
+                // underwater the sea state decides how much skylight replaces it.
+                float target=wetBlend>0?state.oceanFill:Mathf.Lerp(oceanFillBase,state.oceanFill,gradeBlend);
+                oceanFill.intensity=target;
+            }
             // Keep a continuous breathing rhythm as the animal approaches or retreats.
             var threats=ThreatDirector.Instance;
             float danger=wet && viewed!=null && !viewed.IsDead && threats!=null
@@ -148,15 +166,24 @@ namespace Raid
             breathPhase=Mathf.Repeat(breathPhase+dt*Mathf.Lerp(2.2f,3.65f,predatorProximity),2*Mathf.PI);
             float fear=predatorProximity*wetBlend*(viewed!=null?1f-viewed.HypoxiaSeverity:0f);
             float breath=Mathf.Sin(breathPhase);
-            if(profile!=null && profile.TryGet<ColorAdjustments>(out var color))
+            var deckState=grading.Deck;
+            if(profile!=null)
             {
-                float seaExposure=abyss?Mathf.Lerp(-.045f,-.23f,lowerWater):Mathf.Lerp(.27f,.02f,lowerWater);
-                color.postExposure.Override(Mathf.Lerp(.12f,seaExposure,wetBlend)+fear*(.43f*breath-.06f));
-                color.saturation.Override(Mathf.Lerp(-5,Mathf.Lerp(-8,-15,lowerWater),wetBlend));
-                color.contrast.Override(Mathf.Lerp(8,Mathf.Lerp(3,8,lowerWater),wetBlend));
+                if(profile.TryGet<ColorAdjustments>(out var color))
+                {
+                    float exposure=Mathf.Lerp(state.exposureTop,state.exposureBottom,lowerWater);
+                    color.postExposure.Override(Mathf.Lerp(deckState.exposureTop,exposure,gradeBlend)+fear*(.43f*breath-.06f));
+                    color.saturation.Override(Mathf.Lerp(deckState.saturationTop,Mathf.Lerp(state.saturationTop,state.saturationBottom,lowerWater),gradeBlend));
+                    color.contrast.Override(Mathf.Lerp(deckState.contrastTop,Mathf.Lerp(state.contrastTop,state.contrastBottom,lowerWater),gradeBlend));
+                }
+                if(profile.TryGet<Bloom>(out var bloom))
+                {
+                    bloom.intensity.Override(Mathf.Lerp(.24f,state.bloom,gradeBlend));
+                    bloom.threshold.Override(Mathf.Lerp(1.05f,state.bloomThreshold,gradeBlend));
+                }
+                if(profile.TryGet<Vignette>(out var vignette))
+                    vignette.intensity.Override(Mathf.Lerp(deckState.vignette,state.vignette,gradeBlend)+fear*(.065f-.05f*breath));
             }
-            if(profile!=null && profile.TryGet<Vignette>(out var vignette))
-                vignette.intensity.Override(Mathf.Lerp(.16f,.14f,wetBlend)+fear*(.065f-.05f*breath));
         }
 
         void ResetFog()
@@ -169,7 +196,11 @@ namespace Raid
 
         void RestoreOceanSettings()
         {
-            ApplyShallowFill(0);
+            RenderSettings.ambientMode=deckAmbientMode;
+            RenderSettings.ambientSkyColor=deckSky;
+            RenderSettings.ambientEquatorColor=deckHorizon;
+            RenderSettings.ambientGroundColor=deckGround;
+            if(oceanFill!=null)oceanFill.intensity=oceanFillBase;
             if(appliedFog)ResetFog();
             Shader.SetGlobalVector(LampShader,Vector4.zero);
             if(diveLamp!=null)Destroy(diveLamp.gameObject);
