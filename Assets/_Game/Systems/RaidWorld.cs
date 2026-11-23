@@ -219,6 +219,14 @@ namespace Raid
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
             if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
+            ShipConsoleKind? switchKind=action switch
+            {
+                WorldAction.SendProcessingDraft or WorldAction.StopProcessing => ShipConsoleKind.Process,
+                WorldAction.SendFeedingDraft or WorldAction.StopFeeding => ShipConsoleKind.Feed,
+                _ => null
+            };
+            if(switchKind.HasValue && !ShipConsole.CanUseKind(diver,switchKind.Value))
+            {Respond(sender,requestId,false,"range");return;}
             bool dispatch=action is WorldAction.SendFish or WorldAction.SendProcessingDraft or WorldAction.SendFeedingDraft;
             CatchDestination? dispatchDestination=action switch
             {
@@ -262,9 +270,23 @@ namespace Raid
                     break;
                 case WorldAction.Hoist: success=team.BeginHoist(progression); break;
             }
-            if(success) { diver.ConfirmInteraction(); Publish(); Save(); }
+            if(success)
+            {
+                diver.ConfirmInteraction();
+                if(switchKind.HasValue) ShowDispatchPress(switchKind.Value,sender.ClientId);
+                Publish(); Save();
+            }
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
             Respond(sender,requestId,success,success?"ok":"unavailable");
+        }
+        [ObserversRpc]
+        private void ShowDispatchPress(ShipConsoleKind kind,int operatorId)
+        {
+            // The operator starts their hand and cap together on input.
+            if(NetworkManager.ClientManager.Connection.ClientId==operatorId)return;
+            foreach(var station in ShipConsole.Stations)
+                if(station && station.kind==kind && station.gameObject.scene==gameObject.scene)
+                    station.GetComponent<Nereid.NereidDispatchButton>()?.Press(null);
         }
         [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
         internal bool LoadSelectedCargo(HarpoonTool tool,DroppedKind kind,long id)

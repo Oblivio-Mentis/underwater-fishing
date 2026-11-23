@@ -24,6 +24,7 @@ namespace Raid.UI
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
             public float health,hypoxia,airlockWater,innerDoor,outerDoor;
             public string airlockPhase,reticleControl;
+            public int processingPresses,feedingPresses;
             public GoshaSnapshot gosha;
             public bool goshaModelVisible;
             public int watchedOwner=-1,depthTier;
@@ -440,6 +441,13 @@ namespace Raid.UI
             }
             if(world!=null)
             {
+                foreach(var station in ShipConsole.Stations)
+                {
+                    var button=station.GetComponent<Nereid.NereidDispatchButton>();
+                    if(!button) continue;
+                    if(station.kind==ShipConsoleKind.Process) snapshot.processingPresses=button.PressCount;
+                    if(station.kind==ShipConsoleKind.Feed) snapshot.feedingPresses=button.PressCount;
+                }
                 snapshot.droppedItems=Enumerable.Range(0,world.DroppedCount).Select(i=>{
                     var item=world.DroppedAt(i);
                     return new DropReadout {instance=item.id.ToString(),kind=item.kind.ToString(),species=item.Fish?.SpeciesId,position=item.position};

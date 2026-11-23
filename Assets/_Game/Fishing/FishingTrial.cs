@@ -146,7 +146,7 @@ namespace Raid
                 };
                 foreach(var item in staged)Require(world.Team.Deposit(item),"Reservoir test requires a fresh save.");
                 yield return Wait(()=>staged.All(item=>world.View.tank.Exists(fish=>fish.id==item.id)),4,"Staged catches were not published.");
-                yield return ChooseReservoirRoutes(staged.Select(item=>item.id).ToArray());
+                yield return ChooseReservoirRoutes(staged.Select(item=>item.id).ToArray(),true);
                 yield break;
             }
 
