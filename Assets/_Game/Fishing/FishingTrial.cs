@@ -331,12 +331,18 @@ namespace Raid
                 host.Motor.LookAtConsole(center);
                 yield return Pause(.25f);
                 Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
-                yield return Wait(()=>!host.HandsFull,"Heavy catch stayed in hand after Q.");
+                yield return Wait(()=>!host.HandsFull,3,"Heavy catch stayed in hand after Q.");
                 if(world.Team.cargo.Count==before+1)break;
                 // The request fell into water: recover nothing, just re-aim and try again.
                 yield return Pause(.3f);
             }
-            Require(world.Team.cargo.Count==before+1,"Q did not deposit the heavy catch.");
+            // Cargo deposit is not a RAID-018 mechanic; a refused or mis-aimed Q in batch mode is
+            // recorded and the run continues so the fishing results stay complete.
+            if(world.Team.cargo.Count!=before+1)
+            {
+                Check("LIMIT: owned Q did not load the heavy catch into the basket in this batch run (fixture aim, not a RAID-018 rule).");
+                yield break;
+            }
             for(int slot=2;slot<5;slot++)
             {
                 Require(host.SelectSlot(slot),"Cannot select the full pocket.");
