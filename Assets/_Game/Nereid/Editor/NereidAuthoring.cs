@@ -197,8 +197,9 @@ namespace Raid.Nereid.Editor
             blueShaft.shadows=LightShadows.Soft;
             foreach(int side in new[]{-1,1})
             {
-                var position=new Vector3(side*5,4,7);
-                var rotation=Quaternion.LookRotation(new Vector3(side*3,2,13)-position);
+                // Flush-mounted on the wet side of the inspection cover, looking forward along the hull.
+                var position=new Vector3(side*6.33f,3.15f,6.39f);
+                var rotation=Quaternion.LookRotation(new Vector3(side*12,1.9f,11.2f)-position);
                 Solid("Bow inspection floodlight",position,new Vector3(.45f,.28f,.22f),"Nereid_Dark");
                 root.GetChild(root.childCount-1).localRotation=rotation;
                 Solid("Bow floodlight lens",position+rotation*Vector3.forward*.12f,new Vector3(.34f,.18f,.025f),"Nereid_Lamp");
