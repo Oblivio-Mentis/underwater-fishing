@@ -24,6 +24,7 @@ namespace Raid.Nereid
         AirlockWaterVfx waterVfx;
         TMP_Text display;
         float water,shownInner=1,shownOuter;
+        bool receivedDoorPose;
         public float WaterHeight => transform.TransformPoint(Vector3.up*Level).y;
         public AirlockPad GetPad(int index) => index>=0&&index<pads.Length?pads[index]:null;
 
@@ -268,9 +269,16 @@ namespace Raid.Nereid
         void Update()
         {
             var w=RaidWorld.Instance;
-            if(w==null || w.NetworkObject==null || (!w.IsClientInitialized&&!w.IsServerInitialized))return;
+            if(w==null || w.NetworkObject==null || (!w.IsClientInitialized&&!w.IsServerInitialized))
+            {receivedDoorPose=false;return;}
             var s=w.Airlock;
-            if(!w.IsServerInitialized)
+            if(!w.IsServerInitialized && (!receivedDoorPose || (s.Outer>0 && shownInner>.001f) || (s.Inner>0 && shownOuter>.001f)))
+            {
+                // Late boarding and reconnect restore one coherent seal/water state before interpolating.
+                ApplyDoors(s);
+                receivedDoorPose=true;
+            }
+            else if(!w.IsServerInitialized)
             {
                 float step=Time.deltaTime*1.2f;
                 shownInner=Mathf.MoveTowards(shownInner,s.Inner,step);shownOuter=Mathf.MoveTowards(shownOuter,s.Outer,step);
