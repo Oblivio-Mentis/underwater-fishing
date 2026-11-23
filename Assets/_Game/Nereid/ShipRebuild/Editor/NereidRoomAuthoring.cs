@@ -113,6 +113,7 @@ namespace Raid.Nereid.Editor
                 finally { Object.DestroyImmediate(assembly); }
             }
             if(prefab==null)throw new InvalidOperationException("NEREID prefab save failed");
+            CompletePressureFairings();
             RetireOldShip(vessel);
             var result=(GameObject)PrefabUtility.InstantiatePrefab(prefab,vessel.transform);
             EditorSceneManager.MarkSceneDirty(vessel.gameObject.scene);
