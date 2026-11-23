@@ -197,9 +197,8 @@ namespace Raid
                 }
                 else
                 {
-                    stride.FreeHand(s,out var offset,out var tilt);
-                    wrist=Vector3.Scale(avatar.restingWrist,new Vector3(s,1,1))+lower+offset;
-                    angles=new Vector3(8,-s*18,-s*35)+tilt;
+                    stride.FreeHand(s,avatar,out wrist,out angles);
+                    wrist+=lower;
                     if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.46f),.85f);
                 }
                 if(s<0 && keyPress && !cuddling && !displayedHeavy)
@@ -223,7 +222,8 @@ namespace Raid
                     arm.Clavicle.position=root.TransformPoint(back);
                 }
                 bool support=ranged && s<0;
-                float carry=support && !keyPress && press<=0 ? stride.Weight*(1f-aim)*(1f-monitorRest) : 0f;
+                // Keep the support elbow tucked even between steps and while sighting.
+                float carry=support ? Mathf.Lerp(.85f,1f,stride.Weight)*(1f-push)*(1f-keyReach) : 0f;
                 BendArm(arm,s,wrist,support,carry);
                 arm.Wrist.localRotation=Quaternion.Euler(angles);
                 avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);

@@ -78,12 +78,13 @@ MonoBehaviour:
     endBind: {x: 0.31199837, y: 0.48928243, z: 0.8143036, w: 0.0130211925}
   leftSleeve: {fileID: 1421253651760265266}
   rightSleeve: {fileID: 5657666711778879847}
-  movingSupportShoulder: {x: 0.035, y: -0.065, z: 0.076}
-  movingSupportPole: {x: -0.06, y: -1, z: 0.05}
+  movingSupportShoulder: {x: 0.075, y: -0.16, z: 0.105}
+  movingSupportPole: {x: 0.04, y: -1, z: -0.12}
   shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
   shoulderReturn: {x: 0.18, y: -0.26, z: -0.235}
   shoulderTravel: 0.045
   restingWrist: {x: 0.22, y: -0.215, z: 0.37}
+  deckRestingWrist: {x: 0.24, y: -0.265, z: 0.32}
   supportWrist: {x: -0.126, y: 0.018, z: 0.105}
   supportAngles: {x: 30.55, y: 52.87, z: 157.55}
   triggerWrist: {x: 0.059, y: -0.049, z: -0.249}
@@ -103,6 +104,21 @@ MonoBehaviour:
   cradleCenter: {x: 0, y: -0.235, z: 0.54}
   cradleScale: 0.64
   motions:
+  - action: 0
+    clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
+    speed: 1
+    holdPose: 1
+    normalizedPose: 0.33
+  - action: 1
+    clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
+    speed: 1
+    holdPose: 1
+    normalizedPose: 0.33
+  - action: 2
+    clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
+    speed: 1
+    holdPose: 1
+    normalizedPose: 0.52
   - action: 4
     clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
     speed: 1

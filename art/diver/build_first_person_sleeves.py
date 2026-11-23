@@ -1,5 +1,6 @@
 """Build the first-person sleeves from the crew's FBX. Run with Blender in background mode."""
 from pathlib import Path
+from math import cos, sin, tau
 import bmesh
 import bpy
 from mathutils import Vector
@@ -30,6 +31,35 @@ def mesh_islands(mesh):
 
 
 islands = mesh_islands(body.data)
+
+
+def add_undersleeve(bm, uv, weights, group, elbow, wrist):
+    # The rigid glove and elbow armour can rotate away from the outer shell.
+    # Rounded ends keep the flexible dark undersuit visible through either joint.
+    axis = wrist - elbow
+    direction = axis.normalized()
+    radial = direction.orthogonal().normalized()
+    tangent = direction.cross(radial)
+    rings = []
+    sides = 12
+    for along, radius in ((-.23, .07), (-.17, .21), (0, .28), (.34, .26),
+                          (.78, .22), (1, .24), (1.15, .18), (1.22, .07)):
+        ring = []
+        for j in range(sides):
+            angle = tau * j / sides
+            offset = radial * cos(angle) + tangent * sin(angle)
+            v = bm.verts.new(elbow + along * axis + offset * (radius * axis.length))
+            v[weights][group] = 1.0
+            ring.append(v)
+        rings.append(ring)
+    faces = [bm.faces.new(tuple(reversed(rings[0]))), bm.faces.new(rings[-1])]
+    for a, b in zip(rings, rings[1:]):
+        for i in range(sides):
+            j = (i + 1) % sides
+            faces.append(bm.faces.new((a[i], a[j], b[j], b[i])))
+    for face in faces:
+        for loop in face.loops:
+            loop[uv].uv = (.47266, .48828)  # Charcoal neoprene on the suit atlas.
 
 
 def make_sleeve(side):
@@ -103,6 +133,10 @@ def make_sleeve(side):
         for loop in cap.loops:
             loop[uv].uv = (ta + tb) * .5
     assert all(not e.is_boundary for e in rim)
+    forearm = next(b for b in rig.data.bones if b.name.endswith(side + "ForeArm"))
+    hand = next(b for b in rig.data.bones if b.name.endswith(side + "Hand"))
+    add_undersleeve(bm, uv, weights, sleeve.vertex_groups[forearm.name].index,
+                    bone_to_mesh @ forearm.head_local, bone_to_mesh @ hand.head_local)
     bm.normal_update()
     bm.to_mesh(sleeve.data)
     bm.free()

@@ -80,17 +80,26 @@ namespace Raid
             Tilt += new Vector3(10.5f, -18f, 10f) * tuck;
         }
 
-        public void FreeHand(int hand, out Vector3 offset, out Vector3 angles)
+        public void FreeHand(int hand, DiverAvatarRig rig, out Vector3 wrist, out Vector3 angles)
         {
             float radians = phase * 2f * Mathf.PI;
             float sweep = hand * Mathf.Sin(radians);
             float recover = hand * Mathf.Cos(radians);
-            Vector3 walk = new Vector3(hand * (recover * .008f - run*.027f), sweep * (.024f + run * .042f) + run*.024f,
-                sweep * (.070f + run * .085f) - run*.031f);
-            Vector3 stroke = new Vector3(hand * recover * .046f, recover * .028f, sweep * .135f);
-            offset = Vector3.Lerp(walk, stroke, water) * weight;
-            angles = new Vector3(-sweep * Mathf.Lerp(13f+15f*run, 21f, water), hand * recover * water * 10f,
-                -hand * recover * Mathf.Lerp(6f, 15f, water)) * weight;
+            var mirror = new Vector3(hand,1,1);
+            var shoulder = Vector3.Scale(rig.shoulderOrigin,mirror);
+            var deckRest = Vector3.Scale(rig.deckRestingWrist,mirror);
+            // Swing from the shoulder. A running diver bends the elbows and brings each
+            // glove closer to the chest on its forward pass.
+            float swing = sweep*weight*(18f+10f*run);
+            var deckWrist = shoulder + Quaternion.Euler(-swing,0,0)*(deckRest-shoulder);
+            deckWrist += new Vector3(-hand*.025f,.065f,-.045f)*run
+                + new Vector3(-hand*.012f,.008f,.036f)*sweep*weight;
+            var deckAngles = new Vector3(24f-swing*.72f,-hand*(11f+4f*sweep*weight),-hand*(64f-8f*run));
+            var stroke = new Vector3(hand*recover*.046f,recover*.028f,sweep*.135f)*weight;
+            var swimAngles = new Vector3(8f,-hand*18f,-hand*35f)
+                + new Vector3(-sweep*21f,hand*recover*10f,-hand*recover*15f)*weight;
+            wrist = Vector3.Lerp(deckWrist,Vector3.Scale(rig.restingWrist,mirror)+stroke,water);
+            angles = Vector3.Lerp(deckAngles,swimAngles,water);
         }
     }
 }

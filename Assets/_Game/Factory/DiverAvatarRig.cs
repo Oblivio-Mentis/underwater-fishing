@@ -19,6 +19,9 @@ namespace Raid
             public Action action;
             public AnimationClip clip;
             [Min(.01f)] public float speed = 1;
+            [Tooltip("Hold a finger pose from this clip while locomotion drives the arms.")]
+            public bool holdPose;
+            [Range(0,1)] public float normalizedPose;
         }
 
         [Serializable]
@@ -56,6 +59,8 @@ namespace Raid
         [Range(0, .08f)] public float shoulderTravel = .045f;
         [Tooltip("Camera-space resting position of the right wrist. The left wrist mirrors X.")]
         public Vector3 restingWrist = new Vector3(.22f, -.215f, .37f);
+        [Tooltip("Unarmed right wrist on deck. The left hand mirrors X.")]
+        public Vector3 deckRestingWrist = new(.24f,-.265f,.32f);
         [Tooltip("Weapon-space wrist position and rotation while supporting the barrel.")]
         public Vector3 supportWrist = new Vector3(-.038f, -.057f, .116f);
         public Vector3 supportAngles = new Vector3(-14, 28, 50);
@@ -141,6 +146,7 @@ namespace Raid
             float duration = next.clip.length;
             float sample = elapsed * next.speed;
             if (duration > 0) sample = next.clip.isLooping ? Mathf.Repeat(sample, duration) : Mathf.Min(sample, duration);
+            if (next.holdPose) sample = next.normalizedPose * duration;
             next.clip.SampleAnimation(model.gameObject, sample);
         }
     }
