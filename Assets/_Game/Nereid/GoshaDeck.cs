@@ -92,27 +92,38 @@ namespace Raid.Nereid
             p.y=floor+Pivot;
             return Hull.TransformPoint(p);
         }
-        static bool Obstacle(Collider c)=>c.GetComponentInParent<DiverMotor>()==null&&!c.TryGetComponent<GoshaBallBody>(out _);
+        static bool Obstacle(Collider c,bool planning)
+        {
+            if(c.GetComponentInParent<DiverMotor>() || c.TryGetComponent<GoshaBallBody>(out _))return false;
+            if(planning)
+            {
+                // Gosha opens automatic passage doors on approach. Their fixed frames and
+                // the pressure lock still block routes, and every actual step checks the seals.
+                var door=c.GetComponentInParent<NereidPassageDoor>();
+                if(door && door.isActiveAndEnabled && (c==door.portSeal || c==door.starboardSeal))return false;
+            }
+            return true;
+        }
         // Ground follows the incline through each stair nose. Sweep the belly above that line.
         static readonly Vector3 BellyLift=Vector3.up*.19f;
         public bool WalkClear(Vector3 from,Vector3 to,float radius)=>Clear(from+BellyLift,to+BellyLift,radius);
-        bool RoomForBody(Vector3 p,float radius)
+        bool RoomForBody(Vector3 p,float radius,bool planning=false)
         {
             int n=Physics.OverlapSphereNonAlloc(p+BellyLift,radius,overlaps,~0,QueryTriggerInteraction.Ignore);
-            for(int i=0;i<n;i++)if(Obstacle(overlaps[i]))return false;
+            for(int i=0;i<n;i++)if(Obstacle(overlaps[i],planning))return false;
             return n<overlaps.Length;
         }
-        public bool Clear(Vector3 from,Vector3 to,float radius=.15f)
+        public bool Clear(Vector3 from,Vector3 to,float radius=.15f,bool planning=false)
         {
             var delta=to-from;
             if(delta.sqrMagnitude<.0001f)return true;
             int n=Physics.SphereCastNonAlloc(from,radius,delta.normalized,hits,delta.magnitude,~0,QueryTriggerInteraction.Ignore);
-            for(int i=0;i<n;i++)if(Obstacle(hits[i].collider))return false;
+            for(int i=0;i<n;i++)if(Obstacle(hits[i].collider,planning))return false;
             return n<hits.Length;
         }
         bool Walkable(Vector3 a,Vector3 b)
         {
-            if(!WalkClear(a,b,.15f))return false;
+            if(!Clear(a+BellyLift,b+BellyLift,.15f,planning:true))return false;
             // Check the walk surface between endpoints as well as obstacle clearance:
             // a line passing above a stair rail or straight across an open drop is not a path.
             int steps=Mathf.CeilToInt(Vector3.Distance(a,b)/.62f);
@@ -128,14 +139,14 @@ namespace Raid.Nereid
             for(int i=0;i<Count;i++)for(int j=0;j<i;j++)
             {
                 var a=Mark(i);var b=Mark(j);
-                if(RoomForBody(a,.15f)&&RoomForBody(b,.15f)&&Walkable(a,b))edges[i,j]=edges[j,i]=Vector3.Distance(a,b);
+                if(RoomForBody(a,.15f,planning:true)&&RoomForBody(b,.15f,planning:true)&&Walkable(a,b))edges[i,j]=edges[j,i]=Vector3.Distance(a,b);
             }
             baked=true;
         }
         bool Route(Vector3 from,Vector3 to,out Vector3 next)
         {
             next=from;
-            if(!Interior(to)||!RoomForBody(to,.15f))return false;
+            if(!Interior(to)||!RoomForBody(to,.15f,planning:true))return false;
             if(Walkable(from,to)){next=to;return true;}
             if(!baked)Bake();
             for(int i=0;i<Count;i++)
