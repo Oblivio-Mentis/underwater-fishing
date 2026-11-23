@@ -81,6 +81,20 @@ namespace Raid
             }
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal float SampledFingerAngle()
+        {
+            float angle = 0;
+            if (playing == null || bones == null) return angle;
+            for (int i = 0; i < bones.Length; i++)
+            {
+                if (bones[i] != rightArm.end && bones[i].IsChildOf(rightArm.end))
+                    angle = Mathf.Max(angle, Quaternion.Angle(restRotations[i], bones[i].localRotation));
+            }
+            return angle;
+        }
+#endif
+
         internal void BeginPose()
         {
             if (playing == null) return;

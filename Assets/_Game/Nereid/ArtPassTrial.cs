@@ -233,6 +233,16 @@ namespace Raid.Nereid
                 yield return Await("Physical hunt connects to the ray",()=>inventory.HookedFish==featured,3);
                 yield return new WaitForSecondsRealtime(.18f);
             }
+            if (mark.prop == "crew")
+            {
+                var arms = eye.GetComponentInChildren<DiverAvatarRig>();
+                var suit = peer.GetComponentInChildren<DiverAvatarRig>();
+                float firstPerson = arms ? arms.SampledFingerAngle() : 0;
+                float thirdPerson = suit ? suit.SampledFingerAngle() : 0;
+                if (firstPerson < 2f || thirdPerson < 2f)
+                    throw new InvalidOperationException($"Equipped fingers stayed at bind pose: hands {firstPerson:F1}, crew {thirdPerson:F1} degrees.");
+                Debug.Log($"[NEREID DIVER] Live harpoon grip, right finger rotation from bind pose: hands {firstPerson:F1}, crew {thirdPerson:F1} degrees.");
+            }
             CaptureImage(mark);
             var sample=new Sample{name=mark.name,depth=mark.depth,eye=eye.transform.position,direction=eye.transform.forward,inside=owner.IsInside};
             if(mark.benchmark && Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-timing")>=0)
