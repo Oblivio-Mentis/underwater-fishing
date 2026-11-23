@@ -191,6 +191,7 @@ namespace Raid
         }
         static ShipConsoleKind? DispatchControl(WorldAction action) => action switch
         {
+            WorldAction.Hoist => ShipConsoleKind.CargoControl,
             WorldAction.SendProcessingDraft or WorldAction.StopProcessing => ShipConsoleKind.Process,
             WorldAction.SendFeedingDraft or WorldAction.StopFeeding => ShipConsoleKind.Feed,
             _ => null
@@ -204,7 +205,7 @@ namespace Raid
             bool hasContact=false;
             if(DispatchControl(action).HasValue)
             {
-                var actor=NetworkManager.ClientManager.Connection.FirstObject;
+                var actor=NetworkManager.ClientManager.Connection?.FirstObject;
                 var camera=actor ? actor.GetComponentInChildren<Camera>() : null;
                 if(camera && Physics.Raycast(camera.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,
                     4f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
@@ -238,11 +239,11 @@ namespace Raid
             bool factory=Nereid.NereidVessel.Active!=null;
             if(factory && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
             {Respond(sender,requestId,false,"unavailable");return;}
-            if(factory && action==WorldAction.Hoist && !CargoDispatch.CanUse(diver) && !ShipConsole.CanUseKind(diver,ShipConsoleKind.CargoControl))
-            {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
             var switchKind=DispatchControl(action);
+            // A legacy hoist or the button on the submerged cage has no interior plunger to animate.
+            if(action==WorldAction.Hoist && (!factory || CargoDispatch.CanUse(diver))) switchKind=null;
             if(switchKind.HasValue)
             {
                 // Reliable click and its target travel together. Look/turn updates arrive on another tick.

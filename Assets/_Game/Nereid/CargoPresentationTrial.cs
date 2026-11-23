@@ -159,6 +159,25 @@ namespace Raid
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Loading,"Winch cycles back to its original load point");
                 Check(world.Team.CargoUsed==0 && Vector3.Distance(world.container.position,center)<.12f,
                     "Cage reopens at its original loading position with only one delivered copy per ID.");
+                var internalSwitch=ShipConsole.Stations.SingleOrDefault(s=>s.kind==ShipConsoleKind.CargoControl);
+                if(internalSwitch && internalSwitch.dispatchButton)
+                {
+                    const long cabinCatch=15000005;
+                    var sample=species.ToCargo(cabinCatch);
+                    Check(world.Team.LoadCargo(sample,world.progression),"A separate catch is ready to test the cabin hoist.");
+                    var face=internalSwitch.screenAnchor;
+                    host.Teleport(face.position-face.forward*1.35f-Vector3.up*.6f);
+                    host.LookAtConsole(face.position);
+                    await Until(()=>ShipConsole.ResolveSight(host,camera)==internalSwitch,"Cabin diver can target the actual hoist cap");
+                    int prior=internalSwitch.dispatchButton.PressCount;
+                    Check(UiRoot.Instance.QaClickReticle(),"Cabin hoist responds to the owned pointer.");
+                    await Until(()=>world.Team.hoistPhase==HoistPhase.Raising && internalSwitch.dispatchButton.PressCount==prior+1,
+                        "Internal switch physically depressed and started a separate lift");
+                    ShootFrame("09-cabin-hoist-switch.png");
+                    await Until(()=>world.Team.hoistPhase==HoistPhase.Loading && world.Team.tank.Count(item=>item.id==cabinCatch)==1,
+                        "Cabin dispatch delivers the correct catch and returns to the berth",40);
+                    Check(stock.All(item=>world.Team.tank.Count(x=>x.id==item.id)==1),"The cabin and cage controls each delivered their own manifest once.");
+                }
                 report.Status="passed";
             }
             catch(Exception ex)
