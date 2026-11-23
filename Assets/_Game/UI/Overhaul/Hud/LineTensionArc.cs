@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace Raid.UI
 {
     // Local coordinates are centred on the same canvas point as the aiming ray.
-    [DisallowMultipleComponent]
+    [DisallowMultipleComponent, RequireComponent(typeof(CanvasRenderer))]
     public sealed class LineTensionArc : MaskableGraphic
     {
         const float Radius = 104f;

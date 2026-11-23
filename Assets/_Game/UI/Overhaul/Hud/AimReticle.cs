@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace Raid.UI
 {
-    [DisallowMultipleComponent, DefaultExecutionOrder(300)]
+    [DisallowMultipleComponent, RequireComponent(typeof(CanvasRenderer)), DefaultExecutionOrder(300)]
     public sealed class AimReticle : MaskableGraphic
     {
         public Color ContextColor = UiTheme.Text;
