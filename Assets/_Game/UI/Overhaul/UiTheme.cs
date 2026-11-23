@@ -41,17 +41,20 @@ namespace Raid.UI
         public float scale=1f, fov=80f, sensitivity=1f, fishingCamera=1f;
         // RAID-018 presentation comfort: separate switches for the fight FOV, camera shake and hook/bite impulse.
         public float cameraShake=1f, hitImpulse=1f;
+        public bool reduceInterfaceMotion;
         public static UiSettings Load() => new UiSettings {
             scale=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.scale",1f),.9f,1.2f),
             fishingCamera=Mathf.Clamp01(PlayerPrefs.GetFloat("RAID014.fishingCamera",1f)),
             cameraShake=Mathf.Clamp01(PlayerPrefs.GetFloat("RAID018.cameraShake",1f)),
             hitImpulse=Mathf.Clamp01(PlayerPrefs.GetFloat("RAID018.hitImpulse",1f)),
+            reduceInterfaceMotion=PlayerPrefs.GetInt("RAID019.skillMotion",0)!=0,
             fov=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.fov",80f),65f,100f),
             sensitivity=Mathf.Clamp(PlayerPrefs.GetFloat("RAID011.sensitivity",1f),.4f,2f) };
         public void Save()
         {
             PlayerPrefs.SetFloat("RAID014.fishingCamera",fishingCamera);
             PlayerPrefs.SetFloat("RAID018.cameraShake",cameraShake);PlayerPrefs.SetFloat("RAID018.hitImpulse",hitImpulse);
+            PlayerPrefs.SetInt("RAID019.skillMotion",reduceInterfaceMotion?1:0);
             PlayerPrefs.SetFloat("RAID011.scale",scale);
             PlayerPrefs.SetFloat("RAID011.fov",fov); PlayerPrefs.SetFloat("RAID011.sensitivity",sensitivity); PlayerPrefs.Save();
         }

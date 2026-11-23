@@ -156,7 +156,15 @@ namespace Raid.UI
             yield return new WaitForSecondsRealtime(.25f);
             var before=HitDescription(host);
             bool clicked=buy?Ui.QaBuyReticle():Ui.QaClickReticle();
-            if(!clicked)throw new InvalidOperationException("Host could not click "+control+"; "+before);
+            if(!clicked)
+            {
+                UiQaProbe.CapturePeerCamera(Path.Combine(folder,"reticle-failure-720.png"));
+                var tree=Ui.GetComponentsInChildren<SkillPurchaseButton>();
+                var view=host.GetComponentInChildren<Camera>();
+                var target=UiQaProbe.ReticleTarget(button);
+                throw new InvalidOperationException("Host could not click "+control+"; "+before+
+                    $"; button active {button.isActiveAndEnabled}; nodes {tree.Length}; target {target}; pixel {view.WorldToScreenPoint(target)}");
+            }
             Check("Host reticle " + (buy?"RMB ":"LMB ") + control,true);
         }
 
@@ -248,6 +256,8 @@ namespace Raid.UI
             yield return Wait("Both clients show the physical dial",()=>Remote()?.page=="SkillTree" &&
                 Ui.GetComponentsInChildren<SkillSectorButton>().Count(v=>v.IsActive())==8);
             var hostCamera=host.GetComponentInChildren<Camera>();
+            Check("Monitor has no animation toggle",Ui.GetComponentsInChildren<UnityEngine.UI.Button>()
+                .All(button=>button.name!="ProgressionMotion"));
             Check("Physical monitor reserves the pointer and keeps the normal camera FOV",
                 UiInputGate.PointerReserved && UiInputGate.MonitorLook &&
                 Mathf.Abs(hostCamera.fieldOfView-Ui.Settings.fov)<.4f);

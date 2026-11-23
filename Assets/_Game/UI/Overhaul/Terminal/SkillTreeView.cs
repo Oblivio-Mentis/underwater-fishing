@@ -12,7 +12,6 @@ namespace Raid.UI
     {
         const float Width=1180, Height=810, GraphWidth=754, GraphHeight=564;
         const float TransitionSeconds=.48f, PurchaseSeconds=.38f;
-        const string ReduceMotionKey="RAID019.skillMotion";
         static readonly Vector2 Center=new(.5f,.5f), Entry=new(-330,0);
         static readonly Color Ink=new(.89f,.95f,.97f), Muted=new(.55f,.68f,.72f);
         static readonly Color Night=new(.025f,.059f,.079f), Steel=new(.047f,.098f,.125f), Border=new(.16f,.28f,.33f);
@@ -48,7 +47,7 @@ namespace Raid.UI
         readonly Sector[] sectors=new Sector[SkillTreeDefinition.BranchCount];
         readonly Sprite[] sprites=new Sprite[SkillTreeDefinition.BranchCount];
         readonly Card[] cards=new Card[SkillTreeDefinition.NodesPerBranch];
-        readonly Button buy, motion;
+        readonly Button buy;
         readonly Button[] stageKeys=new Button[5];
         readonly Dictionary<SkillId,Vector2> positions=new(31);
         readonly SkillWires wires;
@@ -61,7 +60,8 @@ namespace Raid.UI
         int shownPlayer=int.MinValue, shownTeam=int.MinValue;
         float transition=1, fill=1, zoom=1, targetZoom=1, deadline, responseUntil, fillTime;
         Vector2 pan, targetPan, overviewFocus;
-        bool revised, approved, detailLabels, reducedMotion;
+        bool revised, approved, detailLabels;
+        bool ReducedMotion => app.Settings.reduceInterfaceMotion;
 
         public RectTransform Root { get; }
 
@@ -75,10 +75,7 @@ namespace Raid.UI
             Box(surface,"Display rail",19,18,1142,71,Steel);
             Box(surface,"Rail edge",19,88,1142,2,Border);
             section=Label(surface,"Screen title",38,32,394,43,"МОДУЛИ NEREID",32,Ink);
-            treasury=MaterialStrip(surface,"Treasury",432,30,440,46);
-            motion=Key(surface,"ProgressionMotion","",914,31,226,42,ToggleMotion);
-            reducedMotion=PlayerPrefs.GetInt(ReduceMotionKey,0)!=0;
-            ShowMotion();
+            treasury=MaterialStrip(surface,"Treasury",718,30,420,46);
 
             overview=UiKit.Node(surface,"Progression sectors");
             Place(overview,0,94,1176,662);
@@ -232,17 +229,6 @@ namespace Raid.UI
             return rect;
         }
 
-        void ToggleMotion()
-        {
-            reducedMotion=!reducedMotion;
-            PlayerPrefs.SetInt(ReduceMotionKey,reducedMotion?1:0);
-            PlayerPrefs.Save();
-            ShowMotion();
-            if(reducedMotion && transition<1)CompleteTransition();
-        }
-
-        void ShowMotion()=>UiKit.Caption(motion,reducedMotion?"Без анимации":"Плавная анимация");
-
         internal void Open()
         {
             pending=filled=SkillId.None;
@@ -296,7 +282,7 @@ namespace Raid.UI
                 overview.gameObject.SetActive(true);
                 overviewGroup.alpha=0;
             }
-            if(reducedMotion)CompleteTransition();
+            if(ReducedMotion)CompleteTransition();
         }
 
         void CompleteTransition()
@@ -481,7 +467,7 @@ namespace Raid.UI
                 if(transition>=1)CompleteTransition();
             }
 
-            float ease=reducedMotion?1:1-Mathf.Exp(-16*dt);
+            float ease=ReducedMotion?1:1-Mathf.Exp(-16*dt);
             if(Mathf.Abs(zoom-targetZoom)>.0001f || (pan-targetPan).sqrMagnitude>.001f)
             {
                 zoom=Mathf.Abs(zoom-targetZoom)<.002f?targetZoom:Mathf.Lerp(zoom,targetZoom,ease);
@@ -499,7 +485,7 @@ namespace Raid.UI
             if(fill<1 && filled!=SkillId.None)
             {
                 fillTime+=dt;
-                fill=reducedMotion?1:Mathf.Clamp01(fillTime/PurchaseSeconds);
+                fill=ReducedMotion?1:Mathf.Clamp01(fillTime/PurchaseSeconds);
                 PresentPurchaseFill();
             }
             if(responseUntil>0 && Time.unscaledTime>responseUntil)
@@ -557,7 +543,7 @@ namespace Raid.UI
                 if(approved && Owned(SkillTreeDefinition.Get(pending)).Contains(pending))
                 {
                     filled=pending;
-                    fill=reducedMotion?1:0;
+                    fill=ReducedMotion?1:0;
                     fillTime=0;
                     pending=SkillId.None;
                     approved=false;

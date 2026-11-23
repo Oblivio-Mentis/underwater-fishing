@@ -22,7 +22,8 @@ namespace Raid.UI
         static readonly Vector2 BoardSize=new(1180,810);
         CanvasScaler scaler,hudScaler;
         GameObject hudOverlay;
-        ShipConsole dismissedMonitor;
+        ShipConsole dismissedMonitor, activeSkillStation;
+        DiverMotor skillStationPlayer;
         Canvas canvas;
         bool computerSurface;
         Camera viewCamera;
@@ -153,7 +154,7 @@ namespace Raid.UI
             Page=value;
             if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
             if(value!=UiPage.Terminal && value!=UiPage.SkillTree)Context.SelectedConsole=null;
-            if(value!=UiPage.SkillTree)skills.Close();
+            if(value!=UiPage.SkillTree && value!=UiPage.None)ClearSkillStation();
             boardInput.Clear();
             ConfigureSurface(value);
             if(toastPanel!=null)UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),
@@ -192,8 +193,16 @@ namespace Raid.UI
         {
             if(confirmation.gameObject.activeSelf){CancelConfirmation();return;}
             if(computerSurface)dismissedMonitor=Context.SelectedConsole;
+            if(Page==UiPage.SkillTree)ClearSkillStation();
             ShowPage(Page==UiPage.Settings?settingsBack:Page==UiPage.Crew?crewBack:Context.Connected?UiPage.None:UiPage.Main);
         }
+        void ClearSkillStation()
+        {
+            activeSkillStation=null;
+            skillStationPlayer=null;
+            skills.Close();
+        }
+
         void SetCursor()
         {
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
@@ -307,6 +316,8 @@ namespace Raid.UI
             AimedCargoDispatch=false;
             if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
+            if(activeSkillStation!=null && (player!=skillStationPlayer || player.IsHelpless ||
+                !player.IsInside || !activeSkillStation.InRange(player)))ClearSkillStation();
             if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.GoshaBallInHands(player)))CancelBallGesture();
             if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
             var cam=player.GetComponentInChildren<Camera>();
@@ -403,7 +414,12 @@ namespace Raid.UI
             {
                 if(!station.InRange(Context.Player)){Toast(UiText.NeedTerminal,true);return;}
                 Context.SelectedConsole=station;
-                skills.Open();
+                if(activeSkillStation!=station || skillStationPlayer!=Context.Player)
+                {
+                    skills.Open();
+                    activeSkillStation=station;
+                    skillStationPlayer=Context.Player;
+                }
                 ShowPage(UiPage.SkillTree);
                 return;
             }

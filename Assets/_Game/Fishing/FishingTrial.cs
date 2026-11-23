@@ -314,15 +314,20 @@ namespace Raid
             var caughtIds=new[]{host.CatchIdInSlot(2),host.CatchIdInSlot(3),host.CatchIdInSlot(4),landedHeavyId};
             // Try every open face in turn: a roaming fish between the eye and the basket
             // must not stall the fixture, and the deposit itself is still the real Q action.
-            foreach(var offset in new[]{new Vector3(2.14f,-.18f,-.4f),new Vector3(0,-.18f,2.3f),new Vector3(-2.14f,-.18f,0),new Vector3(0,-.18f,-2.3f)})
+            string loadDiagnostics="";
+            foreach(var offset in new[]{new Vector3(2.14f,-.18f,-.4f),new Vector3(2.14f,-.18f,-.92f),new Vector3(1.12f,-.30f,-.35f)})
             {
-                host.Motor.Teleport(center+offset);
+                host.Motor.Teleport(control.Frame.TransformPoint(offset));
                 host.Motor.LookAtConsole(center);
                 float attempt=Time.unscaledTime+.9f;
                 while(!CargoDispatch.CanLoad(world,host.Motor) && Time.unscaledTime<attempt) yield return null;
                 if(CargoDispatch.CanLoad(world,host.Motor)) break;
+                var eye=host.Motor.transform.position+Vector3.up*.6f;
+                string obstruction=Physics.Raycast(eye,host.Motor.AimDirection,out var obstructionHit,1.6f,
+                    Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)?obstructionHit.collider.name:"open water";
+                loadDiagnostics+=$" {control.Frame.InverseTransformPoint(eye)} insideShip={host.Motor.IsInside} {obstruction};";
             }
-            Require(CargoDispatch.CanLoad(world,host.Motor),"Cannot reach the basket's open face from any side.");
+            Require(CargoDispatch.CanLoad(world,host.Motor),"Cannot use the loading opening."+loadDiagnostics);
             Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
             yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"Q did not deposit the heavy catch.");
             for(int slot=2;slot<5;slot++)

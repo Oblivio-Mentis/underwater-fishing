@@ -294,17 +294,19 @@ namespace Raid.UI
                 value => app.Settings.cameraShake = value, UiText.MenuPercent);
             AddSetting(content, "HitImpulse", UiText.MenuHitImpulse, 0, 1, () => app.Settings.hitImpulse,
                 value => app.Settings.hitImpulse = value, UiText.MenuPercent);
+            AddSetting(content, "ReducedMotion", UiText.MenuReducedMotion, 0, 1, () => app.Settings.reduceInterfaceMotion?1:0,
+                value => app.Settings.reduceInterfaceMotion = value>.5f, value => value>.5f?UiText.MenuEnabled:UiText.MenuDisabled, wholeNumbers:true);
             Line(content, "LocalOnly", UiText.MenuSettingsLocalOnly, 62, 21, UiTheme.Muted);
             UiKit.Button(content, "RestoreDefaults", UiText.MenuRestore, () =>
             {
                 app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1; app.Settings.fishingCamera = 1;
-                app.Settings.cameraShake = 1; app.Settings.hitImpulse = 1;
+                app.Settings.cameraShake = 1; app.Settings.hitImpulse = 1; app.Settings.reduceInterfaceMotion = false;
                 foreach (var row in settingRows) row.Slider.SetValueWithoutNotify(row.Read());
                 app.ApplySettings(); Refresh(); app.Toast(UiText.MenuRestoreDone);
             });
         }
 
-        void AddSetting(Transform parent, string name, string caption, float min, float max, Func<float> read, Action<float> write, Func<float, string> format)
+        void AddSetting(Transform parent, string name, string caption, float min, float max, Func<float> read, Action<float> write, Func<float, string> format, bool wholeNumbers=false)
         {
             var panel = UiKit.Panel(parent, name + "Setting", UiTheme.Panel);UiKit.Tile(panel); UiKit.Size(panel, 92);
             var column = UiKit.Column(panel.transform, "Content", 8, 12); UiKit.Fill(column);
@@ -312,7 +314,7 @@ namespace Raid.UI
             var label = UiKit.Label(heading, "Label", caption, 21, UiTheme.Muted); UiKit.Size(label, flexibleWidth: 1);
             var valueText = UiKit.Label(heading, "Value", format(read()), 23, UiTheme.Text); UiKit.Size(valueText, width: 120); valueText.alignment = TextAlignmentOptions.Right;
             var sliderRoot = UiKit.Panel(column, name + "Slider", new Color(0, 0, 0, 0), true); UiKit.Size(sliderRoot, 28);
-            var slider = sliderRoot.gameObject.AddComponent<Slider>(); slider.direction = Slider.Direction.LeftToRight; slider.minValue = min; slider.maxValue = max;
+            var slider = sliderRoot.gameObject.AddComponent<Slider>(); slider.direction = Slider.Direction.LeftToRight; slider.minValue = min; slider.maxValue = max; slider.wholeNumbers = wholeNumbers;
             var background = UiKit.Panel(sliderRoot.transform, "Track", UiTheme.Edge);
             background.rectTransform.anchorMin = new Vector2(0, .5f); background.rectTransform.anchorMax = new Vector2(1, .5f); background.rectTransform.sizeDelta = new Vector2(-20, 6);
             var fillArea = UiKit.Node(sliderRoot.transform, "FillArea"); UiKit.Fill(fillArea); fillArea.offsetMin = new Vector2(10, 10); fillArea.offsetMax = new Vector2(-10, -10);
