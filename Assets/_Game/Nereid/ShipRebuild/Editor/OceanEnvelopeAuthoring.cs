@@ -11,7 +11,7 @@ namespace Raid.Nereid.Editor
         const string Folder="Assets/_Game/Nereid/ShipRebuild/OceanEnvelope";
         const string Envelope=Folder+"/NereidOceanEnvelope.prefab";
         static Transform body;
-        static Material pearl,slate,carbon,teal,titanium,orange,amber,aqua,black,visor;
+        static Material pearl,slate,carbon,teal,titanium,orange,amber,black,visor;
         static readonly List<(OceanEnvelopeMesh mesh,bool collision)> assemblies=new();
 
         [MenuItem("RAID/020/Install sculpted NEREID exterior")]
@@ -21,17 +21,18 @@ namespace Raid.Nereid.Editor
             if(!asset)
             {
                 Ensure(Folder);Ensure(Folder+"/Meshes");Ensure(Folder+"/Materials");
-                Palette();
+                ConfigureSteelImports();Palette();
                 var sculpt=new GameObject("NereidOceanEnvelope");
                 body=sculpt.transform;assemblies.Clear();
                 try
                 {
-                    PressureForm();CommandSaddle();Wheelhouse();Propulsion();NavigationDetails();
+                    PressureForm();CommandSaddle();Wheelhouse();Propulsion();NavigationDetails();ServiceHardware();
                     foreach(var part in assemblies)part.mesh.Save(Folder+"/Meshes/"+part.mesh.node.name+".asset",part.collision);
                     asset=PrefabUtility.SaveAsPrefabAsset(sculpt,Envelope);
                 }
                 finally { UnityEngine.Object.DestroyImmediate(sculpt);assemblies.Clear(); }
             }
+            if(!asset.transform.Find(RefitMarker))InstallIndustrialPlating();
             string hullPath=HullFolder+"/PressureHull.prefab";
             var template=PrefabUtility.LoadPrefabContents(hullPath);
             try
@@ -57,29 +58,39 @@ namespace Raid.Nereid.Editor
             if(AssetDatabase.IsValidFolder(path))return;int n=path.LastIndexOf('/');
             Ensure(path.Substring(0,n));AssetDatabase.CreateFolder(path.Substring(0,n),path.Substring(n+1));
         }
-        static void Palette()
+        static void Palette(bool update=false)
         {
-            Material Finish(string label,Color color,float metal,float gloss,float glow)
+            Material Finish(string label,Color color,float metal,float gloss,float glow=0,bool painted=true)
             {
                 string path=Folder+"/Materials/"+label+".mat";
-                var m=AssetDatabase.LoadAssetAtPath<Material>(path);if(m)return m;
-                m=new Material(Shader.Find("Universal Render Pipeline/Lit")){name=label};
-                m.SetColor("_BaseColor",color);m.SetFloat("_Metallic",metal);m.SetFloat("_Smoothness",gloss);
+                var m=AssetDatabase.LoadAssetAtPath<Material>(path);
+                if(m&&!update)return m;
+                bool create=!m;
+                if(create)m=new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                m.name=label;m.SetColor("_BaseColor",color);m.SetFloat("_Metallic",metal);m.SetFloat("_Smoothness",gloss);
+                if(painted)
+                {
+                    m.SetTexture("_BaseMap",AssetDatabase.LoadAssetAtPath<Texture2D>(SteelFolder+"Rolled steel paint.png"));
+                    m.SetTexture("_BumpMap",AssetDatabase.LoadAssetAtPath<Texture2D>(SteelFolder+"Battered steel normal.png"));
+                    m.SetTexture("_MetallicGlossMap",AssetDatabase.LoadAssetAtPath<Texture2D>(SteelFolder+"Metal and roughness.png"));
+                    m.SetFloat("_BumpScale",.75f);m.EnableKeyword("_NORMALMAP");m.EnableKeyword("_METALLICSPECGLOSSMAP");
+                }
                 m.SetColor("_EmissionColor",color.linear*glow);
-                m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive;
-                m.EnableKeyword("_EMISSION");
-                AssetDatabase.CreateAsset(m,path);return m;
+                if(glow>0){m.EnableKeyword("_EMISSION");m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive;}
+                else {m.DisableKeyword("_EMISSION");m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.EmissiveIsBlack;}
+                if(create)AssetDatabase.CreateAsset(m,path);else EditorUtility.SetDirty(m);
+                return m;
             }
-            pearl=Finish("Glacier ceramic armor",new(.80f,.87f,.85f),.25f,.48f,.13f);
-            slate=Finish("Deep ocean composite",new(.24f,.36f,.41f),.22f,.43f,.13f);
-            carbon=Finish("Blue graphite underbody",new(.12f,.21f,.26f),.25f,.46f,.18f);
-            teal=Finish("Abyssal jade lacquer",new(.10f,.47f,.49f),.34f,.46f,.11f);
-            titanium=Finish("Titanium leading edge",new(.56f,.65f,.66f),.59f,.48f,.095f);
-            orange=Finish("Vermilion rescue enamel",new(.96f,.39f,.10f),.15f,.43f,.22f);
-            black=Finish("Recessed acoustic rubber",new(.043f,.079f,.096f),.05f,.29f,.10f);
-            amber=Finish("Amber optical ceramic",new(1f,.57f,.24f),.05f,.45f,2.5f);
-            aqua=Finish("Aqua navigation optics",new(.28f,.91f,.96f),.04f,.40f,2.5f);
-            visor=Finish("Command laminated visor",new(.12f,.41f,.46f,.13f),.06f,.63f,.025f);
+            pearl=Finish("Oxidised pressure plate",new(.50f,.52f,.49f),.44f,.75f);
+            slate=Finish("Heat-treated hull steel",new(.36f,.415f,.42f),.38f,.74f);
+            carbon=Finish("Keel bituminous coat",new(.23f,.265f,.28f),.31f,.60f);
+            teal=Finish("Weathered petrol enamel",new(.31f,.37f,.355f),.37f,.71f);
+            titanium=Finish("Brushed clamp steel",new(.63f,.65f,.60f),.61f,.89f);
+            orange=Finish("Faded safety ochre",new(.62f,.425f,.205f),.38f,.72f);
+            black=Finish("Recessed acoustic rubber",new(.12f,.14f,.14f),.07f,.26f,0,false);
+            amber=Finish("Amber flood lens",new(.98f,.63f,.30f),.14f,.42f,1.65f,false);
+            Finish("Smoked service lens",new(.19f,.28f,.275f),.18f,.46f,0,false);
+            visor=Finish("Command laminated visor",new(.22f,.29f,.28f,.16f),.10f,.70f,0,false);
             visor.SetFloat("_Surface",1);visor.SetFloat("_SrcBlend",5);visor.SetFloat("_DstBlend",10);
             visor.SetFloat("_SrcBlendAlpha",1);visor.SetFloat("_DstBlendAlpha",10);visor.SetFloat("_ZWrite",0);
             visor.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");visor.SetOverrideTag("RenderType","Transparent");

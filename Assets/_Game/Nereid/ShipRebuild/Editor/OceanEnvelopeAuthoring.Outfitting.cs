@@ -12,7 +12,8 @@ namespace Raid.Nereid.Editor
                 var optics=Part(hand+" observation lighting",new(side*6.98f,.5f,-1));
                 // A broad navigation line remains legible in the trench haze, under the real observation windows.
                 optics.Ring(black,u=>Side(side,Mix(-7.68f,7.57f,u),.36f)+Vector3.right*side*.086f,.147f,52);
-                optics.Ring(side<0?amber:aqua,u=>Side(side,Mix(-7.55f,7.43f,u),.36f)+Vector3.right*side*.206f,.056f,52);
+                foreach(float station in new[]{-6.66f,5.35f})
+                    optics.Ring(amber,u=>Side(side,station+.56f*u,.36f)+Vector3.right*side*.206f,.056f,6);
                 foreach(float z in new[]{-6.53f,5.49f})
                 {
                     Vector3 at=Lower(side,z,.89f);
@@ -42,7 +43,7 @@ namespace Raid.Nereid.Editor
             }
             foreach(int side in new[]{-1,1})foreach(var band in new[]{(0f,.62f,carbon),(.62f,.83f,pearl),(.83f,.93f,orange),(.93f,1f,carbon)})
                 aerial.Surface(band.Item3,7,14,(u,v)=>Blade(side,Mix(band.Item1,band.Item2,u),v),(u,v)=>Vector3.right*side);
-            aerial.Ring(aqua,t=>Blade(1,.98f,Mix(.24f,.83f,t)),.046f,10);
+            aerial.Ring(amber,t=>Blade(1,.98f,Mix(.49f,.63f,t)),.046f,10);
         }
 
 
@@ -62,7 +63,7 @@ namespace Raid.Nereid.Editor
                 collar.Surface(band.Item3,8,40,(u,v)=>Shell(Mix(band.Item1,band.Item2,u),v,1),
                     (u,v)=>new Vector3(.18f,Mathf.Sin(v*2*Mathf.PI),Mathf.Cos(v*2*Mathf.PI)));
             collar.Surface(teal,3,40,(u,v)=>Shell(1,v,Mix(1,.91f,u)),(u,v)=>Vector3.right);
-            collar.Ring(amber,v=>Shell(.91f,Mix(.08f,.42f,v),1.022f),.045f,20);
+            foreach(float start in new[]{.053f,.39f})collar.Ring(amber,v=>Shell(.91f,start+.051f*v,1.022f),.045f,5);
         }
 
         static void PaintMark(int side)

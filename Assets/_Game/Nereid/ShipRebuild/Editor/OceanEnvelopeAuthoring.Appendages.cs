@@ -24,7 +24,7 @@ namespace Raid.Nereid.Editor
                     cap.Surface(band.Item3,59,9,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),Mix(band.Item1,band.Item2,v)),(u,v)=>new Vector3(side*.5f,1,0));
                 cap.Surface(black,59,7,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),v,.18f),(u,v)=>Vector3.down);
                 cap.Surface(teal,59,2,(u,v)=>Crown(side,Mix(CZ[0],CZ[CZ.Length-1],u),1,.18f*v),(u,v)=>Vector3.right*side);
-                cap.Ring(aqua,u=>Crown(side,Mix(-31.95f,-22.1f,u),1,.12f),.033f,35);
+                cap.Ring(black,u=>Crown(side,Mix(-31.95f,-22.1f,u),1,.12f),.033f,35);
                 var saddle=Part(hand+" pilothouse flying buttress",new(side*5.1f,5.30f,-21.8f),true);
                 // A glazed bridge floats over the pressure capsule. Aft of its glazing the saddle
                 // closes and slopes continuously into the main deck. The port companionway is inside the crown.
@@ -59,27 +59,7 @@ namespace Raid.Nereid.Editor
                     windows.Ring(slate,t=>Vector3.Lerp(foot,top,t),.13f,8);
                 }
                 var flank=Part(hand+" swept pressure armor",new(side*6,1.50f,-25),true);
-                // Large sweeping armor scales wrap from the keel toward the navigation windows.
-                // The lower lip projects beyond the structural side, giving it real section thickness.
-                for(int k=0;k<2;k++)
-                {
-                    float za=k==0?-35.36f:-29.15f,zb=k==0?-27.0f:-16.12f;
-                    Vector3 Armor(float u,float t)
-                    {
-                        float z=Mix(za,zb,u)+.57f*Mathf.Sin(t*Mathf.PI)*Mathf.Sin(u*Mathf.PI);
-                        float fan=Mathf.Pow(Mathf.Max(0,Mathf.Sin(u*Mathf.PI)),.56f);
-                        float h=Mix(.84f,1.85f,u)+(.20f+1.28f*fan)*(t-.50f)*2;
-                        float x=SideX(z,h)+.17f+.23f*fan*Mathf.Sin(t*Mathf.PI);
-                        return new Vector3(side*x,h,z);
-                    }
-                    flank.Surface(pearl,32,7,Armor,(u,v)=>Vector3.right*side);
-                    foreach(float edge in new[]{0f,1f})
-                        flank.Surface(edge==0?carbon:titanium,32,2,(u,v)=>{
-                            var p=Armor(u,edge);return p-Vector3.right*side*(v*.32f);
-                        },(u,v)=>Vector3.up*(edge==0?-1:1));
-                    flank.Surface(k==0?orange:teal,25,2,(u,v)=>Armor(Mix(.08f,.88f,u),Mix(.14f,.21f,v))+Vector3.right*(side*.012f),
-                        (u,v)=>Vector3.right*side);
-                }
+                FlankPlates(flank,side);
             }
         }
 
@@ -111,7 +91,7 @@ namespace Raid.Nereid.Editor
                 nozzle.Surface(titanium,3,40,(u,v)=>Pod(side,lip,Mathf.PI*2*v,Mix(1,.82f,u)),(u,v)=>Vector3.back);
                 nozzle.Surface(black,6,40,(u,v)=>Pod(side,Mix(lip,-36.90f,u),Mathf.PI*2*v,.81f),
                     (u,v)=>new Vector3(-side*Mathf.Sin(Mathf.PI*2*v),-Mathf.Cos(Mathf.PI*2*v),0));
-                nozzle.Ring(aqua,v=>Pod(side,lip+.09f,Mathf.PI*2*v,.83f),.039f,40);
+                nozzle.Ring(titanium,v=>Pod(side,lip+.09f,Mathf.PI*2*v,.83f),.039f,40);
                 const float rotorZ=-38.24f;
                 Vector3 Centre(float z)=>new(side*Spline(z,PZ,PX),Spline(z,PZ,PY),z);
                 nozzle.Surface(slate,9,28,(u,v)=>Centre(Mix(rotorZ-.56f,rotorZ+.38f,u))+
@@ -128,7 +108,7 @@ namespace Raid.Nereid.Editor
                             -.15f+.26f*t+.16f*r+aft);
                     }
                     nozzle.Surface(titanium,7,4,(u,v)=>Blade(u,v,0),(u,v)=>Vector3.back);
-                    nozzle.Surface(amber,3,2,(u,v)=>Blade(Mix(.63f,.87f,u),Mix(.36f,.46f,v),-.008f),(u,v)=>Vector3.back);
+                    nozzle.Surface(orange,3,2,(u,v)=>Blade(Mix(.63f,.87f,u),Mix(.36f,.46f,v),-.008f),(u,v)=>Vector3.back);
                     nozzle.Surface(teal,7,4,(u,v)=>Blade(u,v,.07f),(u,v)=>Vector3.forward);
                 }
 
@@ -157,7 +137,7 @@ namespace Raid.Nereid.Editor
                 wing.Surface(pearl,15,9,(u,v)=>Tip(u,v,true),(u,v)=>Vector3.up);
                 wing.Surface(slate,15,9,(u,v)=>Tip(u,v,false),(u,v)=>Vector3.down);
                 wing.Surface(orange,4,7,(u,v)=>Tip(Mix(.79f,.91f,u),v,true)+Vector3.up*.012f,(u,v)=>Vector3.up);
-                pod.Ring(aqua,t=>Pod(side,Mix(-36.83f,-28.18f,t),1.34f,1.016f),.042f,26);
+                pod.Ring(amber,t=>Pod(side,Mix(-34.92f,-34.32f,t),1.34f,1.016f),.042f,26);
             }
         }
     }

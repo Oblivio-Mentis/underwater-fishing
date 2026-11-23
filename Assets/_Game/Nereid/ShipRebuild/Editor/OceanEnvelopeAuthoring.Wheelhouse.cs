@@ -45,11 +45,7 @@ namespace Raid.Nereid.Editor
                 foreach(float h in new[]{0f,1f})
                 {
                     seams.Ring(titanium,t=>Pane(t,h),h==0?.13f:.116f,26);
-                    for(int t=0;t<2;t++)
-                    {
-                        float left=t*.47f+.09f;
-                        seams.Ring(h==0?amber:aqua,u=>Pane(Mix(left,left+.26f,u),h)+Vector3.back*.095f,.034f,12);
-                    }
+                    if(h==0)seams.Ring(amber,u=>Pane(Mix(.57f,.655f,u),h)+Vector3.back*.095f,.032f,6);
                 }
                 foreach(float col in new[]{.43f,1f})
                     seams.Ring(carbon,h=>Pane(Mathf.Lerp(col,col*.945f+.048f,h),h),col==1f?.13f:.072f,9);

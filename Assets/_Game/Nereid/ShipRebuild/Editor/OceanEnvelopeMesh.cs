@@ -29,10 +29,22 @@ namespace Raid.Nereid.Editor
             int index=materials.IndexOf(finish);
             if(index<0){index=materials.Count;materials.Add(finish);triangles.Add(new List<int>());}
             var tri=triangles[index];var start=positions.Count;
-            for(int i=0;i<=rows;i++) for(int j=0;j<=cols;j++)
+            float along=0;
+            Vector3 lastCentre=point(0,.5f);
+            for(int i=0;i<=rows;i++)
             {
-                float u=(float)i/rows,v=(float)j/cols;
-                positions.Add(point(u,v)-pivot);uv.Add(new Vector2(u,v));
+                float u=(float)i/rows;
+                Vector3 centre=point(u,.5f);
+                along+=Vector3.Distance(lastCentre,centre);
+                lastCentre=centre;
+                float cross=0;Vector3 last=point(u,0);
+                for(int j=0;j<=cols;j++)
+                {
+                    var vertex=point(u,(float)j/cols);
+                    cross+=Vector3.Distance(last,vertex);last=vertex;
+                    positions.Add(vertex-pivot);
+                    uv.Add(new Vector2(along+pivot.z*.37f,cross+pivot.x*.23f)/2.84f);
+                }
             }
             for(int i=0;i<rows;i++)for(int j=0;j<cols;j++)
             {
