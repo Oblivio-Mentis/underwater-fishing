@@ -65,7 +65,10 @@ namespace Raid
 
         internal void Prepare()
         {
-            if (motions.Length == 0) return;
+            if (motions.Length == 0 || !model) return;
+            // Standalone Unity requires an Animator on the sampling root for native .anim clips.
+            if (!model.TryGetComponent<Animator>(out _))
+                model.gameObject.AddComponent<Animator>();
             bones = model.GetComponentsInChildren<Transform>(true);
             restPositions = new Vector3[bones.Length];
             restScales = new Vector3[bones.Length];
