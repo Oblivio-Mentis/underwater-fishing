@@ -19,8 +19,9 @@ namespace Raid.Nereid
         public Transform[] fairleads=Array.Empty<Transform>();
 
         [Header("Park and recovery")]
-        [Range(-65, 65)] public float parkedSlew = 35f;
-        [Range(.5f, 1f)] public float parkedReach = .82f;
+        [Tooltip("Park the jib outboard of the boarding collar while the cage is on the seabed.")]
+        [Range(-65, 65)] public float parkedSlew = -35f;
+        [Range(.5f, 1f)] public float parkedReach = .97f;
         [Header("Work lights")]
         public Light workFlood, deckWash;
         public Renderer floodGlass, portGlass, starboardGlass, warningLens;

@@ -13,7 +13,7 @@ namespace Raid
         bool arrivalPending,staggered;
         float arrivalAt,departureAt,fleeRemaining,senseAt,hookAvailableAt,avoidUntil;
         Vector3 alarmPoint,avoidDirection;
-        FishHabitat.Zone habitat;
+        FishHabitat.Zone habitat,lastHabitat;
         FishSpeciesProfile legacyProfile;
         System.Random rng;
         int station;
@@ -38,11 +38,13 @@ namespace Raid
         {
             staggered=available && Nereid.NereidVessel.Active!=null;
             if(!staggered){SetDepthActive(available);return;}
-            ScheduleAt(Time.time+Profile.arrivalDelay);
+            ScheduleAt(Time.time+Profile.arrivalDelay*Rand(.8f,1.2f));
+            lastHabitat=null;
         }
 
         void ScheduleAt(float time)
         {
+            if (habitat != null) lastHabitat=habitat;
             SetDepthActive(false);
             arrivalPending=true;
             arrivalAt=time;
@@ -82,18 +84,24 @@ namespace Raid
             int count=GatherZones(out var zones);
             float visibility = depthTier > 1 ? 14 : 22;
             if (count == 0) { arrivalAt = Time.time + 2; return; }
-            int firstZone = Rng.Next(count);
-            // Sample a new route and entry on every arrival, preserving species preferences and local budgets.
-            for (int pass = 0; pass < 2; pass++)
+            if (zones != zoneBuffer) System.Array.Copy(zones,zoneBuffer,count);
+            for (int i = count-1; i > 0; i--)
+            {
+                int j=Rng.Next(i+1);
+                (zoneBuffer[i],zoneBuffer[j])=(zoneBuffer[j],zoneBuffer[i]);
+            }
+            // Start with a different, unoccupied route of this species' preferred type.
+            // An obstructed or fully occupied route still has alternatives.
+            for (int pass = 0; pass < 8; pass++)
             for (int i = 0; i < count; i++)
             {
-                int index=(firstZone + i) % count;
-                var zone = zones[index];
-                if ((zone.role == spec.preferredHabitat) != (pass == 0) || zone.anchors == null || zone.anchors.Length == 0) continue;
+                var zone = zoneBuffer[i];
+                if (zone.anchors == null || zone.anchors.Length == 0) continue;
                 int localCount = 0;
                 foreach (var other in ServerSchool)
                     if (other != this && other.IsWildInHabitat && other.habitat == zone) localCount++;
-                if (localCount >= 2) continue;
+                int priority=(zone.role==spec.preferredHabitat?0:4)+(zone==lastHabitat?2:0)+(localCount>0?1:0);
+                if (localCount >= 2 || priority!=pass) continue;
 
                 int stride = zone.anchors.Length;
                 int firstEntry = Rng.Next(stride);
@@ -116,7 +124,7 @@ namespace Raid
                     homePoint = LanePoint(zone, zone.Anchor, .5f);
                     transform.SetPositionAndRotation(point, Quaternion.LookRotation(firstLeg));
                     velocity = firstLeg.normalized * Mathf.Max(.5f, spec.cruiseSpeed * .6f);
-                    departureAt = Time.time + spec.dwellSeconds + power * 8;
+                    departureAt = Time.time + spec.dwellSeconds * Rand(.65f,1.05f);
                     senseAt = Time.time + .6f;
                     swim = FishBehaviour.Cruise;
                     PickTarget();
@@ -152,7 +160,7 @@ namespace Raid
             var spec=Profile;
             float y;
             if (FloorUnder(at, out float floor))
-                y = Mathf.Clamp(floor + Mathf.Lerp(spec.floorClearanceMin, spec.floorClearanceMax, t), at.y - 2.5f, at.y + 2.5f);
+                y = Mathf.Max(floor+BodyRadius+.2f, Mathf.Clamp(floor + Mathf.Lerp(spec.floorClearanceMin, spec.floorClearanceMax, t), at.y - 2.5f, at.y + 2.5f));
             else y = at.y + zone.fallbackLane;
             at.y = Mathf.Min(y, zone.ceiling - BodyRadius);
             return at;
@@ -187,10 +195,18 @@ namespace Raid
             if (!staggered || habitat == null || Mode != FishMode.Roam || DesiredState != FishMode.Roam || lines.Count > 0)
                 return false;
             if (Time.time <= departureAt) return false;
-            leaving = HasRoamingReplacement() && NearestSwimmer(transform.position,19) == null &&
-                ReefHabitats.CanArrive(transform.position,19,depthTier > 1 ? 23 : 28);
-            if (!leaving || fleeRemaining > 0 || Vector3.Distance(transform.position, homePoint) > 1.8f) return false;
-            ScheduleAt(Time.time + 9 + power * 1.4f);
+            // Wild population turnover must not depend on a fish reaching an exact point
+            // behind reef geometry. Let it depart from clear water out of the divers' view.
+            if (fleeRemaining > 0 || !HasRoamingReplacement() ||
+                !ReefHabitats.CanArrive(transform.position,19,depthTier > 1 ? 23 : 28)) return false;
+            if (!leaving)
+            {
+                leaving=true;
+                PickTarget();
+                departureAt=Time.time+Rand(2f,5f);
+                return false;
+            }
+            ScheduleAt(Time.time + Rand(6f,12f));
             return true;
         }
 

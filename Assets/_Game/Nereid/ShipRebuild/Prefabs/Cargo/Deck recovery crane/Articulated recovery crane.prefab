@@ -2414,8 +2414,8 @@ MonoBehaviour:
   - {fileID: 3308048881352430741}
   - {fileID: 989217642451243702}
   - {fileID: 2260936695728933386}
-  parkedSlew: 35
-  parkedReach: 0.82
+  parkedSlew: -35
+  parkedReach: 0.97
   workFlood: {fileID: 6935118948432947178}
   deckWash: {fileID: 216794976383201148}
   floodGlass: {fileID: 7133687445605666042}
