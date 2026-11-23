@@ -35,6 +35,7 @@ namespace Raid.Nereid.Editor
             // Only the identified factory-default path templates qualify for the conversion.
             foreach(var route in rail.GetComponentsInChildren<NereidPipeRoute>())
             {
+                if(route.line!=PipeLine.Inlet) PressureGateAuthoring.Install(route);
                 switch(route.line)
                 {
                     case PipeLine.Inlet:

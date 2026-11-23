@@ -30,6 +30,12 @@ namespace Raid.Nereid
         [Range(6,40)] public int circumference = 16;
         public Material sightGlass, metal, enamel;
 
+        [Header("Outlet isolation gate")]
+        public Transform valveFrame, portLeaf, starboardLeaf;
+        [Range(0,1)] public float valveAt=.95f;
+        [Min(.05f)] public float valveSeconds=.32f;
+        float valveOpening;
+
         [NonSerialized] Mesh skin;
         readonly List<Vector3> samples = new();
         readonly List<float> distances = new();
@@ -123,10 +129,26 @@ namespace Raid.Nereid
             shell = GetComponent<MeshRenderer>();
             shell.sharedMaterials = build.Apply(skin);
             shell.shadowCastingMode = ShadowCastingMode.Off;
+            PositionValve();
+        }
+
+        void PositionValve()
+        {
+            if(!valveFrame || samples.Count<2)return;
+            var at=WorldPoint(valveAt);
+            var heading=WorldPoint(Mathf.Min(1,valveAt+.012f))-WorldPoint(Mathf.Max(0,valveAt-.012f));
+            if(heading.sqrMagnitude>.00001f)valveFrame.SetPositionAndRotation(at,Quaternion.LookRotation(heading,Mathf.Abs(Vector3.Dot(heading.normalized,Vector3.up))>.92f?Vector3.forward:Vector3.up));
+            valveFrame.localScale=Vector3.one*radius;
         }
 
         public void SetFlow(float amount)
         {
+            if(valveFrame && portLeaf && starboardLeaf)
+            {
+                valveOpening=Mathf.MoveTowards(valveOpening,amount>.04f?1:0,Time.deltaTime/Mathf.Max(.05f,valveSeconds));
+                float distance=Mathf.SmoothStep(0,1, valveOpening)*1.08f;
+                portLeaf.localPosition=Vector3.left*distance;starboardLeaf.localPosition=Vector3.right*distance;
+            }
             if (!shell) return;
             flow ??= new MaterialPropertyBlock();
             shell.GetPropertyBlock(flow);
