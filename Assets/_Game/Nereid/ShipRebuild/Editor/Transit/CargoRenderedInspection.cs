@@ -39,7 +39,7 @@ namespace Raid.Nereid.Editor
                         rail.leftDoor.localPosition=rail.DoorPosition(true,open);
                         rail.rightDoor.localPosition=rail.DoorPosition(false,open);
                         cage.PoseMechanism(phase,t);
-                        if(rail.davit)rail.davit.Present(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,null);
+                        if(rail.davit)rail.davit.Present(rail.davit.HeadTarget(rail.TrolleyPoint(cage.CableSocket.position),phase,t),cage.CableSocket.position,null);
                         if(!lateGate && open<1f && CargoMeshClearance.OccupiesAperture(rail,inspector.VisibleCargoBounds(),.65f,out _))
                         {issues.Add("The receiver leaves must clear the first cargo edge by at least 0.65 m and hold until the last edge leaves.");lateGate=true;}
                         inspector.Sample($"{phase} {t:F3} ({rail.transform.InverseTransformPoint(position):F2})");

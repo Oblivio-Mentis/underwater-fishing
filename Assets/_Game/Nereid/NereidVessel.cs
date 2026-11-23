@@ -110,7 +110,8 @@ namespace Raid.Nereid
             basket.Present(state,HoistAnimation);
             if(hopper!=null)hopper.Present(state,HoistAnimation);
             if(hasRail && authoredRail.davit)
-                authoredRail.davit.Present(authoredRail.TrolleyPoint(basket.CableSocket.position),basket.CableSocket.position,hoistCable);
+                authoredRail.davit.PresentCycle(authoredRail.TrolleyPoint(basket.CableSocket.position),basket.CableSocket.position,
+                    hoistCable,PresentedHoistPhase,HoistAnimation);
             else if(hoistCable!=null)
             {
                 var liftingEye=basket.CableSocket.position;

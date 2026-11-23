@@ -37,6 +37,7 @@ namespace Raid.Nereid.Editor
                     var drive=root.AddComponent<NereidCargoDavit>();
                     MakeCrane(drive);
                     foreach(var piece in parts)piece.StorePalette(DavitParts+"/Meshes/"+piece.node.name+".asset",atlas,cabinSwatches);
+                    FitOperatingLights(drive);
                     asset=PrefabUtility.SaveAsPrefabAsset(root,DavitAsset);
                 }
                 finally{parts.Clear();Object.DestroyImmediate(root);}
@@ -66,7 +67,8 @@ namespace Raid.Nereid.Editor
                 vessel.hoistCable.numCornerVertices=2;
                 EditorUtility.SetDirty(vessel.hoistCable);
             }
-            rail.davit.Present(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,vessel.hoistCable);
+            rail.davit.PresentCycle(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,
+                vessel.hoistCable,HoistPhase.Loading,0);
             foreach(var node in installed.GetComponentsInChildren<Transform>())
                 PrefabUtility.RecordPrefabInstancePropertyModifications(node);
             EditorSceneManager.MarkSceneDirty(vessel.gameObject.scene);AssetDatabase.SaveAssets();

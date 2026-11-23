@@ -13,6 +13,7 @@ namespace Raid.Nereid.Editor
         float clock,duration;
         double previous;
         List<string> issues;
+        Action restoreCrane;
         readonly List<(Transform target,AnimationClip clip)> clips=new();
 
         [MenuItem("NEREID/Cargo Rail & Hatch Editor")]
@@ -157,6 +158,7 @@ namespace Raid.Nereid.Editor
                 var gate=(Transform)data.FindProperty("loadingGate").objectReferenceValue;
                 if(gate) Animate(gate,"m_LocalPosition",t=>new Vector3(gate.localPosition.x,2.02f*(1-Closure(t)),0));
             }
+            RememberCranePose();
             AnimationMode.StartAnimationMode();
             preview=playing=true;clock=0;previous=EditorApplication.timeSinceStartup;Sample();
         }
@@ -194,9 +196,43 @@ namespace Raid.Nereid.Editor
         {
             if(!rail || !rail.davit || !rail.cageAnchor)return;
             var cage=rail.cageAnchor.GetComponentInChildren<CargoBasket>();
-            if(cage && cage.CableSocket)
-                rail.davit.Present(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,
-                    rail.GetComponentInParent<NereidVessel>().hoistCable);
+            if(!cage || !cage.CableSocket)return;
+            float up=rail.timings ? rail.timings.raisingSeconds : 5;
+            float unload=rail.timings ? rail.timings.unloadingSeconds : 3;
+            var phase=clock<up ? HoistPhase.Raising : clock<up+unload ? HoistPhase.Unloading : HoistPhase.Returning;
+            float progress=phase==HoistPhase.Raising ? clock/up : phase==HoistPhase.Unloading ?
+                (clock-up)/unload : Mathf.InverseLerp(up+unload,duration,clock);
+            rail.davit.PresentCycle(rail.TrolleyPoint(cage.CableSocket.position),cage.CableSocket.position,
+                rail.GetComponentInParent<NereidVessel>().hoistCable,phase,progress);
+        }
+
+        void RememberCranePose()
+        {
+            var davit=rail.davit;
+            if(!davit)return;
+            var nodes=Array.ConvertAll(davit.GetComponentsInChildren<Transform>(true),
+                t=>(node:t, pos:t.localPosition, rot:t.localRotation, scale:t.localScale));
+            var lights=Array.ConvertAll(davit.GetComponentsInChildren<Light>(true),
+                l=>(light:l, enabled:l.enabled, power:l.intensity));
+            var glass=new Dictionary<Renderer,MaterialPropertyBlock>();
+            foreach(var lens in new[]{davit.portGlass,davit.starboardGlass,davit.floodGlass,davit.warningLens})
+            {
+                if(!lens)continue;
+                var b=new MaterialPropertyBlock();lens.GetPropertyBlock(b);glass[lens]=b;
+            }
+            var cable=rail.GetComponentInParent<NereidVessel>().hoistCable;
+            var points=new Vector3[cable ? cable.positionCount : 0];
+            if(cable && points.Length>0)cable.GetPositions(points);
+            restoreCrane=()=>
+            {
+                foreach(var s in nodes)if(s.node)
+                {
+                    s.node.localPosition=s.pos;s.node.localRotation=s.rot;s.node.localScale=s.scale;
+                }
+                foreach(var s in lights)if(s.light){s.light.intensity=s.power;s.light.enabled=s.enabled;}
+                foreach(var kv in glass)if(kv.Key)kv.Key.SetPropertyBlock(kv.Value.isEmpty ? null : kv.Value);
+                if(cable){cable.positionCount=points.Length;cable.SetPositions(points);}
+            };
         }
 
         void StopPreview()
@@ -204,7 +240,7 @@ namespace Raid.Nereid.Editor
             if(preview && AnimationMode.InAnimationMode())AnimationMode.StopAnimationMode();
             preview=playing=false;
             foreach(var pair in clips)if(pair.clip)DestroyImmediate(pair.clip);
-            clips.Clear();FollowLoad();SceneView.RepaintAll();
+            clips.Clear();restoreCrane?.Invoke();restoreCrane=null;SceneView.RepaintAll();
         }
     }
 }
