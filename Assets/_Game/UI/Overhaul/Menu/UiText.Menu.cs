@@ -63,6 +63,9 @@ namespace Raid.UI
         public const string MenuScale = "МАСШТАБ ИНТЕРФЕЙСА";
         public const string MenuFov = "ПОЛЕ ЗРЕНИЯ";
         public const string MenuSensitivity = "ЧУВСТВИТЕЛЬНОСТЬ МЫШИ";
+        public const string MenuDynamicFov = "ДИНАМИЧЕСКОЕ ПОЛЕ ЗРЕНИЯ";
+        public const string MenuCameraShake = "ТРЯСКА КАМЕРЫ";
+        public const string MenuHitImpulse = "ТОЛЧОК ПРИ ПОПАДАНИИ";
         public const string MenuSettingsLocalOnly = "Поле зрения и чувствительность относятся только к вашей камере. Они не меняют скорость водолаза, серверные правила или настройки других игроков.";
         public const string MenuRestore = "По умолчанию";
         public const string MenuRestoreDone = "Локальные настройки восстановлены";

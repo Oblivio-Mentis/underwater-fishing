@@ -18,6 +18,22 @@ namespace Raid.Nereid
         bool applied;
         float fishingOffset;
         float swallowAt=-10,releaseAt=-10,chargeUntil=-10,chargeDuration=.44f,severity=1;
+        // RAID-018 one-shot impacts: a single kick per server-confirmed hook, tug or bite.
+        float hitAt=-10, hitMetres, hitDegrees, hitDirection;
+        /// <summary>One short directional shake. Called only for a locally observed confirmed event.</summary>
+        public void Hit(float metres,float degrees,float direction)
+        {
+            float impulse=uiShake;
+            if(impulse<=.001f)return;
+            hitMetres=Mathf.Max(hitMetres,Mathf.Max(0,metres)*impulse);
+            hitDegrees=Mathf.Max(hitDegrees,Mathf.Max(0,degrees)*impulse);
+            hitDirection=direction;hitAt=Time.unscaledTime;
+        }
+        static float uiShake
+        {
+            get { var ui=UI.UiRoot.Instance; return ui==null?1:Mathf.Clamp01(ui.Settings.hitImpulse*ui.Settings.cameraShake); }
+        }
+        static float shakeScale => UI.UiRoot.Instance==null?1:Mathf.Clamp01(UI.UiRoot.Instance.Settings.cameraShake);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         float backgroundQaUntil;
         public void BeginBackgroundQa(float seconds)
@@ -66,15 +82,20 @@ namespace Raid.Nereid
             float gulp=gulpAge>=0&&gulpAge<.38f?Mathf.Sin(gulpAge/.38f*Mathf.PI):0;
             float charge=chargeUntil>Time.time?1-(chargeUntil-Time.time)/chargeDuration:0;
             float distance=Mathf.Clamp01(1-Vector3.Distance(cameraTransform.position,origin)/36);
-            float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance;
+            float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance*shakeScale;
             var tool=ui.Context.Harpoon;
             var fish=tool?.HookedFish;
             float pull=fish!=null && fish.HookCount>0 ? (tool.LineTension*.009f+(fish.Surging?.016f:0))*ui.Settings.fishingCamera : 0;
-            fishingOffset=Mathf.Lerp(fishingOffset,pull,1-Mathf.Exp(-Time.unscaledDeltaTime*9));
-            if(amplitude<.00001f && fishingOffset<.0001f)return;
+            fishingOffset=Mathf.Lerp(fishingOffset,pull*shakeScale,1-Mathf.Exp(-Time.unscaledDeltaTime*9));
+            float hitAge=Time.unscaledTime-hitAt;
+            float hit=hitAge>=0 && hitAge<.42f ? Mathf.Exp(-hitAge*7.5f) : 0;
+            if(hitAge>=.42f){hitMetres=hitDegrees=0;}
+            if(amplitude<.00001f && fishingOffset<.0001f && hit<=0)return;
             float t=Time.time;Vector3 noise=new Vector3(Mathf.Sin(t*47)+.35f*Mathf.Sin(t*79+.3f),Mathf.Sin(t*61+.7f)+.3f*Mathf.Sin(t*97),Mathf.Sin(t*37)*.35f)/1.35f;
-            CurrentOffset=noise*amplitude + baseRotation * Vector3.back * fishingOffset;
-            Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*amplitude*17;
+            CurrentOffset=noise*amplitude + baseRotation * Vector3.back * fishingOffset
+                + baseRotation * (Vector3.right*(hit*hitMetres*hitDirection) + Vector3.up*(hit*hitMetres*.35f));
+            Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*amplitude*17
+                + new Vector3(-hit*hitDegrees,hit*hitDegrees*hitDirection,hit*hitDegrees*.4f*hitDirection);
             cameraTransform.localPosition=basePosition+CurrentOffset;cameraTransform.localRotation=baseRotation*Quaternion.Euler(angles);
             lastAppliedPosition=cameraTransform.localPosition;lastAppliedRotation=cameraTransform.localRotation;applied=true;AppliedThisFrame=true;AppliedOwnerId=player.OwnerId;
             AppliedPeakMetres=Mathf.Max(AppliedPeakMetres,CurrentOffset.magnitude);AppliedPeakDegrees=Mathf.Max(AppliedPeakDegrees,Quaternion.Angle(baseRotation,lastAppliedRotation));

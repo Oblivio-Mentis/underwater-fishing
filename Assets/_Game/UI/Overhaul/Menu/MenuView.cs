@@ -288,12 +288,17 @@ namespace Raid.UI
             AddSetting(content, "Scale", UiText.MenuScale, .9f, 1.2f, () => app.Settings.scale, value => app.Settings.scale = value, UiText.MenuPercent);
             AddSetting(content, "Fov", UiText.MenuFov, 65, 100, () => app.Settings.fov, value => app.Settings.fov = value, UiText.MenuDegrees);
             AddSetting(content, "Sensitivity", UiText.MenuSensitivity, .4f, 2, () => app.Settings.sensitivity, value => app.Settings.sensitivity = value, UiText.MenuPercent);
-            AddSetting(content, "FishingCamera", "ЭФФЕКТЫ КАМЕРЫ ПРИ ЛОВЛЕ", 0, 1, () => app.Settings.fishingCamera,
+            AddSetting(content, "FishingCamera", UiText.MenuDynamicFov, 0, 1, () => app.Settings.fishingCamera,
                 value => app.Settings.fishingCamera = value, UiText.MenuPercent);
+            AddSetting(content, "CameraShake", UiText.MenuCameraShake, 0, 1, () => app.Settings.cameraShake,
+                value => app.Settings.cameraShake = value, UiText.MenuPercent);
+            AddSetting(content, "HitImpulse", UiText.MenuHitImpulse, 0, 1, () => app.Settings.hitImpulse,
+                value => app.Settings.hitImpulse = value, UiText.MenuPercent);
             Line(content, "LocalOnly", UiText.MenuSettingsLocalOnly, 62, 21, UiTheme.Muted);
             UiKit.Button(content, "RestoreDefaults", UiText.MenuRestore, () =>
             {
                 app.Settings.scale = 1; app.Settings.fov = 80; app.Settings.sensitivity = 1; app.Settings.fishingCamera = 1;
+                app.Settings.cameraShake = 1; app.Settings.hitImpulse = 1;
                 foreach (var row in settingRows) row.Slider.SetValueWithoutNotify(row.Read());
                 app.ApplySettings(); Refresh(); app.Toast(UiText.MenuRestoreDone);
             });

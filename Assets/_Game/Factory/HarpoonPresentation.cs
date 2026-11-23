@@ -33,8 +33,9 @@ namespace Raid
         float nextSuitCheck;
         int observedShot;
         Renderer statusLamp;
-        Vector3 sway;
+        Vector3 sway, tugPull;
         float searchAt,recoil,recoilVelocity,monitorRest;
+        int observedTug; float tugVelocity,tugKick;
 
         void OnEnable()
         {
@@ -107,6 +108,23 @@ namespace Raid
             bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether||viewedTool.HasBallLine;
             if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
             observedShot=viewedTool.ShotSequence;
+            // A confirmed tug yanks the forearms a few centimetres and rolls the receiver; it never changes aim.
+            var hooked=viewedTool.HookedFish;
+            if(hooked!=null && hooked.TugSequence!=observedTug)
+            {
+                observedTug=hooked.TugSequence;
+                float strength=Mathf.Clamp01(hooked.TugStrength);
+                tugVelocity-= (hooked.RequiresPartner?.5f:.9f)*(0.35f+strength);
+            }
+            else if(hooked==null) observedTug=0;
+            float tugRest=0, remainingTug=dt;
+            while(remainingTug>0)
+            {
+                float step=Mathf.Min(remainingTug,.008f);remainingTug-=step;
+                tugVelocity+=(-tugKick*180-tugVelocity*19)*step;tugKick=Mathf.Clamp(tugKick+tugVelocity*step,-.03f,.05f);
+            }
+            float tensionPull=hooked!=null && hooked.Mode>=FishMode.Hooked&&hooked.Mode<=FishMode.Tired?viewedTool.LineTension:0;
+            tugPull=Vector3.Lerp(tugPull,Vector3.back*(tensionPull*.012f),1-Mathf.Exp(-dt*8));
             if(statusLamp!=null)statusLamp.enabled=hasLine;
             // The receiver's damped spring is kicked only by the accepted server-shot event.
             float remaining=dt;
@@ -118,8 +136,8 @@ namespace Raid
             float aim=actor==owner?Nereid.NereidAim.Blend:0;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
-            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick);
-            model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,0);
+            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick)+tugPull+Vector3.back*(tugKick*kick);
+            model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,tugKick*140*kick);
             model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress,monitorRest));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
@@ -332,7 +350,7 @@ namespace Raid
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
             meshes.Clear();model=null;reel=null;loadedBolt=null;slide=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
-            sway=Vector3.zero;recoil=0;recoilVelocity=0;
+            sway=Vector3.zero;recoil=0;recoilVelocity=0;tugPull=Vector3.zero;observedTug=0;tugVelocity=0;tugKick=0;
         }
         void OnDisable() { ReleaseModel();if(active==this)active=null; }
         void OnDestroy() { ReleaseModel();if(active==this)active=null; }

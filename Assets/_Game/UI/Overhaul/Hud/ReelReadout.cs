@@ -84,7 +84,11 @@ namespace Raid.UI
             UiKit.Set(range,Vector3.Distance(tool.transform.position,fish.transform.position).ToString("0.0")+" м");
             UiKit.Set(strength, $"Гарпуны {fish.HookCount}/{(fish.RequiresPartner ? 2 : 1)}  ·  Силы {Mathf.RoundToInt(energy*100)}%");
             string action = t>=.82f ? "Отпустите ЛКМ · леска натянута"
-                : fish.Surging ? "Рывок · следите за леской" : fish.SurgeWarning ? "Рыба готовится к рывку"
+                : fish.Surging ? "Рывок · ослабьте леску"
+                : fish.Behaviour == FishBehaviour.SurgeWindup || fish.SurgeWarning ? "Рывок через мгновение"
+                : fish.Behaviour == FishBehaviour.LastEscape ? "Последний рывок · ослабьте леску"
+                : fish.Behaviour == FishBehaviour.Lateral ? "Рыба уходит в сторону · тяните"
+                : fish.Behaviour == FishBehaviour.Weakened ? "Рыба сдаётся · ЛКМ — тянуть"
                 : fish.RequiresPartner && fish.HookCount < 2 ? "Нужно два гарпуна"
                 : fish.RequiresPartner && fish.Mode == FishMode.Tired ? "Подплывите к рыбе, удерживая ЛКМ"
                 : fish.RequiresPartner && !fish.Coordinated ? "Тяните в одну сторону"

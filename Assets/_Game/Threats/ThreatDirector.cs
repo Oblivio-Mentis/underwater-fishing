@@ -44,6 +44,9 @@ namespace Raid
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
         public HuntStage AnglerStage=>state.Value.AnglerStage;
+        public int BiteSequence=>state.Value.BiteSequence;
+        public int BiteVictim=>state.Value.BiteVictim;
+        public Vector3 BiteDirection=>state.Value.BiteDirection;
         public Vector3 AnglerPosition=>state.Value.PredatorPosition;
 
         private void Awake()

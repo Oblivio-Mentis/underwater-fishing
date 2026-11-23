@@ -32,7 +32,12 @@ namespace Raid.UI
         float ballPressAt=-1;
         public bool WindingBall => ballPressAt>=0;
         public float LocalBallWind => WindingBall && Context.World!=null ? Mathf.Clamp01((Time.unscaledTime-ballPressAt)/Mathf.Max(.1f,Context.World.tuning.ballWindSeconds)) : 0;
-        float desiredFov=80, fightZoom;
+        float desiredFov=80, fightZoom, fishingPunch;
+        /// <summary>Confirmed hook / tug / bite impulse on the owned camera. Decays back to the fight baseline.</summary>
+        public void PushFishingPunch(float degrees)
+        {
+            fishingPunch=Mathf.Max(fishingPunch,Mathf.Clamp(degrees,0,14));
+        }
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;
@@ -486,12 +491,17 @@ namespace Raid.UI
                     ? Context.Harpoon?.HookedFish : null;
                 bool fighting = fish != null && fish.HookCount > 0 && fish.Mode <= FishMode.Tired;
                 float target = fighting ? fish.tuning.fightFov + (fish.Surging ? fish.tuning.burstFov : 0) : 0;
-                fightZoom = Mathf.Lerp(fightZoom, target * Settings.fishingCamera, 1-Mathf.Exp(-Time.unscaledDeltaTime*6));
+                float attack = fishingPunch > fightZoom + .05f ? 26f : 6f;
+                fightZoom = Mathf.Lerp(fightZoom, target * Settings.fishingCamera, 1-Mathf.Exp(-Time.unscaledDeltaTime*attack));
+                // A fresh confirmed event snaps the view open, then settles into the steady fight offset.
+                // While the fight continues the extra snap bleeds back into the steady fight offset.
+                fishingPunch = Mathf.MoveTowards(fishingPunch,0,Time.unscaledDeltaTime*(fighting?9f:26f));
+                if (!fighting && Mathf.Abs(fightZoom) < .01f) { fightZoom = 0; fishingPunch = 0; }
                 if(aim!=null&&!computerSurface&&!UiInputGate.Modal&&Nereid.NereidAim.Blend>0)
-                    viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov) + fightZoom;
+                    viewCamera.fieldOfView=aim.ResolveFieldOfView(Settings.fov) + fightZoom + fishingPunch*Settings.fishingCamera;
                 else
                 {
-                    viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov+fightZoom,
+                    viewCamera.fieldOfView=Mathf.Lerp(viewCamera.fieldOfView,desiredFov+fightZoom+fishingPunch*Settings.fishingCamera,
                         1-Mathf.Exp(-Time.unscaledDeltaTime*18));
                 }
             }

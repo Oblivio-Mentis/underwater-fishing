@@ -132,6 +132,7 @@ namespace Raid
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = RenderSettings.fogColor;
             if(Nereid.NereidVessel.Active!=null)view.AddComponent<HypoxiaLens>().Bind(this);
+            view.gameObject.AddComponent<FishingFeel>().Bind(this);
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
             bool lockCursor=!UI.UiInputGate.Active || (Application.isFocused&&!UI.UiInputGate.Blocked);
