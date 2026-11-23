@@ -1,6 +1,51 @@
 {
   "cameras": [
     {
+      "name": "exterior-drives",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 16.8,
+        "y": 7.3,
+        "z": -44.4
+      },
+      "look": {
+        "x": 0,
+        "y": 2.5,
+        "z": -23.2
+      }
+    },
+    {
+      "name": "exterior-starboard",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 20.4,
+        "y": 4.45,
+        "z": -34.1
+      },
+      "look": {
+        "x": 0,
+        "y": 1.9,
+        "z": -16.6
+      }
+    },
+    {
+      "name": "exterior-outer-lock",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 15.45,
+        "y": 3.2,
+        "z": -17.77
+      },
+      "look": {
+        "x": 1.8,
+        "y": 1.3,
+        "z": -11
+      }
+    },
+    {
       "name": "exterior-bow",
       "depth": 1,
       "feet": {
