@@ -43,6 +43,10 @@ namespace Raid
         private FsmPresentationDriver _presentation;
         private bool _depthActive;
         private long _cargoId;
+        // Client-side follow: the replicated position is extrapolated by its own velocity and
+        // smoothed, so a 20 Hz snapshot stream reads as continuous swimming.
+        private Vector3 netPrevious, netVelocity, followVelocity;
+        private float netReceivedAt;
 
         public event Action<UniversalFsmLayerStateChange> LayerStateChanged;
         public FishMode Mode => _snapshot.Value.Mode;
@@ -329,10 +333,16 @@ namespace Raid
             bool snap = visual.Active && (!lastVisualActive || (transform.position - visual.Position).sqrMagnitude > 64);
             if (!IsServerInitialized && visual.Active)
             {
-                float blend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.02f, tuning.snapshotInterval));
-                transform.position = Vector3.Lerp(transform.position, visual.Position, blend);
+                if (snap) { transform.position = visual.Position; followVelocity = Vector3.zero; netVelocity = Vector3.zero; }
+                else
+                {
+                    bool carried = visual.Mode == FishMode.Captured || visual.Mode == FishMode.Transported;
+                    float age = Mathf.Clamp(Time.time - netReceivedAt, 0, .25f);
+                    Vector3 target = carried ? visual.Position : visual.Position + netVelocity * age;
+                    transform.position = Vector3.SmoothDamp(transform.position, target, ref followVelocity, carried ? .03f : .11f, 40f, Time.deltaTime);
+                }
                 // Heading settles over a longer window than position so turns read as arcs, not steps.
-                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .14f);
+                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .16f);
                 transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, turnBlend);
             }
             lastVisualActive = visual.Active;
@@ -351,6 +361,15 @@ namespace Raid
         {
             if (!asServer && previous.Mode != next.Mode)
                 LayerStateChanged?.Invoke(new UniversalFsmLayerStateChange(0, "Default", (int)previous.Mode, (int)next.Mode));
+            if (!asServer)
+            {
+                float gap = Time.time - netReceivedAt;
+                if (gap > .001f && gap < .5f && previous.Active && next.Active)
+                    netVelocity = Vector3.Lerp(netVelocity, (next.Position - previous.Position) / gap, .6f);
+                else netVelocity = Vector3.zero;
+                netReceivedAt = Time.time;
+                netPrevious = next.Position;
+            }
         }
 
         public void SetTint(Color color)

@@ -88,6 +88,9 @@ namespace Raid
                 return local;
             }
             local.x += wave + bend;
+            // Pectoral fins flap up and down out of phase with the tail beat.
+            float fin = Mathf.Clamp01((Mathf.Abs(local.x) - .22f) / .18f);
+            if (fin > 0) local.y += Mathf.Sin(wavePhase * 1.15f + Mathf.Sign(local.x) * .6f) * (.03f + waveAmplitude * .35f) * fin;
             return local;
         }
 

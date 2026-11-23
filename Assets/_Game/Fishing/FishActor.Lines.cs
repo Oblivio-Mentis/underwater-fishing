@@ -27,6 +27,14 @@ namespace Raid
         FishFightInput fightInput;
         Vector3 fightHeading;
         int fightSeed;
+        float deflectReadyAt;
+
+        void DeflectOnce()
+        {
+            if (Time.time < deflectReadyAt) return;
+            deflectReadyAt = Time.time + .6f;
+            fight.Deflect();
+        }
 
         public FishFightBrain FightBrain => fight;
 
@@ -320,12 +328,14 @@ namespace Raid
                 Vector3 desired = away;
                 if (Nereid.NereidVessel.Active != null && !tired) desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
                 Vector3 dir = ClearHeading(transform.position, desired, 1);
-                if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) fight.Deflect();
+                if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) DeflectOnce();
+                // Arcs are real swimming, not a drift: a lateral phase moves at cruise pace.
+                if (Behaviour == FishBehaviour.Lateral) escape *= 1.6f;
                 // Turn inertia: heavy species carry their heading into the next arc.
                 fightHeading = Vector3.RotateTowards(fightHeading.sqrMagnitude < .01f ? dir : fightHeading, dir, profile.turnRate * dt, 0);
                 Vector3 move = fightHeading * (escape * dt);
                 if (!SolidAhead(transform.position, transform.position + move)) transform.position += move;
-                else fight.Deflect();
+                else DeflectOnce();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
                 // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
                 if (!tired && !state.Surging) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
@@ -339,9 +349,17 @@ namespace Raid
             if (Mathf.Abs(lateral) < .01f) return;
             Vector3 step = side * (lateral * dt);
             Vector3 next = transform.position + step;
-            // The line is a leash: never swing further from the hand than the spool allows.
-            if ((leader.Tool.HandAnchor - next).magnitude > leader.Spool.PaidOut + tuning.slackAllowance) { fight.Deflect(); return; }
-            if (SolidAhead(transform.position, next)) { fight.Deflect(); return; }
+            // The line is a leash: at its limit the body slides around the hand on the sphere
+            // instead of bouncing back and forth across the boundary every tick.
+            Vector3 hand = leader.Tool.HandAnchor;
+            float reach = leader.Spool.PaidOut + tuning.slackAllowance;
+            Vector3 offset = next - hand;
+            if (offset.magnitude > reach)
+            {
+                next = hand + offset.normalized * reach;
+                if ((next - transform.position).sqrMagnitude < step.sqrMagnitude * .04f) { DeflectOnce(); return; }
+            }
+            if (SolidAhead(transform.position, next)) { DeflectOnce(); return; }
             transform.position = next;
         }
 

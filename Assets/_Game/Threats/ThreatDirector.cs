@@ -251,7 +251,8 @@ namespace Raid
             if(nereid)ShowReef();
             Show(predatorView,snapshot.PredatorPosition,snapshot.PredatorHealth > 0f && (!nereid || reefState.Value.Active),!nereid);
             if (nereid && snapshot.AnglerHeading.sqrMagnitude > .01f)
-                predatorView.rotation = Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),Time.deltaTime * 225);
+                predatorView.rotation = Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),
+                    Time.deltaTime * (snapshot.AnglerStage == HuntStage.Pursuit ? 240 : 120));
             if (!IsServerInitialized) PlaceRaider(snapshot, true);
         }
 

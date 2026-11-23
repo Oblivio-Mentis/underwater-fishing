@@ -46,7 +46,7 @@ MonoBehaviour:
   nearSurgeBias: 0.8
   lateralStrength: 1.1
   turnRate: 2.2
-  surgeSpeedMultiplier: 2
+  surgeSpeedMultiplier: 3.2
   weakenedSpeedMultiplier: 0.25
   weakenedRecovery: 2.5
   weakenedTension: 0.55

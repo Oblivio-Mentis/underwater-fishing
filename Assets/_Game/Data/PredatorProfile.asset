@@ -39,26 +39,26 @@ MonoBehaviour:
   noiseCooldown: 8
   losLossTimeout: 1.4
   investigateSpeed: 2.4
-  circleRadiusMin: 5
-  circleRadiusMax: 12
+  circleRadiusMin: 4
+  circleRadiusMax: 8
   circleHeightVariation: 1.6
   circleSpeed: 2.9
   circleRadialSpeed: 1.8
   arcReverseChance: 0.35
   arcSecondsMin: 1.4
   arcSecondsMax: 3.2
-  stalkSecondsMin: 2.6
-  stalkSecondsMax: 6
+  stalkSecondsMin: 1.8
+  stalkSecondsMax: 4
   closeStrikeDistance: 3.2
-  telegraphMin: 0.5
-  telegraphMax: 1
+  telegraphMin: 0.9
+  telegraphMax: 1.3
   aimLockSeconds: 0.2
   telegraphTurnRate: 7
-  telegraphDrift: 0.35
-  chargeSpeed: 6.3
+  telegraphDrift: 0.7
+  chargeSpeed: 7.5
   chargeMaxSeconds: 2.2
   biteRadius: 0.55
-  biteShove: 1.1
+  biteShove: 2.4
   overshootDistance: 3.6
   overshootTurnRate: 95
   passesPerHunt: 2
