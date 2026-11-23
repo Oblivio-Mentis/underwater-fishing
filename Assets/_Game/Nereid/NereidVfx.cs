@@ -6,7 +6,9 @@ namespace Raid.Nereid
     // Machinery cues follow the replicated route, including remote-client starts and interruption.
     public sealed class NereidVfx : MonoBehaviour
     {
-        ParticleSystem outlet,mouth;
+        ParticleSystem outlet,mouth,receiver;
+        NereidCargoRail rail;
+        NereidVessel vessel;
         Material particles;
         Factory.FactoryVisuals factory;
 
@@ -21,6 +23,11 @@ namespace Raid.Nereid
             if(factory.processRoute && factory.processRoute.destination) discharge=transform.InverseTransformPoint(factory.processRoute.destination.transform.position);
             outlet=MakeParticles("Processor water vapour",discharge+new Vector3(0,-1.15f,-.15f),new Color(.74f,.79f,.73f,.39f),.105f,.73f);
             mouth=MakeParticles("Feeding pressure bubbles",factory.feedRoute && factory.feedRoute.destination ? transform.InverseTransformPoint(factory.feedRoute.destination.transform.position) : new Vector3(1.35f,2.5f,7.55f),new Color(.62f,.78f,.78f,.58f),.08f,.64f);
+            vessel=GetComponent<NereidVessel>();
+            rail=vessel ? vessel.authoredRail : null;
+            if(rail && rail.inlet && rail.inlet.source)
+                receiver=MakeParticles("Receiver aeration",transform.InverseTransformPoint(rail.inlet.source.transform.position),
+                    new Color(.58f,.87f,.99f,.58f),.065f,.42f);
         }
 
         void Update()
@@ -31,6 +38,14 @@ namespace Raid.Nereid
             bool feed=active&&w.FishRoute.feeding;
             var emission=outlet.emission;emission.rateOverTime=active&&!feed?9:0;
             emission=mouth.emission;emission.rateOverTime=feed?7:0;
+            if(receiver && rail && rail.inlet && rail.inlet.source)
+            {
+                receiver.transform.position=rail.inlet.source.transform.position;
+                float t=vessel.HoistAnimation;
+                bool transferring=connected && w.View!=null && w.View.cargo.Count>0 && vessel.PresentedHoistPhase==HoistPhase.Unloading;
+                var water=receiver.emission;
+                water.rateOverTime=transferring ? 19*Mathf.Sin(t*Mathf.PI):0;
+            }
         }
 
         ParticleSystem MakeParticles(string name,Vector3 point,Color color,float size,float speed)

@@ -25,9 +25,9 @@ namespace Raid.Nereid.Editor
                 var current=pipe.WorldPoint((float)i/count);
                 foreach(var c in Physics.OverlapCapsule(last,current,radius,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                 {
-                    if(c.gameObject.scene!=pipe.gameObject.scene || c.transform.IsChildOf(pipe.transform))continue;
+                    if(c.gameObject.scene!=pipe.gameObject.scene || c.transform.IsChildOf(pipe.transform) || MobileActor(c))continue;
                     if(AtSocket(c,pipe.source,current,radius) || AtSocket(c,pipe.destination,current,radius))continue;
-                    issues.Add("Line crosses collider · "+c.name);
+                    issues.Add("Line crosses collider · "+ColliderName(c));
                 }
                 foreach(var walk in walks)
                     if(walk.gameObject.scene==pipe.gameObject.scene && walk.Intersects(current,Vector3.one*radius)) issues.Add("Line enters a crew passage · "+walk.name);
@@ -35,6 +35,10 @@ namespace Raid.Nereid.Editor
             }
             return new List<string>(issues);
         }
+
+        static bool MobileActor(Collider c) => c.GetComponentInParent<FishActor>() || c.GetComponentInParent<DiverMotor>() || c.GetComponentInParent<LootActor>();
+
+        static string ColliderName(Collider c) => c.transform.parent ? c.transform.parent.name+"/"+c.name : c.name;
 
         static void Socket(PipeSocket socket,PipePort expected,HashSet<string> issues)
         {
@@ -61,7 +65,7 @@ namespace Raid.Nereid.Editor
             int count=Mathf.Clamp(Mathf.CeilToInt(rail.Length()/.45f),8,1024);
             for(int i=0;i<=count;i++)
             {
-                var at=rail.Point((float)i/count);
+                var at=rail.Point((float)i/count)+rail.transform.rotation*rail.cageCentreMetres;
                 var local=rail.hatch.InverseTransformPoint(at);
                 if(Mathf.Abs(local.y)*Mathf.Abs(rail.hatch.lossyScale.y)<half.y && Mathf.Abs(local.x)<rail.aperture.x && Mathf.Abs(local.z)<rail.aperture.y)
                 {
@@ -70,9 +74,11 @@ namespace Raid.Nereid.Editor
                 }
                 foreach(var c in Physics.OverlapBox(at,half,rail.transform.rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                 {
-                    if(c.gameObject.scene!=rail.gameObject.scene || c.transform.IsChildOf(rail.transform) ||
+                    if(c.gameObject.scene!=rail.gameObject.scene || MobileActor(c) || c.transform.IsChildOf(rail.transform) ||
                        (world && world.container && c.transform.IsChildOf(world.container)) || c.transform.IsChildOf(rail.hatch))continue;
-                    issues.Add("Cargo clearance intersects · "+c.name);
+                    // The landing feet bear on the seabed at the first stop.
+                    if(i==0 && c.bounds.max.y <= at.y-half.y+.075f) continue;
+                    issues.Add("Cargo clearance intersects · "+ColliderName(c));
                 }
                 foreach(var walk in walks)
                     if(walk.gameObject.scene==rail.gameObject.scene && walk.Intersects(at,half)) issues.Add("Cargo enters a crew passage · "+walk.name);

@@ -21,6 +21,7 @@ namespace Raid.Nereid
         public Transform[] wheels = Array.Empty<Transform>();
         public Renderer[] signalLights = Array.Empty<Renderer>();
         public Vector2 aperture = new(4.8f,4.8f);
+        public Vector3 cageCentreMetres = new(.12f,.38f,0);
         public Vector3 cageDimensionsMetres = new(4.2f,2.97f,3.7f);
         [Min(.2f)] public float craneAboveHatch = 2.4f;
         [Min(.01f)] public float beamWidth = .15f;
@@ -85,7 +86,9 @@ namespace Raid.Nereid
         {
             var p=hatch.InverseTransformPoint(cage);
             float clearance=Mathf.Max(Mathf.Abs(p.x)-aperture.x*.5f,Mathf.Abs(p.z)-aperture.y*.5f);
-            return 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.65f,3.1f,clearance));
+            float approach=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.65f,3.1f,clearance));
+            float vertical=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.5f,4.7f,Mathf.Abs(p.y)));
+            return approach*vertical;
         }
 
         public Vector3 DoorPosition(bool left,float open) =>

@@ -23,7 +23,7 @@ namespace Raid.Nereid.Editor
         public static void Install(NereidVessel vessel)
         {
             if(!vessel || Application.isPlaying) throw new InvalidOperationException("Open the rebuilt vessel in Edit Mode.");
-            if(vessel.authoredRail) return;
+            if(vessel.authoredRail){TransitFitAuthoring.Fit(vessel);return;}
             var scene=vessel.gameObject.scene;
             FactoryVisuals factory=null; RaidWorld world=null;
             foreach(var root in scene.GetRootGameObjects())
@@ -126,6 +126,7 @@ namespace Raid.Nereid.Editor
                 EditorUtility.SetDirty(component);
                 PrefabUtility.RecordPrefabInstancePropertyModifications(component);
             }
+            TransitFitAuthoring.Fit(vessel);
             EditorSceneManager.MarkSceneDirty(scene);
         }
 
@@ -168,7 +169,7 @@ namespace Raid.Nereid.Editor
                         Box(root,"Pressure guide",new Vector3(side*2.52f,.05f,0),new Vector3(.24f,.32f,5.28f),steel);
                         Box(root,"Longitudinal service coaming",new Vector3(0,.08f,side*2.51f),new Vector3(5.31f,.26f,.21f),dark);
                         var door=New(side<0?"Port pressure door":"Starboard pressure door",root,new Vector3(side*1.2f,0,0));
-                        Box(door,"Laminated shutter",Vector3.zero,new Vector3(2.39f,.19f,4.8f),steel);
+                        Box(door,"Laminated shutter",Vector3.zero,new Vector3(2.39f,.19f,4.8f),steel).gameObject.AddComponent<BoxCollider>();
                         Box(door,"Pressure seal",new Vector3(-side*1.13f,.12f,0),new Vector3(.12f,.10f,4.60f),enamel);
                         for(int k=-2;k<=2;k++)
                             Box(door,"Armoured stiffener",new Vector3(0,.12f,k*.82f),new Vector3(2.1f,.13f,.11f),dark);

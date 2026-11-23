@@ -15,7 +15,7 @@ namespace Raid.Nereid.Editor
         List<string> issues;
         readonly List<(Transform target,AnimationClip clip)> clips=new();
 
-        [MenuItem("NEREID/Cargo Rail && Hatch Editor")]
+        [MenuItem("NEREID/Cargo Rail & Hatch Editor")]
         public static void Open()=>GetWindow<CargoRailEditor>("Cargo Rail & Hatch Editor");
 
         void OnEnable()

@@ -13,6 +13,7 @@ namespace Raid
             internal Transform Model;
             internal float Phase, Ring, Depth, Speed, Size, Delay;
             internal bool InCage, Arriving, Routing;
+            internal int DeliveryRank;
             internal Vector3 ExitStart;
         }
 
@@ -107,7 +108,9 @@ namespace Raid
                         confirmed.Add(item.id);
                         continue;
                     }
-                    Slot(item).InCage=true;
+                    var staged=Slot(item);
+                    staged.InCage=true;
+                    staged.DeliveryRank=cageCount;
                     confirmed.Add(item.id);
                     cageCount++;
                 }
@@ -226,7 +229,11 @@ namespace Raid
 
         void FollowDelivery(Swimmer fish,float elapsed)
         {
-            if(elapsed<fish.Delay){SwimInCage(fish);return;}
+            var pipe=vessel.authoredRail ? vessel.authoredRail.inlet : null;
+            bool authored=pipe && pipe.IsConnected;
+            float start=authored ? .13f+.32f*fish.DeliveryRank/Mathf.Max(1,cageCount-1) : fish.Delay;
+            float finish=authored ? start+.52f : .91f;
+            if(elapsed<start){SwimInCage(fish);return;}
             // Keep the tail animation and material instance from the cage as the fish enters the water.
             if(!fish.Arriving)
             {
@@ -234,9 +241,8 @@ namespace Raid
                 fish.ExitStart=fish.Model.position;
                 fish.Model.SetParent(null,true);
             }
-            float t=Mathf.InverseLerp(fish.Delay,.91f,elapsed);
-            var pipe=vessel.authoredRail ? vessel.authoredRail.inlet : null;
-            if(pipe && pipe.IsConnected)
+            float t=Mathf.InverseLerp(start,finish,elapsed);
+            if(authored)
             {
                 Vector3 routePoint;
                 if(t<.24f) routePoint=Vector3.Lerp(fish.ExitStart,pipe.WorldPoint(0),CargoBasket.Ease(t/.24f));
