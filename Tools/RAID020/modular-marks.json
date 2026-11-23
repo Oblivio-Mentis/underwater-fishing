@@ -437,6 +437,51 @@
       },
       "shipLocal": true,
       "prop": "crew"
+    },
+    {
+      "name": "aquarium-dispatch",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.58,
+        "y": 0.48,
+        "z": 0.26
+      },
+      "look": {
+        "x": 3.41,
+        "y": 0.65,
+        "z": -0.13
+      }
+    },
+    {
+      "name": "aquarium-switches",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.98,
+        "y": 0.49,
+        "z": 0.84
+      },
+      "look": {
+        "x": 3.11,
+        "y": 0.6,
+        "z": 0.53
+      }
+    },
+    {
+      "name": "processor-infeed",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -0.63,
+        "y": 0.56,
+        "z": -11.72
+      },
+      "look": {
+        "x": -3.69,
+        "y": 0.81,
+        "z": -10.67
+      }
     }
   ]
 }

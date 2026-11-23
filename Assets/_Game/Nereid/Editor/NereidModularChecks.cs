@@ -65,11 +65,32 @@ namespace Raid.Nereid.Editor
                     line.line+" follows its destination socket.");
             }
             var instruments=layout.GetComponentsInChildren<NereidInstrument>();
-            Check(instruments.Length==6 && Object.FindObjectsByType<ShipConsole>().Length==6,"Six active consoles without overlapping legacy stations.");
+            var stations=Object.FindObjectsByType<ShipConsole>();
+            Check(instruments.Length==6 && stations.Length==6 && stations.Select(s=>s.kind).Distinct().Count()==6,
+                "Six operational stations and six instruments with unique controls.");
+            var discharge=stations.Single(s=>s.kind==ShipConsoleKind.Process);
+            var feeding=stations.Single(s=>s.kind==ShipConsoleKind.Feed);
+            var hallRoom=layout.Socket(NereidRoomRole.Reservoir).parent;
+            var separation=Vector3.Distance(discharge.screenAnchor.position,feeding.screenAnchor.position);
+            Check(discharge.transform.IsChildOf(hallRoom) && feeding.transform.IsChildOf(hallRoom) &&
+                  separation>.15f && separation<2f && !discharge.GetComponentInParent<NereidInstrument>() &&
+                  !feeding.GetComponentInParent<NereidInstrument>(),
+                "The two physical switches are adjacent in the aquarium hall, independent of display housings.");
+            Check(instruments.Count(i=>!i.console)==2,
+                "The machinery keeps two separate status displays.");
             Physics.SyncTransforms();
-            foreach(var instrument in instruments)
+            var centre=(discharge.screenAnchor.position+feeding.screenAnchor.position)*.5f;
+            var operatorEye=centre-(discharge.screenAnchor.forward+feeding.screenAnchor.forward).normalized*1.25f;
+            foreach(var line in new[]{discharge,feeding})
             {
-                var console=instrument.console; var face=console.screenAnchor;
+                var direction=line.screenAnchor.position-operatorEye;
+                Check(Physics.Raycast(operatorEye,direction,out var hit,direction.magnitude+.15f,
+                    Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) && hit.collider==line.dispatchButton.hitFace,
+                    "Both keys are independently reachable from the same standing position: "+line.kind);
+            }
+            foreach(var console in stations)
+            {
+                var face=console.screenAnchor;
                 var eye=face.position-face.forward*1.65f;
                 Check(layout.ContainsSealed(eye),"Dry operator position at "+console.kind);
                 bool hit=Physics.Raycast(eye,face.forward,out var contact,1.85f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
@@ -82,7 +103,7 @@ namespace Raid.Nereid.Editor
                 if(!EditorSceneManager.SaveScene(scene,temporary,true)) throw new IOException(temporary);
                 var clone=EditorSceneManager.OpenScene(temporary);
                 var copy=Object.FindAnyObjectByType<NereidShipLayout>();
-                var monitor=copy.GetComponentsInChildren<NereidInstrument>().First(s=>s.console.kind==ShipConsoleKind.Reservoir);
+                var monitor=copy.GetComponentsInChildren<NereidInstrument>().First(s=>s.console && s.console.kind==ShipConsoleKind.Reservoir);
                 monitor.transform.localPosition+=Vector3.right*.19f;
                 var p=Object.FindObjectsByType<NereidPipeRoute>().First(l=>l.line==PipeLine.Process);
                 var knot=p.knots[1];knot.position+=new Vector3(.13f,.27f,-.22f);p.knots[1]=knot;p.Rebuild();
@@ -98,7 +119,7 @@ namespace Raid.Nereid.Editor
                 EditorSceneManager.OpenScene(temporary);
                 r=Object.FindAnyObjectByType<NereidCargoRail>();
                 p=Object.FindObjectsByType<NereidPipeRoute>().First(l=>l.line==PipeLine.Process);
-                monitor=Object.FindObjectsByType<NereidInstrument>().First(s=>s.console.kind==ShipConsoleKind.Reservoir);
+                monitor=Object.FindObjectsByType<NereidInstrument>().First(s=>s.console && s.console.kind==ShipConsoleKind.Reservoir);
                 Check(Vector3.Distance(monitor.transform.position,monitorPosition)<.001f &&
                     Vector3.Distance(p.knots[1].position,knot.position)<.001f && Vector3.Distance(r.Point(0),berth)<.001f,
                     "Moved monitor, pipe bend and loading berth survived saving and reopening a scene.");
