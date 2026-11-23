@@ -294,7 +294,13 @@ namespace Raid.Nereid
             Check("Beast sends the existing sphere flying back in front of its lips",world.Gosha.Ball==GoshaBallMode.Flying && hull.InverseTransformPoint(world.Gosha.BallPosition).z<6.73f);
             HostShot("mouth-returns-ball.png");
             yield return Wait("Same ball recovered after entering the mouth",()=>world.HasGoshaBall(host),30);
-            world.QaStageLooseThrow(host,hull.TransformPoint(new Vector3(0,.8f,-3)),Vector3.zero);
+            var rail=NereidVessel.Active.authoredRail;
+            if(rail && rail.aquarium)
+            {
+                world.QaStageLooseThrow(host,hull.TransformPoint(new Vector3(0,.8f,-3)),Vector3.zero);
+                yield return Wait("Ball resting on glass is fetched from the walkable deck",()=>world.HasGoshaBall(host),35);
+            }
+            world.QaStageLooseThrow(host,rail && rail.aquarium?rail.aquarium.position:hull.TransformPoint(new Vector3(0,.8f,-3)),Vector3.zero);
             yield return Wait("Ball inside sealed reservoir machinery lands back in a reachable aisle",()=>world.QaBallRelocated,8);
             yield return Wait("Gosha returns the recovered reservoir ball to its thrower",()=>world.HasGoshaBall(host),35);
             Check("Same single physical sphere after stairs, mouth and equipment recovery",FindAnyObjectByType<GoshaBallBody>()==sphere && FindObjectsByType<GoshaBallBody>().Length==1);

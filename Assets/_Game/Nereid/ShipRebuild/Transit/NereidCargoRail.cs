@@ -27,6 +27,9 @@ namespace Raid.Nereid
         public Vector3 leftClosed, rightClosed;
         public NereidPipeRoute inlet;
         public Transform aquarium;
+        [Tooltip("Water enclosed by the reservoir walls, in aquarium socket coordinates.")]
+        public Bounds aquariumVolume = new(Vector3.zero,new Vector3(4.84f,2.11f,9.40f));
+        public bool InsideAquarium(Vector3 worldPoint) => aquarium && aquariumVolume.Contains(aquarium.InverseTransformPoint(worldPoint));
         public Vector3 aquariumSwimRadii = new(2f,.75f,4f);
         public bool Ready
         {

@@ -142,11 +142,13 @@ namespace Raid
                 foreach(var fish in stock)
                     Check(world.Team.tank.Count(x=>x.id==fish.id && x.species==fish.species)==1 && cage.ModelFor(fish.id)==original[fish.id],
                         "Original "+fish.species+" #"+fish.id+" uses the exact same visible model in the aquarium.");
-                Vector3 tankCenter=vessel.transform.TransformPoint(new Vector3(0,1.54f,-3));
+                var rail=vessel.authoredRail;
+                Vector3 tankCenter=rail && rail.aquarium?rail.aquarium.position:vessel.transform.TransformPoint(new Vector3(0,1.54f,-3));
                 await Until(()=>stock.All(catchItem=>
                 {
                     var model=cage.ModelFor(catchItem.id);
                     if(model==null || !model.gameObject.activeInHierarchy || !model.GetComponent<Renderer>().enabled)return false;
+                    if(rail && rail.aquarium) return rail.InsideAquarium(model.position);
                     var delta=model.position-tankCenter;
                     return Mathf.Abs(delta.y)<1.60f && Vector2.SqrMagnitude(new Vector2(delta.x,delta.z))<6.25f;
                 }),"All four visible models remain inside the glass tank as the cage returns",1.4f);

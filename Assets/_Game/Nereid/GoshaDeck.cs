@@ -47,7 +47,7 @@ namespace Raid.Nereid
         public Vector3 RecoveryMark(Vector3 position)
         {
             Vector3 nearest=Mark(7);float nearestDistance=float.PositiveInfinity;
-            for(int i=0;i<marks.Length;i++)
+            for(int i=0;i<Count;i++)
             {
                 Vector3 p=Mark(i);float d=(p-position).sqrMagnitude;
                 if(d<nearestDistance&&RoomForBody(p,.18f)){nearest=p;nearestDistance=d;}
@@ -70,6 +70,8 @@ namespace Raid.Nereid
         public bool InSea(Vector3 world)
         {
             if(NereidAirlock.Active.Contains(world))return NereidAirlock.Active.IsSubmerged(world);
+            var rail=NereidVessel.Active.authoredRail;
+            if(rail && rail.InsideAquarium(world))return false;
             if(NereidVessel.Active.ContainsSealed(world)||Mouth(world))return false;
             var p=Hull.InverseTransformPoint(world);
             return Mathf.Abs(p.x)>6.15f || p.z< -16.5f || p.z>10.25f || p.y<-.65f || p.y>4.75f;
