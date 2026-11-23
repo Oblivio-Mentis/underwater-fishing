@@ -172,6 +172,7 @@ namespace Raid.Nereid
 
         void BuildGate(bool outer)
         {
+            if(authored && (outer ? authored.seaFrame : authored.cabinFrame)) return;
             float x=outer?OuterX:0;int gate=outer?1:0;
             for(int s=-1;s<=1;s+=2)
             {

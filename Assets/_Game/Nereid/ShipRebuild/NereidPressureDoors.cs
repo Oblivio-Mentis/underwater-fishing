@@ -5,6 +5,7 @@ namespace Raid.Nereid
     // Door leaves are saved in the sealed pose. The left and right tracks use chamber-local metres.
     public sealed class NereidPressureDoors : MonoBehaviour
     {
+        public Transform cabinFrame, seaFrame;
         public Transform innerPort, innerStarboard, outerPort, outerStarboard;
         [Min(0)] public float stroke = 1.59f;
         public Transform waterSurface;

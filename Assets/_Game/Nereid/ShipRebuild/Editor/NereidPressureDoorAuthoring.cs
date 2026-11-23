@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 
 namespace Raid.Nereid.Editor
 {
-    public static class NereidPressureDoorAuthoring
+    public static partial class NereidPressureDoorAuthoring
     {
         const string Root="Assets/_Game/Nereid/ShipRebuild";
         const string Room=Root+"/Prefabs/Rooms/AirlockCollar.prefab";
@@ -49,6 +49,7 @@ namespace Raid.Nereid.Editor
                 }
                 finally { UnityEngine.Object.DestroyImmediate(assembly); }
             }
+            FitDoorFrames();
             var room=PrefabUtility.LoadPrefabContents(Room);
             try
             {
