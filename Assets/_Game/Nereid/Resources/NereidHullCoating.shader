@@ -198,7 +198,7 @@ Shader "RAID/Nereid Hull Coating"
                 // Safety ochre keeps its chroma: worn rims only brighten it, the grey chalking is for steel.
                 half peakTint=max(_BaseColor.r,max(_BaseColor.g,_BaseColor.b));
                 half chroma=saturate((peakTint-min(_BaseColor.r,min(_BaseColor.g,_BaseColor.b)))/max(peakTint,.01)*1.6);
-                surface.albedo=lerp(paint,paint*1.9+half3(.035,.048,.052)*(1.-chroma),wear*.55);
+                surface.albedo=lerp(paint,paint*1.45+half3(.028,.036,.040)*(1.-chroma),wear*.42);
                 surface.metallic=saturate(_Metallic+wear*.35);
                 surface.smoothness=saturate(gloss-streak*.10-grime*.07+(plate-1.)*.075+wear*.14);
                 surface.normalTS=half3(0,0,1);

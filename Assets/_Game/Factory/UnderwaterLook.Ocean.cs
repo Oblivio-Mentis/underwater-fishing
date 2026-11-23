@@ -43,7 +43,7 @@ namespace Raid
             deckHorizon=RenderSettings.ambientEquatorColor;
             deckGround=RenderSettings.ambientGroundColor;
             grading=UnderwaterGrading.Active;
-            foreach(var light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            foreach(var light in FindObjectsByType<Light>(FindObjectsInactive.Exclude))
                 if(light!=null && light.name=="Ocean reflected fill"){oceanFill=light;oceanFillBase=light.intensity;break;}
         }
 
@@ -178,8 +178,8 @@ namespace Raid
                 }
                 if(profile.TryGet<Bloom>(out var bloom))
                 {
-                    bloom.intensity.Override(Mathf.Lerp(.24f,state.bloom,gradeBlend));
-                    bloom.threshold.Override(Mathf.Lerp(1.05f,state.bloomThreshold,gradeBlend));
+                    bloom.intensity.Override(Mathf.Lerp(deckState.bloom,state.bloom,gradeBlend));
+                    bloom.threshold.Override(Mathf.Lerp(deckState.bloomThreshold,state.bloomThreshold,gradeBlend));
                 }
                 if(profile.TryGet<Vignette>(out var vignette))
                     vignette.intensity.Override(Mathf.Lerp(deckState.vignette,state.vignette,gradeBlend)+fear*(.065f-.05f*breath));
