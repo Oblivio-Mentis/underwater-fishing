@@ -1,0 +1,7 @@
+{
+    "scenario": "catch",
+    "phase": "failed",
+    "error": "Object reference not set to an instance of an object",
+    "frames": 0,
+    "notes": []
+}

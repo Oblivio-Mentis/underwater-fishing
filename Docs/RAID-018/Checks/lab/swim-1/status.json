@@ -1,0 +1,10 @@
+{
+    "scenario": "swim",
+    "phase": "done",
+    "error": "",
+    "frames": 333,
+    "notes": [
+        "watching Lanternfish in Far Ridge",
+        "behaviours: Cruise,Alert,Forage,Hover"
+    ]
+}

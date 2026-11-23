@@ -1,0 +1,10 @@
+{
+    "scenario": "catch",
+    "phase": "done",
+    "error": "",
+    "frames": 36,
+    "notes": [
+        "hooking Needlefish in Kelp Gate",
+        "landed Needlefish phases: HookShock>LastEscape>Lateral"
+    ]
+}
