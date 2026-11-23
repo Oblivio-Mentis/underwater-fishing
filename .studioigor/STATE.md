@@ -1,9 +1,9 @@
 # studioigor - Underwater Fishing
 PROJECT: Underwater Fishing
 PHASE: 6 — Mechanics
-UPDATED: 2026-11-23 21:15
+UPDATED: 2026-11-24 00:20
 ## Now
-Рабочая основа RAID-020 готова. Сохранена резервная сцена. Следующий этап определяется отдельно.
+Merge feel pass into raid/020-nereid-modular-rebuild, user playtest of the fight
 
 ## Open questions
 Плейтест экипажем через интернет с двух устройств и Steam-аккаунтов остаётся открытым.
@@ -23,3 +23,4 @@ UPDATED: 2026-11-23 21:15
 | 2026-11-22 18:57 | 6 — Mechanics | RAID-017 интегрирован с RAID-015 и RAID-016. Проверены 54 теста EditMode, 38 сценариев рифа, закупка личных и общих навыков одним экипажем, передача и смешанная разгрузка катушки, пакетная отправка рыбы, уведомление HUD и мяч Гоши. Windows Release подключил два экземпляра по LAN. | Совместный плейтест ощущений ловли и плавания. |
 | 2026-11-22 17:29 | 6 — Mechanics | RAID-015: Q загружает отдельную рыбу, та же модель проходит клеть и резервуар. По плейтесту один кошелёк NEREID, 36 узлов с личными и общими эффектами. Прошли 53 EditMode, реальные Windows-пары, замер рифа и Release. | Ревью PR #13 и плейтест RAID015-Nereid. Интернет-сессия Steam между двумя аккаунтами и устройствами остаётся отдельной проверкой. |
 | 2026-11-23 21:15 | 6 — Mechanics | В RAID-020 объединены актуальная NEREID, прогрессия RAID-019, визуал Claude и QA-G. Проверены Windows x64, сцена, 61 EditMode, рывок и камера, аквариум, клеть, Гоша и прокачка. Подробности и ограничения в Docs/RAID-020/FOUNDATION.md. | Рабочая основа RAID-020 готова. Сохранена резервная сцена. Следующий этап определяется отдельно. |
+| 2026-11-24 00:20 | 6 — Mechanics | RAID-018 feel pass on raid/020-fishing-feel (73189df): taut cable from spool vs anchor distance, viewmodel fight pose + camera strain, dense fine fish VFX; verified on lab runs catch-lantern-4 and swim-1 | Merge feel pass into raid/020-nereid-modular-rebuild, user playtest of the fight |
