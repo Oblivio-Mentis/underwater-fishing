@@ -81,6 +81,12 @@ MonoBehaviour:
   movingSupportShoulder: {x: 0.025, y: -0.075, z: 0.045}
   movingSupportPole: {x: -0.06, y: -1, z: 0.05}
   motions:
+  - action: 1
+    clip: {fileID: 7400000, guid: bd8f7da8e7b5e1b4c84e316f181ffc7c, type: 2}
+    speed: 1
+  - action: 2
+    clip: {fileID: 7400000, guid: bd8f7da8e7b5e1b4c84e316f181ffc7c, type: 2}
+    speed: 1
   - action: 4
     clip: {fileID: 7400000, guid: f2b38f678e199b54d8437a26d432cb65, type: 2}
     speed: 1

@@ -16,6 +16,8 @@ namespace Raid
             public string name = "Zone";
             [Min(1)] public int depthTier = 1;
             public FishHabitatRole role = FishHabitatRole.Reef;
+            [Tooltip("Keep a small school within swimming distance of the airlock.")]
+            public bool entrySchool;
             public Vector3[] anchors = Array.Empty<Vector3>();
             [Tooltip("Horizontal scatter around each anchor when picking a target.")]
             [Min(0)] public float radius = 2.4f;
@@ -26,6 +28,8 @@ namespace Raid
             public Vector3 Anchor => anchors.Length > 0 ? anchors[0] : Vector3.zero;
         }
 
+        [Min(1)] public int populationPerDepth = 20;
+        [Min(1)] public int fishPerZone = 4;
         public Zone[] zones = Array.Empty<Zone>();
 
         static Zone[] legacyShelf, legacyRift;

@@ -12,7 +12,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e9cd47b01ac041b28860832e9f0f6919, type: 3}
   m_Name: ReefHabitat
   m_EditorClassIdentifier: Assembly-CSharp::Raid.FishHabitat
+  populationPerDepth: 20
+  fishPerZone: 4
   zones:
+  - name: Boarding Reef
+    depthTier: 1
+    role: 0
+    entrySchool: 1
+    anchors:
+    - {x: 28, y: -5, z: -25}
+    - {x: 31, y: -5.5, z: -31}
+    - {x: 34, y: -6, z: -35}
+    - {x: 28, y: -7, z: -34}
+    radius: 3.5
+    ceiling: -2
+    fallbackLane: 0.3
+  - name: Rift Approach
+    depthTier: 2
+    role: 1
+    entrySchool: 1
+    anchors:
+    - {x: 29, y: -6.2, z: -26}
+    - {x: 33, y: -7, z: -30}
+    - {x: 36, y: -8.5, z: -35}
+    - {x: 29, y: -8, z: -34}
+    radius: 3.5
+    ceiling: -3
+    fallbackLane: 0.3
   - name: Survey Wreck
     depthTier: 1
     role: 2

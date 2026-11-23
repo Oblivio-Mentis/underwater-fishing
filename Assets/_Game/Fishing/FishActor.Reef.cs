@@ -9,6 +9,7 @@ namespace Raid
     {
         internal static readonly List<FishActor> ServerSchool=new();
         static readonly FishHabitat.Zone[] zoneBuffer=new FishHabitat.Zone[24];
+        static readonly int[] zoneRank=new int[zoneBuffer.Length];
         readonly RaycastHit[] swimHits=new RaycastHit[12];
         bool arrivalPending,staggered;
         float arrivalAt,departureAt,fleeRemaining,senseAt,hookAvailableAt,avoidUntil;
@@ -29,6 +30,7 @@ namespace Raid
 
         public string HabitatName => habitat?.name ?? "";
         public bool InHabitat => _snapshot.Value.Active;
+        public int HabitatPopulationLimit => Profile.habitat ? Mathf.Max(1,Profile.habitat.populationPerDepth) : 20;
         public bool Startled => _snapshot.Value.Startled;
         FishSpeciesProfile Profile => speciesProfile!=null ? speciesProfile : legacyProfile!=null ? legacyProfile : legacyProfile=FishSpeciesProfile.Legacy(SpeciesId);
         System.Random Rng => rng ??= MarineSpawn.NewStream(ObjectId * 7919 + depthTier);
@@ -38,7 +40,7 @@ namespace Raid
         {
             staggered=available && Nereid.NereidVessel.Active!=null;
             if(!staggered){SetDepthActive(available);return;}
-            ScheduleAt(Time.time+Profile.arrivalDelay*Rand(.8f,1.2f));
+            ScheduleAt(Time.time+Profile.arrivalDelay*Rand(.65f,1.15f)+Rand(0,2.5f));
             lastHabitat=null;
         }
 
@@ -78,7 +80,7 @@ namespace Raid
             int budget = 0;
             foreach (var other in ServerSchool)
                 if (other != this && other.depthTier == depthTier && other.IsWildInHabitat) budget++;
-            if (budget >= 3) { arrivalAt = Time.time + 2; return; }
+            if (budget >= HabitatPopulationLimit) { arrivalAt = Time.time + Rand(1f,2.5f); return; }
 
             var spec=Profile;
             int count=GatherZones(out var zones);
@@ -90,19 +92,22 @@ namespace Raid
                 int j=Rng.Next(i+1);
                 (zoneBuffer[i],zoneBuffer[j])=(zoneBuffer[j],zoneBuffer[i]);
             }
-            // Start with a different, unoccupied route of this species' preferred type.
-            // An obstructed or fully occupied route still has alternatives.
-            for (int pass = 0; pass < 8; pass++)
+            int capacity=spec.habitat ? Mathf.Max(1,spec.habitat.fishPerZone) : 4;
             for (int i = 0; i < count; i++)
             {
                 var zone = zoneBuffer[i];
-                if (zone.anchors == null || zone.anchors.Length == 0) continue;
                 int localCount = 0;
                 foreach (var other in ServerSchool)
                     if (other != this && other.IsWildInHabitat && other.habitat == zone) localCount++;
-                int priority=(zone.role==spec.preferredHabitat?0:4)+(zone==lastHabitat?2:0)+(localCount>0?1:0);
-                if (localCount >= 2 || priority!=pass) continue;
-
+                // First seed the approach to the dive, then spread each wave across the map.
+                int entryBonus=zone.entrySchool && !RequiresPartner && localCount<3 ? 16 : 0;
+                zoneRank[i]=localCount>=capacity || zone.anchors==null || zone.anchors.Length==0
+                    ? int.MaxValue : 4*localCount+(zone.role==spec.preferredHabitat?0:2)+(zone==lastHabitat?1:0)-entryBonus;
+            }
+            System.Array.Sort(zoneRank,zoneBuffer,0,count);
+            for (int i = 0; i < count && zoneRank[i]!=int.MaxValue; i++)
+            {
+                var zone=zoneBuffer[i];
                 int stride = zone.anchors.Length;
                 int firstEntry = Rng.Next(stride);
                 for (int attempt = 0; attempt < Mathf.Max(8, stride * 3); attempt++)

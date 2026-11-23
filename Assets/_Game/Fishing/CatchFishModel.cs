@@ -122,6 +122,7 @@ namespace Raid
 
         private void LateUpdate()
         {
+            if (actor != null && (!actor.InHabitat || actor.IsStowed || actor.Mode==FishMode.Transported)) return;
             if (escapeAt >= 0)
             {
                 float age = Time.time - escapeAt;

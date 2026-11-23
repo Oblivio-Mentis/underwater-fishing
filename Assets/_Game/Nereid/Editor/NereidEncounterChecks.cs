@@ -73,7 +73,7 @@ namespace Raid.Nereid.Editor
             yield return Wait("Shelf has a fixed cargo berth, an elevated ledge and a traversable gate",()=>LandscapeReady(false),6);
             var school=UnityEngine.Object.FindObjectsByType<FishActor>().Where(f=>f.depthTier==1).ToArray();
             yield return Wait("Travel begins with a quiet fishing ground",()=>school.All(f=>!f.InHabitat));
-            yield return Wait("A single scout swims into the habitat",()=>school.Count(f=>f.InHabitat)==1,4);
+            yield return Wait("The first fish swim into the habitat",()=>school.Any(f=>f.InHabitat),6);
             var scout=school.First(f=>f.InHabitat);
             var start=scout.transform.position;
             yield return Wait("Scout swims several body lengths on patrol",()=>Vector3.Distance(scout.transform.position,start)>2f,4);
@@ -91,11 +91,11 @@ namespace Raid.Nereid.Editor
             yield return Wait("A close living swimmer makes the scout flee",()=>scout.Startled);
             yield return Wait("Startled fish actually moves away",()=>Vector3.Distance(diver.transform.position,scout.transform.position)>2.5f);
             Place(new Vector3(1,1.1f,1));
-            yield return Wait("Three fish arrive over separate release windows",()=>school.Count(f=>f.InHabitat)==3,18);
+            yield return Wait("Schools fill the shelf over successive arrivals",()=>school.Count(f=>f.InHabitat)>=12,22);
             if(school.Where(f=>f.InHabitat).Select(f=>f.HabitatName).Distinct().Count()<2)
                 throw new InvalidOperationException("Staggered fish did not occupy separate habitats.");
             yield return Pause(6.6f);
-            if(school.Count(f=>f.InHabitat)>3)throw new InvalidOperationException("A fourth wild fish exceeded the cap.");
+            if(school.Count(f=>f.InHabitat)>scout.HabitatPopulationLimit)throw new InvalidOperationException("Wild fish exceeded the habitat population limit.");
             foreach(bool breakLine in new[]{false,true})
             {
                 // Stage only the shooter's position. Both the impact and line loss run through

@@ -110,15 +110,11 @@ MonoBehaviour:
     holdPose: 1
     normalizedPose: 0.33
   - action: 1
-    clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
+    clip: {fileID: 7400000, guid: bd8f7da8e7b5e1b4c84e316f181ffc7c, type: 2}
     speed: 1
-    holdPose: 1
-    normalizedPose: 0.33
   - action: 2
-    clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
+    clip: {fileID: 7400000, guid: bd8f7da8e7b5e1b4c84e316f181ffc7c, type: 2}
     speed: 1
-    holdPose: 1
-    normalizedPose: 0.52
   - action: 4
     clip: {fileID: 7400000, guid: 98eefc46de016db40b11c6a708ade893, type: 2}
     speed: 1
