@@ -8,28 +8,51 @@ namespace Raid.Nereid
     [DefaultExecutionOrder(540)]
     public sealed class NereidWaterLife : MonoBehaviour
     {
-        readonly List<Object> owned = new();
+        [SerializeField] Transform shallowBeds, deepBeds;
+        [SerializeField] MeshRenderer[] clouds = new MeshRenderer[4];
         readonly List<MeshRenderer>[] groves = {new(),new()};
-        readonly MeshRenderer[] clouds = new MeshRenderer[4];
         readonly Vector4[] swimmers = new Vector4[5];
-        readonly System.Random random = new(14029);
-        NereidWaterTuning tuning;
-        Material kelp, specks;
-        public Vector3 FirstHoldfast { get; private set; }
+        [SerializeField] NereidWaterTuning tuning;
+        [SerializeField] Material kelp, specks;
+        [SerializeField] Vector3 firstHoldfast;
+        public Vector3 FirstHoldfast => firstHoldfast;
         public bool ShowingSuspension => clouds[0] != null && clouds[0].enabled;
         public int VisibleGroves { get; private set; }
 
+        bool runtimeMaterials;
+
+        void Awake()
+        {
+            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) { enabled=false; return; }
+            if (!shallowBeds || !deepBeds || !kelp || !specks || !tuning) { enabled=false; return; }
+            shallowBeds.GetComponentsInChildren(true,groves[0]);
+            deepBeds.GetComponentsInChildren(true,groves[1]);
+            kelp = new Material(kelp);
+            specks = new Material(specks);
+            runtimeMaterials=true;
+            foreach (var region in groves)
+                foreach (var renderer in region) renderer.sharedMaterial=kelp;
+            foreach (var cloud in clouds) if (cloud) cloud.sharedMaterial=specks;
+            kelp.SetFloat("_BendRadius", tuning.bendRadius);
+            kelp.SetFloat("_BendMetres", tuning.bendMetres);
+        }
+
+#if UNITY_EDITOR
+        readonly System.Random random = new(14029);
         float Sample(float low, float high) => Mathf.Lerp(low, high, (float)random.NextDouble());
 
         internal void Build(MeshCollider shallowBed,MeshCollider deepBed)
         {
-            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) { enabled = false; return; }
             tuning = Resources.Load<NereidWaterTuning>("NereidWaterTuning");
             kelp = MaterialFor("NereidTallKelp");
             specks = MaterialFor("NereidSuspension");
             if (!tuning || !kelp || !specks) { enabled = false; return; }
             kelp.SetFloat("_BendRadius", tuning.bendRadius);
             kelp.SetFloat("_BendMetres", tuning.bendMetres);
+            shallowBeds=new GameObject("Laminaria beds").transform;
+            shallowBeds.SetParent(shallowBed.transform.parent,false);
+            deepBeds=new GameObject("Rift holdfasts").transform;
+            deepBeds.SetParent(deepBed.transform.parent,false);
             foreach (var zone in tuning.groves) Plant(zone,shallowBed,false);
             foreach (var zone in tuning.deepGroves) Plant(zone,deepBed,true);
 
@@ -44,9 +67,8 @@ namespace Raid.Nereid
         Material MaterialFor(string resource)
         {
             var shader = Resources.Load<Shader>(resource);
-            if (!shader || !shader.isSupported) { Debug.LogError("Unavailable water shader " + resource); return null; }
+            if (!shader) { Debug.LogError("Unavailable water shader " + resource); return null; }
             var m = new Material(shader) {name = resource};
-            owned.Add(m);
             return m;
         }
 
@@ -80,7 +102,7 @@ namespace Raid.Nereid
                 if (NereidSalvage.Reserved(x,z) ||
                     !bottom.Raycast(new Ray(new Vector3(x,16,z), Vector3.down), out var hit, 60) ||
                     hit.normal.y < .72f) continue;
-                if (!deep && FirstHoldfast == Vector3.zero) FirstHoldfast = hit.point;
+                if (!deep && firstHoldfast == Vector3.zero) firstHoldfast = hit.point;
                 plants++;
                 var root = hit.point-centre;
                 float height = deep?Sample(1.6f,3.65f):Sample(tuning.bladeHeight.x,tuning.bladeHeight.y);
@@ -95,8 +117,9 @@ namespace Raid.Nereid
             var bounds = mesh.bounds;
             bounds.Expand(2*(tuning.bendMetres+.5f));
             mesh.bounds = bounds;
-            owned.Add(mesh);
-            groves[deep?1:0].Add(Draw(deep?"Sporadic rift holdfasts":"Tall laminaria grove",mesh,kelp,centre));
+            var grove=Draw(deep?"Sporadic rift holdfasts":"Tall laminaria grove",mesh,kelp,centre);
+            grove.transform.SetParent(deep?deepBeds:shallowBeds,true);
+            grove.enabled=true;
         }
 
         void Blade(ReefGeometry g,List<Vector3> midribs,Vector3 root,float height,float angle,float warm,bool deep)
@@ -151,9 +174,10 @@ namespace Raid.Nereid
             }
             var mesh = new Mesh {name="Suspended detritus", vertices=pos, uv=uv, uv2=shape, triangles=idx,
                 bounds=new Bounds(Vector3.zero,Vector3.one*(extent+.2f))};
-            owned.Add(mesh);
             return mesh;
         }
+
+#endif
 
         void LateUpdate()
         {
@@ -172,6 +196,7 @@ namespace Raid.Nereid
             for (int i=0; i<clouds.Length; i++)
             {
                 var r = clouds[i];
+                if(!r)continue;
                 r.enabled = wet && (i==0 || Vector3.SqrMagnitude(r.transform.position-eye.transform.position)<28*28);
             }
             if (wet)
@@ -211,7 +236,7 @@ namespace Raid.Nereid
 
         void OnDestroy()
         {
-            foreach (var asset in owned) if (asset) Destroy(asset);
+            if (runtimeMaterials) { Destroy(kelp); Destroy(specks); }
         }
     }
 }

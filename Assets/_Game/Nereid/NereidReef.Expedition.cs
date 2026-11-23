@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -378,3 +379,4 @@ namespace Raid.Nereid
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -359,3 +360,4 @@ namespace Raid.Nereid
         }
     }
 }
+#endif

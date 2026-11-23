@@ -37,9 +37,7 @@ namespace Raid.Nereid
             airlock=NereidAirlock.Install(transform);
             DeckExtension=NereidDeckExtension.Install(this);
             if (!authoredRail) InstallLegacyDressing();
-            var reef=new GameObject("NEREID fishing grounds");
-            reef.transform.SetParent(transform,true);
-            grounds=reef.AddComponent<NereidReef>();
+            grounds=FindAnyObjectByType<NereidReef>();
         }
 
         void InstallLegacyDressing()
