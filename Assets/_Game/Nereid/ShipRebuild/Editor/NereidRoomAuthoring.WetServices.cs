@@ -22,8 +22,6 @@ namespace Raid.Nereid.Editor
                     jacket.Beam(enamel,p-Vector3.up*.41f,p,.20f,.12f);
                     if(x==8.69f)
                         HoodedLamp(jacket,Vector3.Lerp(high,top,.50f)-Vector3.up*.10f,Vector3.right,Vector3.forward,.45f,.18f);
-                    else
-                        SocketBolt(jacket,Vector3.Lerp(high,top,.36f)-Vector3.up*.093f,Vector3.right,Vector3.forward,.046f);
                 }
             }
             var control=Part("Ballast pressure compensator",new(8.43f,1.33f,-15.43f));
@@ -39,11 +37,6 @@ namespace Raid.Nereid.Editor
             var lever=arm+n*.060f;
             control.Beam(deck,lever,lever-u*.165f+v*.17f,.066f,.07f);
             control.Tube(ochre,lever-u*.165f+v*.17f,lever-u*.165f+v*.17f+n*.09f,.059f,-1,9);
-            foreach(float dx in new[]{-.92f,.92f})
-            {
-                SocketBolt(control,at+u*dx+v*.27f+n*.15f,u,v,.055f);
-                SocketBolt(control,at+u*dx-v*.27f+n*.15f,u,v,.055f);
-            }
             control.Lamp("Pressure gauge wash",new Color(.82f,.86f,.81f),at+new Vector3(-.38f,.51f,.65f),2.8f,4.2f);
 
         }
@@ -71,17 +64,10 @@ namespace Raid.Nereid.Editor
             var track=Part("Bunk reading lamp and pressure controls",new(5.40f,1.12f,3.06f));
             // The bunk is a wall-mounted field berth: a caged sleeper light above an upholstery pad
             // and an offset service vent, cushioned face exposed to the animal.
-            Intake(track,center-u*.47f+v*.10f,u,v,.44f,.39f,4);
+            Intake(track,center-u*.47f+v*.10f,u,v,.44f,.39f);
             HoodedLamp(track,center+u*.30f+v*.27f,u,v,.57f,.21f);
             var pad=center+u*.17f-v*.11f;
             Casting(track,pad,u,v,Shield(.97f,.32f,.36f),.057f,rubber,deck,water,.94f);
-            for(int i=0;i<3;i++)
-            {
-                var seam=pad+n*.061f+u*(-.29f+i*.29f);
-                track.Tube(water,seam-v*.11f,seam+v*.11f,.012f,-1,6);
-            }
-            foreach(float offset in new[]{-.69f,.69f})
-                SocketBolt(track,back+u*offset-v*.24f+n*.272f,u,v,.046f);
             track.Lamp("Bunk reading pool",new Color(.95f,.82f,.63f),a+new Vector3(-.65f,.34f,.35f),3.4f,3.7f);
 
         }

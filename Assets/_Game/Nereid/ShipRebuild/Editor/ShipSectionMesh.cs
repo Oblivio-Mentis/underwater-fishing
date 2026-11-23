@@ -12,10 +12,8 @@ namespace Raid.Nereid.Editor
     {
         readonly List<Vector3> vertices = new();
         readonly List<Vector2> uv = new();
-        readonly List<(int start,int count)> faces = new();
         readonly List<Material> finishes = new();
         readonly List<List<int>> indices = new();
-        readonly List<(int vertex,Vector2 atlasUV)> printed = new();
         readonly Vector3 pivot;
         internal readonly Transform node;
 
@@ -41,7 +39,6 @@ namespace Raid.Nereid.Editor
         {
             var tris=Surface(mat);
             var start=vertices.Count;
-            faces.Add((start,points.Length));
             var along=(points[1]-points[0]).normalized;
             var across=Vector3.Cross(Vector3.Cross(along,points[2]-points[0]).normalized,along);
             foreach (var p in points)
@@ -50,20 +47,6 @@ namespace Raid.Nereid.Editor
                 uv.Add(new Vector2(Vector3.Dot(p-points[0],along),Vector3.Dot(p-points[0],across)));
             }
             for (int i=1;i<points.Length-1;i++) { tris.Add(start); tris.Add(start+i); tris.Add(start+i+1); }
-        }
-
-        internal void PrintedFace(Material baseMaterial, int tile, Vector3 center, Vector3 u, Vector3 v,
-            float halfWidth, float halfHeight, params Vector3[] polygon)
-        {
-            int start=vertices.Count;
-            Face(baseMaterial,polygon);
-            var chip=new Vector2(((tile%4)+.5f)*.25f,((tile/4)+.5f)*.25f);
-            for(int i=0;i<polygon.Length;i++)
-            {
-                Vector3 delta=polygon[i]-center;
-                var offset=new Vector2(Vector3.Dot(delta,u.normalized)/halfWidth,Vector3.Dot(delta,v.normalized)/halfHeight);
-                printed.Add((start+i,chip+offset*.118f));
-            }
         }
 
         internal void Box(Material m, Vector3 c, Vector3 size, Quaternion rotation=default, float bevel=.055f)
@@ -172,27 +155,15 @@ namespace Raid.Nereid.Editor
             if(!mesh)
             {
                 var swatchUV=new Vector2[vertices.Count];
-                // Keep grain subtle on small fittings and limit stretching on large castings.
-                // All vertices in a polygon stay within its padded atlas tile, including at lower mips.
-                var detailUV=new Vector2[vertices.Count];
-                foreach(var face in faces)
-                {
-                    Vector2 lo=uv[face.start],hi=lo;
-                    for(int n=1;n<face.count;n++){lo=Vector2.Min(lo,uv[face.start+n]);hi=Vector2.Max(hi,uv[face.start+n]);}
-                    var center=(lo+hi)*.5f;
-                    float span=Mathf.Max(1.50f,Mathf.Max(hi.x-lo.x,hi.y-lo.y));
-                    for(int n=0;n<face.count;n++) detailUV[face.start+n]=(uv[face.start+n]-center)*(.213f/span);
-                }
                 var triangles=new List<int>();
                 for(int i=0;i<indices.Count;i++)
                 {
                     Vector2 sample=swatches[finishes[i]];
-                    foreach(int v in indices[i])swatchUV[v]=sample+detailUV[v];
+                    foreach(int v in indices[i])swatchUV[v]=sample;
                     triangles.AddRange(indices[i]);
                 }
-                foreach(var mark in printed)swatchUV[mark.vertex]=mark.atlasUV;
                 mesh=new Mesh{name=node.name,indexFormat=vertices.Count>65000?IndexFormat.UInt32:IndexFormat.UInt16};
-                mesh.SetVertices(vertices);mesh.uv=swatchUV;mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();
+                mesh.SetVertices(vertices);mesh.uv=swatchUV;mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateBounds();
                 AssetDatabase.CreateAsset(mesh,path);
             }
             node.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;

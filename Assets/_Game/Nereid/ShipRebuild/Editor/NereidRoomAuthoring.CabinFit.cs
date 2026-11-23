@@ -59,63 +59,41 @@ namespace Raid.Nereid.Editor
 
         static Material CabinAtlas()
         {
-            // Colour, metalness, polished finish and emissive inlays occupy corresponding texels.
-            // The ordinary URP/Lit maps remain directly paintable and replaceable in Unity.
-            var chips=new (Material key, string rgb,float metal,float smooth,float light)[]{
-                (dark,"353B3E",.37f,.27f,0),(hull,"465252",.35f,.32f,0),(enamel,"4D5A56",.28f,.34f,0),
-                (ceramic,"6A7068",.25f,.29f,0),(steel,"767C79",.68f,.46f,0),(ochre,"806548",.33f,.34f,0),
-                (rubber,"35373A",.04f,.22f,0),(deck,"4C524F",.49f,.34f,0),(warm,"E4C69C",.04f,.38f,.72f),
-                (cyan,"A5C4BF",.05f,.42f,.48f),(alarm,"AE6144",.06f,.43f,.46f),
-                (glass,"435758",.41f,.63f,0),(water,"53574C",.06f,.28f,0) };
-            const int tile=128,size=tile*4;
-            var buffers=new[]{new Color32[size*size],new Color32[size*size],new Color32[size*size],new Color32[size*size]};
+            // Each material occupies one flat texel. Flat normals on the actual mesh describe
+            // the plane changes. There is no surface grain or view-dependent detail in the palette.
+            var chips=new (Material key,string rgb,float metal,float smooth,float glow)[] {
+                (dark,"384449",.19f,.25f,0),(hull,"495A5B",.22f,.29f,0),(enamel,"556962",.15f,.27f,0),
+                (ceramic,"737E75",.09f,.25f,0),(steel,"818C88",.43f,.34f,0),(ochre,"94774F",.18f,.28f,0),
+                (rubber,"353E40",.03f,.21f,0),(deck,"4F5B5C",.24f,.27f,0),(warm,"DFC5A0",.03f,.30f,.67f),
+                (cyan,"AAC8C5",.03f,.32f,.50f),(alarm,"B97A61",.05f,.30f,.44f),
+                (glass,"536C71",.28f,.47f,0),(water,"656B5A",.06f,.26f,0) };
+            const int size=4;
+            int cells=size*size;
+            var values=new[]{new Color32[cells],new Color32[cells],new Color32[cells]};
             cabinSwatches=new Dictionary<Material,Vector2>();
-            for(int i=0;i<16;i++)
+            for(int i=0;i<cells;i++)
             {
-                var c=chips[Mathf.Min(i,chips.Length-1)];
-                ColorUtility.TryParseHtmlString("#"+c.rgb,out Color rgb);
-                int column=i%4,row=i/4;
-                if(i<chips.Length)cabinSwatches.Add(c.key,new Vector2((column+.5f)/4,(row+.5f)/4));
-                for(int y=0;y<tile;y++) for(int x=0;x<tile;x++)
-                {
-                    float u=x/(tile-1f),v=y/(tile-1f);
-                    float powder=Mathf.PerlinNoise(i*13.7f+u*4.4f,v*4.4f+1.9f)-.5f;
-                    float brushed=Mathf.PerlinNoise(u*(1.4f+c.metal),v*(18+24*c.metal)+i*3.6f)-.5f;
-                    // Short scuffs and displaced paint collect on pressed lips. On large panels variation stays broad.
-                    float scratch=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.74f,.90f,
-                        Mathf.PerlinNoise(u*3.1f+i*13.5f,v*61.0f+i*3.4f)));
-                    float crust=Mathf.PerlinNoise(i*3.71f+u*21f,v*16f);
-                    float bare=(i==4 || i==5)?scratch*.42f:0;
-                    float pitting=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.68f,.84f,crust))*(1-c.light);
-                    float pigment=1+(powder*.40f+brushed*.28f)*(1-c.light)-pitting*.13f;
-                    Color paint=Color.Lerp(rgb,new Color(.53f,.54f,.49f),bare);
-                    float finish=Mathf.Clamp01(c.smooth+brushed*.28f+powder*.22f-pitting*.20f+bare*.22f);
-                    int index=(row*tile+y)*size+column*tile+x;
-                    buffers[0][index]=new Color(paint.r*pigment,paint.g*pigment,paint.b*pigment,1);
-                    buffers[1][index]=new Color(c.metal,0,0,finish);
-                    buffers[2][index]=new Color(rgb.r*c.light,rgb.g*c.light,rgb.b*c.light);
-                    if(i>=13)InstrumentFinish(i,u,v,index,buffers);
-                    const float step=1f/(tile-1);
-                    float relief=FinishRelief(i,u,v);
-                    Vector3 normal=new Vector3((relief-FinishRelief(i,u+step,v))*1.85f,
-                        (relief-FinishRelief(i,u,v+step))*1.85f,1f).normalized;
-                    buffers[3][index]=new Color(normal.x*.5f+.5f,normal.y*.5f+.5f,normal.z*.5f+.5f);
-                }
+                var chip=chips[Mathf.Min(i,chips.Length-1)];
+                if(i<chips.Length)cabinSwatches[chip.key]=new Vector2((i%size+.5f)/size,(i/size+.5f)/size);
+                ColorUtility.TryParseHtmlString("#"+chip.rgb,out Color paint);
+                values[0][i]=paint;
+                values[1][i]=new Color(chip.metal,0,0,chip.smooth);
+                values[2][i]=new Color(paint.r*chip.glow,paint.g*chip.glow,paint.b*chip.glow,1);
             }
-            var maps=new Texture2D[4];
-            string[] names={"Anodized cabin finishes","Metal and smoothness","Luminous ceramics","Brushed and pitted relief"};
+            var maps=new Texture2D[3];
+            string[] names={"Anodized cabin finishes","Metal and smoothness","Luminous ceramics"};
             for(int i=0;i<maps.Length;i++)
             {
                 string path=FinishFolder+"/"+names[i]+".png";
                 if(!File.Exists(path))
                 {
                     var texture=new Texture2D(size,size,TextureFormat.RGBA32,false);
-                    texture.SetPixels32(buffers[i]);texture.Apply();File.WriteAllBytes(path,texture.EncodeToPNG());UnityEngine.Object.DestroyImmediate(texture);
+                    texture.SetPixels32(values[i]);texture.Apply();File.WriteAllBytes(path,texture.EncodeToPNG());UnityEngine.Object.DestroyImmediate(texture);
                     AssetDatabase.ImportAsset(path);
                     var importer=(TextureImporter)AssetImporter.GetAtPath(path);
-                    if(i==3)importer.textureType=TextureImporterType.NormalMap;
-                    importer.sRGBTexture=i==0 || i==2;importer.textureCompression=TextureImporterCompression.Uncompressed;
-                    importer.mipmapEnabled=true;importer.filterMode=FilterMode.Trilinear;importer.anisoLevel=2;importer.wrapMode=TextureWrapMode.Clamp;importer.SaveAndReimport();
+                    importer.sRGBTexture=i!=1;importer.textureCompression=TextureImporterCompression.Uncompressed;
+                    importer.mipmapEnabled=false;importer.filterMode=FilterMode.Point;importer.anisoLevel=0;
+                    importer.wrapMode=TextureWrapMode.Clamp;importer.SaveAndReimport();
                 }
                 maps[i]=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             }
@@ -125,7 +103,6 @@ namespace Raid.Nereid.Editor
             m=new Material(Shader.Find("Universal Render Pipeline/Lit")){name="Cabin inlays",enableInstancing=true};
             m.SetTexture("_BaseMap",maps[0]);m.SetColor("_BaseColor",Color.white);
             m.SetTexture("_MetallicGlossMap",maps[1]);m.EnableKeyword("_METALLICSPECGLOSSMAP");m.SetFloat("_Smoothness",.87f);
-            m.SetTexture("_BumpMap",maps[3]);m.EnableKeyword("_NORMALMAP");m.SetFloat("_BumpScale",.32f);
             m.SetTexture("_EmissionMap",maps[2]);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",Color.white*.86f);
             m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive;
             AssetDatabase.CreateAsset(m,materialPath);return m;
@@ -157,8 +134,9 @@ namespace Raid.Nereid.Editor
         }
 
         static void Band(ShipSectionMesh s,Vector3 center,Vector3 u,Vector3 v,float outer,float inner,float height,
-            Material front,Material rim,float first=0,float last=360,int spans=32)
+            Material front,Material rim,float first=0,float last=360,int spans=16)
         {
+            spans=Mathf.Min(spans,Mathf.Max(2,Mathf.CeilToInt((last-first)/22.5f)));
             var axis=Vector3.Cross(u,v).normalized;
             for(int i=0;i<spans;i++)
             {
@@ -175,13 +153,12 @@ namespace Raid.Nereid.Editor
         static void Lens(ShipSectionMesh s,Vector3 c,Vector3 u,Vector3 v,float r,Material fill)
         {
             var n=Vector3.Cross(u,v).normalized;
-            Band(s,c,u,v,r,r*.64f,.105f,dark,steel,0,360,20);
-            Band(s,c+n*.105f,u,v,r*.87f,r*.71f,.025f,steel,deck,0,360,20);
-            var plate=new Vector3[20];
+            Band(s,c,u,v,r,r*.73f,.064f,deck,hull,0,360,10);
+            var plate=new Vector3[10];
             for(int i=0;i<plate.Length;i++)
             {
                 float a=i*2*Mathf.PI/plate.Length;
-                plate[i]=c+(u*Mathf.Cos(a)+v*Mathf.Sin(a))*r*.67f+n*.077f;
+                plate[i]=c+(u*Mathf.Cos(a)+v*Mathf.Sin(a))*r*.74f+n*.052f;
             }
             s.Face(fill,plate);
         }

@@ -18,8 +18,6 @@ namespace Raid.Nereid.Editor
                         new(2.04f,.06f),new(1.93f,.47f),new(-1.87f,.47f)};
                     Casting(wall,brow,u,v,p,.37f,ceramic,enamel,dark,.91f);
                     HoodedLamp(wall,brow+n*.38f+u*.25f+v*.04f,u,v,.85f,.28f);
-                    foreach(float offset in new[]{-1.31f,1.36f})
-                        SocketBolt(wall,brow+n*.375f+u*offset+v*.12f,u,v,.073f);
                     var foot=new Vector3(side*5.76f,.45f,z);
                     Casting(wall,foot,u,v,Shield(3.66f,.58f,.62f),.20f,enamel,steel,dark,.95f);
                     for(int j=-1;j<=1;j+=2)
@@ -41,18 +39,12 @@ namespace Raid.Nereid.Editor
                     spine.Beam(enamel,b,c,.43f,.33f);spine.Beam(steel,b-Vector3.up*.085f,c-Vector3.up*.12f,.235f,.23f);
                     var yoke=Vector3.Lerp(b,c,.46f)-Vector3.up*.235f;
                     Casting(spine,yoke,Vector3.right,Vector3.forward,Shield(.32f,.41f),.048f,deck,steel,dark);
-                    SocketBolt(spine,yoke+Vector3.down*.05f,Vector3.right,Vector3.forward,.071f);
                 }
             }
             var o=Part("Bathymetric lens housing",new(0,4.18f,1.92f));
             var pos=new Vector3(0,4.40f,1.92f);var x=Vector3.right;var zAxis=Vector3.forward;
             Band(o,pos,x*1.25f,zAxis,1.14f,.91f,.21f,ceramic,dark,0,360,36);
             Band(o,pos+Vector3.down*.19f,x*1.25f,zAxis,.965f,.665f,.16f,steel,enamel,0,360,32);
-            for(int i=0;i<4;i++)
-            {
-                float a=i*90;
-                Band(o,pos+Vector3.down*.355f,x*1.25f,zAxis,.89f,.79f,.029f,deck,hull,a+6,a+68,7);
-            }
             Lens(o,pos+Vector3.down*.24f,x*1.25f,zAxis,.60f,glass);
             for(int side=-1;side<=1;side+=2)
                 HoodedLamp(o,pos+new Vector3(side*.98f,-.37f,0),zAxis,Vector3.left,.45f,.185f);
@@ -74,16 +66,10 @@ namespace Raid.Nereid.Editor
             Band(nav,p,x*1.31f,z,1.23f,.90f,.16f,dark,steel);
             Band(nav,p-Vector3.up*.14f,x*1.31f,z,1.09f,.84f,.075f,steel,dark);
             Band(nav,p-Vector3.up*.20f,x*1.31f,z,.85f,.74f,.045f,glass,steel);
-            for(int k=0;k<3;k++)
-            {
-                float a=k*120f;
-                Band(nav,p-Vector3.up*.22f,x*1.31f,z,1.04f,.972f,.028f,deck,dark,a+11,a+106,11);
-            }
             Lens(nav,p-Vector3.up*.17f,x,z,.49f,glass);
             for(int side=-1;side<=1;side+=2)
             {
                 HoodedLamp(nav,p+new Vector3(side*1.21f,-.20f,0),z,Vector3.left,.62f,.21f);
-                SocketBolt(nav,p+new Vector3(side*.68f,-.22f,.66f),x,z,.08f);
             }
             nav.Lamp("Chart canopy indirect light",new Color(.78f,.84f,.83f),p-Vector3.up*.58f,10,8);
             foreach(int side in new[]{-1,1})
