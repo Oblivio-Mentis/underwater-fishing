@@ -7,7 +7,7 @@ if (-not (Test-Path -LiteralPath $gameExecutable)) { throw "Build is missing: $g
 $runningPrototype=Get-Process -Name UnderwaterFishing -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $gameExecutable }
 if($runningPrototype) { throw 'Close instances of this build before packaging; Unity holds its data files open.' }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'steam_appid.txt') -Destination $buildDirectory
-foreach ($guide in 'Docs/HOW_TO_PLAY.md', 'Docs/RAID-013/COOP-RU.md', 'Docs/THIRD_PARTY.md') {
+foreach ($guide in 'Docs/HOW_TO_PLAY.md', 'Docs/RAID-013/COOP-RU.md', 'Docs/THIRD_PARTY.md', 'Docs/RAID-019/SKILLS.md') {
     Copy-Item -LiteralPath (Join-Path $projectRoot $guide) -Destination $buildDirectory -Force
 }
 $licenses = Join-Path $buildDirectory 'Licenses'

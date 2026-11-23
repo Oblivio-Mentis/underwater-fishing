@@ -38,6 +38,7 @@ namespace Raid.UI
         }
     }
 
+    [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class SkillSectorGraphic : MaskableGraphic, ICanvasRaycastFilter
     {
         internal const float Outer=308;
@@ -120,6 +121,7 @@ namespace Raid.UI
 
     internal enum SkillNodeState { MissingRank, MissingMaterials, Available, Purchased }
 
+    [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class SkillNodeBadge : MaskableGraphic, ICanvasRaycastFilter
     {
         static readonly Color Dark=new(.044f,.087f,.110f);
@@ -195,6 +197,7 @@ namespace Raid.UI
         }
     }
 
+    [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class SkillWires : MaskableGraphic
     {
         internal readonly struct Link

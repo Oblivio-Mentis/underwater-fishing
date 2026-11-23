@@ -3,6 +3,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
+using Unity.Profiling;
 using System.Linq;
 using UnityEngine;
 
@@ -14,6 +16,15 @@ namespace Raid.UI
         {
             public string status = "running", phase, error;
             public List<string> checks = new();
+            public FrameSample gameplay, branch;
+        }
+
+        [Serializable] sealed class FrameSample
+        {
+            public int frames;
+            public float medianMs, p95Ms;
+            public bool gcAvailable;
+            public long p95Bytes;
         }
 
         readonly Report report = new();
@@ -21,6 +32,7 @@ namespace Raid.UI
         RaidWorld world;
         DiverMotor host, peer;
         ShipConsole station;
+        bool recordClip, recording;
         static UiRoot Ui => UiRoot.Instance;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -35,6 +47,7 @@ namespace Raid.UI
             string output=Read("-raid-skills-trial"), remote=Read("-raid-skills-peer");
             if(output=="" || remote=="" || Read("-raid-save")=="") return;
             var trial=new GameObject("RAID019 radial progression validation").AddComponent<Raid019SkillTrial>();
+            trial.recordClip=Array.IndexOf(arguments,"-raid-record-skills")>=0;
             trial.folder=Path.GetFullPath(output);
             trial.peerDirectory=Path.GetFullPath(remote);
             Directory.CreateDirectory(trial.folder);
@@ -59,6 +72,7 @@ namespace Raid.UI
                 catch(Exception e){report.status="failed";report.error=e.ToString();break;}
                 yield return next;
             }
+            recording=false;
             if(report.status=="running")report.status="passed";
             Write();
         }
@@ -153,6 +167,43 @@ namespace Raid.UI
             yield return Send(buy?"reticle_buy":"reticle_click");
         }
 
+        IEnumerator MeasureFrames(FrameSample sample)
+        {
+            using var gc = ProfilerRecorder.StartNew(ProfilerCategory.Memory,"GC Allocated In Frame",1);
+            var durations=new List<float>(1024);
+            var allocated=new List<long>(1024);
+            float end=Time.realtimeSinceStartup+1.5f;
+            while(Time.realtimeSinceStartup<end)
+            {
+                yield return null;
+                durations.Add(Time.unscaledDeltaTime*1000f);
+                allocated.Add(gc.LastValue);
+            }
+            durations.Sort();
+            allocated.Sort();
+            int percentile=Mathf.CeilToInt(durations.Count*.95f)-1;
+            sample.frames=durations.Count;
+            sample.medianMs=durations[durations.Count/2];
+            sample.p95Ms=durations[percentile];
+            sample.gcAvailable=gc.Valid;
+            sample.p95Bytes=gc.Valid?allocated[percentile]:0;
+        }
+
+        IEnumerator CaptureClip()
+        {
+            string frames=Path.Combine(folder,"clip-frames");
+            Directory.CreateDirectory(frames);
+            using var timestamps=new StreamWriter(Path.Combine(frames,"timestamps.txt"));
+            double start=Time.realtimeSinceStartupAsDouble;
+            for(int frame=0;recording;frame++)
+            {
+                timestamps.WriteLine((Time.realtimeSinceStartupAsDouble-start).ToString("F6",CultureInfo.InvariantCulture));
+                timestamps.Flush();
+                UiQaProbe.CapturePeerCamera(Path.Combine(frames,$"{frame:D5}.png"));
+                yield return new WaitForSecondsRealtime(.10f);
+            }
+        }
+
         IEnumerator RunTrial()
         {
             yield return Wait("Distinct connected Windows players with private progress",
@@ -168,9 +219,6 @@ namespace Raid.UI
             var a=world.Team.Player(world.ProgressKey(host));
             var b=world.Team.Player(world.ProgressKey(peer));
             Check("Two distinct profile bindings",a!=b);
-            world.Team.Treasury=new MaterialCost(200,200,200,200);
-            yield return Wait("Both screens receive the shared treasury",
-                ()=>world.View?.Treasury.biomass==200 && RemoteTeam()?.Treasury.biomass==200);
             station=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.SkillTree);
             Check("One progression station, decorative workshop cannot receive commands",
                 !ShipConsole.Stations.Any(s=>s.kind==ShipConsoleKind.Workshop));
@@ -182,6 +230,17 @@ namespace Raid.UI
             yield return new WaitForSecondsRealtime(.5f);
 
             yield return AimHost(screen);
+            if(recordClip)
+            {
+                recording=true;
+                StartCoroutine(CaptureClip());
+                yield return new WaitForSecondsRealtime(.5f);
+            }
+            else
+            {
+                report.gameplay=new FrameSample();
+                yield return MeasureFrames(report.gameplay);
+            }
             Check("Left click opens the physical dial",Ui.QaClickReticle() && Ui.Page==UiPage.SkillTree);
             yield return Send("reticle_aim",station.name);
             yield return new WaitForSecondsRealtime(.25f);
@@ -195,7 +254,28 @@ namespace Raid.UI
             yield return ClickHost("Sector0");
             yield return Wait("Harpoon detail displays 31 real rank nodes",()=>Ui.GetComponentsInChildren<SkillPurchaseButton>().Length==31);
             yield return new WaitForSecondsRealtime(.63f);
+            if(!recordClip)
+            {
+                yield return AimHost(screen);
+                report.branch=new FrameSample();
+                yield return MeasureFrames(report.branch);
+            }
+            var cableI=SkillTreeDefinition.Id(SkillLine.Cable,1);
+            Check("Fresh campaign treasury begins empty",world.Team.Treasury.Equals(default(MaterialCost)));
+            yield return ClickHost("harpoon.cable.01");
+            yield return AimHost(screen);
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-cable-no-materials-720.png"));
+            int emptyRevision=world.Team.teamRevision;
+            world.RequestSkill(cableI,emptyRevision,a.revision);
+            yield return new WaitForSecondsRealtime(.35f);
+            Check("Insufficient materials leave the skill, wallet and revision unchanged",
+                !a.skills.Contains(cableI) && world.Team.teamRevision==emptyRevision &&
+                world.Team.Treasury.Equals(default(MaterialCost)));
+            world.Team.Treasury=new MaterialCost(200,200,200,200);
+            yield return Wait("Both screens receive the shared trial treasury",
+                ()=>world.View?.Treasury.biomass==200 && RemoteTeam()?.Treasury.biomass==200);
             yield return ClickHost("harpoon.cable.03");
+            yield return AimHost(screen);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-cable-iii-locked-720.png"));
             var before=world.Team.Treasury;
             var cableIII=SkillTreeDefinition.Id(SkillLine.Cable,3);
@@ -225,19 +305,32 @@ namespace Raid.UI
                 var id=SkillTreeDefinition.Id(SkillLine.Cable,rank);
                 var node=SkillTreeDefinition.Get(id);
                 yield return ClickHost(node.Key);
+                int beforeRevision=a.revision;
                 yield return ClickHost(node.Key,true);
-                yield return Wait("Confirmed Cable "+SkillTreeDefinition.Roman(rank),()=>a.skills.Contains(id) &&
+                if(rank==1)Ui.QaBuyReticle();
+                yield return Wait("Confirmed Cable +SkillTreeDefinition.Roman(rank),()=>a.skills.Contains(id) &&
                     world.LocalProgress.skills.Contains(id) && world.View.teamRevision==world.Team.teamRevision &&
                     RemoteTeam()?.teamRevision==world.Team.teamRevision);
                 before=before.Subtract(node.Cost);
-                Check("Confirmed price matches the debit at Cable "+rank,world.Team.Treasury.Equals(before));
+                Check("Confirmed price matches the debit at Cable "+rank,
+                    world.Team.Treasury.Equals(before) && a.revision==beforeRevision+1);
+                yield return AimHost(screen);
                 UiQaProbe.CapturePeerCamera(Path.Combine(folder,"03-cable-rank-"+rank+"-720.png"));
             }
             Check("Cable III applies +36% on the server for only the buyer",
                 Mathf.Abs(world.SkillFactor(host,SkillLine.Cable)-.36f)<.001f && world.SkillValue(peer,SkillLine.Cable)==0);
             yield return ClickHost("ProgressionStage5");
             yield return new WaitForSecondsRealtime(.55f);
+            yield return AimHost(screen);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"04-harpoon-stage-v-720.png"));
+            yield return ClickHost("ProgressionOverview");
+            yield return new WaitForSecondsRealtime(.63f);
+            yield return AimHost(screen);
+            if(recordClip)
+            {
+                yield return new WaitForSecondsRealtime(.8f);
+                recording=false;
+            }
             yield return ClickPeer("Sector1");
             yield return new WaitForSecondsRealtime(.63f);
             var oxygen=SkillTreeDefinition.Get(SkillTreeDefinition.Id(SkillLine.Oxygen,1));
@@ -250,7 +343,6 @@ namespace Raid.UI
                 !b.skills.Contains(cableIII) && world.Team.Treasury.Equals(before));
             yield return Send("capture","05-oxygen-peer-1080.png");
 
-            yield return ClickHost("ProgressionOverview");
             yield return ClickPeer("ProgressionOverview");
             yield return new WaitForSecondsRealtime(.63f);
             yield return ClickHost("Sector4");
@@ -277,6 +369,7 @@ namespace Raid.UI
                 RemoteTeam().Treasury.Equals(before) && RemoteTeam().Capacity(world.progression)==16);
             yield return AimHost(screen);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"06-crew-capacity-720.png"));
+            yield return Send("reticle_aim",station.name);
             yield return Send("capture","06-crew-capacity-1080.png");
 
             var args=Environment.GetCommandLineArgs();
@@ -285,12 +378,61 @@ namespace Raid.UI
                 loaded.TeamRank(SkillLine.Cage)==2 && loaded.Treasury.Equals(before) &&
                 loaded.Player(a.key).skills.Contains(cableIII) && loaded.Player(b.key).skills.Contains(oxygen.Id));
             Check("Remote treasury snapshot carries no private profiles",RemoteTeam().players.Count==0);
+            var oldPeer=peer;
+            yield return Send("rejoin_local");
+            yield return Wait("LAN peer rejoins with the same private rank and oxygen effect",()=>
+            {
+                peer=DiverMotor.ServerDivers.Find(d=>d!=null && !d.IsOwner && d!=oldPeer);
+                return peer!=null && world.ProgressKey(peer)==b.key && Remote()?.connected==true &&
+                    Remote()?.localProgress?.skills.Contains(oxygen.Id)==true &&
+                    Mathf.Abs(peer.OxygenMultiplier-1.20f)<.002f && RemoteTeam()?.Treasury.Equals(before)==true;
+            },24);
+            Check("LAN reconnect preserves crew capacity, both profiles and wallet",
+                RemoteTeam().Capacity(world.progression)==16 && world.Team.players.Count==2);
             host.Teleport(new Vector3(0,1.2f,1));
             yield return new WaitForSecondsRealtime(.45f);
             world.RequestSkill(SkillTreeDefinition.Id(SkillLine.Reel,1),world.Team.teamRevision,a.revision);
             yield return new WaitForSecondsRealtime(.4f);
             Check("A valid rank cannot be purchased away from the physical console",
                 !a.skills.Contains(SkillTreeDefinition.Id(SkillLine.Reel,1)) && world.Team.Treasury.Equals(before));
+
+            host.Teleport(screen.position-screen.forward*1.71f+screen.right*.64f-Vector3.up*.38f);
+            yield return AimHost(screen);
+            var hull=SkillTreeDefinition.Get(SkillTreeDefinition.Id(SkillLine.Hull,1));
+            world.RequestSkill(hull.Id,world.Team.teamRevision,a.revision);
+            yield return Wait("Hull rank I opens depth two on both clients",
+                ()=>world.View?.CanVisitDepth(2)==true && RemoteTeam()?.CanVisitDepth(2)==true);
+            before=before.Subtract(hull.Cost);
+
+            var chart=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.Depths);
+            peer.Teleport(new Vector3(3,1.1f,3));
+            foreach(var axis in new[]{Vector3.forward,Vector3.back,Vector3.right,Vector3.left})
+            {
+                host.Teleport(chart.transform.position+axis*1.45f+Vector3.up*.5f);
+                Physics.SyncTransforms();
+                if(host.IsInside && ShipConsole.CanUse(host,WorldAction.DiveTwo))break;
+            }
+            world.Command(WorldAction.DiveTwo,0);
+            yield return Wait("Both clients embark for the second fishing ground",()=>world.TravelRemaining>0,10);
+            host.Teleport(screen.position-screen.forward*1.71f+screen.right*.64f-Vector3.up*.38f);
+            yield return AimHost(screen);
+            var reel=SkillTreeDefinition.Id(SkillLine.Reel,1);
+            world.RequestSkill(reel,world.Team.teamRevision,a.revision);
+            yield return Wait("Depth two loads on both clients",()=>world.CurrentDepth==2 && Remote()?.depthTier==2,18);
+            loaded=TeamSave.Load(args[Array.IndexOf(args,"-raid-save")+1]);
+            Check("Travel rejects purchases and persists the ranks and wallet at depth two",
+                loaded.expeditionDepth==2 && loaded.TeamRank(SkillLine.Cage)==2 && loaded.Treasury.Equals(before) &&
+                loaded.Player(a.key).skills.Contains(cableIII) && !loaded.Player(a.key).skills.Contains(reel) &&
+                loaded.Player(b.key).skills.Contains(oxygen.Id) && Mathf.Abs(peer.OxygenMultiplier-1.20f)<.002f);
+
+            host.Teleport(screen.position-screen.forward*1.71f+screen.right*.64f-Vector3.up*.38f);
+            yield return AimHost(screen);
+            host.SendMessage("BeginDeath",false,SendMessageOptions.RequireReceiver);
+            yield return Wait("Owner incapacitated",()=>host.IsDead);
+            world.RequestSkill(reel,world.Team.teamRevision,a.revision);
+            yield return new WaitForSecondsRealtime(.35f);
+            Check("An incapacitated player cannot purchase a valid rank beside the monitor",
+                !a.skills.Contains(reel) && world.Team.Treasury.Equals(before));
         }
     }
 }

@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)][string] $Player,
     [Parameter(Mandatory)][string] $OutputDirectory,
     [int] $Port = 18149,
-    [string] $ExistingTeamSave
+    [string] $ExistingTeamSave,
+    [switch] $RecordSkills
 )
 $ErrorActionPreference = 'Stop'
 $exe = (Resolve-Path -LiteralPath $Player).Path
@@ -40,6 +41,7 @@ switch ($Case) {
     'Skills' {
         $report = "$results/skill-results.json"
         $hostArgs += @('-batchmode', '-raid-skills-trial', $results, '-raid-skills-peer', $peerDir)
+        if ($RecordSkills) { $hostArgs += '-raid-record-skills' }
     }
     'Water' {
         $report = "$results/environment.json"
