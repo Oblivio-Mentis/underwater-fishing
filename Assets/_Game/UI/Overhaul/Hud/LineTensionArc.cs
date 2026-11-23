@@ -7,7 +7,7 @@ namespace Raid.UI
     [DisallowMultipleComponent, RequireComponent(typeof(CanvasRenderer))]
     public sealed class LineTensionArc : MaskableGraphic
     {
-        const float Radius = 104f;
+        const float Radius = 162f;
         internal const float Caution = .60f;
         internal const float Danger = .82f;
         static readonly Color32 Underlay = new(8, 23, 28, 223);
@@ -34,17 +34,17 @@ namespace Raid.UI
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            Ring(mesh, 0f, 1f, 7f, Underlay);
-            Ring(mesh, 0f, Caution - .006f, 3.4f, Easy);
-            Ring(mesh, Caution + .006f, Danger - .006f, 3.4f, Loaded);
-            Ring(mesh, Danger + .006f, 1f, 4.2f, Critical);
+            Ring(mesh, 0f, 1f, 9f, Underlay);
+            Ring(mesh, 0f, Caution - .006f, 5f, Easy);
+            Ring(mesh, Caution + .006f, Danger - .006f, 5f, Loaded);
+            Ring(mesh, Danger + .006f, 1f, 5.5f, Critical);
 
             // Fixed index marks distinguish high load even without colour.
             for (int i = 0; i <= 2; i++)
                 Tick(mesh, Mathf.Lerp(Danger, 1f, i * .5f), 3f, 8f, 2.3f, Critical);
 
-            Tick(mesh, load, -8.5f, 11f, 6f, Underlay);
-            Tick(mesh, load, -7f, 9.5f, 2.8f, Ivory);
+            Tick(mesh, load, -11f, 13f, 7f, Underlay);
+            Tick(mesh, load, -9f, 11f, 3.3f, Ivory);
         }
 
         static void Ring(VertexHelper mesh, float from, float to, float thickness, Color32 ink)

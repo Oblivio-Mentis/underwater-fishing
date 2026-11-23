@@ -10,7 +10,7 @@ namespace Raid.Nereid
 {
     internal sealed partial class CargoReceiverTrial
     {
-        readonly MaterialPropertyBlock beaconSample = new();
+        MaterialPropertyBlock beaconSample;
         readonly List<string> filmTimes = new();
         Transform cableSocket;
         float parkedYaw, maxYaw, initialSlew, beamError, initialLight, maxWorkLight;
@@ -27,6 +27,7 @@ namespace Raid.Nereid
             if (!observedPark)
             {
                 if (phase != HoistPhase.Loading) throw new InvalidOperationException("Expected a grounded basket at the start.");
+                beaconSample = new MaterialPropertyBlock();
                 parkedYaw = yaw;
                 initialLight = arm.workFlood.enabled || arm.deckWash.enabled ? 1 : 0;
                 cableSocket = rail.cageAnchor.GetComponentInChildren<CargoBasket>().CableSocket;

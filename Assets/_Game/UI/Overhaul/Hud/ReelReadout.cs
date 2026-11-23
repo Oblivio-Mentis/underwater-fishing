@@ -20,7 +20,7 @@ namespace Raid.UI
             root = UiKit.Node(parent, "Fishing instruments");
             UiKit.Fill(root);
             var gauge = UiKit.Node(root, "Line tension");
-            UiKit.Place(gauge, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(238, 238));
+            UiKit.Place(gauge, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(358, 358));
             arc = gauge.gameObject.AddComponent<LineTensionArc>();
             arc.raycastTarget = false;
 
