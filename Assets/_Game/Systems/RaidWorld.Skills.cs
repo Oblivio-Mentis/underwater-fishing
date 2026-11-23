@@ -10,7 +10,7 @@ namespace Raid
     {
         readonly Dictionary<NetworkConnection,string> crewProfiles = new();
         readonly Dictionary<long,string[]> catchOwners = new();
-        const string LanProfilePreference="RAID.profile.v1";
+        const string LanProfilePreference="RAID.profile.radial";
         public PlayerProgress LocalProgress { get; private set; }
         public event Action<bool,string> SkillResponded;
 
@@ -26,13 +26,17 @@ namespace Raid
             return crewProfiles.TryGetValue(diver.Owner,out var key)?key:null;
         }
 
-        public bool HasSkill(DiverMotor diver, SkillId id) =>
-            team?.Player(ProgressKey(diver))?.skills.Contains(id)==true;
+        public int SkillRank(DiverMotor diver, SkillLine line) =>
+            SkillTreeDefinition.Rank(team?.Player(ProgressKey(diver))?.skills,line);
 
-        public int SkillValue(DiverMotor diver, SkillId id) =>
-            HasSkill(diver,id) ? progression.Skill(id).Magnitude : 0;
+        public bool HasSkill(DiverMotor diver, SkillLine line) => SkillRank(diver,line)>0;
 
-        public float SkillFactor(DiverMotor diver, SkillId id) => SkillValue(diver,id)*.01f;
+        public int SkillValue(DiverMotor diver, SkillLine line) =>
+            SkillTreeDefinition.Value(team?.Player(ProgressKey(diver))?.skills,line);
+
+        public float SkillFactor(DiverMotor diver, SkillLine line) => SkillValue(diver,line)*.01f;
+        public float TeamSkillFactor(SkillLine line) => (IsServerInitialized ? team : view)?.TeamFactor(line) ?? 0;
+        public int LocalRank(SkillLine line) => SkillTreeDefinition.Rank(LocalProgress?.skills,line);
 
         internal void RecordCatch(long id,IEnumerable<string> keys)
         {
@@ -120,43 +124,24 @@ namespace Raid
         }
 
         [ServerRpc(RequireOwnership=false)]
-        public void RequestSkill(SkillId id,int revision,NetworkConnection sender=null)
+        public void RequestSkill(SkillId id,int revision,int profileRevision,NetworkConnection sender=null)
         {
-            if(sender==null)return;
+            if(sender?.IsAuthenticated!=true)return;
             var diver=sender.FirstObject==null?null:sender.FirstObject.GetComponent<DiverMotor>();
             var player=team?.Player(ProgressKey(diver));
-            var node=progression.Skill(id);
             if(player==null || diver.IsHelpless || transitionRemaining>0 ||
                 !ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree))
-            {SkillReply(sender,false,"Подойдите к монитору навыков живым водолазом");return;}
-            if(node==null){SkillReply(sender,false,"Неизвестный навык");return;}
-            var owned=node.Team ? team.teamSkills : player.skills;
-            if(owned.Contains(id))
-            {SkillReply(sender,false,node.Team?"Уже улучшено экипажем":"Навык уже открыт");return;}
-            if(revision!=team.teamRevision)
-            {SendProfile(sender,player);SkillReply(sender,false,"Данные обновились. Выберите узел снова");return;}
-            if(!SkillTreeDefinition.IsAvailable(id,owned) || !team.Treasury.Covers(node.Cost))
-            {SkillReply(sender,false,"Не хватает материалов или предыдущего навыка");return;}
-            var before=team.Treasury;
-            int previousPlayer=player.revision, previousTeam=team.teamRevision;
-            if(previousPlayer==int.MaxValue || previousTeam==int.MaxValue)
-            {SkillReply(sender,false,"Достигнут предел версии сохранения");return;}
-            owned.Add(id);
-            team.Treasury=before.Subtract(node.Cost);
-            player.revision++;
-            team.teamRevision++;
-            if(!SaveTransaction())
+            {SkillReply(sender,false,"Подойдите к монитору прокачки");return;}
+            if(!team.TryPurchase(player,id,revision,profileRevision,progression,SaveTransaction,out var reason))
             {
-                owned.Remove(id);
-                team.Treasury=before;
-                player.revision=previousPlayer;
-                team.teamRevision=previousTeam;
-                SkillReply(sender,false,"Сохранение недоступно. Материалы остались в казне");
+                SendProfile(sender,player);
+                SkillReply(sender,false,reason);
                 return;
             }
             Publish();
             SendProfile(sender,player);
-            SkillReply(sender,true,node.Name);
+            diver.ConfirmInteraction();
+            SkillReply(sender,true,reason);
         }
 
         bool SaveTransaction()

@@ -3072,7 +3072,7 @@ MonoBehaviour:
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
   fishId: Sailray
   biomass: 8
-  chitin: 0
+  chitin: 2
   offering: 9
   cargoSize: 3
   depthTier: 1
@@ -51242,7 +51242,7 @@ MonoBehaviour:
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
   fishId: Bristlefish
   biomass: 6
-  chitin: 0
+  chitin: 2
   offering: 6
   cargoSize: 3
   depthTier: 1
@@ -66755,7 +66755,7 @@ MonoBehaviour:
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
   fishId: Needlefish
   biomass: 4
-  chitin: 0
+  chitin: 1
   offering: 2
   cargoSize: 1
   depthTier: 1
@@ -68543,7 +68543,7 @@ MonoBehaviour:
   presentationProfile: {fileID: 11400000, guid: 82711cdf0f18d6b429056840dd1cffa1, type: 2}
   fishId: Lanternfish
   biomass: 3
-  chitin: 0
+  chitin: 1
   offering: 3
   cargoSize: 1
   depthTier: 1

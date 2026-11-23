@@ -297,7 +297,6 @@ namespace Raid.Nereid
                 switch(station.kind)
                 {
                     case ShipConsoleKind.Depths:local=new(-.38f,UpperDeck,-28.53f);yaw=180;break;
-                    case ShipConsoleKind.Upgrades:local=new(3.30f,0,-19.19f);yaw=90;break;
                     case ShipConsoleKind.Reservoir:local=new(0,0,-.72f);yaw=180;break;
                     default:continue;
                 }

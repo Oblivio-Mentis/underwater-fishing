@@ -66,14 +66,21 @@ namespace Raid.UI
             if (!down && pressed!=null && (dragScrollbar || dragGraph))
             {
                 Vector2 point = raycaster.transform.InverseTransformPoint(pointer.pointerCurrentRaycast.worldPosition);
-                if (!pointer.dragging)
+                Vector2 delta=point-lastPoint;
+                if(dragScrollbar || pointer.dragging || delta.sqrMagnitude>=4)
                 {
-                    pointer.dragging = true;
-                    ExecuteEvents.Execute(dragged, pointer, ExecuteEvents.beginDragHandler);
+                    if (!pointer.dragging)
+                    {
+                        pointer.dragging = true;
+                        ExecuteEvents.Execute(dragged, pointer, ExecuteEvents.beginDragHandler);
+                    }
+                    if(delta.sqrMagnitude>.0001f)
+                    {
+                        pointer.delta=delta;
+                        ExecuteEvents.Execute(dragged, pointer, ExecuteEvents.dragHandler);
+                        lastPoint=point;
+                    }
                 }
-                pointer.delta = point - lastPoint;
-                ExecuteEvents.Execute(dragged, pointer, ExecuteEvents.dragHandler);
-                lastPoint = point;
             }
             bool clicked = false;
             if (up)

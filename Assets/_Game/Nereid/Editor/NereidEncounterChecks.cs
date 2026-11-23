@@ -258,7 +258,8 @@ namespace Raid.Nereid.Editor
         static void Stage(int tier)
         {
             tool.DropCargo();diver.Rescue();
-            var fixture=new TeamProgress(world.progression){highestDepth=2,hullLevel=1,hungerRemaining=3600};
+            var fixture=new TeamProgress(world.progression){hungerRemaining=3600};
+            fixture.teamSkills.Add(SkillTreeDefinition.Id(SkillLine.Hull,1));
             Field(world,"team").SetValue(world,fixture);
             Travel(tier);
             var value=DiverState(diver);var state=value.Value;

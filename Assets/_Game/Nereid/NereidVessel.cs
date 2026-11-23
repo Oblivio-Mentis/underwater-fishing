@@ -88,13 +88,7 @@ namespace Raid.Nereid
                 hopper=CageReceivingHopper.Install(this,world);
             }
             if(state!=observed){observed=state;seenAt=Time.time;}
-            var duration=state.hoistPhase switch {
-                HoistPhase.Raising=>world.progression.raisingSeconds,
-                HoistPhase.Unloading=>world.progression.unloadingSeconds,
-                HoistPhase.Returning=>world.progression.returningSeconds,
-                _=>1
-            };
-            duration=Mathf.Max(.01f,duration/Mathf.Max(1f,1+state.winchLevel*world.progression.winchSpeedPerLevel));
+            float duration=state.HoistDuration(state.hoistPhase,world.progression);
             float estimate=world.IsServerInitialized?0:Mathf.Min(world.tuning.snapshotInterval,Time.time-seenAt);
             PresentedHoistPhase=state.hoistPhase;
             HoistAnimation=state.hoistPhase==HoistPhase.Loading?0:Mathf.Clamp01(1-(state.hoistRemaining-estimate)/duration);

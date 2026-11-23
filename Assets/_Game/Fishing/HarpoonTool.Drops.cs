@@ -185,7 +185,7 @@ namespace Raid
         public bool ResistPocketTheft()
         {
             if(pocketTheftShieldUsed || PocketCount==0 ||
-               RaidWorld.Instance?.HasSkill(Motor,SkillId.C3)!=true)return false;
+               (RaidWorld.Instance?.SkillRank(Motor,SkillLine.Pockets)??0)<3)return false;
             pocketTheftShieldUsed=true;
             return true;
         }

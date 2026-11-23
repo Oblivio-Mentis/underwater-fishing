@@ -162,7 +162,7 @@ namespace Raid
         }
 
         void SwimForMeeting(Vector3 goal,float speed,float dt,bool detour=true) =>
-            pet.Position=meetingRoute.Step(pet.Position,goal,speed*dt,detour,false);
+            pet.Position=meetingRoute.Step(pet.Position,goal,speed*dt,detour,0f);
 
         void TickShoulderRide(DiverMotor diver,NereidAirlock lockRoom,float dt)
         {

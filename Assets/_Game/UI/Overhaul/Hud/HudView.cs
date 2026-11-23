@@ -71,7 +71,7 @@ namespace Raid.UI
             if(context==null || !context.Connected || context.Player.tuning==null)
             {observedPlayer=null;observedWorld=null;return;}
             var player=context.Player;var view=context.View;var tuning=context.Tuning;
-            float capacity=Mathf.Max(1,player.tuning.oxygenCapacity*player.OxygenMultiplier);
+            float capacity=player.AirCapacity;
             float oxygenFraction=Mathf.Clamp01(player.Oxygen/capacity);
             reel.Refresh(context);
             RefreshHarpoon(context);
@@ -124,8 +124,7 @@ namespace Raid.UI
             cargoPanel.anchoredPosition=new Vector2(-24,harpoonPanel.gameObject.activeSelf?harpoonPanel.sizeDelta.y+38:24);
             if(!cargoPanel.gameObject.activeSelf)return;
             int capacity=view.Capacity(tuning);UiKit.Set(cargoCount,UiText.HudCargoCount(view.CargoUsed,capacity));
-            float duration=view.hoistPhase==HoistPhase.Raising?tuning.raisingSeconds:view.hoistPhase==HoistPhase.Unloading?tuning.unloadingSeconds:tuning.returningSeconds;
-            duration=Mathf.Max(.01f,duration/Mathf.Max(1,1+view.winchLevel*tuning.winchSpeedPerLevel));
+            float duration=Mathf.Max(.01f,view.HoistDuration(view.hoistPhase,tuning));
             UiKit.Fraction(cargoBar,busy?1-view.hoistRemaining/duration:(float)view.CargoUsed/Mathf.Max(1,capacity));
             bool full=view.CargoUsed>=capacity;SetColor(cargoBar,full?UiTheme.Red:busy?UiTheme.Cyan:UiTheme.Amber);
             UiKit.Set(cargoPhase,busy?UiText.HudHoistTime(view.hoistPhase,view.hoistRemaining):full?UiText.HudCargoFull:UiText.HudCargoReady);
@@ -283,9 +282,15 @@ namespace Raid.UI
                 if(player.CanRespawn)detail+=(detail.Length>0?"    ·    ":"")+"E — вернуться на борт";
                 else if(player.CanBeRescued&&teammate)detail+="    ·    Напарник может спасти вас [F]";
             }
+            else if(player.AirReserveRemaining>0)
+            {
+                title="Аварийный воздух";detail=Mathf.CeilToInt(player.AirReserveRemaining)+" с · к сухому отсеку";
+            }
             else if(player.IsHypoxic)
             {
                 title="Гипоксия";detail="Теряете здоровье · вернитесь в сухой отсек";
+                if(player.AirReserveSpent && player.AirReserveCooldown>0)
+                    detail+=" · резерв "+player.AirReserveCooldown+" с";
                 color=Color.Lerp(UiTheme.Amber,UiTheme.Red,player.HypoxiaSeverity);
             }
             else if(player.IsHelpless){title=UiText.HudOxygenCritical;detail=UiText.HudRescueHint;color=UiTheme.Red;}

@@ -44,9 +44,6 @@ namespace Raid
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
         public HuntStage AnglerStage=>state.Value.AnglerStage;
-        public int BiteSequence=>state.Value.BiteSequence;
-        public int BiteVictim=>state.Value.BiteVictim;
-        public Vector3 BiteDirection=>state.Value.BiteDirection;
         public Vector3 AnglerPosition=>state.Value.PredatorPosition;
 
         private void Awake()
@@ -205,7 +202,7 @@ namespace Raid
             if (target == null || predatorCooldown > 0f || Vector3.Distance(next.PredatorPosition, goal) > tuning.attackRange) return;
             if (Physics.Linecast(next.PredatorPosition, goal, out RaycastHit hit, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
                 !hit.transform.IsChildOf(target.transform)) return;
-            target.DamageOxygen(tuning.attackDamage * Strength);
+            target.DamageFromCreature(tuning.attackDamage * Strength);
             target.GetComponent<HarpoonTool>()?.DropCargo();
             predatorCooldown = Mathf.Max(.1f, tuning.attackInterval);
             next.Message = "Хищник ударил водолаза и сорвал улов. Укройтесь в подлодке или за скалой!";

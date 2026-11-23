@@ -6,19 +6,24 @@ namespace Raid
     public sealed partial class DiverMotor
     {
         Vector3 swimVelocity;
-        float dashUntil,dashReadyAt,reserveSeconds;
+        float dashUntil,dashReadyAt,reserveSeconds,reserveReadyAt;
         bool usedReserve,rearmedAtDeck;
         const float DryRearmSeconds=2f;
+        const float ReserveCooldownSeconds=30f;
         float dryDuration;
         HarpoonTool skillEquipment;
-        float Personal(SkillId id) => RaidWorld.Instance?.SkillFactor(this,id) ?? 0;
+        float Personal(SkillLine line) => RaidWorld.Instance?.SkillFactor(this,line) ?? 0;
+
+        public float AirReserveRemaining => _state.Value.ReserveAir;
+        public bool AirReserveSpent => _state.Value.ReserveSpent;
+        public int AirReserveCooldown => _state.Value.ReserveCooldown;
 
         [ServerRpc]
         void StartHydroDash()
         {
             if(IsHelpless || IsTrapped || IsInside || UsesIndoorWalking(transform.position) ||
                 RaidWorld.Instance==null || Nereid.NereidAirlock.Active?.Contains(transform.position)==true ||
-                Time.time<dashReadyAt || !RaidWorld.Instance.HasSkill(this,SkillId.F4))return;
+                Time.time<dashReadyAt || !RaidWorld.Instance.HasSkill(this,SkillLine.HydroDash))return;
             dashUntil=Time.time+RaidWorld.Instance.progression.hydroSeconds;
             dashReadyAt=Time.time+RaidWorld.Instance.progression.hydroCooldown;
         }
@@ -27,13 +32,19 @@ namespace Raid
         {
             if(!inside){dryDuration=0;rearmedAtDeck=false;return;}
             dashUntil=0;
-            if(rearmedAtDeck)return;
+            if(rearmedAtDeck && !usedReserve)return;
             dryDuration+=dt;
             if(dryDuration<DryRearmSeconds || Nereid.NereidAirlock.Active?.Contains(transform.position)==true)return;
-            usedReserve=false;
-            reserveSeconds=0;
-            rearmedAtDeck=true;
-            skillEquipment?.RearmPocketShield();
+            if(!rearmedAtDeck)
+            {
+                rearmedAtDeck=true;
+                skillEquipment?.RearmPocketShield();
+            }
+            if(Time.time>=reserveReadyAt)
+            {
+                usedReserve=false;
+                reserveSeconds=0;
+            }
         }
 
         bool ReserveBreath(bool inside,float oxygen,float dt)
@@ -41,8 +52,11 @@ namespace Raid
             if(inside || oxygen>0)return false;
             if(!usedReserve)
             {
+                if(Time.time<reserveReadyAt)return false;
+                reserveSeconds=Mathf.Clamp(RaidWorld.Instance?.SkillValue(this,SkillLine.EmergencyAir)??0,0,9);
+                if(reserveSeconds<=0)return false;
                 usedReserve=true;
-                reserveSeconds=RaidWorld.Instance?.SkillValue(this,SkillId.S4) ?? 0;
+                reserveReadyAt=Time.time+ReserveCooldownSeconds;
             }
             if(reserveSeconds<=0)return false;
             reserveSeconds=Mathf.Max(0,reserveSeconds-dt);

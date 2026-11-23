@@ -94,6 +94,7 @@ namespace Raid.UI
                 : fish.RequiresPartner && !fish.Coordinated ? "Тяните в одну сторону"
                 : fish.Mode == FishMode.Tired ? "Рыба устала · ЛКМ — тянуть"
                 : fish.Coordinated ? "Тянете вместе" : "ЛКМ — сматывать";
+            if(tool.StabilizerCooldown>0)action+="\nСтабилизатор · "+tool.StabilizerCooldown+" с";
             UiKit.Set(instruction,action);instruction.color=t>=.82f?UiTheme.Red:surgeCue?UiTheme.Amber:UiTheme.Text;
         }
 

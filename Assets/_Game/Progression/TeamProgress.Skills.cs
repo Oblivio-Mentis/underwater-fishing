@@ -17,7 +17,6 @@ namespace Raid
         public List<PlayerProgress> players = new();
         public List<SkillId> teamSkills = new();
         public int teamRevision;
-        public int legacyCargoCapacityBonus;
         public MaterialCost processingRemainder;
         public const int FoodScale = 100;
         public int offeringPoints;
@@ -29,37 +28,24 @@ namespace Raid
         public int RequiredFood(ProgressionTuning tuning) =>
             checked(Math.Max(1, tuning.foodRequired + (highestDepth - 1) * tuning.foodPerDepth) * FoodScale);
 
-        public void MigrateV1(int previousFood, int capacityPerWinch)
-        {
-            if(schemaVersion!=1)return;
-            legacyCargoCapacityBonus=checked(winchLevel*capacityPerWinch);
-            offering=previousFood;
-            schemaVersion=CurrentSchema;
-        }
-
-        public void MigrateV2(MaterialCost balance)
-        {
-            if(schemaVersion!=2)return;
-            Treasury=Treasury.Add(balance);
-            schemaVersion=CurrentSchema;
-        }
-
-        public bool HasTeamSkill(SkillId id) => teamSkills.Contains(id);
-        int Bonus(SkillId id, ProgressionTuning tuning) =>
-            HasTeamSkill(id) ? (tuning?.Skill(id) ?? SkillTreeDefinition.Get(id)).Magnitude : 0;
+        public int TeamRank(SkillLine line) => SkillTreeDefinition.Rank(teamSkills,line);
+        public int TeamValue(SkillLine line) => SkillTreeDefinition.Value(teamSkills,line);
+        public float TeamFactor(SkillLine line) => TeamValue(line)*.01f;
+        public bool HasTeamLine(SkillLine line) => TeamRank(line)>0;
 
         public int FoodValue(CatchItem item, ProgressionTuning tuning)
         {
-            int category = item.offering <= 2 ? Bonus(SkillId.N2,tuning) : Bonus(SkillId.N3,tuning);
-            return checked(item.offering * (FoodScale + Bonus(SkillId.N1,tuning) + category + Bonus(SkillId.N4,tuning)));
+            int category=TeamValue(item.offering<=2 ? SkillLine.SmallRation : SkillLine.LargeRation);
+            return checked(item.offering*(FoodScale+TeamValue(SkillLine.Nutrition)+category));
         }
 
         public MaterialCost ProcessPreview(CatchItem item, ProgressionTuning tuning)
         {
-            int general = 100 + Bonus(SkillId.P1,tuning) + Bonus(SkillId.P4,tuning);
-            int living = general + Bonus(SkillId.P2,tuning), mineral=general+Bonus(SkillId.P3,tuning);
-            return new MaterialCost(checked(item.biomass*living),checked(item.chitin*living),
-                checked(item.scrap*mineral),checked(item.electronics*mineral));
+            int scale=100+TeamValue(SkillLine.Separator)+TeamValue(SkillLine.WasteFree);
+            return new MaterialCost(checked(item.biomass*(scale+TeamValue(SkillLine.Biomass))),
+                checked(item.chitin*(scale+TeamValue(SkillLine.Chitin))),
+                checked(item.scrap*(scale+TeamValue(SkillLine.Scrap))),
+                checked(item.electronics*(scale+TeamValue(SkillLine.Electronics))));
         }
 
         public MaterialCost Treasury
@@ -89,6 +75,45 @@ namespace Raid
             return projection;
         }
 
+        public bool TryPurchase(PlayerProgress buyer, SkillId id, int treasuryRevision, int personalRevision,
+            ProgressionTuning tuning, Func<bool> persist, out string reason)
+        {
+            var perk=SkillTreeDefinition.Get(id);
+            if(buyer==null || Player(buyer.key)!=buyer){reason="Профиль не подключён";return false;}
+            if(perk==null){reason="Неизвестный узел";return false;}
+            var owned=perk.Team ? teamSkills : buyer.skills;
+            if(owned.Contains(id)){reason="Ранг уже куплен";return false;}
+            if(treasuryRevision!=teamRevision || personalRevision!=buyer.revision)
+            {reason="Баланс обновился. Повторите покупку";return false;}
+            if(!SkillTreeDefinition.IsAvailable(id,owned)){reason="Сначала купите предыдущий ранг";return false;}
+            if(!Treasury.Covers(perk.Cost)){reason="Не хватает материалов";return false;}
+            if(teamRevision==int.MaxValue || buyer.revision==int.MaxValue){reason="Достигнут предел ревизий";return false;}
+
+            var before=Treasury;
+            float oldHunger=hungerRemaining, oldHoist=hoistRemaining;
+            float hungerCycle=HungerInterval(tuning), hoistCycle=HoistDuration(hoistPhase,tuning);
+            owned.Add(id);
+            Treasury=before.Subtract(perk.Cost);
+            teamRevision++;
+            if(!perk.Team)buyer.revision++;
+            if(perk.Line==SkillLine.Satiety)hungerRemaining=oldHunger*HungerInterval(tuning)/hungerCycle;
+            if(hoistPhase!=HoistPhase.Loading && (perk.Line is SkillLine.Winch or SkillLine.Industrial))
+                hoistRemaining=oldHoist*HoistDuration(hoistPhase,tuning)/hoistCycle;
+            if(!persist())
+            {
+                owned.Remove(id);
+                Treasury=before;
+                teamRevision=treasuryRevision;
+                buyer.revision=personalRevision;
+                hungerRemaining=oldHunger;
+                hoistRemaining=oldHoist;
+                reason="Ошибка записи. Материалы остались в казне";
+                return false;
+            }
+            reason=perk.Name;
+            return true;
+        }
+
         public bool CreditProcessedCatch(long id, ProgressionTuning tuning, out MaterialCost yield)
         {
             yield=default;
@@ -112,7 +137,7 @@ namespace Raid
 
         void ValidateSkills()
         {
-            if(teamRevision<0 || legacyCargoCapacityBonus<0 || players==null || teamSkills==null ||
+            if(teamRevision<0 || players==null || teamSkills==null ||
                 !processingRemainder.IsValid || processingRemainder.biomass>=100 || processingRemainder.chitin>=100 ||
                 processingRemainder.scrap>=100 || processingRemainder.electronics>=100)
                 throw new InvalidOperationException("Invalid skill save.");
@@ -136,6 +161,9 @@ namespace Raid
                 if(node==null || node.Team!=team || !unique.Add(id))
                     throw new InvalidOperationException("Invalid or duplicated skill.");
             }
+            foreach(var id in unique)
+                foreach(var prerequisite in SkillTreeDefinition.Dependencies(id))
+                    if(!unique.Contains(prerequisite))throw new InvalidOperationException("Missing prerequisite in save.");
         }
     }
 }

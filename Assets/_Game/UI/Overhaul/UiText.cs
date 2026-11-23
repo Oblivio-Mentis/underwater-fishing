@@ -4,7 +4,6 @@ namespace Raid.UI
     public static partial class UiText
     {
         public static string Phase(HoistPhase phase) => phase==HoistPhase.Loading?"Загрузка":phase==HoistPhase.Raising?"Подъём":phase==HoistPhase.Unloading?"Разгрузка":"Спуск";
-        public static string UpgradeName(Upgrade value) => value==Upgrade.Reel?"Катушка":value==Upgrade.Fins?"Ласты":value==Upgrade.Tank?"Баллоны":value==Upgrade.Hull?"Корпус":"Лебёдка";
         public static string Materials(int b,int c,int s,int e) => "Биомасса "+b+"   Хитин "+c+"   Лом "+s+"   Электроника "+e;
         public static string Materials(MaterialCost cost) => Materials(cost.biomass,cost.chitin,cost.scrap,cost.electronics);
         public static string CargoName(CatchItem item) => item.offering>0 || item.biomass>0 || item.chitin>0 ?
@@ -28,6 +27,6 @@ namespace Raid.UI
             return raw;
         }
         public const string QuoteChanged="Состав улова, уровень или цена изменились. Повторите действие";
-        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="onboard"?"Войдите в подлодку и подойдите к пульту":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
+        public static string CommandReason(string reason) => reason=="ok"?"Сервер подтвердил действие":reason=="onboard"?"Войдите в подлодку и подойдите к пульту":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="reservoir_full"?"Освободите место в резервуаре":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
     }
 }

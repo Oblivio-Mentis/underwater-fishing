@@ -34,7 +34,7 @@ namespace Raid.UI
             resources=new MaterialStrip(layout,"Team treasury",true);
             summary=TerminalParts.Text(layout,"Summary",UiText.NoConfirmedState,30,21,UiTheme.Muted);
             tabRow=UiKit.Row(layout,"Tabs",8);UiKit.Size(tabRow,50);
-            AddTab(tabRow,"catch",UiText.CatchTab);AddTab(tabRow,"upgrades",UiText.UpgradesTab);AddTab(tabRow,"depths",UiText.DepthsTab);AddTab(tabRow,"feeding",UiText.FeedingTab);
+            AddTab(tabRow,"catch",UiText.CatchTab);AddTab(tabRow,"depths",UiText.DepthsTab);AddTab(tabRow,"feeding",UiText.FeedingTab);
             dispatchRow=UiKit.Row(layout,"Dispatch controls",14);
             UiKit.Size(dispatchRow,54);
             dispatchSummary=UiKit.Label(dispatchRow,"Selection summary","",21);
@@ -58,10 +58,9 @@ namespace Raid.UI
             if(!Root.gameObject.activeInHierarchy)return;
             var ctx=app.Context;var view=ctx.View;
             var station=ctx.SelectedConsole;
-            bool equipment=station!=null&&station.kind==ShipConsoleKind.Upgrades;
             bool navigation=station!=null&&station.kind==ShipConsoleKind.Depths;
-            if(equipment)tab="upgrades";else if(navigation)tab="depths";
-            tabRow.gameObject.SetActive(!equipment&&!navigation);
+            if(navigation)tab="depths";
+            tabRow.gameObject.SetActive(!navigation);
             UiKit.Set(shellTitle,station==null?UiText.TerminalTitle:station.Caption.ToUpperInvariant());
             foreach(var pair in tabs)
             {
@@ -78,12 +77,10 @@ namespace Raid.UI
             }
             else
             {
-                UiKit.Set(summary,UiText.TerminalSummary(view,ctx.FoodRequired,ctx.DefendingReservoir));
-                if(equipment)UiKit.Set(summary,"Бортовая мастерская · оборудование экипажа");
+                UiKit.Set(summary,UiText.TerminalSummary(view,ctx.Tuning,ctx.FoodRequired,ctx.DefendingReservoir));
                 if(navigation)UiKit.Set(summary,"На борту: "+ctx.Players.Count(p=>p.IsInside)+" / "+ctx.Players.Count+"  ·  "+(ctx.AllInside?"Все водолазы в лодке":"Верните экипаж в лодку"));
                 string reason=TerminalParts.BaseReason(app);
                 UiKit.Set(footer,ctx.World.TravelRemaining>0?UiText.TravelRemaining(ctx.World.TravelRemaining):!string.IsNullOrEmpty(reason)?reason:UiText.CargoSummary(view,ctx.Tuning));
-                if(equipment&&string.IsNullOrEmpty(reason))UiKit.Set(footer,"Улучшения действуют на весь экипаж");
                 if(station?.kind==ShipConsoleKind.Reservoir && string.IsNullOrEmpty(reason))
                     UiKit.Set(footer,view.processingRemainder.IsEmpty
                         ?"Улов без задания остаётся в резервуаре"
@@ -131,15 +128,14 @@ namespace Raid.UI
             var view=app.Context.View;if(view==null)return "waiting";
             var key=new StringBuilder(tab);
             if(tab=="catch" || tab=="feeding")foreach(var item in view.tank)key.Append('|').Append(item.id);
-            if(tab=="upgrades")foreach(Upgrade upgrade in Enum.GetValues(typeof(Upgrade)))key.Append('|').Append(view.Level(upgrade));
-            if(tab=="depths")key.Append('|').Append(view.highestDepth).Append('|').Append(view.hullLevel);
+            if(tab=="depths")key.Append('|').Append(view.highestDepth);
             return key.ToString();
         }
         void Rebuild()
         {
             UiKit.Clear(content);refreshRows.Clear();feedingSummary=feedingTime=feedingState=feedingThreat=feedingLoss=null;feedingBar=null;scroll.StopMovement();scroll.verticalNormalizedPosition=1;
             if(app.Context.View==null){TerminalParts.Text(content,"Waiting",UiText.NoConfirmedState,70);return;}
-            if(tab=="catch")BuildCatch(false);else if(tab=="upgrades")BuildUpgrades();else if(tab=="depths")BuildDepths();else BuildFeeding();
+            if(tab=="catch")BuildCatch(false);else if(tab=="depths")BuildDepths();else BuildFeeding();
         }
         void BuildCatch(bool foodOnly)
         {
@@ -202,52 +198,6 @@ namespace Raid.UI
             TeamProgress.FoodText(points.biomass)+" Б  "+TeamProgress.FoodText(points.chitin)+" Х  "+
             TeamProgress.FoodText(points.scrap)+" Л  "+TeamProgress.FoodText(points.electronics)+" Э";
 
-        void BuildUpgrades()
-        {
-            var loaded=app.Context.View;
-            if(loaded.reelLevel+loaded.finsLevel+loaded.tankLevel>0)
-                TerminalParts.Text(content,"Legacy gear","Унаследованы прежние уровни катушки, ласт и баллонов",33,19,UiTheme.Muted);
-            foreach(Upgrade value in new[]{Upgrade.Hull,Upgrade.Winch})
-            {
-                Upgrade upgrade=value;var ctx=app.Context;var view=ctx.View;var recipe=ctx.Tuning.Recipe(upgrade);
-                int level=view.Level(upgrade);var body=TerminalParts.Card(content,"Upgrade_"+upgrade,222);
-                var heading=UiKit.Row(body,"Heading",12);UiKit.Size(heading,34);
-                var title=UiKit.Label(heading,"Name",UiText.UpgradeName(upgrade),28);UiKit.Size(title,34,flexibleWidth:1);
-                var levelText=UiKit.Label(heading,"Level",UiText.UpgradeLevel(level,recipe==null?0:recipe.maximumLevel),22,UiTheme.Cyan);UiKit.Size(levelText,34,220);
-                bool maximum=recipe!=null && level>=recipe.maximumLevel;
-                TerminalParts.Text(body,"Bonus",maximum?UiText.CurrentUpgradeBonus(upgrade,level,ctx):UiText.UpgradeBonus(upgrade,level,ctx),38,22,maximum?UiTheme.Green:UiTheme.Text);
-                if(recipe==null){TerminalParts.Text(body,"MissingRecipe",UiText.MissingRecipe,70,22,UiTheme.Amber);continue;}
-                if(maximum){TerminalParts.Text(body,"Complete",UiText.MaxUpgrade,68,22,UiTheme.Muted);continue;}
-                var cost=view.Cost(upgrade,ctx.Tuning);
-                var costStrip=new MaterialStrip(body,"Upgrade cost");
-                costStrip.Quote(cost);
-                var row=UiKit.Row(body,"Purchase",20);UiKit.Size(row,54);
-                var status=UiKit.Label(row,"Reason","",20,UiTheme.Amber);UiKit.Size(status,54,flexibleWidth:1);
-                var buy=UiKit.Button(row,"Buy_"+upgrade,UiText.BuyUpgradeLevel(level+1),()=>ConfirmUpgrade(upgrade),true,52);UiKit.Size(buy,52,210);buy.GetComponent<LayoutElement>().flexibleWidth=0;
-                refreshRows.Add(()=>TerminalParts.ButtonReason(buy,status,UpgradeReason(upgrade),UiText.UpgradeReady));
-            }
-        }
-        string UpgradeReason(Upgrade upgrade)
-        {
-            string reason=TerminalParts.BaseReason(app);if(!string.IsNullOrEmpty(reason))return reason;
-            var ctx=app.Context;var view=ctx.View;var recipe=ctx.Tuning.Recipe(upgrade);
-            if(recipe==null)return UiText.MissingRecipe;if(view.Level(upgrade)>=recipe.maximumLevel)return UiText.MaxUpgrade;
-            string missing=UiText.NeedMaterials(view.Cost(upgrade,ctx.Tuning),view);
-            if(upgrade==Upgrade.Hull && view.lifetimeCatch<ctx.Tuning.depthTwoLifetimeCatch)return UiText.LifetimeNeed(view.lifetimeCatch,ctx.Tuning.depthTwoLifetimeCatch)+(string.IsNullOrEmpty(missing)?"":"\n"+missing);
-            return missing;
-        }
-        void ConfirmUpgrade(Upgrade upgrade)
-        {
-            string reason=UpgradeReason(upgrade);if(!string.IsNullOrEmpty(reason)){app.Toast(reason,true);return;}
-            var ctx=app.Context;var view=ctx.View;
-            int quotedLevel=view.Level(upgrade);var quotedCost=view.Cost(upgrade,ctx.Tuning);
-            app.Confirm(UiText.BuyConfirmTitle,UiText.UpgradeName(upgrade)+"\n"+UiText.UpgradeTarget(view.Level(upgrade)+1)+"\n\n"+UiText.UpgradeConfirmHint,
-                ()=>
-                {
-                    if(ctx.View==null||ctx.View.Level(upgrade)!=quotedLevel||!ctx.View.Cost(upgrade,ctx.Tuning).Equals(quotedCost)){app.Toast(UiText.QuoteChanged,true);return;}
-                    TerminalParts.Execute(app,()=>UpgradeReason(upgrade),(WorldAction)((int)WorldAction.Reel+(int)upgrade));
-                },quotedCost);
-        }
         void BuildDepths()
         {
             var zones=UiKit.Row(content,"DepthZones",16);UiKit.Size(zones,356);
@@ -269,7 +219,7 @@ namespace Raid.UI
             {
                 var ctx=app.Context;if(ctx.View==null){button.interactable=false;return;}
                 bool unlocked=ctx.View.CanVisitDepth(depth);
-                UiKit.Set(access,unlocked?UiText.DepthAvailable:UiText.HullUnlock(ctx.View.lifetimeCatch,ctx.Tuning.depthTwoLifetimeCatch));access.color=unlocked?UiTheme.Green:UiTheme.Amber;
+                UiKit.Set(access,unlocked?UiText.DepthAvailable:UiText.HullUnlock);access.color=unlocked?UiTheme.Green:UiTheme.Amber;
                 TerminalParts.ButtonReason(button,reason,TravelReason(depth),"");
             });
         }
@@ -306,7 +256,7 @@ namespace Raid.UI
             TerminalParts.Text(explanation,"None",UiText.OutcomeNone,30,20,UiTheme.Muted);
             TerminalParts.Text(explanation,"Under",UiText.OutcomeUnder,30,20,UiTheme.Muted);
             TerminalParts.Text(explanation,"Enough",UiText.OutcomeEnough,32,20,UiTheme.Muted);
-            TerminalParts.Text(explanation,"Over",UiText.OverfeedingRule(app.Context.Tuning.maximumFoodCarry),54,20,UiTheme.Muted);
+            TerminalParts.Text(explanation,"Over",UiText.OverfeedingRule(app.Context.View.TeamValue(SkillLine.Carryover),app.Context.Tuning.maximumFoodCarry),54,20,UiTheme.Muted);
             TerminalParts.Text(content,"FeedingHint",UiText.FeedingHint,50,21,UiTheme.Muted);
             BuildCatch(true);
         }

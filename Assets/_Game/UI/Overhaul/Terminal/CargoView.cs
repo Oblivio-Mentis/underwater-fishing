@@ -60,8 +60,7 @@ namespace Raid.UI
                 bool active=i==(int)view.hoistPhase;steps[i].color=active?UiTheme.Cyan:UiTheme.Panel;
                 steps[i].GetComponentInChildren<TMP_Text>().color=active?UiTheme.Steel:UiTheme.Text;
             }
-            float baseDuration=view.hoistPhase==HoistPhase.Raising?ctx.Tuning.raisingSeconds:view.hoistPhase==HoistPhase.Unloading?ctx.Tuning.unloadingSeconds:ctx.Tuning.returningSeconds;
-            float duration=Mathf.Max(.01f,baseDuration/Mathf.Max(1,1+view.winchLevel*ctx.Tuning.winchSpeedPerLevel));
+            float duration=view.HoistDuration(view.hoistPhase,ctx.Tuning);
             UiKit.Fraction(phaseBar,view.hoistPhase==HoistPhase.Loading?0:1-view.hoistRemaining/duration);
             UiKit.Set(remaining,view.hoistPhase==HoistPhase.Loading?UiText.CargoPhaseSequence:UiText.CargoRemaining(view.hoistRemaining));
             UiKit.Set(description,view.hoistPhase==HoistPhase.Loading?(view.cargo.Count==0?"Загрузите улов, затем запустите подъём.":UiText.CargoLoadingHint):view.hoistPhase==HoistPhase.Raising?UiText.CargoRaisingHint:view.hoistPhase==HoistPhase.Unloading?UiText.CargoUnloadingHint:UiText.CargoReturningHint);

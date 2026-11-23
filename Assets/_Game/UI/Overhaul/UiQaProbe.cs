@@ -215,8 +215,7 @@ namespace Raid.UI
                     var button=root.GetComponentsInChildren<Button>().FirstOrDefault(target=>target.name==r.name && target.IsActive());
                     if(button==null || (root.Page!=UiPage.Terminal && root.Page!=UiPage.SkillTree))
                         throw new InvalidOperationException("Active physical display control not found");
-                    var rect=(RectTransform)button.transform;
-                    diver.LookAtConsole(rect.TransformPoint(rect.rect.center));
+                    diver.LookAtConsole(ReticleTarget(button));
                 }
                 return;
             }
@@ -341,6 +340,15 @@ namespace Raid.UI
         }
 
         // Batch players have no presented swap-chain image. Render the owned diver's actual camera stack on the GPU.
+        internal static Vector3 ReticleTarget(Button button)
+        {
+            var rect=(RectTransform)button.transform;
+            Vector2 location=rect.rect.center;
+            if(button is SkillSectorButton && int.TryParse(button.name.Substring("Sector".Length),out int sector))
+                location+=SkillBoardMesh.At(sector*45)*216;
+            return rect.TransformPoint(location);
+        }
+
         public static void CapturePeerCamera(string path)
         {
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)

@@ -83,18 +83,13 @@ namespace Raid.UI
         public const string CargoRaisingHint="Контейнер поднимается. Новая загрузка временно закрыта.";
         public const string CargoUnloadingHint="Улов передаётся в резервуар после завершения разгрузки.";
         public const string CargoReturningHint="Улов уже в резервуаре. Дождитесь возвращения пустой корзины.";
-        public static string TerminalSummary(TeamProgress view,int required,bool defending) => "Улов: "+view.tank.Count+"   •   Пища: "+TeamProgress.FoodText(view.offeringPoints)+" / "+required+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
+        public static string TerminalSummary(TeamProgress view,ProgressionTuning tuning,int required,bool defending) => "Улов "+view.tank.Count+" / "+view.ReservoirCapacity(tuning)+"   •   Пища: "+TeamProgress.FoodText(view.offeringPoints)+" / "+required+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
         public static string CargoSummary(TeamProgress view,ProgressionTuning tuning) => "Контейнер "+view.CargoUsed+" / "+view.Capacity(tuning)+"   •   "+Phase(view.hoistPhase)+(view.hoistPhase==HoistPhase.Loading?"":"   "+Time(view.hoistRemaining));
         public static string YieldLabel(CatchItem item) => Materials(item.biomass,item.chitin,item.scrap,item.electronics);
         public static string ItemTitle(int index,CatchItem item) => (index+1).ToString("00")+"  /  "+ItemName(item);
         public static string FoodValue(int value) => "Пища: "+value;
         public static string ItemUnits(int value) => "Занимает в контейнере: "+value;
-        public static string UpgradeLevel(int level,int maximum) => "Уровень "+level+" / "+maximum;
-        public static string UpgradeTarget(int level) => "Следующий уровень: "+level;
-        public static string BuyUpgradeLevel(int level) => "Улучшить до "+level;
-        public static string UpgradeCost(MaterialCost cost) => "Стоимость: "+Materials(cost);
-        public static string LifetimeNeed(long current,int required) => "Накопленная добыча: "+current+" / "+required+" ед. материалов";
-        public static string HullUnlock(long current,int required) => "Нужен Корпус I. Добыча "+current+" / "+required+(current>=required?" — условие выполнено":" — накопите материалы");
+        public const string HullUnlock="Нужен Корпус I на мониторе прокачки";
         public static string NeedMaterials(MaterialCost cost,TeamProgress view)
         {
             var items=new List<string>();
@@ -104,37 +99,9 @@ namespace Raid.UI
             if(cost.electronics>view.electronics)items.Add("электроника "+(cost.electronics-view.electronics));
             return items.Count==0?"":"Не хватает: "+string.Join(", ",items);
         }
-        public static string UpgradeBonus(Upgrade upgrade,int level,UiContext ctx)
-        {
-            var t=ctx.Tuning;int next=level+1;
-            switch(upgrade)
-            {
-                case Upgrade.Reel: return "Подтягивание и утомление добычи: ×"+(1+level*t.reelPowerPerLevel).ToString("F2")+" → ×"+(1+next*t.reelPowerPerLevel).ToString("F2");
-                case Upgrade.Fins: return "Скорость плавания: ×"+(1+level*t.finsSpeedPerLevel).ToString("F2")+" → ×"+(1+next*t.finsSpeedPerLevel).ToString("F2");
-                case Upgrade.Tank:
-                    float oxygen=ctx.Player==null?0:ctx.Player.tuning.oxygenCapacity;
-                    return "Запас кислорода: "+(oxygen*(1+level*t.oxygenPerTankLevel)).ToString("F0")+" → "+(oxygen*(1+next*t.oxygenPerTankLevel)).ToString("F0");
-                case Upgrade.Hull:
-                    float safe=ctx.Player==null?0:ctx.Player.tuning.safeDepth;
-                    return "Открывает глубину 2. Допуск давления: "+(safe+level*ctx.World.tuning.deepDepth).ToString("F0")+" → "+(safe+next*ctx.World.tuning.deepDepth).ToString("F0")+" м";
-                default:
-                    float cycle=t.raisingSeconds+t.unloadingSeconds+t.returningSeconds;
-                    return "Полный цикл: "+(cycle/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" → "+(cycle/(1+next*t.winchSpeedPerLevel)).ToString("F1")+" с";
-            }
-        }
-        public static string CurrentUpgradeBonus(Upgrade upgrade,int level,UiContext ctx)
-        {
-            var t=ctx.Tuning;
-            switch(upgrade)
-            {
-                case Upgrade.Reel: return "Подтягивание и утомление добычи: ×"+(1+level*t.reelPowerPerLevel).ToString("F2");
-                case Upgrade.Fins: return "Скорость плавания: ×"+(1+level*t.finsSpeedPerLevel).ToString("F2");
-                case Upgrade.Tank: return "Запас кислорода: "+((ctx.Player==null?0:ctx.Player.tuning.oxygenCapacity)*(1+level*t.oxygenPerTankLevel)).ToString("F0");
-                case Upgrade.Hull: return "Глубина 2 открыта. Допуск давления: "+((ctx.Player==null?0:ctx.Player.tuning.safeDepth)+level*ctx.World.tuning.deepDepth).ToString("F0")+" м";
-                default: return "Полный цикл: "+((t.raisingSeconds+t.unloadingSeconds+t.returningSeconds)/(1+level*t.winchSpeedPerLevel)).ToString("F1")+" с";
-            }
-        }
-        public static string OverfeedingRule(int carry) => "Перекорм — избыток переносится в следующий цикл, максимум "+carry+" пищи; других бонусов нет.";
+        public static string OverfeedingRule(int rate,int cap) => rate==0
+            ? "Навык «Сохранение избытка» переносит часть перекорма."
+            : "Переносится "+rate+"% избытка, до "+cap+" пищи.";
         public static string FoodProjection(int offering,int required) => offering==0?"Чудовище ждёт первую порцию":offering<required?"Часть рациона получена":offering==required?"Полный рацион получен":"Получено сверх рациона";
         public static string FeedingAmount(int paid,int required) => "Получено пищи: "+paid+" / "+required;
         public static string HungerCountdown(float time) => "До конца срока кормления "+Time(time);

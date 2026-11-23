@@ -13,84 +13,13 @@ MonoBehaviour:
   m_Name: ProgressionTuning
   m_EditorClassIdentifier: Raid.Progression::Raid.ProgressionTuning
   cargoCapacity: 8
-  cargoCapacityPerWinch: 4
+  reservoirCapacity: 24
   raisingSeconds: 8
   unloadingSeconds: 3
   returningSeconds: 6
-  winchSpeedPerLevel: 0.35
-  depthTwoLifetimeCatch: 24
   foodRequired: 12
   foodPerDepth: 6
   maximumFoodCarry: 3
   hungerInterval: 180
   maximumStockLossFraction: 0.35
   maximumStockLossCount: 4
-  reelPowerPerLevel: 0.3
-  finsSpeedPerLevel: 0.2
-  oxygenPerTankLevel: 0.4
-  upgrades:
-  - upgrade: 0
-    initialCost:
-      biomass: 6
-      chitin: 0
-      scrap: 0
-      electronics: 0
-    additionalPerLevel:
-      biomass: 0
-      chitin: 2
-      scrap: 0
-      electronics: 0
-    costMultiplier: 1.7
-    maximumLevel: 3
-  - upgrade: 1
-    initialCost:
-      biomass: 8
-      chitin: 0
-      scrap: 0
-      electronics: 0
-    additionalPerLevel:
-      biomass: 0
-      chitin: 0
-      scrap: 2
-      electronics: 0
-    costMultiplier: 1.7
-    maximumLevel: 3
-  - upgrade: 2
-    initialCost:
-      biomass: 10
-      chitin: 0
-      scrap: 0
-      electronics: 0
-    additionalPerLevel:
-      biomass: 0
-      chitin: 1
-      scrap: 0
-      electronics: 0
-    costMultiplier: 1.7
-    maximumLevel: 3
-  - upgrade: 3
-    initialCost:
-      biomass: 18
-      chitin: 0
-      scrap: 0
-      electronics: 0
-    additionalPerLevel:
-      biomass: 0
-      chitin: 0
-      scrap: 0
-      electronics: 0
-    costMultiplier: 1.7
-    maximumLevel: 1
-  - upgrade: 4
-    initialCost:
-      biomass: 12
-      chitin: 0
-      scrap: 2
-      electronics: 0
-    additionalPerLevel:
-      biomass: 0
-      chitin: 0
-      scrap: 0
-      electronics: 1
-    costMultiplier: 1.7
-    maximumLevel: 3

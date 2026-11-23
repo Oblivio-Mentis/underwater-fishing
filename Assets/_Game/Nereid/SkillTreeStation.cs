@@ -51,7 +51,7 @@ namespace Raid.Nereid
             idle.textWrappingMode=TextWrappingModes.NoWrap;
             idle.fontSize=1.23f;
             idle.color=UI.UiTheme.Cyan;
-            idle.text="NEREID\n\nСНАРЯЖЕНИЕ ЭКИПАЖА";
+            idle.text="NEREID\n\nМОДУЛИ ЭКИПАЖА";
         }
 
         void LateUpdate()

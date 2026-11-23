@@ -21,6 +21,8 @@ namespace Raid
         PredatorProfile P => anglerProfile;
         float AnglerScale => depthTier > 1 ? P.deepSpeedMultiplier : 1;
         public int BiteSequence => state.Value.BiteSequence;
+        public int BiteVictim => state.Value.BiteVictim;
+        public Vector3 BiteDirection => state.Value.BiteDirection;
         static bool Hunting(HuntStage stage) => stage != HuntStage.Watching && stage != HuntStage.Recovery;
 
         void EnsureProfile()
@@ -275,7 +277,7 @@ namespace Raid
         {
             anglerBit = true;
             anglerBites++;
-            victim.DamageOxygen(tuning.attackDamage * Strength);
+            victim.DamageFromCreature(tuning.attackDamage * Strength);
             victim.ApplyExternalMotion(main.AnglerHeading * P.biteShove);
             var inventory = victim.GetComponent<HarpoonTool>();
             if (inventory != null && !inventory.ResistPocketTheft()) inventory.DropOneCatch();

@@ -216,6 +216,7 @@ namespace Raid.UI
             if(Application.isFocused && !overlayBefore && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
+                else if(Page==UiPage.SkillTree && skills.Back())boardInput.Clear();
                 else if(Page==UiPage.None)ShowPage(UiPage.Pause);
                 else ClosePanel();
             }
@@ -256,8 +257,8 @@ namespace Raid.UI
                     hud.Refresh();if(Page==UiPage.Terminal)terminal.Refresh();else if(Page==UiPage.Cargo)cargo.Refresh();else if(Page==UiPage.SkillTree)skills.Refresh();
                     ApplyCameraSettings();
                     string worldMessage=Context.World.Message;
-                    if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Подача остановлена:")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
-                    else if(!worldMessage.StartsWith("SAVE ERROR")&&!worldMessage.StartsWith("Подача остановлена:"))lastSaveMessage="";
+                    if((worldMessage.StartsWith("SAVE ERROR")||worldMessage.StartsWith("Сохранение несовместимо")||worldMessage.StartsWith("Подача остановлена:")) && worldMessage!=lastSaveMessage){lastSaveMessage=worldMessage;Toast(UiText.WorldMessage(worldMessage),true);}
+                    else if(!worldMessage.StartsWith("SAVE ERROR")&&!worldMessage.StartsWith("Сохранение несовместимо")&&!worldMessage.StartsWith("Подача остановлена:"))lastSaveMessage="";
                 }
                 if(menu.Root.gameObject.activeSelf)menu.Refresh();UpdatePending();
                 toastPanel.gameObject.SetActive(Time.unscaledTime<toastUntil);UiKit.Set(pendingText,CommandPending?UiText.WaitCommand:"");
@@ -414,7 +415,7 @@ namespace Raid.UI
                 return;
             }
             Context.SelectedConsole=station;
-            terminal.SelectTab(station==null||station.kind==ShipConsoleKind.Reservoir?"catch":station.kind==ShipConsoleKind.Depths?"depths":"upgrades");
+            terminal.SelectTab(station?.kind==ShipConsoleKind.Depths?"depths":"catch");
             ShowPage(UiPage.Terminal);
         }
         void ToggleFishRoute(bool feeding)
@@ -440,13 +441,11 @@ namespace Raid.UI
         {
             if(!Context.Connected||Context.World==null){Toast(UiText.NotConnected,true);return;}if(CommandPending)return;
             pendingAction=action;pendingId=id;beforeFingerprint=Fingerprint();pendingSince=Time.unscaledTime;replyReceived=false;CommandPending=true;
-            int expectedLevel=action>=WorldAction.Reel&&action<=WorldAction.Winch?Context.View.Level((Upgrade)((int)action-(int)WorldAction.Reel)):-1;
-            pendingRequestId=++requestSequence;Context.World.RequestCommand(action,id,pendingRequestId,expectedLevel);
+            pendingRequestId=++requestSequence;Context.World.RequestCommand(action,id,pendingRequestId);
         }
         string Fingerprint()
         {
             var v=Context.View;if(v==null)return "";
-            if(pendingAction>=WorldAction.Reel && pendingAction<=WorldAction.Winch)return v.Level((Upgrade)((int)pendingAction-(int)WorldAction.Reel)).ToString();
             if(pendingAction==WorldAction.Process||pendingAction==WorldAction.Feed||pendingAction==WorldAction.HoldFish)
                 return v.tank.Find(x=>x.id==pendingId)?.destination.ToString() ?? "gone";
             if(pendingAction==WorldAction.LoadCargo)return v.CargoUsed.ToString();if(pendingAction==WorldAction.Hoist)return v.hoistPhase.ToString();

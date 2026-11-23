@@ -59,7 +59,7 @@ namespace Raid
                 {clampedDiver=null;clamCooldown=5;}
                 else
                 {
-                    clampedDiver.DamageOxygen(1.4f*dt);
+                    clampedDiver.DamageFromCreature(1.4f*dt);
                     // Solo still gets the timed escape built into the diver. In co-op, a teammate can pry it open with F.
                     if(DiverMotor.ServerDivers.Count>1)clampedDiver.Trap();
                 }
@@ -170,7 +170,7 @@ namespace Raid
             if ((reef.Eel - point).sqrMagnitude > 1.5f * 1.5f || !ClearTo(reef.Eel,eelTarget)) return;
             var inventory = eelTarget.GetComponent<HarpoonTool>();
             bool stoleFish = inventory != null && !inventory.ResistPocketTheft() && inventory.DropPocketCatch();
-            eelTarget.DamageOxygen(7);
+            eelTarget.DamageFromCreature(7);
             DistractEel(ref reef,point,7);
             main.Message = stoleFish ? "Сетевик сорвал рыбу и отвлёкся на добычу." : "Сетевик наскочил на водолаза.";
         }
@@ -210,7 +210,7 @@ namespace Raid
             {
                 foreach(var diver in DiverMotor.ServerDivers)
                     if(CanPursue(diver) && Vector3.Distance(diver.transform.position,reef.Sweep)<3.7f && ClearTo(Rift+Vector3.up*2,diver))
-                    {diver.DamageOxygen(26);diver.ApplyExternalMotion((diver.transform.position-Rift).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
+                    {diver.DamageFromCreature(26);diver.ApplyExternalMotion((diver.transform.position-Rift).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
                 reef.KrakenPhase=2;krakenClock=.85f;
             }
             else if(reef.KrakenPhase==2){reef.KrakenPhase=3;krakenClock=6;}

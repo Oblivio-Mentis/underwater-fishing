@@ -317,7 +317,7 @@ namespace Raid
         {
             team.biomass=24;team.chitin=7;team.scrap=13;team.electronics=3;
             team.hungerRemaining=160;
-            team.hullLevel=Mathf.Max(1,team.hullLevel);
+            if(!team.CanVisitDepth(2))team.teamSkills.Add(SkillTreeDefinition.Id(SkillLine.Hull,1));
             team.tank.Clear();
             team.tank.Add(new CatchItem(1101,4,0,2,1,1,species:"Needlefish"));
             team.tank.Add(new CatchItem(1102,6,1,3,2,1,species:"Sailray"));

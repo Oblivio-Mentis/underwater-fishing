@@ -7,7 +7,7 @@ if (-not (Test-Path -LiteralPath $gameExecutable)) { throw "Build is missing: $g
 $runningPrototype=Get-Process -Name UnderwaterFishing -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $gameExecutable }
 if($runningPrototype) { throw 'Close instances of this build before packaging; Unity holds its data files open.' }
 Copy-Item -LiteralPath (Join-Path $projectRoot 'steam_appid.txt') -Destination $buildDirectory
-foreach ($guide in 'Docs/HOW_TO_PLAY.md', 'Docs/RAID-013/COOP-RU.md', 'Docs/THIRD_PARTY.md') {
+foreach ($guide in 'Docs/HOW_TO_PLAY.md', 'Docs/RAID-013/COOP-RU.md', 'Docs/THIRD_PARTY.md', 'Docs/RAID-019/SKILLS.md') {
     Copy-Item -LiteralPath (Join-Path $projectRoot $guide) -Destination $buildDirectory -Force
 }
 $licenses = Join-Path $buildDirectory 'Licenses'
@@ -17,14 +17,14 @@ Get-ChildItem -LiteralPath (Join-Path $projectRoot 'Docs/Licenses') |
 Copy-Item -LiteralPath (Join-Path $projectRoot 'Assets/_Game/UI/Overhaul/Fonts/OFL.txt') -Destination (Join-Path $licenses 'PT-Sans-OFL.txt') -Force
 Copy-Item -LiteralPath (Join-Path $projectRoot 'Assets/TextMesh Pro/Fonts/LiberationSans - OFL.txt') -Destination $licenses -Force
 
-foreach ($name in 'Start-Menu', 'Start-Solo') {
-    $mode = if ($name -eq 'Start-Solo') { ' -raid-host' } else { '' }
+foreach ($name in 'Start-Menu', 'Start-Solo', 'Start-New-Campaign') {
+    $mode = switch ($name) { 'Start-Solo' { ' -raid-host' } 'Start-New-Campaign' { ' -raid-host -raid-new-campaign' } default { '' } }
     $lines = @(
         '@echo off'
         'setlocal DisableDelayedExpansion'
         'cd /d "%~dp0" || exit /b 1'
         'if not exist "UserData\" mkdir "UserData" || exit /b 1'
-        ('start "" "%~dp0UnderwaterFishing.exe" -screen-fullscreen 1' + $mode + ' -raid-save "%~dp0UserData\team-progress.json"')
+        ('start "" "%~dp0UnderwaterFishing.exe" -screen-fullscreen 1' + $mode + ' -raid-save "%~dp0UserData\raid019-team-progress.json"')
     )
     [IO.File]::WriteAllLines((Join-Path $buildDirectory "$name.cmd"), $lines, [Text.Encoding]::ASCII)
 }
