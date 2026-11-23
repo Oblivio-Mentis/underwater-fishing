@@ -25,10 +25,6 @@ namespace Raid.UI
             DiveInstruments.Mark.Spear,DiveInstruments.Mark.Helmet,DiveInstruments.Mark.Needle,DiveInstruments.Mark.Submarine,
             DiveInstruments.Mark.Tile,DiveInstruments.Mark.Shield,DiveInstruments.Mark.Jaw,DiveInstruments.Mark.Bristle
         };
-        static readonly DiveInstruments.Mark[] LaneMarks={
-            DiveInstruments.Mark.Spear,DiveInstruments.Mark.Bristle,DiveInstruments.Mark.Shield,
-            DiveInstruments.Mark.Needle,DiveInstruments.Mark.Glove
-        };
 
         sealed class Sector
         {
@@ -391,8 +387,25 @@ namespace Raid.UI
         Sprite NodeArt(SkillNode node)
         {
             if(node.Capstone)return SectorArt(node.Branch);
-            int lane=(int)node.Line%SkillTreeDefinition.LinesPerBranch;
-            var mark=lane==0?BranchMarks[node.Branch]:LaneMarks[lane];
+            var mark=node.Line switch
+            {
+                SkillLine.Reel or SkillLine.Tip or SkillLine.Fetch=>DiveInstruments.Mark.Spear,
+                SkillLine.Cable or SkillLine.Winch or SkillLine.Separator or SkillLine.Chitin=>DiveInstruments.Mark.Bristle,
+                SkillLine.Damper or SkillLine.Armor or SkillLine.TugStability or SkillLine.CargoDefense or SkillLine.SafeSwim=>
+                    DiveInstruments.Mark.Shield,
+                SkillLine.SyncPull or SkillLine.CargoCarry or SkillLine.Pockets or SkillLine.Delivery=>DiveInstruments.Mark.Glove,
+                SkillLine.Oxygen or SkillLine.EmergencyAir or SkillLine.Medical or SkillLine.Satiety=>DiveInstruments.Mark.Bottle,
+                SkillLine.Seal=>DiveInstruments.Mark.Helmet,
+                SkillLine.Pressure or SkillLine.SwimmingTurn or SkillLine.Scanner=>DiveInstruments.Mark.Compass,
+                SkillLine.Fins or SkillLine.SwimStart or SkillLine.GoshaSpeed=>DiveInstruments.Mark.Needle,
+                SkillLine.Hull=>DiveInstruments.Mark.Submarine,
+                SkillLine.Searchlights or SkillLine.Electronics or SkillLine.Recall=>DiveInstruments.Mark.Lantern,
+                SkillLine.Airlock or SkillLine.Cage or SkillLine.Reservoir or SkillLine.Scrap or SkillLine.Carryover=>
+                    DiveInstruments.Mark.Tile,
+                SkillLine.Nutrition=>DiveInstruments.Mark.Jaw,
+                SkillLine.SmallRation or SkillLine.LargeRation or SkillLine.Biomass=>DiveInstruments.Mark.Ray,
+                _=>BranchMarks[node.Branch]
+            };
             return DiveInstruments.Art(mark);
         }
 
@@ -601,7 +614,7 @@ namespace Raid.UI
             SkillNodeState state=Status(node,owned,money);
             card.Face.State=state;
             card.Face.Selected=selected==node.Id;
-            card.Face.PurchaseFill=filled==node.Id?fill:1;
+            card.Face.PurchaseFill=pending==node.Id?0:filled==node.Id?fill:1;
             card.Symbol.color=state==SkillNodeState.MissingRank?Muted:Accent(node);
             card.Rank.color=state==SkillNodeState.MissingRank?Muted:Ink;
             card.Face.SetVerticesDirty();
