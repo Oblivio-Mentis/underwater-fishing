@@ -162,6 +162,15 @@ namespace Raid
             fade.color = gradient;
         }
 
+        static void SetBubbleRise(ParticleSystem particles,float min,float max)
+        {
+            var velocity=particles.velocityOverLifetime;
+            velocity.space=ParticleSystemSimulationSpace.World;
+            velocity.x=velocity.z=new ParticleSystem.MinMaxCurve(0f,0f);
+            velocity.y=new ParticleSystem.MinMaxCurve(min,max);
+            velocity.enabled=true;
+        }
+
         bool CreateFx()
         {
             var bubbleSource = Resources.Load<Material>("NereidBubbles");
@@ -185,7 +194,7 @@ namespace Raid
             main.startSpeed = new ParticleSystem.MinMaxCurve(.1f, .45f);
             main.maxParticles = 900;
             var shape = sheath.shape; shape.shapeType = ParticleSystemShapeType.Box; shape.scale = new Vector3(.22f * body, .16f * body, .9f * body);
-            var vel = sheath.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World; vel.y = new ParticleSystem.MinMaxCurve(.35f, .7f);
+            SetBubbleRise(sheath,.35f,.7f);
             var inherit = sheath.inheritVelocity; inherit.enabled = true; inherit.mode = ParticleSystemInheritVelocityMode.Initial; inherit.curve = .35f;
             Fade(sheath, .12f, .6f);
             var noise = sheath.noise; noise.enabled = true; noise.strength = .25f; noise.frequency = 1.6f; noise.scrollSpeed = .8f;
@@ -200,7 +209,7 @@ namespace Raid
             main.startSpeed = new ParticleSystem.MinMaxCurve(1.4f, 3.8f);
             main.maxParticles = 560;
             shape = tailSpray.shape; shape.shapeType = ParticleSystemShapeType.Cone; shape.angle = 38; shape.radius = .06f * body; shape.rotation = new Vector3(0, 180, 0);
-            vel = tailSpray.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World; vel.y = new ParticleSystem.MinMaxCurve(.3f, .6f);
+            SetBubbleRise(tailSpray,.3f,.6f);
             var limit = tailSpray.limitVelocityOverLifetime; limit.enabled = true; limit.dampen = .35f; limit.limit = 1.2f;
             Fade(tailSpray, .08f, .5f);
             tailSpray.Play();
@@ -214,7 +223,7 @@ namespace Raid
             main.startSpeed = new ParticleSystem.MinMaxCurve(.2f, .7f);
             main.maxParticles = 80;
             shape = flankSweep.shape; shape.shapeType = ParticleSystemShapeType.Sphere; shape.radius = .12f * body;
-            vel = flankSweep.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World; vel.y = new ParticleSystem.MinMaxCurve(.25f, .5f);
+            SetBubbleRise(flankSweep,.25f,.5f);
             Fade(flankSweep, .1f, .6f);
             flankSweep.Play();
 
@@ -229,7 +238,7 @@ namespace Raid
             main.maxParticles = 200;
             shape = churn.shape; shape.shapeType = ParticleSystemShapeType.Box; shape.scale = new Vector3(.4f * body, .3f * body, 1.1f * body);
             var grow = churn.sizeOverLifetime; grow.enabled = true; grow.size = new ParticleSystem.MinMaxCurve(1, new AnimationCurve(new Keyframe(0, .45f), new Keyframe(.25f, 1f), new Keyframe(1, 1.35f)));
-            vel = churn.velocityOverLifetime; vel.enabled = true; vel.space = ParticleSystemSimulationSpace.World; vel.y = new ParticleSystem.MinMaxCurve(.15f, .4f);
+            SetBubbleRise(churn,.15f,.4f);
             Fade(churn, .08f, .35f);
             churn.Play();
 
