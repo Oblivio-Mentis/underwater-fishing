@@ -184,11 +184,13 @@ for side in(-1,1):
                        (side*16,-3.5,8),(side*12.7,-6,3.5),(side*10.9,-5.2,2.5),(side*11.7,-3.5,5)],1.55))
     ARM_PATHS.append(([(side*4.8,.55,21),(side*8,-2.8,18),(side*11,-7.2,13),
                        (side*9,-10,7.3),(side*5.5,-10.2,4.8),(side*3.8,-9.1,6),(side*5.1,-8.6,8)],1.22))
-    # One forward-feeling arm has a tighter asymmetric curl by the attached head.
-    ARM_PATHS.append(([(side*5.45,1,19.5),(side*8,0,18),(side*11,3,15.3),
-                       (side*10,5.8,12.8),(side*8,5.4,12.1),(side*7.4,3.9,13.3),(side*8.6,3.4,14.5)],1.07))
+    # The short pair reaches around the containment bulkhead and curls along the wet outer fairing.
+    ARM_PATHS.append(([(side*5.45,1,19.5),(side*8.9,1.35,20.6),(side*12.35,2.85,19.5),
+                       (side*15.3,4.9,17.3),(side*16.05,5.45,15.1),(side*15.65,4.29,14.11),(side*15.30,3.55,15.15)],1.07))
 
+short_arm_vertices={}
 for k,(points,radius)in enumerate(ARM_PATHS):
+    start={mat:len(parts[0]) for mat,parts in PARTS.items()}
     path=catmull(points,7)
     sweep(path,(radius,1.15,.055),'Nereid_CreatureSkin',18,.86,k,True)
     # Raised lateral nerve folds wind smoothly with the arm, visibly modelled rather than a texture stripe.
@@ -198,6 +200,10 @@ for k,(points,radius)in enumerate(ARM_PATHS):
             frac=i/(len(path)-1);r=radius*(1-frac)**1.15+.055
             sidepath.append(p+Vector((offset*r,.23*r,0)))
         sweep(sidepath,(.075,.6,.012),'Nereid_CreatureDark',7,.55,k)
+
+    if k in (3,7):
+        for mat,(positions,_) in PARTS.items():
+            short_arm_vertices.setdefault(mat,set()).update(range(start.get(mat,0),len(positions)))
 
 # Raised orbital brows and truly convex amber lenses; two side eyes remain identifiable from outside.
 def lens(centre,normal,rx,ry,mat,bulge=.2):
@@ -234,6 +240,12 @@ for mat,(verts,faces)in PARTS.items():
     obj=bpy.data.objects.new(mat,mesh);bpy.context.collection.objects.link(obj);mesh.materials.append(MATS[mat]);objects.append(obj)
     for poly in mesh.polygons:poly.use_smooth=True
     uv=mesh.uv_layers.new(name='CreatureSurface')
+    # UV2 tags the free-feeling pair for Unity's Reach and Curl shapes. Adjacent mantle folds
+    # and all six older arms keep their original articulation even where trajectories cross.
+    rig=mesh.uv_layers.new(name='Feelers')
+    short_pair=short_arm_vertices.get(mat,set())
+    for loop in mesh.loops:
+        rig.data[loop.index].uv=(1.0 if loop.vertex_index in short_pair else 0.0,0.0)
     for poly in mesh.polygons:
         axis=max(range(3),key=lambda i:abs(poly.normal[i]));dims=[i for i in range(3)if i!=axis]
         for li in poly.loop_indices:

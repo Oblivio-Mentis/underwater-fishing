@@ -162,6 +162,7 @@ namespace Raid.Nereid.Editor
             s.Slab(dark,new(0,4.68f,6.36f),new(11.90f,.20f,3.73f));
             s.Box(alarm,new(0,3.60f,7.95f),new(1.13f,.11f,.14f));
             CrossFrame("Containment arch",4.56f,5.83f,4.51f,alarm);
+            BuildContainmentPressureJacket(room);
         }
 
         static void CompanionBerth()

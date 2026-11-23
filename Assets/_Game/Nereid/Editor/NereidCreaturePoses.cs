@@ -15,7 +15,11 @@ namespace Raid.Nereid.Editor
             new[]{new Vector3(5.45f,1,19.5f),new(8,0,18),new(11,3,15.3f),new(10,5.8f,12.8f),new(8,5.4f,12.1f),new(7.4f,3.9f,13.3f),new(8.6f,3.4f,14.5f)}
         };
 
-        public override uint GetVersion() => 1;
+        // The original field above also drives neighboring mantle folds. Only the UV2-marked
+        // vertices of the repositioned short pair follow its new exterior articulation path.
+        static readonly Vector3[] outerFeelers = new[]{new Vector3(5.45f,1,19.5f),new(8.9f,1.35f,20.6f),new(12.35f,2.85f,19.5f),new(15.3f,4.9f,17.3f),new(16.05f,5.45f,15.1f),new(15.65f,4.29f,14.11f),new(15.30f,3.55f,15.15f)};
+
+        public override uint GetVersion() => 2;
 
         void OnPostprocessModel(GameObject imported)
         {
@@ -24,6 +28,7 @@ namespace Raid.Nereid.Editor
             {
                 var mesh = filter.sharedMesh;
                 var vertices = mesh.vertices;
+                var feelers = mesh.uv2;
                 var breath = new Vector3[vertices.Length];
                 var sine = new Vector3[vertices.Length];
                 var cosine = new Vector3[vertices.Length];
@@ -37,7 +42,7 @@ namespace Raid.Nereid.Editor
                         Mathf.SmoothStep(0,1,Mathf.InverseLerp(40,33,p.z));
                     breath[i] = inverse.MultiplyVector(new Vector3(p.x*.051f,(p.y-3.4f)*.055f,.14f)*chest);
                     if(p.z>22) continue;
-                    ArmPose(p,out Vector3 a,out Vector3 b);
+                    ArmPose(p,feelers.Length == vertices.Length && feelers[i].x > .5f,out Vector3 a,out Vector3 b);
                     sine[i]=inverse.MultiplyVector(a);
                     cosine[i]=inverse.MultiplyVector(b);
                 }
@@ -47,15 +52,15 @@ namespace Raid.Nereid.Editor
             }
         }
 
-        static void ArmPose(Vector3 point,out Vector3 sine,out Vector3 cosine)
+        static void ArmPose(Vector3 point,bool outerFeeler,out Vector3 sine,out Vector3 cosine)
         {
             float side = Mathf.Sign(point.x);
             point.x = Mathf.Abs(point.x);
             float closest = float.PositiveInfinity, t = 0;
             int arm = 0;
-            for (int k=0;k<Arms.Length;k++)
+            for (int k=outerFeeler ? 3 : 0;k<Arms.Length;k++)
             {
-                var path=Arms[k];
+                var path=outerFeeler ? outerFeelers : Arms[k];
                 for(int i=1;i<path.Length;i++)
                 {
                     var start=path[i-1];
