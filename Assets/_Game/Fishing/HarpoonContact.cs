@@ -41,7 +41,8 @@ namespace Raid
 
         internal void ResolveOn(Transform surface,out Vector3 point,out Vector3 normal,out Vector3 direction)
         {
-            point=surface.TransformPoint(localPoint);
+            // The bent body is a pure function of the network tick, so every peer lands on the same skin.
+            point=surface.TransformPoint(surface.TryGetComponent<CatchFishModel>(out var spine)?spine.Displace(localPoint):localPoint);
             normal=surface.worldToLocalMatrix.transpose.MultiplyVector(localNormal).normalized;
             direction=surface.TransformVector(localDirection).normalized;
         }

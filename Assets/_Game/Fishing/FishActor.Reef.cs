@@ -17,7 +17,7 @@ namespace Raid
         FishSpeciesProfile legacyProfile;
         System.Random rng;
         int station, nextHabitat;
-        float bank;
+        float bank, dartUntil, dartRollAt;
         bool leaving;
         // Steering state.
         Vector3 velocity, target, homePoint;
@@ -335,7 +335,7 @@ namespace Raid
                     : Quaternion.AngleAxis((38 + 42 * (i / 2)) * (i % 2 == 0 ? side : -side), Vector3.up) * desired;
                 if(!SwimClear(pos,pos+candidate*distance))continue;
                 avoidDirection=candidate;
-                avoidUntil=Time.time+.65f;
+                avoidUntil=Time.time+1.1f;
                 return candidate;
             }
             if (SwimClear(pos,pos+Vector3.up*distance)) return Vector3.up;
@@ -423,6 +423,13 @@ namespace Raid
                 default:
                     direction = toTarget;
                     desiredSpeed = (leaving ? spec.cruiseSpeed * 1.5f : spec.cruiseSpeed) * (1 + .09f * Mathf.Sin(_clock * 2.3f));
+                    // A living fish does not hold one speed: short darts punctuate the cruise.
+                    if (Time.time >= dartRollAt)
+                    {
+                        dartRollAt = Time.time + 1f;
+                        if (Rand(0, 1) < spec.dartChance) dartUntil = Time.time + spec.dartSeconds;
+                    }
+                    if (Time.time < dartUntil) desiredSpeed *= spec.dartSpeedMultiplier;
                     break;
             }
             if (direction.sqrMagnitude < .0001f) direction = transform.forward;
@@ -445,7 +452,7 @@ namespace Raid
             // Inertia: the heading turns no faster than the species allows at its current speed,
             // and speed changes by acceleration (braking harder, bolting much harder).
             Vector3 heading = speedNow > .02f ? velocity / speedNow : transform.forward;
-            float turnLimit = Mathf.Max(spec.turnRate * .45f, Mathf.Min(spec.turnRate, Mathf.Rad2Deg * speedNow / spec.turnRadius));
+            float turnLimit = Mathf.Max(spec.turnRate * .3f, Mathf.Min(spec.turnRate, Mathf.Rad2Deg * speedNow / spec.turnRadius));
             if (fleeing) turnLimit *= 1.8f;
             heading = Vector3.RotateTowards(heading, direction, turnLimit * Mathf.Deg2Rad * dt, 0);
             float accel = spec.acceleration * (desiredSpeed < speedNow ? 1.6f : 1f) * (fleeing ? 4f : 1f);
@@ -465,7 +472,7 @@ namespace Raid
                 stuckTime += dt * 2;
             }
             if (stuckTime > spec.stuckSeconds) Unstick(position);
-            FaceSwim(heading, dt, 20f, direction);
+            FaceSwim(heading, dt, 6f, direction);
             state.Behaviour = swim;
         }
 

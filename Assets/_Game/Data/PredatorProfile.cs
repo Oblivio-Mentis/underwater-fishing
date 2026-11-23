@@ -36,28 +36,28 @@ namespace Raid
 
         [Header("Investigate and circle")]
         [Min(.1f)] public float investigateSpeed = 2.4f;
-        [Min(1f)] public float circleRadiusMin = 5f;
-        [Min(1f)] public float circleRadiusMax = 12f;
+        [Min(1f)] public float circleRadiusMin = 4f;
+        [Min(1f)] public float circleRadiusMax = 8f;
         [Min(0f)] public float circleHeightVariation = 1.6f;
         [Min(.1f)] public float circleSpeed = 2.9f;
         [Min(.1f)] public float circleRadialSpeed = 1.8f;
         [Range(0f, 1f)] public float arcReverseChance = .35f;
         [Min(.2f)] public float arcSecondsMin = 1.4f;
         [Min(.2f)] public float arcSecondsMax = 3.2f;
-        [Min(0f)] public float stalkSecondsMin = 2.6f;
-        [Min(0f)] public float stalkSecondsMax = 6f;
+        [Min(0f)] public float stalkSecondsMin = 1.8f;
+        [Min(0f)] public float stalkSecondsMax = 4f;
         [Min(0f)] public float closeStrikeDistance = 3.2f;
 
         [Header("Telegraph and charge")]
-        [Min(.1f)] public float telegraphMin = .5f;
-        [Min(.1f)] public float telegraphMax = 1f;
+        [Min(.1f)] public float telegraphMin = .9f;
+        [Min(.1f)] public float telegraphMax = 1.3f;
         [Min(0f)] public float aimLockSeconds = .2f;
         [Min(.1f)] public float telegraphTurnRate = 7f;
-        [Min(0f)] public float telegraphDrift = .35f;
-        [Min(.1f)] public float chargeSpeed = 6.3f;
+        [Min(0f)] public float telegraphDrift = .7f;
+        [Min(.1f)] public float chargeSpeed = 7.5f;
         [Min(.1f)] public float chargeMaxSeconds = 2.2f;
         [Min(.05f)] public float biteRadius = .55f;
-        [Min(0f)] public float biteShove = 1.1f;
+        [Min(0f)] public float biteShove = 2.4f;
         [Min(.1f)] public float overshootDistance = 3.6f;
         [Min(1f)] public float overshootTurnRate = 95f;
         [Min(1)] public int passesPerHunt = 2;

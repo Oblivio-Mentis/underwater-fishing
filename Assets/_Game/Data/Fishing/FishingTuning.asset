@@ -28,10 +28,10 @@ MonoBehaviour:
   burstTensionMultiplier: 4
   tensionRelease: 0.5
   reelSpeed: 2.5
-  escapeSpeed: 0.8
+  escapeSpeed: 1.5
   tugSpeed: 3.5
   tugAcceleration: 12
-  maxTugSpeed: 4.5
+  maxTugSpeed: 5.5
   warningSeconds: 0.55
   minimumWindingSeconds: 0.4
   slackAllowance: 0.18

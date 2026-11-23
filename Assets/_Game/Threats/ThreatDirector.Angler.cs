@@ -210,7 +210,8 @@ namespace Raid
                 if (at.sqrMagnitude > .001f)
                     main.AnglerHeading = Vector3.RotateTowards(main.AnglerHeading, at.normalized, dt * P.telegraphTurnRate, 0);
             }
-            Vector3 drift = main.PredatorPosition + main.AnglerHeading * (P.telegraphDrift * dt);
+            // The body stops and rears back from the target: a readable wind-up before the lunge.
+            Vector3 drift = main.PredatorPosition - main.AnglerHeading * (P.telegraphDrift * dt);
             if (PredatorClear(main.PredatorPosition, drift, P.bodyRadius)) main.PredatorPosition = drift;
             if (anglerClock > 0) return;
             main.AnglerStage = HuntStage.Pursuit;

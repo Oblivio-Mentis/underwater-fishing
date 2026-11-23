@@ -72,8 +72,8 @@ namespace Raid
                 tugSequence = fish.TugSequence;
                 if (controlling && fish.Surging)
                 {
-                    ui.PushFishingPunch(2.2f * Setting(s => s.fishingCamera));
-                    if (camera != null) camera.Hit(.004f + .006f * Mathf.Clamp01(fish.TugStrength), .9f, RandomSign());
+                    ui.PushFishingPunch(3.5f * Setting(s => s.fishingCamera));
+                    if (camera != null) camera.Hit(.018f + .02f * Mathf.Clamp(fish.power, .5f, 3f) * .5f, 2.4f, RandomSign());
                 }
             }
             if (threats != null && threats.BiteSequence != biteSequence)
@@ -83,8 +83,8 @@ namespace Raid
                 if (mine && controlling)
                 {
                     float hit = Setting(s => s.hitImpulse);
-                    ui.PushFishingPunch(3.5f * hit);
-                    if (camera != null) camera.Hit(.012f * hit, 1.6f * hit, Mathf.Sign(Vector3.Dot(owner.transform.right, threats.BiteDirection)));
+                    ui.PushFishingPunch(7f * hit);
+                    if (camera != null) camera.Hit(.05f * hit, 5.5f * hit, Mathf.Sign(Vector3.Dot(owner.transform.right, threats.BiteDirection)));
                 }
             }
         }

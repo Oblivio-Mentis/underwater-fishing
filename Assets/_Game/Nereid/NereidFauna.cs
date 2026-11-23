@@ -12,6 +12,9 @@ namespace Raid.Nereid
         Transform clamShell,eel,kraken,warning,lure,shadow;
         Transform anglerJaw,anglerTail,anglerFinLeft,anglerFinRight,krakenMantle,eelPhotophores;
         Material huntingLights;
+        Light lureLight;
+        Transform anglerBody;
+        float anglerCoil, anglerBank, anglerYaw; bool hasAnglerYaw;
         FlexibleBody eelBody,strikingArm;
         Transform[] lureFish;
         float lureDisplay;
@@ -178,6 +181,7 @@ namespace Raid.Nereid
             Transform body = Node(proxy,"Reef angler",Vector3.zero);
             Vector3 scale = proxy.localScale;
             body.localScale = new Vector3(1 / scale.x,1 / scale.y,1 / scale.z);
+            anglerBody = body;
             var hide = new Color(.23f,.19f,.24f);
             var silhouette = new ReefGeometry();
             silhouette.Tube(new[]{new Vector3(0,0,-1.45f),new(0,.02f,-.73f),new(0,.08f,-.18f),new(0,.06f,.43f),new(0,-.10f,.83f)},
@@ -251,6 +255,10 @@ namespace Raid.Nereid
                 new[]{.05f,.042f,.025f,.017f},Armour,7,.82f);
             Part(angler,"Lure filament",whisker,skin);
             lure=Node(angler,"Shoal-shaped angler lure",new(.06f,.6f,.9f));
+            // The lure is the predator's warning lamp in dark water: it flares during the telegraph.
+            lureLight=lure.gameObject.AddComponent<Light>();
+            lureLight.type=LightType.Point;lureLight.color=new Color(.42f,.95f,.78f);lureLight.range=5.5f;lureLight.intensity=0;
+            lureLight.shadows=LightShadows.None;
             lureFish=new Transform[5];
             for(int i=0;i<lureFish.Length;i++)
             {
@@ -329,8 +337,16 @@ namespace Raid.Nereid
                 lureDisplay=Mathf.MoveTowards(lureDisplay,angler==ThreatDirector.HuntStage.Display?1f:0f,Time.deltaTime*3.5f);
                 bool striking = angler == ThreatDirector.HuntStage.Pursuit;
                 bool fast = striking || angler == ThreatDirector.HuntStage.Overshoot;
-                float jaw = striking ? 36 : 4 + lureDisplay * 22;
+                float jaw = striking ? 44 : 4 + lureDisplay * 40;
                 anglerJaw.localRotation = Quaternion.Slerp(anglerJaw.localRotation,Quaternion.Euler(jaw,0,0),blend);
+                // Wind-up: the body pitches up and coils during the telegraph, then whips flat on the charge.
+                anglerCoil = Mathf.MoveTowards(anglerCoil, angler == ThreatDirector.HuntStage.Display ? 1 : 0, Time.deltaTime * (striking ? 9 : 2.2f));
+                float yawNow = anglerBody.parent.eulerAngles.y;
+                float yawRate = hasAnglerYaw ? Mathf.DeltaAngle(anglerYaw, yawNow) / Mathf.Max(Time.deltaTime, .001f) : 0;
+                hasAnglerYaw = true; anglerYaw = yawNow;
+                anglerBank = Mathf.Lerp(anglerBank, Mathf.Clamp(-yawRate * .22f, -32, 32), 1 - Mathf.Exp(-Time.deltaTime * 6));
+                anglerBody.localRotation = Quaternion.Euler(-14 * anglerCoil + (striking ? 6 : 0), 0, anglerBank);
+                if (lureLight != null) lureLight.intensity = lureDisplay * (3.2f + 1.4f * Mathf.Sin(t * 16)) + (striking ? 1.2f : 0);
                 float stroke = Mathf.Sin(t * (fast ? 11 : angler == ThreatDirector.HuntStage.Circle ? 6 : 4));
                 anglerTail.localRotation = Quaternion.Euler(0,stroke * (fast ? 36 : 20),0);
                 anglerFinLeft.localRotation = Quaternion.Euler(0,0,stroke * 17);

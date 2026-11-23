@@ -27,6 +27,14 @@ namespace Raid
         FishFightInput fightInput;
         Vector3 fightHeading;
         int fightSeed;
+        float deflectReadyAt;
+
+        void DeflectOnce()
+        {
+            if (Time.time < deflectReadyAt) return;
+            deflectReadyAt = Time.time + .6f;
+            fight.Deflect();
+        }
 
         public FishFightBrain FightBrain => fight;
 
@@ -331,14 +339,15 @@ namespace Raid
                 if (Nereid.NereidVessel.Active != null && !tired && !bolting)
                     desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
                 Vector3 dir = ClearHeading(transform.position, desired, 1);
-                if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) fight.Deflect();
+                if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) DeflectOnce();
+                if (state.Behaviour == FishBehaviour.Lateral) escape *= 1.6f;
                 // A surge starts in the escape direction. Normal swimming retains the species' turn inertia.
                 fightHeading = bolting || fightHeading.sqrMagnitude < .01f ? dir :
                     Vector3.RotateTowards(fightHeading, dir, profile.turnRate * dt, 0);
                 Vector3 move = fightHeading * (escape * dt);
                 if ((!bolting || Vector3.Dot(fightHeading, away) > 0f) &&
                     !SolidAhead(transform.position, transform.position + move)) transform.position += move;
-                else fight.Deflect();
+                else DeflectOnce();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
                 // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
                 if (!tired && !state.Surging) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
@@ -352,9 +361,17 @@ namespace Raid
             if (Mathf.Abs(lateral) < .01f) return;
             Vector3 step = side * (lateral * dt);
             Vector3 next = transform.position + step;
-            // The line is a leash: never swing further from the hand than the spool allows.
-            if ((leader.Tool.FishingAnchor - next).magnitude > leader.Spool.PaidOut + tuning.slackAllowance) { fight.Deflect(); return; }
-            if (SolidAhead(transform.position, next)) { fight.Deflect(); return; }
+            // Slide across the taut line while the reel closes any existing overrun at its own speed.
+            Vector3 anchor = leader.Tool.FishingAnchor;
+            float reach = Mathf.Max(leader.Spool.PaidOut + tuning.slackAllowance,
+                Vector3.Distance(transform.position, anchor));
+            Vector3 offset = next - anchor;
+            if (offset.sqrMagnitude > reach * reach)
+            {
+                next = anchor + offset.normalized * reach;
+                if ((next - transform.position).sqrMagnitude < step.sqrMagnitude * .04f) { DeflectOnce(); return; }
+            }
+            if (SolidAhead(transform.position, next)) { DeflectOnce(); return; }
             transform.position = next;
         }
 

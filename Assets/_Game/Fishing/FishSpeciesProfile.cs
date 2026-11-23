@@ -55,6 +55,11 @@ namespace Raid
         [Min(0)] public float recoverSeconds = 2.2f;
 
         [Header("Pauses at waypoints")]
+        [Header("Darts while cruising")]
+        [Tooltip("Chance per second of a short burst of speed while cruising.")]
+        [Range(0, 1)] public float dartChance = .22f;
+        [Min(.1f)] public float dartSeconds = .55f;
+        [Min(1)] public float dartSpeedMultiplier = 2.1f;
         [Range(0, 1)] public float hoverProbability = .3f;
         [Min(0)] public float hoverDurationMin = 1.2f, hoverDurationMax = 3f;
         [Range(0, 1)] public float forageProbability = .25f;
