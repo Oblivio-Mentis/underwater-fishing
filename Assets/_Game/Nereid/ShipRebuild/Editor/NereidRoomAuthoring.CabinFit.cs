@@ -127,6 +127,7 @@ namespace Raid.Nereid.Editor
             m.SetTexture("_MetallicGlossMap",maps[1]);m.EnableKeyword("_METALLICSPECGLOSSMAP");m.SetFloat("_Smoothness",.87f);
             m.SetTexture("_BumpMap",maps[3]);m.EnableKeyword("_NORMALMAP");m.SetFloat("_BumpScale",.32f);
             m.SetTexture("_EmissionMap",maps[2]);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",Color.white*.86f);
+            m.globalIlluminationFlags=MaterialGlobalIlluminationFlags.BakedEmissive;
             AssetDatabase.CreateAsset(m,materialPath);return m;
         }
 
