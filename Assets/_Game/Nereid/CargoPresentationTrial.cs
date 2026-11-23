@@ -106,6 +106,14 @@ namespace Raid
                 ShootFrame("03-full-cage.png");
                 Check(!world.Team.LoadCargo(new CatchItem(15000005,2,0,1,1,1,species:"Needlefish"),world.progression),
                     "Cargo-size limit rejects an additional fish.");
+                const long overflowId=15000055;
+                tool.StagePocketForTrial(species,overflowId);
+                host.Teleport(center+new Vector3(2.14f,-.18f,-.40f));
+                await Awaitable.WaitForSecondsAsync(.26f);
+                host.LookAtConsole(center);
+                await Until(()=>CargoDispatch.CanLoad(world,host) && world.View.CargoUsed==world.View.Capacity(world.progression),"Full cage under the reticle");
+                Check(!tool.RequestLoadFish() && tool.HeldCargoId==overflowId &&
+                    !world.LoadSelectedCargo(tool,DroppedKind.Catch,overflowId),"Full cage rejects the selected fish on owner and server; pocket keeps its ID.");
                 var original=stock.ToDictionary(fish=>fish.id,fish=>cage.ModelFor(fish.id));
                 foreach(var entry in original)
                     Check(entry.Value!=null && entry.Value.GetComponent<CatchFishModel>().CargoId==entry.Key,
@@ -117,6 +125,9 @@ namespace Raid
                 ShootFrame("04-physical-button.png");
                 Check(UiRoot.Instance.QaClickReticle(),"The owned world pointer dispatches the button click.");
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Raising,"Physical console starts hoist");
+                Check(!world.LoadSelectedCargo(tool,DroppedKind.Catch,overflowId) && tool.HeldCargoId==overflowId,
+                    "Closing cage rejects an outstanding loading request.");
+
                 if(motion)
                     await Track(host,()=>world.container.position+Vector3.up*.40f,"closing",17,.15f);
                 else await Awaitable.WaitForSecondsAsync(.72f);
@@ -201,9 +212,11 @@ namespace Raid
 
         static async Awaitable SecondaryPress()
         {
-            var mouse=Mouse.current??InputSystem.AddDevice<Mouse>();
-            InputSystem.QueueStateEvent(mouse,new MouseState().WithButton(MouseButton.Right));await Awaitable.WaitForSecondsAsync(.14f);
-            InputSystem.QueueStateEvent(mouse,new MouseState());
+            var driver=FindAnyObjectByType<UiQaProbe>();
+            if(!driver)driver=new GameObject("Physical cargo input trial").AddComponent<UiQaProbe>();
+            driver.BeginAimTest(2);
+            try{driver.QueueAimButton(true,.18f);await Awaitable.WaitForSecondsAsync(.24f);}
+            finally{driver.EndAimTest();}
         }
 
         static async Awaitable KeyPress(Key key)

@@ -48,19 +48,40 @@ namespace Raid
 
         public static bool CanLoad(RaidWorld world,DiverMotor player)
         {
-            if(world==null || player==null || player.IsInside || player.IsHelpless || world.container==null) return false;
+            return TryLoadAim(world,player,out _);
+        }
+
+        internal static bool TryLoadAim(RaidWorld world,DiverMotor player,out Vector3 direction)
+        {
+            direction=Vector3.forward;
+            if(!player)return false;
+            var eye=player.transform.position+Vector3.up*.6f;
+            direction=player.AimDirection;
+            if(player.IsOwner && player.GetComponentInChildren<Camera>() is Camera camera)
+            {eye=camera.transform.position;direction=camera.transform.forward;}
+            return Opening(world,player,eye,direction);
+        }
+
+        internal static bool ServerSeesOpening(RaidWorld world,DiverMotor player,Vector3 direction)
+        {
+            // An owned click carries its look input in the same packet as its cargo ID.
+            // Range, origin, grating and cage position come from the host's scene.
+            float length=direction.sqrMagnitude;
+            if(!player || !(length>.995f && length<1.005f) || Mathf.Abs(direction.y)>.9964f)return false;
+            return Opening(world,player,player.transform.position+Vector3.up*.6f,direction.normalized);
+        }
+
+        static bool Opening(RaidWorld world,DiverMotor player,Vector3 eye,Vector3 direction)
+        {
+            if(!world || player.IsInside || player.IsHelpless || !world.container)return false;
             var basket=world.container.GetComponentInChildren<Nereid.CargoBasket>();
-            if(basket==null) return false;
-            Vector3 eye=player.transform.position+Vector3.up*.6f;
-            Vector3 direction=player.AimDirection;
-            if(!world.IsServerInitialized && player.GetComponentInChildren<Camera>() is Camera camera)
-            {
-                eye=camera.transform.position;direction=camera.transform.forward;
-            }
+            if(!basket)return false;
             Vector3 release=eye+direction*.68f-Vector3.up*.18f;
             if(ThisBasketContains(basket.transform,eye))return ThisBasketContains(basket.transform,release);
-            var localRay=new Ray(basket.transform.InverseTransformPoint(eye),basket.transform.InverseTransformDirection(direction));
-            if(!Interior.IntersectRay(localRay,out float toCage) || toCage>ReleaseReach) return false;
+            var localRay=new Ray(basket.transform.InverseTransformPoint(eye),basket.transform.InverseTransformVector(direction));
+            if(!Interior.IntersectRay(localRay,out float hit))return false;
+            float toCage=Vector3.Distance(eye,basket.transform.TransformPoint(localRay.GetPoint(hit)));
+            if(toCage>ReleaseReach)return false;
             // An open face is necessary when releasing from outside. Do not load through grating or a shut door.
             return !Physics.Raycast(eye,direction,toCage+.04f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
         }

@@ -61,12 +61,19 @@ namespace Raid.Nereid
                     rail=NereidVessel.Active.authoredRail;
                     if(!rail || !rail.Ready || !rail.cageAnchor)return;
                     meshes=new(rail);Setup(player);initialized=true;
+                    sand=rail.cageAnchor.GetComponentInChildren<CargoLandingSilt>();
+                    if(!sand)throw new Exception("Missing authored cage sediment.");
+                    controls=Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-test-cage-input")>=0;
                     if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)throw new Exception("A rendered graphics device is required");
                     File.WriteAllText(Path.Combine(folder,"ready"),SystemInfo.graphicsDeviceType.ToString());
                 }
-                if(host && !started && DiverMotor.ServerDivers.Count>=2 && File.Exists(Path.Combine(directory,"peer","ready")))
+                if(controls && !inputStarted && (!host || (DiverMotor.ServerDivers.Count>=2 && File.Exists(Path.Combine(directory,"peer","ready")))))
                 {
-                    w.PrepareTransitFilm(First,Second);
+                    inputStarted=true;StageInput(w,player);
+                }
+                if(host && !started && (!controls || (inputDone && File.Exists(Path.Combine(directory,"peer","input-pass")))) && DiverMotor.ServerDivers.Count>=2 && File.Exists(Path.Combine(directory,"peer","ready")))
+                {
+                    if(!controls)w.PrepareTransitFilm(First,Second);
                     started=true;startedAt=Time.realtimeSinceStartup;
                 }
                 var a=shoal.ModelFor(First);var b=shoal.ModelFor(Second);
@@ -115,6 +122,19 @@ namespace Raid.Nereid
                     }
                     meshes.Sample($"{phase} {Number(progress)} t={Number(elapsed)}");
                 }
+                if(sand.VisiblePuffs>0 && phase==HoistPhase.Raising)throw new Exception("Sediment emitted on lift-off.");
+                if(phase==HoistPhase.Returning)
+                {
+                    var berth=w.CargoLoadingPosition;
+                    float altitude=rail.cageAnchor.position.y-berth.y;
+                    if(altitude<3.1f && altitude>1.6f && Vector3.Distance(rail.cageAnchor.position,berth)<8f)
+                        Shot("11-approaching-bed",open,gap,seabed:true);
+                    if(sand.Impacts>0)
+                    {
+                        if(impactTime<0)impactTime=Time.time;
+                        if(Time.time-impactTime>.36f)Shot("12-sand-skirt",open,gap,seabed:true);
+                    }
+                }
                 if(phase==HoistPhase.Raising){
                     if(open<.01f && progress>.40f)Shot("01-approach",open,gap);
                     if(open>.01f)Shot("02-opening",open,gap);
@@ -128,13 +148,16 @@ namespace Raid.Nereid
                     if(open<SeatedThreshold)Shot("09-closing",open,gap);
                     if(open<.01f)Shot("10-sealed",open,gap);
                 }else if(phase==HoistPhase.Loading){
+                    if(impactTime>=0 && Time.time-impactTime<1.15f)return;
+                    if(impactTime>=0)Shot("13-expanding-wake",open,gap,seabed:true);
                     if(shoal.TankCount!=2 || a!=fishA || b!=fishB)throw new Exception("Reservoir does not contain both original visible fish.");
                     timeline.Add($"Mesh samples {samples}; cargo renderers {meshes.CargoMeshes}; candidate structural renderers {meshes.StructuralMeshes}; full open {Number(fullAt)}s; leading edge enters plane {Number(entered)}s; trailing edge clears {Number(departed)}s; closing starts {Number(closeAt)}s; moving-lid violations of 0.65m reserve {(minimumClosedGap<999?"YES":"none")}; maximum missing opening inside plane {Number(maxPartial)}");
                     timeline.Add($"Entry lateral frame margin {Number(entryClearance)}m; exit frame margin {Number(exitClearance)}m; minimum visible open floor to receiver lip {Number(closestFunnel)}m");
+                    timeline.Add($"Depth {w.CurrentDepth}: {sand.Impacts} seabed touchdown; measured foot clearance {Number(sand.ImpactGap)}m; visible sediment photographed={photos.Contains("12-sand-skirt")}");
                     timeline.AddRange(meshes.contacts);timeline.AddRange(meshes.unreadable);
                     foreach(var entry in otherDoors)timeline.Add(entry.Key+" minimum conservative clearance "+Number(entry.Value.closest)+"m");
                     timeline.Add("Cargo IDs "+First+" and "+Second+" in reservoir. GPU "+SystemInfo.graphicsDeviceName+"; server="+w.IsServerInitialized+" client="+w.IsClientInitialized);
-                    bool pass=meshes.CargoMeshes>0 && meshes.StructuralMeshes>0 && otherDoors.Count==4 && meshes.contacts.Count==0 && meshes.unreadable.Count==0 && entered>fullAt && fullAt>=0 && closeAt>departed && maxPartial<.002f && minimumClosedGap>=999 && closestFunnel>.10f;
+                    bool pass=sand.Impacts==1 && photos.Contains("11-approaching-bed") && photos.Contains("12-sand-skirt") && meshes.CargoMeshes>0 && meshes.StructuralMeshes>0 && otherDoors.Count==4 && meshes.contacts.Count==0 && meshes.unreadable.Count==0 && entered>fullAt && fullAt>=0 && closeAt>departed && maxPartial<.002f && minimumClosedGap>=999 && closestFunnel>.10f;
                     Finish(pass?"PASS":"FAIL");return;
                 }
             }catch(Exception e){timeline.Add(e.ToString());Finish("ERROR");}
@@ -158,12 +181,18 @@ namespace Raid.Nereid
             var parts=new List<MeshRenderer>();parts.AddRange(port.GetComponentsInChildren<MeshRenderer>());
             parts.AddRange(starboard.GetComponentsInChildren<MeshRenderer>());if(parts.Count>0)otherDoors[name]=(parts.ToArray(),float.MaxValue);
         }
-        void Shot(string mark,float amount,float gap,bool inside=false)
+        void Shot(string mark,float amount,float gap,bool inside=false,bool seabed=false)
         {
             if(!photos.Add(mark))return;
             var hull=rail.transform;
             view.transform.position=hull.TransformPoint(inside?new Vector3(2.84f,1.65f,-6.53f):new Vector3(6.30f,11.48f,2.63f));
             view.transform.LookAt(hull.TransformPoint(inside?new Vector3(0,4.25f,-3.02f):new Vector3(0,5.03f,-3.77f)));
+            if(seabed)
+            {
+                var berth=rail.stops[0].marker.position;
+                view.transform.position=berth+new Vector3(7.3f,3.15f,6.7f);
+                view.transform.LookAt(berth+Vector3.up*.75f);
+            }
             var prev=RenderTexture.active;
             try{
                 RenderPipeline.SubmitRenderRequest(view,new RenderPipeline.StandardRequest{destination=target});
@@ -182,7 +211,7 @@ namespace Raid.Nereid
         System.Collections.IEnumerator ExitAfterPeer(int code)
         {
             float limit=Time.realtimeSinceStartup+10f;
-            while(host && code==0 && !File.Exists(Path.Combine(directory,"peer","recovery.txt")) && Time.realtimeSinceStartup<limit)yield return null;
+            while(host && !File.Exists(Path.Combine(directory,"peer","recovery.txt")) && Time.realtimeSinceStartup<limit)yield return null;
             Application.Quit(code);
         }
     }

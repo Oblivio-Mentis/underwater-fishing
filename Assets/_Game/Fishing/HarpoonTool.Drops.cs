@@ -60,7 +60,7 @@ namespace Raid
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
             if(Nereid.NereidVessel.Active!=null && expectedKind==DroppedKind.Salvage &&
-                CargoDispatch.CanLoad(world,Motor))
+                CargoDispatch.ServerSeesOpening(world,Motor,Motor.AimDirection))
             {
                 if(world.LoadSelectedCargo(this,expectedKind,id))Motor.ConfirmInteraction();
                 return;
@@ -179,18 +179,18 @@ namespace Raid
         {
             var world=RaidWorld.Instance;
             if(!IsClientInitialized || !IsOwner || UI.UiInputGate.Blocked ||
-               !FishLoadTarget(out var fish,out var id) || !CargoDispatch.CanLoad(world,Motor))return false;
+               !FishLoadTarget(out var fish,out var id) || !CargoDispatch.TryLoadAim(world,Motor,out var direction))return false;
             var state=world.View;
             if(state==null || state.hoistPhase!=HoistPhase.Loading || (long)state.CargoUsed+fish.cargoSize>state.Capacity(world.progression))return false;
-            LoadFishServer(id);
+            LoadFishServer(id,direction);
             return true;
         }
 
         [ServerRpc(RequireOwnership=true)]
-        void LoadFishServer(long fishId)
+        void LoadFishServer(long fishId,Vector3 direction)
         {
             var world=RaidWorld.Instance;
-            if(CargoDispatch.CanLoad(world,Motor) && world.LoadSelectedCargo(this,DroppedKind.Catch,fishId))Motor.ConfirmInteraction();
+            if(CargoDispatch.ServerSeesOpening(world,Motor,direction) && world.LoadSelectedCargo(this,DroppedKind.Catch,fishId))Motor.ConfirmInteraction();
         }
 
         internal bool PlaceSelectedCatch(TeamProgress team,ProgressionTuning tuning,long id)
@@ -211,6 +211,7 @@ namespace Raid
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void StageLiftedForTrial(FishActor fish,long id) => _liftedHeavy.Value=new PocketItem{species=fish.NetworkObject,id=id};
         internal void StagePocketForTrial(FishActor fish,long id,int slot=2) => SetPocket(slot,new PocketItem {species=fish.NetworkObject,id=id});
 #endif
         bool pocketTheftShieldUsed;
