@@ -6,29 +6,38 @@ using UnityEngine.Rendering;
 namespace Raid.Nereid
 {
     // Dimensions are in world metres. The scene's basket root cancels its parent's nonuniform scale.
-    internal sealed class CargoBasket : MonoBehaviour
+    public sealed class CargoBasket : MonoBehaviour
     {
         internal const float Width=3.40f, Depth=3.38f;
         internal const float Floor=-.96f;
         const float Side=Width*.5f, End=Depth*.5f, Rim=1.14f;
-        internal Transform CableSocket { get; private set; }
-        readonly Transform[] lids=new Transform[2], trapdoors=new Transform[2];
-        readonly MeshRenderer[] meter=new MeshRenderer[24];
-        readonly List<Collider> touching=new();
+        [field: SerializeField] public Transform CableSocket { get; private set; }
+        [SerializeField] CargoDispatch dispatch;
+        [SerializeField] Transform[] lids=new Transform[2], trapdoors=new Transform[2];
+        [SerializeField] MeshRenderer[] meter=new MeshRenderer[24];
+        [SerializeField] List<Collider> touching=new();
         readonly List<Mesh> combinedMeshes=new();
-        Transform loadingGate,shockRail,buttonStem;
-        MeshRenderer buttonLens;
+        [SerializeField] Transform loadingGate,shockRail,buttonStem;
+        [SerializeField] MeshRenderer buttonLens;
         Material steel,frame,ochre,signal,fascia;
         MaterialPropertyBlock lights;
-        TMP_Text meterText;
+        [SerializeField] TMP_Text meterText;
         Mesh cube;
         int previousUsed=-1,previousLimit=-1;
         float buttonDepth;
+        bool ownsMaterials;
         static readonly int BaseColor=Shader.PropertyToID("_BaseColor"), Emission=Shader.PropertyToID("_EmissionColor");
         static readonly Color Green=new(.20f,.91f,.56f), Amber=new(1f,.73f,.13f), Red=new(1f,.19f,.10f);
 
         internal static CargoBasket Install(RaidWorld world)
         {
+            var authored=world.container.GetComponentInChildren<CargoBasket>();
+            if(authored)
+            {
+                if(authored.dispatch) authored.dispatch.Initialize(world,authored.transform);
+                authored.lights??=new MaterialPropertyBlock();
+                return authored;
+            }
             var basket=world.container.Find("RAID010 cargo basket");
             if(basket==null)return null;
             var existing=basket.GetComponent<CargoBasket>();
@@ -40,18 +49,35 @@ namespace Raid.Nereid
             return result;
         }
 
+#if UNITY_EDITOR
+        public static CargoBasket Bake(Transform parent,Transform oldFloor,Material steel,Material enamel,Material signal,Material fascia)
+        {
+            var component=parent.gameObject.AddComponent<CargoBasket>();
+            component.steel=steel;
+            component.ochre=enamel;
+            component.signal=signal;
+            component.fascia=fascia;
+            component.Build(null,oldFloor);
+            return component;
+        }
+#endif
+
         void Build(RaidWorld world,Transform oldFloor)
         {
             cube=oldFloor.GetComponent<MeshFilter>().sharedMesh;
             frame=oldFloor.GetComponent<MeshRenderer>().sharedMaterial;
-            steel=transform.Find("Basket rim").GetComponent<MeshRenderer>().sharedMaterial;
+            if(world) steel=transform.Find("Basket rim").GetComponent<MeshRenderer>().sharedMaterial;
             foreach(Transform part in transform)part.gameObject.SetActive(false);
-            var legacy=world.container.GetComponent<Collider>();if(legacy!=null)legacy.enabled=false;
-            ochre=Finish("Recovery cage · enamel",new Color(.78f,.36f,.09f),.38f,false);
-            var instrumentShader=Resources.Load<Shader>("CargoInstrument");
-            signal=new Material(instrumentShader){name="Recovery cage illuminated indicator"};
-            fascia=new Material(instrumentShader){name="Recovery cage matte instrument face"};
-            fascia.SetColor(BaseColor,new Color(.016f,.032f,.048f));
+            if(world)
+            {
+                var legacy=world.container.GetComponent<Collider>();if(legacy!=null)legacy.enabled=false;
+                ownsMaterials=true;
+                ochre=Finish("Recovery cage · enamel",new Color(.78f,.36f,.09f),.38f,false);
+                var instrumentShader=Resources.Load<Shader>("CargoInstrument");
+                signal=new Material(instrumentShader){name="Recovery cage illuminated indicator"};
+                fascia=new Material(instrumentShader){name="Recovery cage matte instrument face"};
+                fascia.SetColor(BaseColor,new Color(.016f,.032f,.048f));
+            }
             lights=new MaterialPropertyBlock();
 
             for(int s=-1;s<=1;s+=2)
@@ -96,8 +122,8 @@ namespace Raid.Nereid
             buttonStem=Pivot(panel,"Dispatch push rod",new Vector3(.215f,-.02f,.43f));
             var button=Box(buttonStem,"Physical cargo dispatch button",Vector3.zero,new Vector3(.09f,.188f,.188f),signal,false);
             buttonLens=button;
-            var press=button.gameObject.AddComponent<CargoDispatch>();
-            press.Initialize(world,transform);
+            dispatch=button.gameObject.AddComponent<CargoDispatch>();
+            dispatch.Initialize(world,transform);
             button.gameObject.AddComponent<BoxCollider>();
             Box(panel,"Capacity bar recess",new Vector3(.151f,-.107f,-.20f),new Vector3(.025f,.110f,.72f),fascia,false);
             for(int i=0;i<meter.Length;i++)
@@ -111,10 +137,13 @@ namespace Raid.Nereid
                 label.text="ПОДЪЁМ";
             }
 
-            CombineShell(transform);
-            CombineShell(loadingGate);
-            foreach(var lid in lids)CombineShell(lid);
-            foreach(var door in trapdoors)CombineShell(door);
+            if(world)
+            {
+                CombineShell(transform);
+                CombineShell(loadingGate);
+                foreach(var lid in lids)CombineShell(lid);
+                foreach(var door in trapdoors)CombineShell(door);
+            }
             var lamp=Pivot(transform,"Cage work lights",new Vector3(0,Rim-.26f,-End+.3f)).gameObject.AddComponent<Light>();
             lamp.transform.rotation=Quaternion.LookRotation(new Vector3(0,-.65f,.78f));lamp.type=LightType.Spot;
             lamp.color=new Color(.45f,.83f,1f);lamp.intensity=4.6f;lamp.range=5.5f;lamp.spotAngle=110;lamp.shadows=LightShadows.None;
@@ -264,6 +293,7 @@ namespace Raid.Nereid
         void OnDestroy()
         {
             foreach(var mesh in combinedMeshes)if(mesh!=null)Destroy(mesh);
+            if(!ownsMaterials)return;
             if(ochre!=null)Destroy(ochre);if(signal!=null)Destroy(signal);if(fascia!=null)Destroy(fascia);
         }
     }

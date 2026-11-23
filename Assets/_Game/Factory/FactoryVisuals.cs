@@ -11,6 +11,8 @@ namespace Raid.Factory
         public Transform fishTemplate;
         public Transform tankCenter;
         public Vector3[] processTube,feedTube;
+        public Nereid.NereidPipeRoute processRoute,feedRoute;
+        public Transform feedThroat, processorDrop, processorIntake, processorGrinder;
         public Renderer[] processGlass,feedGlass,belts;
         public Transform[] rollers;
         public Transform upperJaw,lowerJaw;
@@ -113,6 +115,37 @@ namespace Raid.Factory
 
         internal Vector3 PathPosition(int index,float age,Vector3 origin,bool feeding)
         {
+            var line=feeding?feedRoute:processRoute;
+            if(line && line.IsConnected)
+            {
+                const float enterAt=.9f;
+                float exitAt=feeding?7.55f:4.7f;
+                if(age<enterAt) return Vector3.Lerp(origin,transform.InverseTransformPoint(line.WorldPoint(0)),Smooth(age/enterAt));
+                if(age<=exitAt) return transform.InverseTransformPoint(line.WorldPoint(Mathf.InverseLerp(enterAt,exitAt,age)));
+                Vector3 outletPosition=transform.InverseTransformPoint(line.WorldPoint(1));
+                if(feeding)
+                    return Vector3.Lerp(outletPosition,feedThroat?transform.InverseTransformPoint(feedThroat.position):outletPosition,Mathf.InverseLerp(exitAt,FishSeconds,age));
+                if(processorDrop && processorIntake && processorGrinder)
+                {
+                    int slot=(int)((uint)(index+batchSeed)%4);
+                    Vector3 laneOffset=Vector3.right*(beltX[slot]-(beltX[0]+beltX[3])*.5f);
+                    var drop=transform.InverseTransformPoint(processorDrop.TransformPoint(laneOffset));
+                    var intakePoint=transform.InverseTransformPoint(processorIntake.TransformPoint(laneOffset));
+                    var grinder=transform.InverseTransformPoint(processorGrinder.TransformPoint(laneOffset));
+                    float fall=Mathf.Sqrt(2*Mathf.Max(.01f,transform.TransformVector(outletPosition-drop).y)/9.81f);
+                    float landedAt=Mathf.Min(7.4f,exitAt+fall);
+                    if(age<landedAt)
+                    {
+                        float t=Mathf.InverseLerp(exitAt,landedAt,age);
+                        Vector3 point=Vector3.Lerp(outletPosition,drop,t);
+                        point.y=Mathf.Lerp(outletPosition.y,drop.y,t*t);
+                        return point;
+                    }
+                    if(age<7.55f)return Vector3.Lerp(drop,intakePoint,Mathf.InverseLerp(landedAt,7.55f,age));
+                    return Vector3.Lerp(intakePoint,grinder,Mathf.InverseLerp(7.55f,FishSeconds,age));
+                }
+                return outletPosition;
+            }
             var path=feeding?feedTube:processTube;
             if(path==null||path.Length<2)return origin;
             if(age<.9f)return Vector3.Lerp(origin,path[0],Smooth(age/.9f));
@@ -158,7 +191,7 @@ namespace Raid.Factory
                 inFlight=started-finished;
             }
             int stationary=Mathf.Clamp(stockCount-inFlight,0,stock.Length);
-            Vector3 center=tankCenter==null?new Vector3(0,1.35f,-3):tankCenter.localPosition;
+            Vector3 center=tankCenter==null?new Vector3(0,1.35f,-3):transform.InverseTransformPoint(tankCenter.position);
             for(int i=0;i<stock.Length;i++)
             {
                 var fish=stock[i];fish.gameObject.SetActive(i<stationary);if(i>=stationary)continue;
@@ -173,8 +206,10 @@ namespace Raid.Factory
         void UpdateMachinery()
         {
             float t=Time.time;
-            treadBlock.SetVector(MapId,new Vector4(1,6,0,-t*.6f));if(belts!=null)foreach(var belt in belts)if(belt!=null)belt.SetPropertyBlock(treadBlock);
-            if(rollers!=null)foreach(var roller in rollers)if(roller!=null)roller.localRotation=Quaternion.Euler(t*140,0,0)*Quaternion.Euler(0,0,90);
+            if(processRoute) processRoute.SetFlow(batchActive&&!batchFeeding?1:0);
+            if(feedRoute) feedRoute.SetFlow(batchActive&&batchFeeding?1:0);
+            treadBlock.SetVector(MapId,new Vector4(1,6,0,-t*.6f));if((!processRoute || batchActive&&!batchFeeding) && belts!=null)foreach(var belt in belts)if(belt!=null)belt.SetPropertyBlock(treadBlock);
+            if((!processRoute || batchActive&&!batchFeeding) && rollers!=null)foreach(var roller in rollers)if(roller!=null)roller.localRotation=Quaternion.Euler(t*140,0,0)*Quaternion.Euler(0,0,90);
             float pulse=batchActive?.6f+.4f*Mathf.Sin(t*9):.08f;
             if(processorLamp!=null){block.Clear();block.SetColor(EmissionId,new Color(1,.39f,.08f)*(batchActive&&!batchFeeding?3+3*pulse:.7f));processorLamp.SetPropertyBlock(block);}
             if(mouthLamp!=null){block.Clear();block.SetColor(EmissionId,new Color(.75f,.26f,.1f)*(batchActive&&batchFeeding?2+3*pulse:.4f));mouthLamp.SetPropertyBlock(block);}
@@ -187,7 +222,7 @@ namespace Raid.Factory
 
         void UpdateBubbles()
         {
-            Vector3 center=tankCenter==null?new Vector3(0,1.35f,-3):tankCenter.localPosition;
+            Vector3 center=tankCenter==null?new Vector3(0,1.35f,-3):transform.InverseTransformPoint(tankCenter.position);
             for(int i=0;i<bubbles.Length;i++)
             {
                 float age=Mathf.Repeat(Time.time*(.35f+(i%4)*.04f)+i*.417f,1);

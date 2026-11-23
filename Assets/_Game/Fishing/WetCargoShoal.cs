@@ -41,7 +41,8 @@ namespace Raid
         public static void Attach(RaidWorld world)
         {
             if(world.container==null)return;
-            var basket=world.container.Find("RAID010 cargo basket");
+            var authored=world.container.GetComponentInChildren<CargoBasket>();
+            var basket=authored ? authored.transform : world.container.Find("RAID010 cargo basket");
             if(basket==null)return;
             var shoal=basket.GetComponent<WetCargoShoal>();
             if(shoal==null)shoal=basket.gameObject.AddComponent<WetCargoShoal>();
@@ -59,8 +60,13 @@ namespace Raid
             if(vessel!=null && reservoir==null)
             {
                 reservoir=new GameObject("Aquarium · delivered catches").transform;
-                reservoir.SetParent(vessel.transform,false);
-                reservoir.localPosition=new Vector3(0,1.54f,-3);
+                var rail=vessel.authoredRail;
+                if(rail && rail.aquarium) reservoir.SetParent(rail.aquarium,false);
+                else
+                {
+                    reservoir.SetParent(vessel.transform,false);
+                    reservoir.localPosition=new Vector3(0,1.54f,-3);
+                }
                 factory=FindAnyObjectByType<Factory.FactoryVisuals>();
             }
             var state=world.View;
@@ -229,6 +235,16 @@ namespace Raid
                 fish.Model.SetParent(null,true);
             }
             float t=Mathf.InverseLerp(fish.Delay,.91f,elapsed);
+            var pipe=vessel.authoredRail ? vessel.authoredRail.inlet : null;
+            if(pipe && pipe.IsConnected)
+            {
+                Vector3 routePoint;
+                if(t<.24f) routePoint=Vector3.Lerp(fish.ExitStart,pipe.WorldPoint(0),CargoBasket.Ease(t/.24f));
+                else if(t<.84f) routePoint=pipe.WorldPoint(Mathf.InverseLerp(.24f,.84f,t));
+                else routePoint=Vector3.Lerp(pipe.WorldPoint(1),TankPoint(fish,Time.time),CargoBasket.Ease(Mathf.InverseLerp(.84f,1,t)));
+                Move(fish.Model,routePoint,25);
+                return;
+            }
             Vector3 center=vessel.transform.TransformPoint(new Vector3(0,4.16f,-3));
             Vector3 exit=vessel.transform.TransformPoint(new Vector3(0,2.45f,-3));
             Vector3 entry=Vector3.Lerp(fish.ExitStart,center,CargoBasket.Ease(t*3.75f));
@@ -270,6 +286,14 @@ namespace Raid
         Vector3 TankPoint(Swimmer fish,float time)
         {
             float a=time*(fish.Speed*.49f)+fish.Phase;
+            var rail=vessel.authoredRail;
+            if(rail && rail.aquarium)
+            {
+                var radii=rail.aquariumSwimRadii;
+                float ring=.45f+.55f*fish.Ring;
+                return reservoir.TransformPoint(new Vector3(Mathf.Cos(a)*radii.x*ring,
+                    ((fish.Depth-.5f)*1.6f+Mathf.Sin(a*1.7f)*.16f)*radii.y, Mathf.Sin(a)*radii.z*ring));
+            }
             float radius=1.08f+1.10f*fish.Ring;
             Quaternion hull=vessel.transform.rotation;
             return reservoir.position+hull*new Vector3(radius*Mathf.Cos(a),(fish.Depth-.5f)*2.72f+Mathf.Sin(a*1.7f)*.24f,radius*Mathf.Sin(a));

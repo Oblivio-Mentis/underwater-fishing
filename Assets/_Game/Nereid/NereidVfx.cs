@@ -18,8 +18,9 @@ namespace Raid.Nereid
             particles=new Material(source);
             particles.SetFloat("_ParticleTint",1);
             Vector3 discharge=factory.processTube!=null&&factory.processTube.Length>0?factory.processTube[factory.processTube.Length-1]:new Vector3(-3.45f,2.95f,-4.95f);
+            if(factory.processRoute && factory.processRoute.destination) discharge=transform.InverseTransformPoint(factory.processRoute.destination.transform.position);
             outlet=MakeParticles("Processor water vapour",discharge+new Vector3(0,-1.15f,-.15f),new Color(.74f,.79f,.73f,.39f),.105f,.73f);
-            mouth=MakeParticles("Feeding pressure bubbles",new Vector3(1.35f,2.5f,7.55f),new Color(.62f,.78f,.78f,.58f),.08f,.64f);
+            mouth=MakeParticles("Feeding pressure bubbles",factory.feedRoute && factory.feedRoute.destination ? transform.InverseTransformPoint(factory.feedRoute.destination.transform.position) : new Vector3(1.35f,2.5f,7.55f),new Color(.62f,.78f,.78f,.58f),.08f,.64f);
         }
 
         void Update()

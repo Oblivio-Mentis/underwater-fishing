@@ -22,7 +22,7 @@ namespace Raid.UI
         public ShipConsole SelectedConsole {get;set;}
         public ShipConsole AimedConsole {get;private set;}
         public bool NearTerminal => Player!=null && Player.IsInside && (SelectedConsole!=null?SelectedConsole.InRange(Player):ShipConsole.Stations.Count==0 && World!=null && Vector3.Distance(Player.transform.position,World.tuning.terminalPosition)<World.tuning.interactionRange);
-        public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.tuning.cargoPosition)<World.tuning.interactionRange;
+        public bool NearCargo => Player!=null && World!=null && Vector3.Distance(Player.transform.position,World.CargoLoadingPosition)<World.tuning.interactionRange;
         public bool AllInside => Players.Count>0 && Players.All(p=>p!=null && p.IsClientInitialized && p.IsInside);
         public int FoodRequired => View==null?0:Mathf.Max(1,Tuning.foodRequired+(View.highestDepth-1)*Tuning.foodPerDepth);
         public bool HasCargo => Harpoon!=null && (Harpoon.CarriedFish!=null || Harpoon.CarriedSalvage!=null);

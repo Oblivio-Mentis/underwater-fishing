@@ -15,6 +15,7 @@ namespace Raid.Nereid
         [Min(0)] public float indoorJumpHeight=.8f;
         [Min(0)] public float indoorWalkSpeed=4.5f;
         public Vector3[] cargoRail;
+        public NereidCargoRail authoredRail;
         public LineRenderer hoistCable;
         readonly Dictionary<Material, Material> cladding = new();
         RaidWorld world;
@@ -33,6 +34,14 @@ namespace Raid.Nereid
             Active=this;
             airlock=NereidAirlock.Install(transform);
             DeckExtension=NereidDeckExtension.Install(this);
+            if (!authoredRail) InstallLegacyDressing();
+            var reef=new GameObject("NEREID fishing grounds");
+            reef.transform.SetParent(transform,true);
+            reef.AddComponent<NereidReef>();
+        }
+
+        void InstallLegacyDressing()
+        {
             NereidServiceFittings.Install(transform,airlock);
             gameObject.AddComponent<NereidHullLighting>();
             if (SystemInfo.graphicsDeviceType != UnityEngine.Rendering.GraphicsDeviceType.Null)
@@ -41,9 +50,6 @@ namespace Raid.Nereid
                 var factory = FindAnyObjectByType<Factory.FactoryVisuals>();
                 if (factory != null) NereidSurfaceFinish.Clad(factory.transform, null, cladding);
             }
-            var reef=new GameObject("NEREID fishing grounds");
-            reef.transform.SetParent(transform,true);
-            reef.AddComponent<NereidReef>();
         }
         void OnDestroy()
         {
@@ -81,28 +87,25 @@ namespace Raid.Nereid
             if(world==null)world=RaidWorld.Instance;
             if(world==null||world.NetworkObject==null||!world.IsClientInitialized&&!world.IsServerInitialized)return;
             var state=world.IsServerInitialized?world.Team:world.View;
-            if(state==null||world.container==null||cargoRail==null||cargoRail.Length<2)return;
+            bool hasRail=authoredRail && authoredRail.Ready;
+            if(state==null || world.container==null || (!hasRail && (cargoRail==null || cargoRail.Length<2)))return;
             if(basket==null)
             {
                 basket=CargoBasket.Install(world);
                 if(basket==null)return;
                 if(world.IsClientInitialized)WetCargoShoal.Attach(world);
-                hopper=CageReceivingHopper.Install(this,world);
+                if(!hasRail)hopper=CageReceivingHopper.Install(this,world);
             }
             if(state!=observed){observed=state;seenAt=Time.time;}
             float duration=state.HoistDuration(state.hoistPhase,world.progression);
             float estimate=world.IsServerInitialized?0:Mathf.Min(world.tuning.snapshotInterval,Time.time-seenAt);
             PresentedHoistPhase=state.hoistPhase;
             HoistAnimation=state.hoistPhase==HoistPhase.Loading?0:Mathf.Clamp01(1-(state.hoistRemaining-estimate)/duration);
-            float fraction=state.hoistPhase switch {
-                HoistPhase.Raising=>Mathf.InverseLerp(.15f,.96f,HoistAnimation),
-                HoistPhase.Unloading=>1,
-                HoistPhase.Returning=>1-Mathf.InverseLerp(.07f,.88f,HoistAnimation),
-                _=>0
-            };
+            float fraction=NereidCargoRail.TravelFraction(state.hoistPhase,HoistAnimation);
             railVisual=railVisual<0||state.hoistPhase==HoistPhase.Loading?fraction:
                 Mathf.Lerp(railVisual,fraction,1-Mathf.Exp(-Time.deltaTime*19));
-            world.container.position=transform.TransformPoint(AlongRail(railVisual));
+            world.container.position=hasRail ? authoredRail.Point(railVisual) : transform.TransformPoint(AlongRail(railVisual));
+            if(hasRail) authoredRail.Present(railVisual,state.hoistPhase,HoistAnimation);
             basket.Meter(state.CargoUsed,state.Capacity(world.progression));
             basket.Present(state,HoistAnimation);
             if(hopper!=null)hopper.Present(state,HoistAnimation);
@@ -110,9 +113,9 @@ namespace Raid.Nereid
             {
                 var liftingEye=basket.CableSocket.position;
                 hoistCable.positionCount=3;
-                float railY=transform.TransformPoint(new Vector3(0,7.14f,-14)).y;
-                hoistCable.SetPosition(0,new Vector3(liftingEye.x,railY+.05f,liftingEye.z));
-                hoistCable.SetPosition(1,new Vector3(liftingEye.x,railY-.11f,liftingEye.z));
+                var anchor=hasRail ? authoredRail.TrolleyPoint(liftingEye) : new Vector3(liftingEye.x,transform.TransformPoint(new Vector3(0,7.14f,-14)).y,liftingEye.z);
+                hoistCable.SetPosition(0,anchor+Vector3.up*.05f);
+                hoistCable.SetPosition(1,anchor-Vector3.up*.11f);
                 hoistCable.SetPosition(2,liftingEye);
             }
         }

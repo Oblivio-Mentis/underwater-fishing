@@ -15,6 +15,15 @@ namespace Raid
     {
         public static RaidWorld Instance {get; private set;}
         public WorldTuning tuning;
+        public Vector3 CargoLoadingPosition
+        {
+            get
+            {
+                var vessel=Nereid.NereidVessel.Active;
+                if(vessel && vessel.authoredRail && vessel.authoredRail.Ready) return vessel.authoredRail.stops[0].marker.position;
+                return tuning.cargoPosition;
+            }
+        }
         public ProgressionTuning progression;
         public ThreatDirector threats;
         public Transform container;
@@ -120,7 +129,7 @@ namespace Raid
                 if(TryAimDrop(localDiver, out var item)) localDiver.GetComponent<HarpoonTool>()?.RequestPickup(item.id);
                 else if(CanUseTerminal)
                 { ToggleTerminal(); }
-                else if(Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange)
+                else if(Vector3.Distance(localDiver.transform.position,CargoLoadingPosition)<tuning.interactionRange)
                     Command(WorldAction.LoadCargo,0);
                 else Command(WorldAction.Collect,0);
             }
@@ -175,7 +184,9 @@ namespace Raid
             PresentGosha();
             var state=IsServerInitialized?team:view;
             if(container==null || state==null) return;
-            Vector3 destination=state.hoistPhase==HoistPhase.Raising || state.hoistPhase==HoistPhase.Unloading?tuning.terminalPosition:tuning.cargoPosition;
+            var hull=Nereid.NereidVessel.Active;
+            if(hull && hull.authoredRail && hull.authoredRail.Ready) return;
+            Vector3 destination=state.hoistPhase==HoistPhase.Raising || state.hoistPhase==HoistPhase.Unloading?tuning.terminalPosition:CargoLoadingPosition;
             container.position=Vector3.MoveTowards(container.position,destination,Time.deltaTime*4);
         }
         public void Command(WorldAction action,long id) { Act(action,id); }
@@ -199,7 +210,7 @@ namespace Raid
             bool cargo=action==WorldAction.LoadCargo || action==WorldAction.Hoist;
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll || action==WorldAction.StopProcessing || action==WorldAction.StopFeeding) && ShipConsole.Stations.Count==0)
             {Respond(sender,requestId,false,"unavailable");return;}
-            Vector3 target=cargo?tuning.cargoPosition:tuning.terminalPosition;
+            Vector3 target=cargo?CargoLoadingPosition:tuning.terminalPosition;
             bool factory=Nereid.NereidVessel.Active!=null;
             if(factory && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
             {Respond(sender,requestId,false,"unavailable");return;}
@@ -316,7 +327,7 @@ namespace Raid
             GUILayout.Label("Lifetime "+view.lifetimeCatch+" · Tank "+view.tank.Count+" · Food "+view.offering+" · Hunger "+view.hungerRemaining.ToString("F0")+"s");
             GUILayout.Label("Cargo "+view.CargoUsed+"/"+view.Capacity(progression)+" · "+view.hoistPhase+" "+view.hoistRemaining.ToString("F0"));
             if(threats!=null) GUILayout.Label(threats.Message);
-            bool nearCargo=Vector3.Distance(localDiver.transform.position,tuning.cargoPosition)<tuning.interactionRange;
+            bool nearCargo=Vector3.Distance(localDiver.transform.position,CargoLoadingPosition)<tuning.interactionRange;
             bool nearTerminal=CanUseTerminal;
             if(nearCargo && Cursor.lockState!=CursorLockMode.Locked)
             {
