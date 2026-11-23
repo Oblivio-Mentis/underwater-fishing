@@ -28,6 +28,7 @@ Shader "RAID/Faceted Expedition Equipment"
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
 
             TEXTURE2D(_BaseMap);
             SAMPLER(sampler_BaseMap);
@@ -70,8 +71,7 @@ Shader "RAID/Faceted Expedition Equipment"
             }
             half4 Frag(Interpolants i):SV_Target
             {
-                float3 face=SafeNormalize(cross(ddy(i.world),ddx(i.world)));
-                if (dot(face,i.normal)<0) face=-face;
+                half3 face=FacetNormalWS(i.world,i.normal);
                 half3 n=SafeNormalize(lerp(i.normal,face,_FacetWeight));
                 half3 source=SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv).rgb;
                 SurfaceData surface=(SurfaceData)0;
@@ -100,4 +100,3 @@ Shader "RAID/Faceted Expedition Equipment"
         UsePass "Universal Render Pipeline/Lit/DepthNormals"
     }
 }
-

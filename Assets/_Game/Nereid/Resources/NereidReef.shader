@@ -27,6 +27,7 @@ Shader "RAID/Nereid Reef"
             #pragma multi_compile_fog
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
             float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck;
@@ -94,8 +95,7 @@ Shader "RAID/Nereid Reef"
                 p+=.38*sin(p.yx*1.42+float2(time,-time*.61));
                 half field=ReefNoise(projected*.103+float2(time*.045,0));
                 half litPool=smoothstep(.31,.83,field)*smoothstep(.22,.74,ReefNoise(projected*.23+field*1.86));
-                float3 face = SafeNormalize(cross(ddy(i.pos), ddx(i.pos)));
-                half3 n = dot(face, i.norm) < 0 ? -face : face;
+                half3 n = FacetNormalWS(i.pos, i.norm);
                 float3 eye=GetCameraPositionWS();
                 float3 toSurface=i.pos-eye;
                 float d=max(.01,length(toSurface));

@@ -26,6 +26,7 @@ Shader "RAID/Nereid Hull Coating"
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/_Game/Materials/FacetNormal.hlsl"
             #include "NereidWaterColumn.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
@@ -97,8 +98,7 @@ Shader "RAID/Nereid Hull Coating"
 
             half4 frag(Varyings i):SV_Target
             {
-                float3 face = SafeNormalize(cross(ddy(i.position), ddx(i.position)));
-                half3 n = dot(face, i.normal) < 0 ? -face : face;
+                half3 n = FacetNormalWS(i.position, i.normal);
                 InputData lighting=(InputData)0;
                 lighting.positionWS=i.position;
                 lighting.positionCS=i.clip;
