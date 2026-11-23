@@ -189,6 +189,8 @@ namespace Raid
             float untilSurge = period - Mathf.Repeat(fightClock, period);
             state.SurgeWarning = !tired && untilSurge <= tuning.warningSeconds;
             state.Surging = !tired && fightClock >= period && Mathf.Repeat(fightClock, period) < tuning.burstDuration;
+            // A thrashing fish is heard by the reef angler; the director rate-limits how often it reacts.
+            if (state.Surging && !_snapshot.Value.Surging) ThreatDirector.ReportStruggle(transform.position);
             HookLine leader = null;
             state.Tension = 0;
             foreach (var line in lines)

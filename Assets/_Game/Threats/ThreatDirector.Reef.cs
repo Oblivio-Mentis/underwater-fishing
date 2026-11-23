@@ -6,7 +6,8 @@ namespace Raid
 {
     public sealed partial class ThreatDirector
     {
-        public enum HuntStage : byte { Watching, Display, Pursuit, Recovery }
+        // Watching = patrol. Investigate/Circle/Overshoot were added for the full hunt; Display/Pursuit/Recovery keep their meaning.
+        public enum HuntStage : byte { Watching, Display, Pursuit, Recovery, Investigate, Circle, Overshoot }
         public struct ReefSnapshot
         {
             public bool Active,Deep,ClamClosed;
@@ -14,27 +15,26 @@ namespace Raid
             public byte EelPhase,KrakenPhase;
         }
         static readonly Vector3 EelHome = new(41,-9,-29);
-        static readonly Vector3[] AnglerPatrol = {new(5,-.3f,-2),new(8,-1.8f,-9),new(3,-.8f,-10),new(-.6f,.35f,-4),Vector3.zero};
         static readonly Vector3[] EelPatrol = {new(45,-8.5f,-36),new(48,-8.8f,-43),new(43,-8,-45),new(38,-8.3f,-34),EelHome};
         readonly RaycastHit[] huntHits = new RaycastHit[16];
         public static readonly Vector3 ClamBed=new(29,-15.9f,-33),Rift=new(48,-14,-50);
         readonly SyncVar<ReefSnapshot> reefState=new();
         public ReefSnapshot Reef => reefState.Value;
         const float ThinkPeriod=.12f;
-        float nextThink,eelCooldown,eelDelay,krakenCharge,krakenClock,anglerClock;
+        float nextThink,eelCooldown,eelDelay,krakenCharge,krakenClock;
         Vector3 eelDecoy, eelSeen, eelPreviousTarget;
-        float eelBlindTime, anglerLookAt, anglerRouteAt, eelRouteAt;
-        int anglerWaypoint, eelWaypoint;
-        DiverMotor clampedDiver,eelTarget,anglerTarget;
+        float eelBlindTime, eelRouteAt;
+        int eelWaypoint;
+        DiverMotor clampedDiver,eelTarget;
         float clamCooldown;
         NereidFauna reefView;
         void ResetReef()
         {
             reefState.Value=new ReefSnapshot{Eel=EelHome,EelHeading=Vector3.forward};
-            clampedDiver=null;eelTarget=null;anglerTarget=null;
-            nextThink=eelCooldown=eelDelay=anglerClock=clamCooldown=krakenClock=krakenCharge=0;
-            eelBlindTime=anglerLookAt=anglerRouteAt=eelRouteAt=0;
-            anglerWaypoint=eelWaypoint=0;
+            clampedDiver=null;eelTarget=null;ResetAngler();
+            nextThink=eelCooldown=eelDelay=clamCooldown=krakenClock=krakenCharge=0;
+            eelBlindTime=eelRouteAt=0;
+            eelWaypoint=0;
         }
 
         void TickReef(ref ThreatSnapshot main,float delta)
@@ -77,110 +77,6 @@ namespace Raid
                 TickKraken(ref reef,dt,movingWinch,ref main);
             }
             reefState.Value=reef;
-        }
-
-        void TickAngler(ref ThreatSnapshot main,float dt)
-        {
-            if (main.PredatorHealth <= 0)
-            {
-                main.AnglerStage = HuntStage.Watching;
-                anglerTarget = null;
-                respawn -= dt;
-                if (respawn <= 0) TryReturnAngler(ref main);
-                return;
-            }
-            if (main.AnglerStage == HuntStage.Recovery)
-            {
-                AnglerPatrolStep(ref main,2.6f * dt);
-                predatorCooldown -= dt;
-                if (predatorCooldown <= 0) main.AnglerStage = HuntStage.Watching;
-                return;
-            }
-            if (main.AnglerStage == HuntStage.Watching)
-            {
-                AnglerPatrolStep(ref main,1.5f * dt);
-                if (Time.time < anglerLookAt) return;
-                anglerLookAt = Time.time + .18f;
-                anglerTarget = NearestVisible(main.PredatorPosition,depthTier > 1 ? 6.2f : 5.25f);
-                if (anglerTarget == null) return;
-                main.AnglerStage = HuntStage.Display;
-                anglerClock = .98f;
-            }
-            anglerClock -= dt;
-            if (main.AnglerStage == HuntStage.Display)
-            {
-                if (!CanPursue(anglerTarget) || Vector3.Distance(main.PredatorPosition,BodyPoint(anglerTarget)) > 8 ||
-                    !ClearTo(main.PredatorPosition,anglerTarget))
-                {
-                    AnglerRecover(ref main,2.8f);
-                    return;
-                }
-                if (anglerClock > .2f)
-                {
-                    Vector3 at = BodyPoint(anglerTarget) - main.PredatorPosition;
-                    if (at.sqrMagnitude > .001f)
-                        main.AnglerHeading = Vector3.RotateTowards(main.AnglerHeading,at.normalized,dt * 7,0);
-                }
-                if (anglerClock > 0) return;
-                main.AnglerStage = HuntStage.Pursuit;
-                anglerClock = 1.15f;
-            }
-
-            // The lunge keeps its aim after the display. A lateral dodge or rock can break it.
-            Vector3 step = main.PredatorPosition + main.AnglerHeading * ((depthTier > 1 ? 7.2f : 6.3f) * dt);
-            if (anglerClock <= 0 || !PredatorClear(main.PredatorPosition,step,.52f))
-            {
-                AnglerRecover(ref main,3.4f);
-                return;
-            }
-            main.PredatorPosition = step;
-            if (!CanPursue(anglerTarget) || (BodyPoint(anglerTarget) - step).sqrMagnitude > 1.35f * 1.35f ||
-                !ClearTo(step,anglerTarget)) return;
-            anglerTarget.DamageOxygen(tuning.attackDamage * Strength);
-            var inventory = anglerTarget.GetComponent<HarpoonTool>();
-            if (inventory != null && !inventory.ResistPocketTheft()) inventory.DropOneCatch();
-            main.Message = "Фонарник атаковал из засады.";
-            AnglerRecover(ref main,Mathf.Max(4,tuning.attackInterval));
-        }
-
-        void AnglerRecover(ref ThreatSnapshot main,float seconds)
-        {
-            main.AnglerStage = HuntStage.Recovery;
-            anglerTarget = null;
-            predatorCooldown = seconds;
-        }
-
-        void AnglerPatrolStep(ref ThreatSnapshot main,float distance)
-        {
-            Vector3 goal = tuning.predatorSpawn + AnglerPatrol[anglerWaypoint];
-            if (Time.time >= anglerRouteAt || (goal - main.PredatorPosition).sqrMagnitude < 1.2f)
-            {
-                if (anglerRouteAt > 0) anglerWaypoint = (anglerWaypoint + 1) % AnglerPatrol.Length;
-                goal = tuning.predatorSpawn + AnglerPatrol[anglerWaypoint];
-                anglerRouteAt = Time.time + 9;
-            }
-            Vector3 step = SwimToward(main.PredatorPosition,goal,distance,.53f);
-            Vector3 travel = step - main.PredatorPosition;
-            if (travel.sqrMagnitude > .00001f) main.AnglerHeading = travel.normalized;
-            main.PredatorPosition = step;
-        }
-
-        void TryReturnAngler(ref ThreatSnapshot main)
-        {
-            for (int i = 0; i < AnglerPatrol.Length; i++)
-            {
-                Vector3 point = tuning.predatorSpawn + AnglerPatrol[i];
-                if (!ReefHabitats.CanArrive(point,11,20) ||
-                    Physics.CheckSphere(point,.56f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)) continue;
-                main.PredatorPosition = point;
-                main.PredatorHealth = tuning.predatorHealth * Strength;
-                main.AnglerHeading = Vector3.forward;
-                anglerWaypoint = (i + 1) % AnglerPatrol.Length;
-                anglerRouteAt = Time.time + 9;
-                AnglerRecover(ref main,3);
-                return;
-            }
-            respawn = 2;
         }
 
         public float NearbyDanger(Vector3 eye)

@@ -155,7 +155,7 @@ namespace Raid.Nereid.Editor
                 string threatPath=Folder+"/NereidThreats.asset";var threatTuning=AssetDatabase.LoadAssetAtPath<ThreatTuning>(threatPath);
                 if(threatTuning==null){threatTuning=Object.Instantiate(threats.tuning);AssetDatabase.CreateAsset(threatTuning,threatPath);}
                 threatTuning.predatorSpawn=new Vector3(28,-5,-29);threatTuning.waveSpawn=new Vector3(28,1.5f,-28);threatTuning.airlockWaypoint=new Vector3(12,1.5f,-28);threatTuning.reservoirPoint=new Vector3(0,2.8f,-6);
-                threats.tuning=threatTuning;EditorUtility.SetDirty(threatTuning);EditorUtility.SetDirty(threats);
+                threats.tuning=threatTuning;if(threats.anglerProfile==null)threats.anglerProfile=AssetDatabase.LoadAssetAtPath<PredatorProfile>("Assets/_Game/Data/PredatorProfile.asset");EditorUtility.SetDirty(threatTuning);EditorUtility.SetDirty(threats);
             }
         }
 

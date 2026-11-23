@@ -289,10 +289,11 @@ namespace Raid.Nereid
                 // The moving points on the lure spread into a pale fan before the fish commits to a strike.
                 lureDisplay=Mathf.MoveTowards(lureDisplay,angler==ThreatDirector.HuntStage.Display?1f:0f,Time.deltaTime*3.5f);
                 bool striking = angler == ThreatDirector.HuntStage.Pursuit;
+                bool fast = striking || angler == ThreatDirector.HuntStage.Overshoot;
                 float jaw = striking ? 36 : 4 + lureDisplay * 22;
                 anglerJaw.localRotation = Quaternion.Slerp(anglerJaw.localRotation,Quaternion.Euler(jaw,0,0),blend);
-                float stroke = Mathf.Sin(t * (striking ? 11 : 4));
-                anglerTail.localRotation = Quaternion.Euler(0,stroke * (striking ? 36 : 20),0);
+                float stroke = Mathf.Sin(t * (fast ? 11 : angler == ThreatDirector.HuntStage.Circle ? 6 : 4));
+                anglerTail.localRotation = Quaternion.Euler(0,stroke * (fast ? 36 : 20),0);
                 anglerFinLeft.localRotation = Quaternion.Euler(0,0,stroke * 17);
                 anglerFinRight.localRotation = Quaternion.Euler(0,0,-stroke * 17);
                 huntingLights.SetFloat("_Glow",1.05f + lureDisplay * (2.7f + .48f * Mathf.Sin(t * 16)));

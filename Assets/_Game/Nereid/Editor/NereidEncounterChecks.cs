@@ -122,19 +122,26 @@ namespace Raid.Nereid.Editor
             yield return Wait("Nearby passive angler watches the diver in murky water",()=>
                 threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
                 UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.03f && RenderSettings.fogDensity<.05f);
-            float health=diver.Oxygen;
+            float health=diver.Oxygen;int bites=threats.BiteSequence;
             Place(AnglerWater(3.6f));
-            yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
-            yield return Wait("Angler pursues after its warning",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
-            yield return Wait("Angler ambush removes oxygen",()=>diver.Oxygen<=health-10 && threats.Message.Contains("Фонарник"));
+            yield return Wait("Angler notices the diver and starts circling",()=>threats.AnglerStage==ThreatDirector.HuntStage.Circle);
+            yield return Wait("Angler gives a display before contact",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display,8);
+            yield return Wait("Angler charges after its warning",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
+            yield return Wait("Swept bite removes oxygen exactly once",()=>diver.Oxygen<=health-10 && threats.BiteSequence==bites+1 && threats.Message.Contains("Фонарник"));
+            yield return Wait("Angler overshoots past the diver after the bite",()=>threats.AnglerStage==ThreatDirector.HuntStage.Overshoot);
             Place(new Vector3(1,1.1f,1));
-            yield return Wait("Angler withdraws before it can attack again",()=>threats.AnglerStage==ThreatDirector.HuntStage.Watching,6);
+            yield return Wait("Angler loses its prey in shelter and withdraws",()=>threats.AnglerStage==ThreatDirector.HuntStage.Recovery,6);
+            yield return Wait("Angler returns to patrol",()=>threats.AnglerStage==ThreatDirector.HuntStage.Watching,8);
+            bites=threats.BiteSequence;
             Place(AnglerWater(3.8f));
-            yield return Wait("Patrolling angler starts a second display",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display);
+            yield return Wait("Patrolling angler circles a second time",()=>threats.AnglerStage==ThreatDirector.HuntStage.Circle);
+            yield return Wait("Second display",()=>threats.AnglerStage==ThreatDirector.HuntStage.Display,8);
             yield return Wait("Lunge is committed before dodging",()=>threats.AnglerStage==ThreatDirector.HuntStage.Pursuit);
             health=diver.Oxygen;
             Place(AnglerWater(7.8f,diver.transform.position-threats.AnglerPosition));
-            yield return Wait("A sideways dodge avoids the committed lunge",()=>threats.AnglerStage==ThreatDirector.HuntStage.Recovery && diver.Oxygen>health-8);
+            yield return Wait("A sideways dodge avoids the committed lunge and the angler repositions",()=>
+                threats.AnglerStage is ThreatDirector.HuntStage.Overshoot or ThreatDirector.HuntStage.Circle or ThreatDirector.HuntStage.Recovery &&
+                threats.BiteSequence==bites && diver.Oxygen>health-8);
             Place(ThreatDirector.ClamBed+Vector3.up*.21f);
             yield return Wait("Bottom trap closes and holds",()=>diver.IsTrapped&&threats.Reef.ClamClosed);
             diver.Rescue();

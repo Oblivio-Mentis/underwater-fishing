@@ -50,6 +50,7 @@ namespace Raid
         {
             Instance = this;
             if (tuning == null) { tuning = ScriptableObject.CreateInstance<ThreatTuning>(); ownsTuning = true; }
+            EnsureProfile();
             state.UpdateSettings(new SyncTypeSettings(Mathf.Max(.02f, tuning.snapshotInterval)));
             reefState.UpdateSettings(new SyncTypeSettings(.15f));
             predatorView = Primitive("Predator", new Vector3(1.4f, .8f, 2.8f), new Color(.8f, .23f, .12f));
@@ -229,6 +230,7 @@ namespace Raid
             {
                 next.PredatorHealth -= power;
                 if (next.PredatorHealth <= 0f) { respawn = Mathf.Max(1f, tuning.predatorRespawnSeconds); next.Message = "Хищник отступил. Путь временно безопасен."; }
+                else if (Nereid.NereidVessel.Active != null) AnglerStruck(ref next);
             }
             state.Value = next;
             return true;
@@ -264,6 +266,6 @@ namespace Raid
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-        private void OnDestroy() { if (Instance == this) Instance = null; if (ownsTuning) Destroy(tuning); }
+        private void OnDestroy() { if (Instance == this) Instance = null; if (ownsTuning) Destroy(tuning); if (ownsProfile) Destroy(anglerProfile); }
     }
 }
