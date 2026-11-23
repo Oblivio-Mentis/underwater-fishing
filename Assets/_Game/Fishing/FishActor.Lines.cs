@@ -349,8 +349,10 @@ namespace Raid
                     !SolidAhead(transform.position, transform.position + move)) transform.position += move;
                 else DeflectOnce();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
-                // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
-                if (!tired && !state.Surging) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
+                // A run burns the fish out: letting it go is the way to tire it. Between runs it breathes,
+                // fastest while weakened, so slacking off for long costs the diver.
+                if (!tired && state.Surging) state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * profile.surgeFatigue * state.TugStrength * dt);
+                else if (!tired) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
             }
         }
 

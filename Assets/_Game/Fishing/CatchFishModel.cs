@@ -18,8 +18,9 @@ namespace Raid
         private Shape shape;
         private Mesh spineMesh;
         private Vector3[] spineWork;
-        private float wavePhase, waveAmplitude, bendCurve, lastYaw, yawRate, tailSlope;
-        private bool hasYaw;
+        private float wavePhase, waveAmplitude, bendCurve, yawRate, tailSlope;
+        private Vector3 lastHeading, lastAnchorForBend;
+        private bool hasHeading;
         private const float HeadZ = .52f, TailZ = -.47f;
 
         private static readonly Dictionary<string, Shape> Shapes = new();
@@ -144,11 +145,25 @@ namespace Raid
                 if(actor.HookSequence!=seenHook){seenHook=actor.HookSequence;if(seenHook>0)hitRecoil=1;}
             }
             hitRecoil=Mathf.MoveTowards(hitRecoil,0,dt*4.2f);
-            // Turn rate of the body drives the C-bend: nose into the turn, tail trailing outside.
-            float yaw = transform.parent == null ? transform.eulerAngles.y : transform.parent.eulerAngles.y;
-            float yawDelta = hasYaw ? Mathf.DeltaAngle(lastYaw, yaw) / dt : 0;
-            hasYaw = true; lastYaw = yaw;
-            yawRate = Mathf.Lerp(yawRate, Mathf.Clamp(yawDelta, -360, 360), 1 - Mathf.Exp(-dt * 10));
+            // The C-bend follows the curvature of the actual path, not the object's yaw: a fish
+            // that is pulled sideways by a line bends into that drift, and a snapped rotation
+            // from the network does not kink the body for a frame.
+            Vector3 travelDir = anchor - lastAnchorForBend;
+            float travelLen = travelDir.magnitude;
+            if (travelLen > .004f)
+            {
+                travelDir /= travelLen;
+                if (hasHeading)
+                {
+                    float signed = Vector3.SignedAngle(lastHeading, travelDir, Vector3.up);
+                    float rate = Mathf.Clamp(signed / Mathf.Max(dt, .008f), -360, 360);
+                    yawRate = Mathf.Lerp(yawRate, rate, 1 - Mathf.Exp(-dt * 6));
+                }
+                lastHeading = Vector3.Slerp(hasHeading ? lastHeading : travelDir, travelDir, 1 - Mathf.Exp(-dt * 12));
+                hasHeading = true;
+                lastAnchorForBend = anchor;
+            }
+            else yawRate = Mathf.Lerp(yawRate, 0, 1 - Mathf.Exp(-dt * 4));
             float clock=Time.time, offset=phase;
             if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
             {
@@ -172,15 +187,16 @@ namespace Raid
             // Readable at a glance: a resting Lanternfish swings its tail root ~6 cm, a bolting one ~16 cm.
             float effort = Mathf.Max(strokeWeight, speedWeight);
             waveAmplitude = Mathf.Lerp(ray ? .05f : .075f, ray ? .11f : .19f, effort) + Mathf.Abs(flinch) * .003f;
-            float targetBend = Mathf.Clamp(-yawRate / 90f, -1, 1) * (ray ? .16f : .26f);
-            bendCurve = Mathf.Lerp(bendCurve, targetBend, 1 - Mathf.Exp(-dt * 8));
+            float targetBend = Mathf.Clamp(-yawRate / 110f, -1, 1) * (ray ? .18f : .30f) * Mathf.Clamp01(travel / .6f);
+            bendCurve = Mathf.Lerp(bendCurve, targetBend, 1 - Mathf.Exp(-dt * 7));
             DeformSpine();
             tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,(ray?whip*.42f:whip)*.55f+flinch+tailSlope,0);
             if(actor!=null)
             {
-                float bank=ray?6f:2.5f;
-                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.2f-flinch*.12f,
-                    lead*Mathf.Lerp(1.5f,3.5f,strokeWeight)*amplitude+flinch*.25f,Mathf.Sin(cruise-.6f)*bank+flinch*.3f);
+                // The body itself stays still: the spine wave and the tail carry the stroke.
+                // Only a slow roll remains, so the silhouette never vibrates against the spine.
+                float bank=ray?4f:1.6f;
+                transform.localRotation=Quaternion.Euler(-flinch*.12f,flinch*.25f,Mathf.Sin(cruise*.5f-.6f)*bank+flinch*.3f);
             }
         }
 

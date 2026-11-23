@@ -31,6 +31,7 @@ namespace Raid
         [Range(0,12)] public float fightFov = 7f;
         [Range(0,3)] public float burstFov = 2f;
         public float captureRange = .72f;
+        [Min(0), Tooltip("Radius of the forgiving sphere-cast used when the exact aim ray misses a fish.")] public float hitAssistRadius = .16f;
         public float assistRange = 3f;
         public float assistBonus = 0.4f;
         public float obstructionGrace = 1.5f;

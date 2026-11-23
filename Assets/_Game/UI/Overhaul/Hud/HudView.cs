@@ -10,6 +10,10 @@ namespace Raid.UI
         public RectTransform Root {get;private set;}
         readonly TMP_Text cargoCount,cargoPhase,scanMarker;
         readonly AimReticle reticle;
+        readonly FishingPullEdges pullEdges;
+
+        public void HitMark(Color tint, float strength) => reticle.Hit(tint, strength);
+        public void PullEdge(Vector2 direction, float strength) => pullEdges.Show(direction, strength);
         readonly DiveInstruments instruments;
         readonly Image cargoBar;
         readonly ReelReadout reel;
@@ -31,6 +35,11 @@ namespace Raid.UI
             this.app=app;
             Root=UiKit.Node(parent,"Diver HUD");UiKit.Fill(Root);
             var group=Root.gameObject.AddComponent<CanvasGroup>();group.interactable=false;group.blocksRaycasts=false;
+
+            var edgeArea = UiKit.Node(Root, "Line pull");
+            UiKit.Fill(edgeArea);
+            pullEdges = edgeArea.gameObject.AddComponent<FishingPullEdges>();
+            pullEdges.raycastTarget = false;
 
             RectTransform content;
             instruments=new DiveInstruments(Root);

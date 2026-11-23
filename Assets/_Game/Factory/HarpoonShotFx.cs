@@ -13,7 +13,7 @@ namespace Raid
         [Min(.03f)] public float maximumFlightSeconds=.16f;
         [Min(.02f)] public float attachmentWaitSeconds=.18f;
         [Min(.02f)] public float retrievalSeconds=.24f;
-        [Min(.001f)] public float cableWidth=.011f;
+        [Min(.001f)] public float cableWidth=.014f;
         public CablePhase Phase {get;private set;}
         public int AcceptedShotCount {get;private set;}
         public float SpoolDegrees {get;private set;}
@@ -221,23 +221,67 @@ namespace Raid
         void Retract(float now)
         {retractStart=tip;phaseAt=now;Phase=CablePhase.Retracting;}
 
+        float shownLoad, thrum, twangKick; int cableTug;
+        // The cable tells the fight: slack line hangs in a lazy catenary and drifts; a loaded line
+        // snaps straight, thins, and thrums with a high-frequency standing wave that grows with pull.
         void DrawCable(Vector3 from,Vector3 to,float now,float tension,bool reeling)
         {
             Vector3 delta=to-from;
-            Vector3 normal=Vector3.Cross(delta.normalized,Vector3.up);if(normal.sqrMagnitude<.1f)normal=Vector3.right;normal.Normalize();
+            float length=delta.magnitude;
+            Vector3 dir=length>.001f?delta/length:Vector3.forward;
+            Vector3 normal=Vector3.Cross(dir,Vector3.up);if(normal.sqrMagnitude<.1f)normal=Vector3.right;normal.Normalize();
+            Vector3 binormal=Vector3.Cross(dir,normal);
             bool flying=Phase==CablePhase.Flying;
-            float sag=Mathf.Lerp(Mathf.Min(.65f,.06f+delta.magnitude*.035f),.015f,Mathf.Clamp01(tension));
-            if(reeling)sag*=.35f;
-            if(Phase==CablePhase.Attached && tool.HookedFish!=null)
-                sag+=Mathf.Min(.85f,Mathf.Max(0,tool.LineLength-delta.magnitude)*.32f);
+            bool fighting=Phase==CablePhase.Attached && tool.HookedFish!=null;
+            // Load = how taut the physical line is. The server spool pays out to the body anchor:
+            // when paid-out length is within the slack allowance of the real anchor distance the
+            // line is a straight wire; only genuine slack hangs.
+            float anchorDistance=fighting && tool.AttachedContact.Resolve(out _,out var contactPoint,out _,out _)
+                ? Vector3.Distance(tool.FishingAnchor,contactPoint) : length;
+            float slack=fighting?Mathf.Max(0,tool.LineLength-anchorDistance):0;
+            float allowance=tool.tuning!=null?tool.tuning.slackAllowance:.18f;
+            bool taut=fighting?slack<=allowance+.04f:reeling;
+            var fishNow=tool.HookedFish;
+            bool pulling=fighting && (fishNow.Surging || fishNow.SurgeWarning || tool.Reeling);
+            float load=fighting?(taut||pulling?1f:Mathf.Clamp01(1-slack/.9f)*.5f+tension*.3f):(reeling?1:0);
+            shownLoad=Mathf.Lerp(shownLoad,load,1-Mathf.Exp(-Time.unscaledDeltaTime*(load>shownLoad?22:8)));
+            float sag=Mathf.Lerp(Mathf.Min(.8f,.05f+length*.045f),0f,shownLoad)+Mathf.Min(.7f,slack*.4f)*(1-shownLoad);
             if(Phase==CablePhase.Retracting)sag=.2f;
-            float wave=flying?.06f:Phase==CablePhase.Retracting?.035f:.008f*(1-Mathf.Clamp01(tension));
+            if(flying)sag=.02f;
+            // Thrum: a fast standing wave while loaded, stronger during a tug, invisible when slack.
+            var fish=tool.HookedFish;
+            float pull=fighting?Mathf.Clamp01(fish.TugStrength):0;
+            if(fighting && taut) sag=Mathf.Min(sag,.004f);
+            // A taut wire is still. A tug plucks it once: a short twang that dies within a third of a second.
+            if(fighting && fish.TugSequence!=cableTug){cableTug=fish.TugSequence;twangKick=.018f*Mathf.Clamp01(length/3f);}
+            twangKick=Mathf.Lerp(twangKick,0,1-Mathf.Exp(-Time.unscaledDeltaTime*9));
+            float wantThrum=twangKick+(taut?0:shownLoad*.003f*Mathf.Clamp01(length/3f));
+            thrum=Mathf.Lerp(thrum,wantThrum,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
+            float drift=flying?.06f:Phase==CablePhase.Retracting?.035f:.012f*(1-shownLoad);
+            float twang=Mathf.Sin(now*62f)*thrum+Mathf.Sin(now*41f+1.3f)*thrum*.5f;
             for(int i=0;i<points.Length;i++)
             {
                 float t=i/(float)(points.Length-1),envelope=Mathf.Sin(t*Mathf.PI);
-                points[i]=Vector3.Lerp(from,to,t)+Vector3.down*(envelope*sag)+normal*(Mathf.Sin(t*24-now*36)*envelope*wave);
+                float standing=Mathf.Sin(t*Mathf.PI*3f)*twang+Mathf.Sin(t*Mathf.PI*5f+now*9f)*thrum*.35f;
+                points[i]=Vector3.Lerp(from,to,t)
+                    +Vector3.down*(envelope*sag)
+                    +normal*(Mathf.Sin(t*24-now*36)*envelope*drift+standing)
+                    +binormal*(Mathf.Cos(t*19+now*31)*envelope*drift*.6f+standing*.4f);
             }
             cable.SetPositions(points);
+            // A loaded line reads bright and hard; slack hangs dull and a little thicker.
+            float width=cableWidth*Mathf.Lerp(1.3f,1f,shownLoad);
+            cable.startWidth=cable.endWidth=width;
+            if(material!=null && material.HasProperty("_BaseColor"))
+            {
+                float glow=Mathf.Clamp01(shownLoad*.75f+pull*.6f);
+                material.SetColor("_BaseColor",Color.Lerp(new Color(.46f,.42f,.30f),new Color(.98f,.94f,.74f),glow));
+                if(material.HasProperty("_EmissionColor"))
+                {
+                    if(!material.IsKeywordEnabled("_EMISSION"))material.EnableKeyword("_EMISSION");
+                    material.SetColor("_EmissionColor",new Color(.9f,.86f,.62f)*(glow*glow*.9f));
+                }
+            }
         }
 
         void Clear()

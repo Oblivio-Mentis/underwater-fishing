@@ -57,14 +57,14 @@ namespace Raid
                 owned = diver != null && diver.IsOwner ? diver.GetComponentInChildren<Camera>() : null;
             if (owned == null) return;
             nextFrame = Time.unscaledTime + interval;
-            if (target == null) target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32) { name = "RAID-018 recorder" };
-            var previous = owned.targetTexture;
-            try
+            if (target == null)
             {
-                owned.targetTexture = target;
-                RenderPipeline.SubmitRenderRequest(owned, request);
+                target = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { name = "RAID-018 recorder" };
+                target.Create();
             }
-            finally { owned.targetTexture = previous; }
+            if (!RenderPipeline.SupportsRenderRequest(owned, request)) { until = 0; return; }
+            request.destination = target;
+            RenderPipeline.SubmitRenderRequest(owned, request);
             pending.Enqueue((Frames++, AsyncGPUReadback.Request(target, 0, TextureFormat.RGBA32)));
         }
 

@@ -60,6 +60,10 @@ namespace Raid
         [Tooltip("Tension rise multiplier while Weakened.")]
         [Range(0, 1)] public float weakenedTension = .55f;
 
+        [Header("Run cost")]
+        [Tooltip("Stamina drain multiplier while the fish runs (a surge); the fish tires itself out.")]
+        [Min(0)] public float surgeFatigue = 1.8f;
+
         [Header("Tug")]
         [Tooltip("Seconds for TugStrength to ramp 0 -> 1 after a surge begins.")]
         [Min(.02f)] public float tugAttackSeconds = .18f;

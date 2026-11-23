@@ -39,7 +39,9 @@ namespace Raid
         private Renderer[] _renderers;
         private GameObject _model;
         private Collider[] _colliders;
-        private MaterialPropertyBlock _tint;
+        private MaterialPropertyBlock _tint, _flashBlock;
+        private float appliedFlash = -1;
+        private static readonly int FlashId = Shader.PropertyToID("_Flash");
         private FsmPresentationDriver _presentation;
         private bool _depthActive;
         private long _cargoId;
@@ -339,10 +341,10 @@ namespace Raid
                     bool carried = visual.Mode == FishMode.Captured || visual.Mode == FishMode.Transported;
                     float age = Mathf.Clamp(Time.time - netReceivedAt, 0, .25f);
                     Vector3 target = carried ? visual.Position : visual.Position + netVelocity * age;
-                    transform.position = Vector3.SmoothDamp(transform.position, target, ref followVelocity, carried ? .03f : .11f, 40f, Time.deltaTime);
+                    transform.position = Vector3.SmoothDamp(transform.position, target, ref followVelocity, carried ? .03f : .14f, 40f, Time.deltaTime);
                 }
                 // Heading settles over a longer window than position so turns read as arcs, not steps.
-                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .16f);
+                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .22f);
                 transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, turnBlend);
             }
             lastVisualActive = visual.Active;
@@ -368,6 +370,23 @@ namespace Raid
                     netVelocity = Vector3.Lerp(netVelocity, (next.Position - previous.Position) / gap, .6f);
                 else netVelocity = Vector3.zero;
                 netReceivedAt = Time.time;
+            }
+        }
+
+        // 0..1 pale flash over the whole body. Slot 1 shares the tint block so the stripe keeps its colour.
+        internal void ApplyFlash(float amount)
+        {
+            if (_model == null) return;
+            amount = Mathf.Clamp01(amount);
+            if (Mathf.Abs(amount - appliedFlash) < .004f) return;
+            appliedFlash = amount;
+            _flashBlock ??= new MaterialPropertyBlock();
+            _tint.SetFloat(FlashId, amount);
+            _flashBlock.SetFloat(FlashId, amount);
+            foreach (var body in _renderers)
+            {
+                int slots = body.sharedMaterials.Length;
+                for (int i = 0; i < slots; i++) body.SetPropertyBlock(i == 1 ? _tint : _flashBlock, i);
             }
         }
 

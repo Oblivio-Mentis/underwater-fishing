@@ -290,7 +290,7 @@ namespace Raid
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             // Sample the same pose for PhysX and the network contact even between fixed ticks.
             Physics.SyncTransforms();
-            bool didHit=Physics.Raycast(eye, Motor.AimDirection, out var hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
+            bool didHit=AimCast(tuning, eye, Motor.AimDirection, out var hit);
             var endpoint=didHit?hit.point:eye+Motor.AimDirection*tuning.maxRange;
             var friend=didHit?hit.collider.GetComponentInParent<DiverMotor>():null;
             var fish=didHit?hit.collider.GetComponentInParent<FishActor>():null;
@@ -621,6 +621,20 @@ namespace Raid
             float vertical = Safe(target.Motor.tuning.verticalSpeed, 2, 0, 4) * Time.fixedDeltaTime;
             motion.y = Mathf.Clamp(motion.y, -vertical, vertical);
             target.Motor.ApplyTetherMotion(motion);
+        }
+
+        // The exact ray first; when it misses a fish, a fat sphere-cast gives thin bodies a fair hit.
+        // The sphere's contact point is on the collider surface, so the anchor still sits on the skin.
+        public static bool AimCast(FishingTuning tuning, Vector3 eye, Vector3 direction, out RaycastHit hit)
+        {
+            bool didHit=Physics.Raycast(eye, direction, out hit, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore);
+            if(didHit && hit.collider.GetComponentInParent<FishActor>()!=null) return true;
+            if(tuning.hitAssistRadius<=0) return didHit;
+            if(Physics.SphereCast(eye, tuning.hitAssistRadius, direction, out var wide, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore)
+                && wide.collider.GetComponentInParent<FishActor>()!=null
+                && (!didHit || wide.distance<=hit.distance+tuning.hitAssistRadius))
+            { hit=wide; return true; }
+            return didHit;
         }
 
         bool FriendLineVisible(HarpoonTool target)

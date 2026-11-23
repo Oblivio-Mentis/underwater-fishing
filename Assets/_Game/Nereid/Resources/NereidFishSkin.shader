@@ -8,6 +8,7 @@ Shader "RAID/Nereid Wet Fauna"
         _PatternStrength("Scale coat",Range(0,1))=0
         _CargoLighting("Controlled inspection light",Range(0,1))=0
         [HDR] _EmissionColor("Photophores",Color)=(0,0,0,0)
+        _Flash("Fight flash",Range(0,1))=0
     }
     SubShader
     {
@@ -25,7 +26,7 @@ Shader "RAID/Nereid Wet Fauna"
             #include "NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor,_RimColor,_EmissionColor;
-            half _Smoothness,_PatternStrength,_CargoLighting;
+            half _Smoothness,_PatternStrength,_CargoLighting,_Flash;
             CBUFFER_END
             float3 _NereidReefClarity;
             struct A {float4 pos:POSITION; float3 normal:NORMAL;};
@@ -62,6 +63,8 @@ Shader "RAID/Nereid Wet Fauna"
                 half finRim=pow(1.-face,3.)*saturate(.6+.4*dot(n,half3(0,1,0)));
                 body+=(_RimColor.rgb*.55+sky*.8)*finRim*.34;
                 body+=beam*(base*(.30+.70*face)+_RimColor.rgb*(edge*.58+finRim*.3+pow(face,24.)*_Smoothness*.16));
+                // Fight flash: the flank catches light as the body twists, read from any distance.
+                body=lerp(body,body*1.45+half3(.40,.54,.58)*(.35+.65*face),_Flash);
                 body=lerp(body,clamp(body,base*.63,base*1.40+.028+_EmissionColor.rgb*.16),_CargoLighting);
                 // Fall into the water column the same way the reef does, so a far catch sits in the same haze.
                 float3 delta=i.world-GetCameraPositionWS();

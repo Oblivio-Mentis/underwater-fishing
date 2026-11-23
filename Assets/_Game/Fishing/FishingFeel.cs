@@ -13,6 +13,8 @@ namespace Raid
         ThreatDirector threats;
         FishActor fish;
         int hookSequence, tugSequence, biteSequence;
+        int carriedCount;
+        Camera eye;
         float nextLookup;
 
         public void Bind(DiverMotor diver)
@@ -20,6 +22,8 @@ namespace Raid
             owner = diver;
             tool = diver == null ? null : diver.GetComponent<HarpoonTool>();
             camera = diver == null ? null : diver.CameraImpulse;
+            eye = diver ? diver.GetComponentInChildren<Camera>() : null;
+            carriedCount = tool ? tool.CatchCount : 0;
             ResetCounters();
         }
 
@@ -47,8 +51,9 @@ namespace Raid
                 if (threats == null) threats = ThreatDirector.Instance;
             }
             var observed = owner.IsDead ? owner.Spectating : owner;
-            if (observed != owner) return;
+            if (observed != owner) { ui.PullEdge(Vector2.zero, 0); return; }
             var current = tool == null ? null : tool.HookedFish;
+            bool attached = current != null && current != fish;
             if (current != fish)
             {
                 fish = current;
@@ -57,13 +62,37 @@ namespace Raid
             }
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
 
-            if (fish != null && fish.HookSequence != hookSequence)
+            bool fighting = fish != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
+            if (fighting && controlling && camera != null)
+            {
+                float strain = Mathf.Clamp01(tool.LineTension * .9f + fish.TugStrength * .8f + (fish.SurgeWarning ? .25f : 0));
+                camera.SetStrain(strain * Setting(s => s.cameraShake));
+            }
+            // Pull edge: the screen side the line drags toward lights up with the pull.
+            if (fighting && controlling)
+            {
+                Vector3 local = eye == null ? Vector3.forward : eye.transform.InverseTransformDirection((fish.transform.position - eye.transform.position).normalized);
+                Vector2 dir = new Vector2(local.x, local.y);
+                float pull = Mathf.Clamp01(fish.TugStrength * 1.1f + (tool.Reeling ? tool.LineTension * .35f : 0));
+                ui.PullEdge(dir.sqrMagnitude > .0001f ? dir.normalized : Vector2.zero, pull * (0.35f + 0.65f * Mathf.Clamp01(dir.magnitude * 2f)));
+            }
+            else ui.PullEdge(Vector2.zero, 0);
+            // Landing: the catch reaches the hand. One white mark, one punch.
+            int count = tool ? tool.CatchCount : 0;
+            if (count > carriedCount && controlling)
+            {
+                ui.HitMark(Color.white, 1.4f);
+                ui.PushFishingPunch(4f * Setting(s => s.hitImpulse));
+            }
+            carriedCount = count;
+            if (fish != null && (attached || fish.HookSequence != hookSequence))
             {
                 hookSequence = fish.HookSequence;
                 if (controlling)
                 {
                     float hit = Setting(s => s.hitImpulse);
                     ui.PushFishingPunch(6.5f * hit);
+                    ui.HitMark(UI.UiTheme.Cyan, 1f);
                     if (camera != null) camera.Hit(.010f * Mathf.Clamp(fish.power,.5f,3f), 1.1f, 0f);
                 }
             }
@@ -73,7 +102,10 @@ namespace Raid
                 if (controlling && fish.Surging)
                 {
                     ui.PushFishingPunch(3.5f * Setting(s => s.fishingCamera));
-                    if (camera != null) camera.Hit(.018f + .02f * Mathf.Clamp(fish.power, .5f, 3f) * .5f, 2.4f, RandomSign());
+                    // The kick follows the fish: it yanks the view toward the side the fish bolts to.
+                    Vector3 toFish = fish.transform.position - owner.transform.position;
+                    float side = Mathf.Sign(Vector3.Dot(owner.transform.right, toFish));
+                    if (camera != null) camera.Hit(.018f + .02f * Mathf.Clamp(fish.power, .5f, 3f) * .5f, 2.4f, side);
                 }
             }
             if (threats != null && threats.BiteSequence != biteSequence)
@@ -88,7 +120,5 @@ namespace Raid
                 }
             }
         }
-
-        static float RandomSign() => Time.unscaledTime % 2 < 1 ? -1 : 1;
     }
 }

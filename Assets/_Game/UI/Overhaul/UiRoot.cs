@@ -40,6 +40,8 @@ namespace Raid.UI
         {
             fishingPunch=Mathf.Max(fishingPunch,Mathf.Clamp(degrees,0,14));
         }
+        public void HitMark(Color color,float strength){if(hud!=null)hud.HitMark(color,strength);}
+        public void PullEdge(Vector2 direction,float strength){if(hud!=null)hud.PullEdge(direction,strength);}
         InputSystemUIInputModule inputModule;
         RectTransform canvasRect,shade,confirmation;
         TMP_Text toastText,pendingText;

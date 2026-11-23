@@ -17,14 +17,14 @@ MonoBehaviour:
     min: 0.25
     max: 0.4
   lateral:
-    min: 0.45
-    max: 0.9
+    min: 1.4
+    max: 2.6
   windup:
-    min: 0.3
-    max: 0.42
+    min: 0.55
+    max: 0.75
   surge:
-    min: 0.3
-    max: 0.45
+    min: 1.0
+    max: 1.6
   weakened:
     min: 0.6
     max: 1
@@ -32,9 +32,9 @@ MonoBehaviour:
     min: 0.25
     max: 0.4
   surgeInterval:
-    min: 1.4
-    max: 2.4
-  surgeCooldown: 1.1
+    min: 3.2
+    max: 5.2
+  surgeCooldown: 2.6
   lateralWeight: 1.6
   surgeWeight: 1.1
   weakenedWeight: 1.2
@@ -46,10 +46,11 @@ MonoBehaviour:
   nearSurgeBias: 1
   lateralStrength: 1.5
   turnRate: 3
-  surgeSpeedMultiplier: 3.6
+  surgeSpeedMultiplier: 3.4
   weakenedSpeedMultiplier: 0.3
   weakenedRecovery: 2
   weakenedTension: 0.6
+  surgeFatigue: 1.5
   tugAttackSeconds: 0.1
   twoHookTugFactor: 0.55
   lastEscapeChance: 0.55

@@ -86,7 +86,9 @@ namespace Raid
             float progress = phaseLength > 0 ? Mathf.Clamp01((clock - phaseStart) / phaseLength) : 1;
 
             bool surgeAllowed = !input.Exhausted && !input.Obstructed && clock - lastSurgeAt >= profile.surgeCooldown;
-            if (input.Exhausted && !Weakened && !Surging)
+            // A run ends early once the body is drained: the fish goes slack mid-run instead of
+            // finishing a timer it no longer has the strength for.
+            if (input.Exhausted && !Weakened)
                 Enter(FishBehaviour.Weakened, profile.weakened);
             else if (CurrentPhase == FishBehaviour.Lateral && surgeAllowed && clock >= nextSurgeAt)
                 Enter(FishBehaviour.SurgeWindup, profile.windup);

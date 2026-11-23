@@ -16,6 +16,15 @@ namespace Raid.UI
         bool dotOnly;
         float gap = 4f, kick;
         Color32 ink;
+        Color confirmedColor;
+        float confirmedAt = -1f, confirmedStrength;
+
+        public void Hit(Color tint, float strength)
+        {
+            confirmedAt = Time.unscaledTime;
+            confirmedColor = tint;
+            confirmedStrength = Mathf.Clamp(strength, .2f, 1.6f);
+        }
 
         public void Initialize(IUiController controller)
         {
@@ -58,6 +67,13 @@ namespace Raid.UI
             {
                 var teammate = hit.collider.GetComponentInParent<DiverMotor>();
                 if (teammate && teammate != player) nextInk = UiTheme.Green;
+            }
+            float age = Time.unscaledTime - confirmedAt;
+            if (!point && age < .32f)
+            {
+                float pulse = confirmedStrength * Mathf.Exp(-10f * age);
+                nextGap += 8f * pulse;
+                nextInk = Color.Lerp(nextInk, confirmedColor, Mathf.Clamp01(pulse));
             }
             if (point == dotOnly && Mathf.Abs(nextGap - gap) < .04f && nextInk.Equals(ink)) return;
             dotOnly = point;
