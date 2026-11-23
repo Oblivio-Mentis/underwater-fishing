@@ -1,7 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
-using System.Text;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -9,107 +7,165 @@ namespace Raid.Tests
 {
     public sealed class CrewProgressTests
     {
-        [Test]
-        public void ExactCrewYieldWithSmallFishAndReloadedRemainder()
+        TeamProgress team;
+        ProgressionTuning tuning;
+        PlayerProgress first, second;
+        string path;
+        static SkillId Id(SkillLine line,int rank)=>SkillTreeDefinition.Id(line,rank);
+
+        [SetUp]
+        public void Prepare()
         {
-            var campaign=new TeamProgress();
-            campaign.teamSkills.Add(SkillId.P1);
-            var file=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")+".json");
-            try
+            tuning=ScriptableObject.CreateInstance<ProgressionTuning>();
+            team=new TeamProgress(tuning){Treasury=new MaterialCost(1000,1000,1000,1000)};
+            first=team.RegisterPlayer("lan:first");
+            second=team.RegisterPlayer("lan:second");
+            path=Path.Combine(Path.GetTempPath(),"raid019-test-"+Guid.NewGuid().ToString("N")+".json");
+        }
+
+        [TearDown]
+        public void Finish()
+        {
+            UnityEngine.Object.DestroyImmediate(tuning);
+            File.Delete(path);
+            File.Delete(path+".bak");
+        }
+
+        bool Buy(PlayerProgress player,SkillLine line,int rank,Func<bool> persist=null) =>
+            team.TryPurchase(player,Id(line,rank),team.teamRevision,player.revision,tuning,persist??(()=>true),out _);
+
+        [Test]
+        public void ThreeCableRanksHaveSequentialDependenciesAndConfirmedExactPrices()
+        {
+            var initial=team.Treasury;
+            Assert.That(Buy(first,SkillLine.Cable,3),Is.False);
+            Assert.That(team.Treasury,Is.EqualTo(initial));
+            for(int rank=1;rank<=3;rank++)
             {
-                for(int i=1;i<=10;i++)
-                {
-                    Assert.That(campaign.Deposit(new CatchItem(i,1,0,1,1,1)));
-                    Assert.That(campaign.Process(i));
-                    if(i==5){TeamSave.Save(file,campaign);campaign=TeamSave.Load(file);}
-                }
-                Assert.That(campaign.biomass,Is.EqualTo(11));
-                Assert.That(campaign.chitin,Is.Zero);
-                campaign.teamSkills.AddRange(new[]{SkillId.P2,SkillId.P3,SkillId.P4});
-                for(int i=20;i<=21;i++)
-                {
-                    campaign.Deposit(new CatchItem(i,10,10,2,1,1,10,10));
-                    Assert.That(campaign.Process(i));
-                }
-                Assert.That(campaign.biomass,Is.EqualTo(38));
-                Assert.That(campaign.chitin,Is.EqualTo(27));
-                Assert.That(campaign.scrap,Is.EqualTo(27));
-                Assert.That(campaign.electronics,Is.EqualTo(27));
+                Assert.That(Buy(first,SkillLine.Cable,rank),Is.True);
+                initial=initial.Subtract(SkillTreeDefinition.Get(Id(SkillLine.Cable,rank)).Cost);
+                Assert.That(team.Treasury,Is.EqualTo(initial));
+                if(rank==1)Assert.That(Buy(first,SkillLine.Cable,3),Is.False);
             }
-            finally { File.Delete(file); }
+            Assert.That(SkillTreeDefinition.Value(first.skills,SkillLine.Cable),Is.EqualTo(36));
+            Assert.That(second.skills,Is.Empty);
         }
 
         [Test]
-        public void ASharedCatchCreditsOneYieldAndFeedingLeavesTheWalletAlone()
+        public void TwoBuyersCanOnlyPurchaseOneSharedCageRank()
         {
-            var team=new TeamProgress();
-            team.RegisterPlayer("zz");
-            team.RegisterPlayer("aa");
-            team.Deposit(new CatchItem(1,7,3,2,3,1){caughtBy=new[]{"zz","aa","zz"}});
-            Assert.That(team.Process(1));
-            Assert.That(team.biomass,Is.EqualTo(7));
-            Assert.That(team.chitin,Is.EqualTo(3));
-            Assert.That(team.offeringPoints,Is.Zero);
-            team.teamSkills.AddRange(new[]{SkillId.N1,SkillId.N2,SkillId.N4});
-            team.Deposit(new CatchItem(2,2,0,2,1,1){caughtBy=new[]{"aa"}});
-            Assert.That(team.Feed(2));
-            Assert.That(team.offeringPoints,Is.EqualTo(290));
-            Assert.That(team.biomass,Is.EqualTo(7));
-            Assert.That(team.PublicView().players,Is.Empty);
+            Assert.That(Buy(first,SkillLine.Cage,1),Is.True);
+            int revision=team.teamRevision;
+            var before=team.Treasury;
+            var target=Id(SkillLine.Cage,2);
+            Assert.That(team.TryPurchase(first,target,revision,first.revision,tuning,()=>true,out _),Is.True);
+            Assert.That(team.TryPurchase(second,target,revision,second.revision,tuning,()=>true,out _),Is.False);
+            Assert.That(team.Treasury,Is.EqualTo(before.Subtract(SkillTreeDefinition.Get(target).Cost)));
+            Assert.That(team.teamRevision,Is.EqualTo(revision+1));
+            Assert.That(team.PublicView().Capacity(tuning),Is.EqualTo(16));
+            Assert.That(first.revision+second.revision,Is.Zero);
         }
 
         [Test]
-        public void VersionTwoBalancesMergeOnceAndSkillsStayWithTheirOwner()
+        public void WrongProfileReferenceAndStaleRevisionsCannotSpend()
         {
-            string file=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")+".json");
-            try
-            {
-                const string old="{\"schemaVersion\":2,\"biomass\":5,\"scrap\":3,\"offeringPoints\":290,"+
-                    "\"players\":[{\"key\":\"one\",\"wallet\":{\"biomass\":2},\"skills\":[1]},{\"key\":\"two\",\"wallet\":{\"biomass\":4,\"scrap\":8},\"skills\":[5]}]}";
-                using var sha=SHA256.Create();
-                var envelope=new LegacyEnvelope{format="RAID.TeamProgress",payload=old,sha256=Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(old)))};
-                File.WriteAllText(file,JsonUtility.ToJson(envelope));
-                var team=TeamSave.Load(file);
-                Assert.That(team.Treasury,Is.EqualTo(new MaterialCost(11,0,11,0)));
-                Assert.That(team.Player("one").skills,Is.EqualTo(new[]{SkillId.H1}));
-                Assert.That(team.Player("two").skills,Is.EqualTo(new[]{SkillId.S1}));
-                Assert.That(team.offeringPoints,Is.EqualTo(290));
-                TeamSave.Save(file,team);
-                Assert.That(TeamSave.Load(file).Treasury,Is.EqualTo(team.Treasury));
-            }
-            finally { File.Delete(file);File.Delete(file+".bak"); }
+            var before=team.Treasury;
+            var target=Id(SkillLine.Reel,1);
+            var substitute=new PlayerProgress{key=first.key};
+            Assert.That(team.TryPurchase(substitute,target,0,0,tuning,()=>true,out _),Is.False);
+            Assert.That(team.TryPurchase(first,target,0,1,tuning,()=>true,out _),Is.False);
+            Assert.That(team.TryPurchase(first,target,1,0,tuning,()=>true,out _),Is.False);
+            Assert.That(team.Treasury,Is.EqualTo(before));
+            Assert.That(first.skills,Is.Empty);
         }
 
         [Test]
-        public void VersionOneCapacityFoodAndCargoSurviveWithoutRepeatingTheMigration()
+        public void InsufficientResourcesAndFailedWriteLeaveBalancesRanksAndClocksIntact()
         {
-            var tuning=ScriptableObject.CreateInstance<ProgressionTuning>();
-            var file=Path.Combine(Path.GetTempPath(),Guid.NewGuid().ToString("N")+".json");
-            try
-            {
-                const string old="{\"schemaVersion\":1,\"winchLevel\":2,\"offering\":3,\"hungerRemaining\":42,\"goshaTamed\":true,"+
-                    "\"cargo\":[{\"id\":11,\"species\":\"Needlefish\",\"offering\":1,\"cargoSize\":1,\"depthTier\":1}]}";
-                using var sha=SHA256.Create();
-                var envelope=new LegacyEnvelope{format="RAID.TeamProgress",payload=old,sha256=Convert.ToBase64String(sha.ComputeHash(Encoding.UTF8.GetBytes(old)))};
-                File.WriteAllText(file,JsonUtility.ToJson(envelope));
-                var campaign=TeamSave.Load(file,tuning);
-                Assert.That(campaign.Capacity(tuning),Is.EqualTo(16));
-                Assert.That(campaign.offeringPoints,Is.EqualTo(300));
-                Assert.That(campaign.hungerRemaining,Is.EqualTo(42));
-                Assert.That(campaign.cargo[0].id,Is.EqualTo(11));
-                Assert.That(campaign.goshaTamed);
-                campaign.winchLevel=3;
-                TeamSave.Save(file,campaign);
-                campaign=TeamSave.Load(file,tuning);
-                Assert.That(campaign.Capacity(tuning),Is.EqualTo(16));
-                campaign.teamSkills.AddRange(new[]{SkillId.K1,SkillId.K2,SkillId.K3,SkillId.K4});
-                Assert.That(campaign.Capacity(tuning),Is.EqualTo(34));
-                Assert.That(File.Exists(file+".bak"));
-            }
-            finally { UnityEngine.Object.DestroyImmediate(tuning);File.Delete(file);File.Delete(file+".bak"); }
+            team.Treasury=default;
+            Assert.That(Buy(first,SkillLine.Satiety,1),Is.False);
+            team.Treasury=new MaterialCost(100,100,100,100);
+            var before=team.Treasury;
+            var remaining=team.hungerRemaining;
+            float observedDuringWrite=0;
+            Assert.That(Buy(first,SkillLine.Satiety,1,()=> {observedDuringWrite=team.hungerRemaining;return false;}),Is.False);
+            Assert.That(observedDuringWrite,Is.GreaterThan(remaining));
+            Assert.That(team.hungerRemaining,Is.EqualTo(remaining));
+            Assert.That(team.teamRevision,Is.Zero);
+            Assert.That(team.teamSkills,Is.Empty);
+            Assert.That(team.Treasury,Is.EqualTo(before));
         }
 
-        [Serializable]
-        sealed class LegacyEnvelope { public string format,payload,sha256; }
+        [Test]
+        public void RoundTripKeepsPersonalAndTeamRanksWithoutPublishingProfileKeys()
+        {
+            Assert.That(Buy(first,SkillLine.Reel,1),Is.True);
+            Assert.That(Buy(second,SkillLine.Oxygen,1),Is.True);
+            Assert.That(Buy(second,SkillLine.Hull,1),Is.True);
+            team.expeditionDepth=2;
+            team.goshaMet=team.goshaTamed=true;
+            team.Deposit(new CatchItem(12,3,2,1,1,2,1,4){caughtBy=new[]{first.key,second.key}});
+            var before=team.Treasury;
+            TeamSave.Save(path,team);
+            var loaded=TeamSave.Load(path);
+            Assert.That(loaded.Treasury,Is.EqualTo(before));
+            Assert.That(loaded.expeditionDepth,Is.EqualTo(2));
+            Assert.That(loaded.goshaTamed,Is.True);
+            Assert.That(loaded.Player(first.key).skills,Is.EqualTo(new[]{Id(SkillLine.Reel,1)}));
+            Assert.That(loaded.Player(second.key).skills,Is.EqualTo(new[]{Id(SkillLine.Oxygen,1)}));
+            Assert.That(loaded.TeamRank(SkillLine.Hull),Is.EqualTo(1));
+            Assert.That(JsonUtility.ToJson(loaded.PublicView()),Does.Not.Contain(first.key).And.Not.Contain(second.key));
+        }
+
+        [Test]
+        public void HoistReservesRealTankSpaceAndKeepsEachCatch()
+        {
+            tuning.reservoirCapacity=2;
+            var fish1=new CatchItem(1,1,0,1,1,1);
+            var fish2=new CatchItem(2,1,0,1,1,1);
+            var fish3=new CatchItem(3,1,0,1,1,1);
+            Assert.That(team.Deposit(fish1,tuning),Is.True);
+            Assert.That(team.LoadCargo(fish2,tuning),Is.True);
+            Assert.That(team.LoadCargo(fish3,tuning),Is.True);
+            Assert.That(team.BeginHoist(tuning),Is.False);
+            Assert.That(team.Feed(1,tuning),Is.True);
+            Assert.That(team.BeginHoist(tuning),Is.True);
+            Assert.That(team.Deposit(new CatchItem(4,1,0,1,1,1),tuning),Is.False);
+            team.TickHoist(75,tuning);
+            Assert.That(team.tank.ConvertAll(x=>x.id),Is.EqualTo(new long[]{2,3}));
+            Assert.That(team.cargo,Is.Empty);
+        }
+
+        [Test]
+        public void FoodAndFourYieldsUseTheHighestOwnedRankAndPreserveRemainder()
+        {
+            Assert.That(Buy(first,SkillLine.Nutrition,1),Is.True);
+            Assert.That(Buy(first,SkillLine.SmallRation,1),Is.True);
+            Assert.That(Buy(first,SkillLine.Separator,1),Is.True);
+            Assert.That(Buy(first,SkillLine.Biomass,1),Is.True);
+            var meal=new CatchItem(1,1,1,2,1,1,1,1);
+            Assert.That(team.FoodValue(meal,tuning),Is.EqualTo(218));
+            Assert.That(team.ProcessPreview(meal,tuning),Is.EqualTo(new MaterialCost(112,105,105,105)));
+            Assert.That(team.Deposit(meal),Is.True);
+            Assert.That(team.CreditProcessedCatch(meal.id,tuning,out var credited),Is.True);
+            Assert.That(credited,Is.EqualTo(new MaterialCost(1,1,1,1)));
+            Assert.That(team.processingRemainder,Is.EqualTo(new MaterialCost(12,5,5,5)));
+            Assert.That(team.CreditProcessedCatch(meal.id,tuning,out _),Is.False);
+        }
+
+        [Test]
+        public void SatietyScalesCurrentCycleAndCarryoverStaysCapped()
+        {
+            team.hungerRemaining=tuning.hungerInterval/2;
+            Assert.That(Buy(first,SkillLine.Satiety,1),Is.True);
+            Assert.That(team.hungerRemaining,Is.EqualTo(tuning.hungerInterval*.53f).Within(.001));
+            Assert.That(Buy(first,SkillLine.Carryover,1),Is.True);
+            team.offering=22;
+            team.EvaluateHunger(tuning);
+            Assert.That(team.offeringPoints,Is.EqualTo(150));
+            team.offering=100;
+            team.EvaluateHunger(tuning);
+            Assert.That(team.offeringPoints,Is.EqualTo(300));
+        }
     }
 }

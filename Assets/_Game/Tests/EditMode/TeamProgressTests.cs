@@ -29,20 +29,6 @@ namespace Raid.Tests
 
         private static CatchItem Fish(long id, int size = 1) => new CatchItem(id, 4, 1, 3, size, 1);
 
-        [Test]
-        public void LaterTierUpgradeRequiresNewMaterialsWithoutPartiallyCharging()
-        {
-            tuning.Recipe(Upgrade.Winch).additionalPerLevel=new MaterialCost(0,2,1,1);
-            team.biomass=100;
-            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.True);
-            int balance=team.biomass;
-            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.False);
-            Assert.That(team.biomass,Is.EqualTo(balance));
-            team.chitin=2;team.scrap=1;team.electronics=1;
-            Assert.That(team.Buy(Upgrade.Winch,true,tuning),Is.True);
-            Assert.That(team.chitin+team.scrap+team.electronics,Is.Zero);
-        }
-
         [TestCase(true)]
         [TestCase(false)]
         public void FishCanBeConsumedOnlyOnce(bool processFirst)
@@ -68,79 +54,6 @@ namespace Raid.Tests
             team.Process(1);
             Assert.That(team.biomass, Is.EqualTo(4), "External mutable item cannot change delivered yields.");
             Assert.That(team.lifetimeCatch, Is.EqualTo(5));
-        }
-
-        [Test]
-        public void UpgradePriceScalesAndChargesExactMaterials()
-        {
-            tuning.Recipe(Upgrade.Winch).initialCost = new MaterialCost(3, 2, 1, 1);
-            tuning.Recipe(Upgrade.Winch).costMultiplier = 1.5f;
-            team.biomass = 30; team.chitin = 20; team.scrap = 10; team.electronics = 10;
-            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
-            MaterialCost next = team.Cost(Upgrade.Winch, tuning);
-            Assert.That(next.biomass, Is.EqualTo(5));
-            Assert.That(next.chitin, Is.EqualTo(3));
-            Assert.That(next.scrap, Is.EqualTo(2));
-            Assert.That(next.electronics, Is.EqualTo(2));
-            Assert.That(team.biomass, Is.EqualTo(27));
-            Assert.That(team.chitin, Is.EqualTo(18));
-            Assert.That(team.scrap, Is.EqualTo(9));
-            Assert.That(team.electronics, Is.EqualTo(9));
-        }
-
-        [Test]
-        public void DecimalPriceMultiplierDoesNotAddSpuriousUnitFromFloatRounding()
-        {
-            tuning.Recipe(Upgrade.Reel).initialCost = new MaterialCost(10);
-            tuning.Recipe(Upgrade.Reel).costMultiplier = 1.7f;
-            team.reelLevel = 1;
-            Assert.That(team.Cost(Upgrade.Reel, tuning).biomass, Is.EqualTo(17));
-            team.biomass=100;
-            Assert.That(team.Buy(Upgrade.Reel,true,tuning),Is.False);
-            Assert.That(team.biomass,Is.EqualTo(100));
-        }
-
-        [Test]
-        public void MissingOneMaterialOrBeingUnderwaterDoesNotChargeAnything()
-        {
-            tuning.Recipe(Upgrade.Winch).initialCost = new MaterialCost(3, 2, 1, 1);
-            team.biomass = 30; team.chitin = 20; team.scrap = 10;
-            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.False);
-            team.electronics = 1;
-            Assert.That(team.Buy(Upgrade.Winch, false, tuning), Is.False);
-            Assert.That(team.biomass, Is.EqualTo(30));
-            Assert.That(team.chitin, Is.EqualTo(20));
-            Assert.That(team.scrap, Is.EqualTo(10));
-            Assert.That(team.electronics, Is.EqualTo(1));
-            Assert.That(team.winchLevel, Is.Zero);
-        }
-
-        [Test]
-        public void MaximumUpgradeLevelCannotSpendResourcesAgain()
-        {
-            tuning.Recipe(Upgrade.Winch).maximumLevel = 1;
-            team.biomass = 100;
-            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
-            int balance = team.biomass;
-            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.False);
-            Assert.That(team.biomass, Is.EqualTo(balance));
-            Assert.That(team.winchLevel, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void DepthTwoUnlockUsesCumulativeCatchAndOnlyAccessibleFirstDepthMaterials()
-        {
-            team.biomass = 100;
-            Assert.That(team.Buy(Upgrade.Hull, true, tuning), Is.False);
-            team.biomass = 0;
-            for (int i = 1; i <= 6; i++) { team.Deposit(Fish(i)); team.Process(i); }
-            Assert.That(team.lifetimeCatch, Is.EqualTo(30));
-            MaterialCost cost = team.Cost(Upgrade.Hull, tuning);
-            Assert.That(cost.chitin + cost.scrap + cost.electronics, Is.Zero);
-            Assert.That(team.Buy(Upgrade.Hull, true, tuning), Is.True);
-            Assert.That(team.CanVisitDepth(1), Is.True);
-            Assert.That(team.CanVisitDepth(2), Is.True);
-            Assert.That(team.lifetimeCatch, Is.EqualTo(30), "Paying materials does not reduce technology progress.");
         }
 
         [Test]
@@ -186,7 +99,7 @@ namespace Raid.Tests
         {
             team.biomass = 100;
             int capacity = team.Capacity(tuning);
-            Assert.That(team.Buy(Upgrade.Winch, true, tuning), Is.True);
+            team.teamSkills.Add(SkillTreeDefinition.Id(SkillLine.Winch,1));
             Assert.That(team.Capacity(tuning), Is.EqualTo(capacity));
             team.LoadCargo(Fish(1), tuning);
             team.BeginHoist(tuning);
@@ -205,7 +118,7 @@ namespace Raid.Tests
             Assert.That(report.outcome, Is.EqualTo(outcome));
             Assert.That(report.deficit, Is.EqualTo(deficit).Within(.001));
             Assert.That(report.Attack, Is.EqualTo(offered == 0));
-            Assert.That(team.offering, Is.EqualTo(Math.Min(3, Math.Max(0, offered - 12))));
+            Assert.That(team.offering, Is.Zero);
         }
 
         [Test]
@@ -228,15 +141,16 @@ namespace Raid.Tests
         {
             for (int i = 1; i <= 20; i++) team.Deposit(Fish(i));
             team.biomass = 100;
-            team.Buy(Upgrade.Hull, true, tuning);
-            team.reelLevel = 1; // Legacy equipment already earned on this campaign.
+            team.teamSkills.Add(SkillTreeDefinition.Id(SkillLine.Hull,1));
+            var diver=team.RegisterPlayer("local");
+            diver.skills.Add(SkillTreeDefinition.Id(SkillLine.Reel,1));
             int resources = team.biomass;
             Assert.That(team.ApplyStockLoss(tuning), Is.EqualTo(4));
             Assert.That(team.tank.Count, Is.EqualTo(16));
             Assert.That(team.lifetimeCatch, Is.EqualTo(100));
             Assert.That(team.highestDepth, Is.EqualTo(2));
-            Assert.That(team.hullLevel, Is.EqualTo(1));
-            Assert.That(team.reelLevel, Is.EqualTo(1));
+            Assert.That(team.TeamRank(SkillLine.Hull), Is.EqualTo(1));
+            Assert.That(SkillTreeDefinition.Rank(diver.skills,SkillLine.Reel), Is.EqualTo(1));
             Assert.That(team.biomass, Is.EqualTo(resources));
         }
 
