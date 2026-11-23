@@ -280,7 +280,7 @@ namespace Raid.UI
             TerminalParts.Text(explanation,"None",UiText.OutcomeNone,30,20,UiTheme.Muted);
             TerminalParts.Text(explanation,"Under",UiText.OutcomeUnder,30,20,UiTheme.Muted);
             TerminalParts.Text(explanation,"Enough",UiText.OutcomeEnough,32,20,UiTheme.Muted);
-            TerminalParts.Text(explanation,"Over",UiText.OverfeedingRule(view.TeamValue(SkillLine.Carryover),app.Context.Tuning.maximumFoodCarry),54,20,UiTheme.Muted);
+            TerminalParts.Text(explanation,"Over",UiText.OverfeedingRule(app.Context.View.TeamValue(SkillLine.Carryover),app.Context.Tuning.maximumFoodCarry),54,20,UiTheme.Muted);
             TerminalParts.Text(content,"FeedingHint",UiText.FeedingHint,50,21,UiTheme.Muted);
             BuildCatch(true);
         }
