@@ -44,6 +44,10 @@ namespace Raid.UI
             public int observedBurps;
             public long observedSwallows;
             public float tension,stamina;
+            // RAID-018: replicated fight/predator readouts seen by this independent client.
+            public string fishBehaviour, anglerStage;
+            public int fishHookSequence, fishTugSequence, biteSequence, biteVictim;
+            public float fishTugStrength, anglerDistance;
             public bool tetherActive,isPulled;
             public int tetherOwner=-1,tetherTarget=-1;
             public float tetherRefusal;
@@ -406,6 +410,9 @@ namespace Raid.UI
                 uiScale=root.Settings.scale,fov=root.Settings.fov,sensitivity=root.Settings.sensitivity,lastSuccess=root.LastCommandSucceeded,
                 aimBlend=Nereid.NereidAim.Blend,aiming=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.IsAiming,aimQaActive=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.BackgroundQaActive,applicationFocused=Application.isFocused,
                 team=context.View==null?"":JsonUtility.ToJson(context.View),hookedFish=fish==null?"":fish.SpeciesId,hookMode=fish==null?"":fish.Mode.ToString(),tension=fish==null?0:fish.Tension,stamina=fish==null?0:fish.Stamina,
+                fishBehaviour=fish==null?"":fish.Behaviour.ToString(),fishHookSequence=fish==null?0:fish.HookSequence,fishTugSequence=fish==null?0:fish.TugSequence,fishTugStrength=fish==null?0:fish.TugStrength,
+                anglerStage=ThreatDirector.Instance==null?"":ThreatDirector.Instance.AnglerStage.ToString(),biteSequence=ThreatDirector.Instance==null?0:ThreatDirector.Instance.BiteSequence,biteVictim=ThreatDirector.Instance==null?-1:ThreatDirector.Instance.BiteVictim,
+                anglerDistance=ThreatDirector.Instance==null||player==null?-1:Vector3.Distance(player.transform.position,ThreatDirector.Instance.AnglerPosition),
                 rescueProgress=context.Rescue==null?0:context.Rescue.DisplayProgress,stockLoss=world==null?0:world.StockLossCount,wave=context.Threats!=null&&context.Threats.WaveActive};
             if(context.Harpoon!=null)
             {
