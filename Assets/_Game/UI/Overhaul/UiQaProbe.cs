@@ -22,7 +22,7 @@ namespace Raid.UI
         [Serializable] public sealed class Snapshot
         {
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
-            public float health,hypoxia,airlockWater,innerDoor,outerDoor;
+            public float health,hypoxia,airlockWater,innerDoor,outerDoor,innerLeafTravel,outerLeafTravel;
             public string airlockPhase,reticleControl;
             public int processingPresses,feedingPresses,hoistPresses;
             public GoshaSnapshot gosha;
@@ -456,6 +456,8 @@ namespace Raid.UI
                 snapshot.fishRoute=world.FishRoute;snapshot.gosha=world.Gosha;
                 snapshot.goshaModelVisible=world.QaGoshaVisible;
                 var chamber=world.Airlock;snapshot.airlockPhase=chamber.Phase.ToString();snapshot.airlockWater=chamber.Water;snapshot.innerDoor=chamber.Inner;snapshot.outerDoor=chamber.Outer;
+                var doors=Nereid.NereidAirlock.Active?.GetComponent<Nereid.NereidPressureDoors>();
+                if(doors){snapshot.innerLeafTravel=doors.MeasuredOpening(false);snapshot.outerLeafTravel=doors.MeasuredOpening(true);}
                 if(player!=null)
                 {
                     snapshot.health=player.Health;snapshot.hypoxia=player.HypoxiaSeverity;snapshot.hypoxic=player.IsHypoxic;

@@ -20,6 +20,14 @@ namespace Raid.Nereid
             closed[3] = outerStarboard.localPosition;
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal float MeasuredOpening(bool sea)
+        {
+            var panel=sea ? outerPort : innerPort;
+            return Vector3.Distance(panel.localPosition,closed[sea ? 2 : 0])/Mathf.Max(.001f,stroke);
+        }
+#endif
+
         internal void MoveGate(int gate, float open)
         {
             var travel = Vector3.forward * (stroke * open);
