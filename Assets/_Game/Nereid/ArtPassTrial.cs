@@ -170,7 +170,14 @@ namespace Raid.Nereid
                 look=station.screenAnchor.position;
                 feet=look-station.screenAnchor.forward*1.7f-Vector3.up*.6f;
             }
-            if(mark.prop=="kelp-peer")
+            if(mark.prop=="crew")
+            {
+                peer=DiverMotor.ServerDivers.FirstOrDefault(d=>d && !d.IsOwner);
+                if (!peer) throw new InvalidOperationException("Crew portrait requires an independent client.");
+                peer.Teleport(look);
+                look+=Vector3.up*.45f;
+            }
+            else if(mark.prop=="kelp-peer")
             {
                 // Keep the passer out of the comparison camera until the kelp photograph.
                 peer=DiverMotor.ServerDivers.FirstOrDefault(d=>d && !d.IsOwner);

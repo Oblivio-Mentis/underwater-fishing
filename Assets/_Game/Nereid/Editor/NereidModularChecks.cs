@@ -12,6 +12,13 @@ namespace Raid.Nereid.Editor
     {
         const string ScenePath = "Assets/_Game/Scenes/InterfaceVerticalSlice.unity";
 
+        public static void PrepareCandidate()
+        {
+            TransitFitAuthoring.ApplyToMain();
+            NereidOperationsAuthoring.Install();
+            Run();
+        }
+
         [MenuItem("Tools/NEREID/Validate expedition")]
         public static void Run()
         {
@@ -20,6 +27,10 @@ namespace Raid.Nereid.Editor
             var scene = EditorSceneManager.OpenScene(ScenePath);
             var layout=Object.FindAnyObjectByType<NereidShipLayout>();
             Check(layout && PrefabUtility.IsPartOfPrefabInstance(layout),"The modular vessel is a connected prefab.");
+            var launcher=Object.FindAnyObjectByType<HarpoonPresentation>();
+            Check(launcher && launcher.weaponAppearance && launcher.weaponAppearance.Ready &&
+                Vector3.Distance(launcher.weaponAppearance.boltTipLocal,launcher.weaponAppearance.boltNockLocal)>.07f,
+                "First-person and world displays are bound to a prefab with a detachable spear and cable drum.");
             var decks=Object.FindAnyObjectByType<NereidDeckNavigation>();
             Check(decks && decks.reservoirGlass && decks.reservoirGlass.enabled,"The reservoir floor has solid physical glass.");
             Check(decks.crewSpawns.All(s=>s && layout.ContainsSealed(s.position)),"Every crew spawn is in a dry compartment.");

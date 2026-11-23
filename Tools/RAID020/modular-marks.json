@@ -1,6 +1,37 @@
 {
   "cameras": [
     {
+      "name": "exterior-bow",
+      "depth": 1,
+      "feet": {
+        "x": 8.8,
+        "y": 2.5,
+        "z": 15.3
+      },
+      "look": {
+        "x": 0,
+        "y": 2.1,
+        "z": 8
+      },
+      "shipLocal": true
+    },
+    {
+      "name": "crew-harpoon",
+      "depth": 1,
+      "feet": {
+        "x": 0,
+        "y": 0.6,
+        "z": 1.5
+      },
+      "look": {
+        "x": 0.15,
+        "y": 0.6,
+        "z": -0.45
+      },
+      "shipLocal": true,
+      "prop": "crew"
+    },
+    {
       "name": "exterior",
       "depth": 1,
       "shipLocal": true,
