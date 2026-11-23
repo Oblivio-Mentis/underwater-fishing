@@ -247,7 +247,10 @@ namespace Raid.UI
             yield return Send("reticle_hover");
             yield return Wait("Both clients show the physical dial",()=>Remote()?.page=="SkillTree" &&
                 Ui.GetComponentsInChildren<SkillSectorButton>().Count(v=>v.IsActive())==8);
-            Check("Physical monitor reserves normal gameplay",UiInputGate.Blocked && UiInputGate.MonitorLook && Remote()?.inputBlocked==true);
+            var hostCamera=host.GetComponentInChildren<Camera>();
+            Check("Physical monitor reserves the pointer and keeps the normal camera FOV",
+                UiInputGate.PointerReserved && UiInputGate.MonitorLook &&
+                Mathf.Abs(hostCamera.fieldOfView-Ui.Settings.fov)<.4f);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"01-radial-720.png"));
             yield return Send("capture","01-radial-1080.png");
 
