@@ -31,10 +31,10 @@ Material:
     m_Floats:
     - _DeckTread: 0
     - _Marine: 0
-    - _Metallic: 0.24
-    - _Smoothness: 0.5
+    - _Metallic: 0.23
+    - _Smoothness: 0.37
     m_Colors:
-    - _BaseColor: {r: 0.5, g: 0.56, b: 0.52, a: 1}
+    - _BaseColor: {r: 0.375, g: 0.39, b: 0.365, a: 1}
     - _SurfaceDetail: {r: 0.1, g: 0.55, b: 0.012, a: 1}
     - _SurfaceRegion: {r: 0.242, g: 0.686, b: 0.516, a: 0.293}
     - _SurfaceTiling: {r: 0.32, g: 0.5, b: 0, a: 0}
