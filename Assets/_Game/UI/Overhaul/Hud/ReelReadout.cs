@@ -6,7 +6,7 @@ namespace Raid.UI
 {
     sealed class ReelReadout
     {
-        readonly RectTransform root;
+        readonly RectTransform root, cardRoot;
         readonly LineTensionArc arc;
         readonly TMP_Text species, range, hookCount;
         readonly Image stamina, speciesIcon;
@@ -15,7 +15,7 @@ namespace Raid.UI
         float shownLoad, targetStamina, shownStamina;
         public bool Visible => root.gameObject.activeSelf;
 
-        public ReelReadout(Transform parent)
+        public ReelReadout(RectTransform parent, RectTransform safe = null)
         {
             root = UiKit.Node(parent, "Fishing instruments");
             UiKit.Fill(root);
@@ -24,9 +24,10 @@ namespace Raid.UI
             arc = gauge.gameObject.AddComponent<LineTensionArc>();
             arc.raycastTarget = false;
 
-            var card = UiKit.Panel(root, "Hooked fish", new Color(.025f, .065f, .077f, .84f));
+            var card = UiKit.Panel(safe ? safe : parent, "Hooked fish", new Color(.025f, .065f, .077f, .84f));
+            cardRoot = card.rectTransform;
             UiKit.Tile(card);
-            UiKit.Place(card.rectTransform, new Vector2(1f, .78f), Vector2.one, new Vector2(-26, 0), new Vector2(265, 72));
+            UiKit.Place(cardRoot, Vector2.one, Vector2.one, new Vector2(-26, -18), new Vector2(265, 72));
             speciesIcon = UiKit.Symbol(card.transform, "Species icon", DiveInstruments.Mark.Lantern, Color.white);
             UiKit.Place(speciesIcon.rectTransform, Vector2.up, Vector2.up, new Vector2(10, -7), new Vector2(29, 29));
             species = Label(card.transform, "Species", 47, -5, 146, 33, 23);
@@ -42,7 +43,13 @@ namespace Raid.UI
             UiKit.Place(track.rectTransform, Vector2.up, Vector2.up, new Vector2(83, -50), new Vector2(169, 7));
             stamina = UiKit.Panel(track.transform, "Remaining stamina", UiTheme.Cyan);
             UiKit.Fill(stamina.rectTransform);
-            root.gameObject.SetActive(false);
+            SetVisible(false);
+        }
+
+        void SetVisible(bool visible)
+        {
+            root.gameObject.SetActive(visible);
+            cardRoot.gameObject.SetActive(visible);
         }
 
         static TMP_Text Label(Transform parent, string name, int x, int y, int width, int height, int size)
@@ -79,7 +86,7 @@ namespace Raid.UI
             bool active = !ctx.Player.IsDead && !UiInputGate.Modal && fish != null &&
                 fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
             bool entering = active && (!Visible || lastFish != fish);
-            if (Visible != active) root.gameObject.SetActive(active);
+            if (Visible != active) SetVisible(active);
             lastFish = active ? fish : null;
             lineOwner = active ? tool : null;
             if (!active) return;
@@ -106,7 +113,7 @@ namespace Raid.UI
             if (!lineOwner || !lastFish || lineOwner.HookedFish != lastFish || UiInputGate.Modal ||
                 lastFish.Mode < FishMode.Hooked || lastFish.Mode > FishMode.Tired)
             {
-                root.gameObject.SetActive(false);
+                SetVisible(false);
                 return;
             }
             float targetLoad = Mathf.Clamp01(lineOwner.LineTension);
