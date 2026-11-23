@@ -76,17 +76,7 @@ namespace Raid.Nereid.Editor
         {
             Plate("Service deck",-4.27f,4.27f,-24.85f,-16.10f,0);
             DoorFrame("Service deck pressure arch",-16.11f,5.96f,1.54f,2.72f,3.62f);
-            var s=Part("Sloped companionway overhead",new(-2.58f,4.05f,-21));
-            s.Slab(dark,new(1.40f,3.55f,-20.49f),new(5.73f,.22f,8.75f));
-            s.Slab(dark,new(-3.96f,3.55f,-20.49f),new(.61f,.22f,8.75f));
-            var foot=new Vector3(-2.58f,2.25f,-17.65f);var end=new Vector3(-2.58f,7.10f,-24.85f);
-            s.Beam(enamel,foot,end,2.08f,.16f);
-            s.Collision((foot+end)*.5f,new(2.08f,.16f,Vector3.Distance(foot,end)),Quaternion.LookRotation(end-foot));
-            for(int i=0;i<4;i++)
-            {
-                float t=(i+.45f)/4;var p=Vector3.Lerp(foot,end,t);
-                LightStrip(s,p-Vector3.up*.05f,.64f,cyan,submerged,21);
-            }
+            BridgeTrunkAuthoring.Attach(room);
             var aft=Part("Engine division",new(0,1.58f,-24.88f));
             aft.Slab(enamel,new(0,1.74f,-24.98f),new(8.53f,3.49f,.20f));
             aft.Box(steel,new(.75f,1.62f,-24.82f),new(4.57f,.19f,.21f));
@@ -142,7 +132,7 @@ namespace Raid.Nereid.Editor
             crown.Slab(hull,new(0,7.52f,-27.65f),new(8.73f,.22f,5.66f));
             foreach(int d in new[]{-1,1})LightStrip(crown,new(d*2.64f,7.29f,-27.82f),1.35f,warm,incandescent,28);
             // Full headroom over the landing, split wall flanks leave the proper stair aperture.
-            crown.Slab(enamel,new(.91f,6.15f,-24.73f),new(6.85f,2.60f,.19f));
+            crown.Slab(enamel,new(1.425f,6.15f,-24.73f),new(5.82f,2.60f,.19f));
             crown.Slab(enamel,new(-3.98f,6.15f,-24.73f),new(.70f,2.60f,.19f));
             crown.Box(ochre,new(-2.58f,7.23f,-24.76f),new(2.17f,.19f,.29f));
             foreach(int side in new[]{-1,1})
