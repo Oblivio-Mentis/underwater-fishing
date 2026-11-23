@@ -90,7 +90,7 @@ namespace Raid.Nereid.Editor
             Check(cargoKey.dispatchButton && cargoKey.dispatchButton.hitFace && !cargoKey.GetComponent<NereidInstrument>(),
                 "The internal hoist control has a pressable cap without a screen.");
             Physics.SyncTransforms();
-            CheckBulkheads(layout.transform,passages.Single(p=>p.passage==PassageId.Pump).transform,lockRig.transform);
+            CheckBulkheads(layout.transform,passages.Single(p=>p.passage==PassageId.Pump).transform,lockRig);
             var centre=(discharge.screenAnchor.position+feeding.screenAnchor.position)*.5f;
             var operatorEye=centre-(discharge.screenAnchor.forward+feeding.screenAnchor.forward).normalized*1.25f;
             foreach(var line in new[]{discharge,feeding})
@@ -140,7 +140,7 @@ namespace Raid.Nereid.Editor
             Debug.Log("[NEREID MODULAR QA] PASSED");
         }
 
-        static void CheckBulkheads(Transform hull,Transform pump,Transform sea)
+        static void CheckBulkheads(Transform hull,Transform pump,NereidPressureDoors pressure)
         {
             bool Covered(Transform root,Vector3 origin,Vector3 direction,float distance)
             {
@@ -160,7 +160,11 @@ namespace Raid.Nereid.Editor
             var crown=from z in new[]{-1.35f,-.68f,0,.68f,1.35f}
                       from y in new[]{4.35f,4.57f,4.77f} select new Vector3(8.85f,y,z);
             var cheeks=from z in new[]{-3.43f,3.43f} from y in new[]{1.62f,2.04f,2.42f} select new Vector3(8.78f,y,z);
-            Check(crown.Concat(cheeks).All(p=>BothFaces(sea,p,Vector3.right,1.20f)),"The sea gate joins the hull above and alongside the opening.");
+            Check(crown.Concat(cheeks).All(p=>BothFaces(pressure.transform,p,Vector3.right,1.20f)),"The sea gate joins the hull above and alongside the opening.");
+            var cargoJambs=from sign in new[]{-1,1} from offset in new[]{3.34f,3.46f,3.55f}
+                           from y in new[]{.25f,.95f,1.85f,3.15f,3.95f} select new Vector3(sign*offset,y,0);
+            Check(cargoJambs.All(p=>BothFaces(pressure.cabinFrame,p,Vector3.forward,.79f)),
+                "The dry lock has continuous returns all the way to both cargo bulkhead jambs.");
             var stairSides=from z in new[]{-21.38f,-22.21f,-23.03f,-23.80f,-24.50f} from sign in new[]{-1,1}
                            let eye=hull.TransformPoint(new Vector3(-2.58f,2.86f+(-19.50f-z)*.72f,z))
                            select Covered(hull,eye,sign*hull.right,3.25f);
