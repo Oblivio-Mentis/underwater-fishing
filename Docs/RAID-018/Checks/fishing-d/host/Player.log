@@ -1,0 +1,279 @@
+Mono path[0] = 'E:/Development/Projects/RAID/Builds/RAID018-QA-D/UnderwaterFishing_Data/Managed'
+Mono config path = 'E:/Development/Projects/RAID/Builds/RAID018-QA-D/MonoBleedingEdge/etc'
+CodeReloadManager initialized
+Found 1 interfaces on host : 0) 192.168.0.101
+Player connection [24352]  Target information:
+
+Player connection [24352]  * "[IP] 192.168.0.101 [Port] 55000 [Flags] 2 [Guid] 1693611077 [EditorId] 2147129079 [Version] 1048832 [Id] WindowsPlayer(2,evernthi) [Debug] 0 [PackageName] WindowsPlayer [ProjectName] Underwater Fishing" 
+
+Player connection [24352] Started UDP target info broadcast (1) on [225.0.0.222:54997].
+
+JobSystem: Creating JobQueue using job-worker-count value 3
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+Initialize engine version: 6000.5.6f1 (0e0577a1a2ac)
+[Subsystems] Discovering subsystems at path E:/Development/Projects/RAID/Builds/RAID018-QA-D/UnderwaterFishing_Data/UnitySubsystems
+Forcing GfxDevice: Direct3D 11
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: NVIDIA GeForce RTX 4070 (ID=0x2786)
+    Vendor:   NVIDIA
+    VRAM:     12010 MB
+    Driver:   32.0.16.1088
+Begin MonoManager ReloadAssembly
+- Finished resetting the current domain, in  0.309 seconds
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+UnloadTime: 0.897700 ms
+[RAID Session] Запускается локальный хост…
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+Raid.RaidSession:SetStatus (string) (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:56)
+Raid.RaidSession:HostLocal () (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:73)
+Raid.RaidSession:Start () (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:39)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:34] Local server is starting for Tugboat. Listening on port 18419.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Server.ServerManager:Transport_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs:549)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:330)
+FishNet.Transporting.Tugboat.Tugboat:HandleServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:193)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:39)
+FishNet.Transporting.Tugboat.Server.ServerSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:435)
+FishNet.Transporting.Tugboat.Server.ServerSocket:StartConnection (uint16,int,string,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:253)
+FishNet.Transporting.Tugboat.Tugboat:StartServer () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:514)
+FishNet.Transporting.Tugboat.Tugboat:StartConnection (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:455)
+FishNet.Transporting.Multipass.Multipass:StartServer (int) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:980)
+FishNet.Transporting.Multipass.Multipass:StartConnection (bool,int) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:861)
+Raid.RaidSession:HostLocal () (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:74)
+Raid.RaidSession:Start () (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:39)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:39] Local server is started for Tugboat.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Server.ServerManager:Transport_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs:549)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:330)
+FishNet.Transporting.Tugboat.Tugboat:HandleServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:193)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:39)
+FishNet.Transporting.Tugboat.Server.ServerSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:435)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:223)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1182)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:39] Local client is starting for Tugboat. Server IP is localhost, port is 18419.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Client.ClientManager:Transport_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Client/ClientManager.cs:383)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:321)
+FishNet.Transporting.Tugboat.Tugboat:HandleClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:184)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:41)
+FishNet.Transporting.Tugboat.Client.ClientSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ClientSocket.cs:233)
+FishNet.Transporting.Tugboat.Client.ClientSocket:StartConnection (string,uint16) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ClientSocket.cs:113)
+FishNet.Transporting.Tugboat.Tugboat:StartClient (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:536)
+FishNet.Transporting.Tugboat.Tugboat:StartConnection (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:457)
+FishNet.Transporting.Multipass.Multipass:StartClient () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:1001)
+FishNet.Transporting.Multipass.Multipass:StartConnection (bool,int) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:866)
+FishNet.Transporting.Multipass.Multipass:StartConnection (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:847)
+FishNet.Managing.Client.ClientManager:StartConnection () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Client/ClientManager.cs:325)
+Raid.RaidSession:OnServerState (FishNet.Transporting.ServerConnectionStateArgs) (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:103)
+FishNet.Managing.Server.ServerManager:Transport_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs:553)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:330)
+FishNet.Transporting.Tugboat.Tugboat:HandleServerConnectionState (FishNet.Transporting.ServerConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:193)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:39)
+FishNet.Transporting.Tugboat.Server.ServerSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:435)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:223)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1182)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:39] Remote connection started for Id 0.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Server.ServerManager:Transport_OnRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs:620)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:388)
+FishNet.Transporting.Tugboat.Tugboat:HandleRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:202)
+FishNet.Transporting.Tugboat.Server.ServerSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:454)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:223)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1182)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:39] Local client is started for Tugboat.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Client.ClientManager:Transport_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Client/ClientManager.cs:383)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:321)
+FishNet.Transporting.Tugboat.Tugboat:HandleClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:184)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:41)
+FishNet.Transporting.Tugboat.Client.ClientSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ClientSocket.cs:233)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:225)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1183)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[RAID Session] В сессии. Esc — курсор и меню
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+Raid.RaidSession:SetStatus (string) (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:56)
+Raid.RaidSession:OnClientState (FishNet.Transporting.ClientConnectionStateArgs) (at E:/Development/Projects/RAID/Assets/_Game/Network/RaidSession.cs:114)
+FishNet.Managing.Client.ClientManager:Transport_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Client/ClientManager.cs:387)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:321)
+FishNet.Transporting.Tugboat.Tugboat:HandleClientConnectionState (FishNet.Transporting.ClientConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:184)
+FishNet.Transporting.Tugboat.CommonSocket:SetConnectionState (FishNet.Transporting.LocalConnectionState,bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/CommonSocket.cs:41)
+FishNet.Transporting.Tugboat.Client.ClientSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ClientSocket.cs:233)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:225)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1183)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[2026.11.23 19:42:41] Remote connection started for Id 1.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+FishNet.Managing.Logging.LevelLoggingConfiguration:Log (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Logging/LevelLoggingConfiguration.cs:130)
+FishNet.Managing.NetworkManager:InternalLog (string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:53)
+FishNet.Managing.NetworkManagerExtensions:Log (FishNet.Managing.NetworkManager,string) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/NetworkManager.Logging.cs:118)
+FishNet.Managing.Server.ServerManager:Transport_OnRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Server/ServerManager.cs:620)
+FishNet.Transporting.Multipass.Multipass:Multipass_OnRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:388)
+FishNet.Transporting.Tugboat.Tugboat:HandleRemoteConnectionState (FishNet.Transporting.RemoteConnectionStateArgs) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:202)
+FishNet.Transporting.Tugboat.Server.ServerSocket:IterateIncoming () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Core/ServerSocket.cs:454)
+FishNet.Transporting.Tugboat.Tugboat:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Tugboat/Tugboat.cs:223)
+FishNet.Transporting.Multipass.Multipass:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/Transports/Multipass/Multipass.cs:428)
+FishNet.Managing.Transporting.TransportManager:IterateIncoming (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Transporting/TransportManager.cs:664)
+FishNet.Managing.Timing.TimeManager:TryIterateData (bool) (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:1182)
+FishNet.Managing.Timing.TimeManager:IncreaseTick () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:801)
+FishNet.Managing.Timing.TimeManager:<TickUpdate>g__MethodLogic|117_0 () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:413)
+FishNet.Managing.Timing.TimeManager:TickUpdate () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Managing/Timing/TimeManager.cs:401)
+FishNet.Transporting.NetworkReaderLoop:Update () (at ./Library/PackageCache/com.firstgeargames.fishnet@669674f58d09/Runtime/Transporting/NetworkReaderLoop.cs:29)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+Reduced additional punctual light shadows resolution by 4 to make 24 shadow maps fit in the 2048x2048 shadow atlas. To avoid this, increase shadow atlas size, decrease big shadow resolutions, or reduce the number of shadow maps active in the same frame
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+UnityEngine.Rendering.Universal.Internal.AdditionalLightsShadowCasterPass:Setup (UnityEngine.Rendering.Universal.UniversalRenderingData,UnityEngine.Rendering.Universal.UniversalCameraData,UnityEngine.Rendering.Universal.UniversalLightData,UnityEngine.Rendering.Universal.UniversalShadowData) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/Passes/AdditionalLightsShadowCasterPass.cs:417)
+UnityEngine.Rendering.Universal.UniversalRenderer:OnBeforeRendering (UnityEngine.Rendering.RenderGraphModule.RenderGraph) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRendererRenderGraph.cs:761)
+UnityEngine.Rendering.Universal.UniversalRenderer:OnRecordRenderGraph (UnityEngine.Rendering.RenderGraphModule.RenderGraph,UnityEngine.Rendering.ScriptableRenderContext) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRendererRenderGraph.cs:655)
+UnityEngine.Rendering.Universal.ScriptableRenderer:RecordRenderGraph (UnityEngine.Rendering.RenderGraphModule.RenderGraph,UnityEngine.Rendering.ScriptableRenderContext) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/ScriptableRenderer.cs:936)
+UnityEngine.Rendering.Universal.UniversalRenderPipeline:RecordAndExecuteRenderGraph (UnityEngine.Rendering.RenderGraphModule.RenderGraph,UnityEngine.Rendering.ScriptableRenderContext,UnityEngine.Rendering.Universal.ScriptableRenderer,UnityEngine.Rendering.CommandBuffer,UnityEngine.Camera) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRenderPipelineRenderGraph.cs:27)
+UnityEngine.Rendering.Universal.UniversalRenderPipeline:RenderSingleCamera (UnityEngine.Rendering.ScriptableRenderContext,UnityEngine.Rendering.Universal.UniversalCameraData) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRenderPipeline.cs:1003)
+UnityEngine.Rendering.Universal.UniversalRenderPipeline:RenderCameraStack (UnityEngine.Rendering.ScriptableRenderContext,UnityEngine.Camera,bool) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRenderPipeline.cs:1207)
+UnityEngine.Rendering.Universal.UniversalRenderPipeline:Render (UnityEngine.Rendering.ScriptableRenderContext,System.Collections.Generic.List`1<UnityEngine.Camera>) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRenderPipeline.cs:611)
+UnityEngine.Rendering.Universal.UniversalRenderPipeline:ProcessRenderRequests<object> (UnityEngine.Rendering.ScriptableRenderContext,UnityEngine.Camera,object) (at ./Library/PackageCache/com.unity.render-pipelines.universal@73b4c4ff130e/Runtime/UniversalRenderPipeline.cs:711)
+UnityEngine.Rendering.RenderPipeline:InternalProcessRenderRequests<object> (UnityEngine.Rendering.ScriptableRenderContext,UnityEngine.Camera,object) (at C:/build/output/unity/unity/Runtime/Export/RenderPipeline/RenderPipeline.cs:66)
+UnityEngine.Rendering.RenderPipelineManager:DoRenderLoop_Internal (UnityEngine.Rendering.RenderPipelineAsset,intptr,object) (at C:/build/output/unity/unity/Runtime/Export/RenderPipeline/RenderPipelineManager.cs:161)
+UnityEngine.Camera:SubmitRenderRequestsInternal (object)
+UnityEngine.Camera:SubmitRenderRequest<UnityEngine.Rendering.RenderPipeline/StandardRequest> (UnityEngine.Rendering.RenderPipeline/StandardRequest) (at C:/build/output/unity/unity/Runtime/Export/Camera/Camera.bindings.cs:405)
+UnityEngine.Rendering.RenderPipeline:SubmitRenderRequest<UnityEngine.Rendering.RenderPipeline/StandardRequest> (UnityEngine.Camera,UnityEngine.Rendering.RenderPipeline/StandardRequest) (at C:/build/output/unity/unity/Runtime/Export/RenderPipeline/RenderPipeline.cs:96)
+Raid.UI.UiQaProbe:CapturePeerCamera (string) (at E:/Development/Projects/RAID/Assets/_Game/UI/Overhaul/UiQaProbe.cs:375)
+Raid.FishingTrial/<Shot>d__57:MoveNext () (at E:/Development/Projects/RAID/Assets/_Game/Fishing/FishingTrial.cs:653)
+Raid.FishingTrial/<Verify>d__35:MoveNext () (at E:/Development/Projects/RAID/Assets/_Game/Fishing/FishingTrial.cs:72)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr) (at C:/build/output/unity/unity/Runtime/Export/Scripting/Coroutines.cs:17)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
+[FishingTrial] failed / Deposit and observe swimming cargo on both peers: System.InvalidOperationException: Owned Q refused the heavy catch.
+  at Raid.FishingTrial+<Run>d__36.MoveNext () [0x0274e] in E:\Development\Projects\RAID\Assets\_Game\Fishing\FishingTrial.cs:418 
+  at Raid.FishingTrial+<Verify>d__35.MoveNext () [0x00060] in E:\Development\Projects\RAID\Assets\_Game\Fishing\FishingTrial.cs:72  (E:\Development\Projects\RAID\Docs\RAID-018\Checks\fishing-d\result.json)
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at C:/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.DebugLogHandler:Internal_Log (UnityEngine.LogType,UnityEngine.LogOption,string,UnityEngine.Object)
+UnityEngine.DebugLogHandler:LogFormat (UnityEngine.LogType,UnityEngine.Object,string,object[]) (at C:/build/output/unity/unity/Runtime/Export/Logging/DebugLogHandler.cs:9)
+UnityEngine.Logger:Log (UnityEngine.LogType,object) (at C:/build/output/unity/unity/Runtime/Export/Logging/Logger.cs:60)
+UnityEngine.Debug:Log (object) (at C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs:123)
+Raid.FishingTrial/<Verify>d__35:MoveNext () (at E:/Development/Projects/RAID/Assets/_Game/Fishing/FishingTrial.cs:92)
+UnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr) (at C:/build/output/unity/unity/Runtime/Export/Scripting/Coroutines.cs:17)
+
+(Filename: C:/build/output/unity/unity/Runtime/Export/Debug/Debug.bindings.cs Line: 123)
+
