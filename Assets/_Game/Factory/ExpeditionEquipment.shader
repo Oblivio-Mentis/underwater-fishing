@@ -2,9 +2,14 @@ Shader "RAID/Faceted Expedition Equipment"
 {
     Properties
     {
-        [MainTexture] _BaseMap("Source colour atlas", 2D) = "white" {}
         [MainColor] _BaseColor("Tint", Color) = (1,1,1,1)
-        _PaletteStrength("Simplify source colours", Range(0,1)) = .9
+        _Rubber("Seal rubber",Color)=(.14,.17,.18,1)
+        _Fabric("Suit fabric",Color)=(.24,.29,.31,1)
+        _Steel("Pressure steel",Color)=(.40,.45,.47,1)
+        _LightSteel("Light alloy",Color)=(.62,.65,.65,1)
+        _Safety("Safety ochre",Color)=(.84,.55,.20,1)
+        _Bronze("Oxide bronze",Color)=(.47,.31,.19,1)
+        _Visor("Visor blue",Color)=(.20,.34,.39,1)
         _FacetWeight("Flat face lighting", Range(0,1)) = .88
         _Metallic("Metallic", Range(0,1)) = .17
         _Smoothness("Smoothness", Range(0,1)) = .26
@@ -30,52 +35,53 @@ Shader "RAID/Faceted Expedition Equipment"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/_Game/Materials/FacetNormal.hlsl"
 
-            TEXTURE2D(_BaseMap);
-            SAMPLER(sampler_BaseMap);
             CBUFFER_START(UnityPerMaterial)
-            float4 _BaseMap_ST;
             half4 _BaseColor;
-            half _PaletteStrength, _FacetWeight, _Metallic, _Smoothness;
+            half4 _Rubber, _Fabric, _Steel, _LightSteel, _Safety, _Bronze, _Visor;
+            half _FacetWeight, _Metallic, _Smoothness;
             CBUFFER_END
 
-            struct Vertex { float3 position:POSITION; float3 normal:NORMAL; float2 uv:TEXCOORD0; };
+            struct Vertex { float3 position:POSITION; float3 normal:NORMAL; half4 paint:COLOR; };
             struct Interpolants
             {
                 float4 clip:SV_POSITION;
                 float3 world:TEXCOORD0;
                 half3 normal:TEXCOORD1;
-                float2 uv:TEXCOORD2;
+                half3 pigment:TEXCOORD2;
                 half fog:TEXCOORD3;
                 half3 vertexLight:TEXCOORD4;
             };
+            half3 PartColour(half encoded)
+            {
+                int paint=(int)round(encoded*(255./32.));
+                switch(paint)
+                {
+                    case 0:return _Rubber.rgb;
+                    case 1:return _Fabric.rgb;
+                    case 2:return _Steel.rgb;
+                    case 3:return _LightSteel.rgb;
+                    case 4:return _Safety.rgb;
+                    case 5:return _Bronze.rgb;
+                    default:return _Visor.rgb;
+                }
+            }
             Interpolants Vert(Vertex v)
             {
                 Interpolants o;
                 o.world=TransformObjectToWorld(v.position);
                 o.normal=TransformObjectToWorldNormal(v.normal);
                 o.clip=TransformWorldToHClip(o.world);
-                o.uv=TRANSFORM_TEX(v.uv,_BaseMap);
+                o.pigment=PartColour(v.paint.r);
                 o.fog=ComputeFogFactor(o.clip.z);
                 o.vertexLight=VertexLighting(o.world,o.normal);
                 return o;
-            }
-            half3 SuitPalette(half3 source)
-            {
-                half luma=dot(source,half3(.2126,.7152,.0722));
-                half3 graphite=lerp(half3(.019,.026,.032),half3(.082,.103,.115),smoothstep(.029,.071,luma));
-                half3 steel=lerp(graphite,half3(.255,.280,.280),smoothstep(.14,.22,luma));
-                steel=lerp(steel,half3(.55,.56,.51),smoothstep(.37,.49,luma));
-                half3 ochre=lerp(half3(.185,.063,.015),half3(.54,.215,.035),smoothstep(.08,.19,luma));
-                half paint=smoothstep(.22,.46,(source.r-source.b)/max(source.r,.03));
-                return lerp(steel,ochre,paint);
             }
             half4 Frag(Interpolants i):SV_Target
             {
                 half3 face=FacetNormalWS(i.world,i.normal);
                 half3 n=SafeNormalize(lerp(i.normal,face,_FacetWeight));
-                half3 source=SAMPLE_TEXTURE2D(_BaseMap,sampler_BaseMap,i.uv).rgb;
                 SurfaceData surface=(SurfaceData)0;
-                surface.albedo=lerp(source,SuitPalette(source),_PaletteStrength)*_BaseColor.rgb;
+                surface.albedo=i.pigment*_BaseColor.rgb;
                 surface.metallic=_Metallic;
                 surface.smoothness=_Smoothness;
                 surface.normalTS=half3(0,0,1);
