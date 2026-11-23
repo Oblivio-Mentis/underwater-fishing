@@ -74,11 +74,12 @@ namespace Raid
                 var hunt=visual.ambusher?director.AnglerStage:ThreatDirector.HuntStage.Watching;
                 bool display=hunt==ThreatDirector.HuntStage.Display;
                 bool rushing=hunt==ThreatDirector.HuntStage.Pursuit;
-                visual.phase=Mathf.Repeat(visual.phase+Time.deltaTime*(rushing?9f:3.4f),Mathf.PI*200);
+                bool fast=rushing||hunt==ThreatDirector.HuntStage.Overshoot;
+                visual.phase=Mathf.Repeat(visual.phase+Time.deltaTime*(fast?9f:hunt==ThreatDirector.HuntStage.Circle?5f:3.4f),Mathf.PI*200);
                 float clock=visual.phase;
                 // Pectorals fan outward during the warning and sweep back into the body for the pursuit.
                 visual.finSpread=Mathf.MoveTowards(visual.finSpread,display?23f:rushing?-9f:0f,Time.deltaTime*80f);
-                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*(rushing?21:6),0);
+                visual.tail.localRotation=Quaternion.Euler(0,Mathf.Sin(clock)*(fast?21:6),0);
                 visual.leftFin.localRotation=Quaternion.Euler(0,0,Mathf.Sin(clock*.72f)*3-visual.finSpread);
                 visual.rightFin.localRotation=Quaternion.Euler(0,0,-Mathf.Sin(clock*.72f+.7f)*3+visual.finSpread);
                 float gape=visual.ambusher?(display?-2f:rushing?12f:-20f):6f;

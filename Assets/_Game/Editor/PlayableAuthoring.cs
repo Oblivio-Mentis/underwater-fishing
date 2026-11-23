@@ -24,7 +24,7 @@ namespace Raid.Editor
             var world=go.AddComponent<RaidWorld>(); var threats=go.AddComponent<ThreatDirector>();
             go.AddComponent<RaidStatusHud>();
             world.tuning=Asset<WorldTuning>("WorldTuning"); world.progression=Asset<ProgressionTuning>("ProgressionTuning");
-            threats.tuning=Asset<ThreatTuning>("ThreatTuning"); world.threats=threats;
+            threats.tuning=Asset<ThreatTuning>("ThreatTuning"); threats.anglerProfile=Asset<PredatorProfile>("PredatorProfile"); world.threats=threats;
             world.container=GameObject.Find("Cargo container").transform;
             var session=Object.FindFirstObjectByType<RaidSession>();
             var authenticator=session.gameObject.GetComponent<LobbyAuthenticator>();

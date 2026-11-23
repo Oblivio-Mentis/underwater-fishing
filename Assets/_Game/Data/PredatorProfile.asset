@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3795ac3a0b745b4a4acae5d92669541, type: 3}
+  m_Name: PredatorProfile
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.PredatorProfile
+  territoryOffsets:
+  - {x: 0, y: 0, z: 0}
+  - {x: 6, y: -1.2, z: -6}
+  - {x: -2, y: 0.4, z: -8}
+  - {x: 4, y: -2, z: 3}
+  territoryRadius: 7
+  territoryHeight: 2.2
+  bodyRadius: 0.53
+  leashDistance: 30
+  respawnMinDistance: 11
+  respawnClearView: 20
+  respawnRetrySeconds: 2
+  seed: 4471
+  patrolSpeed: 1.5
+  recoverySpeed: 2.6
+  patrolGoalSeconds: 9
+  territorySwitchChance: 0.3
+  swimTurnRate: 4.7
+  senseDistance: 5.25
+  deepSpeedMultiplier: 1.14
+  senseDelay: 0.3
+  sensePeriod: 0.18
+  noiseDistance: 14
+  noiseMemory: 8
+  noiseCooldown: 8
+  losLossTimeout: 1.4
+  investigateSpeed: 2.4
+  circleRadiusMin: 5
+  circleRadiusMax: 12
+  circleHeightVariation: 1.6
+  circleSpeed: 2.9
+  circleRadialSpeed: 1.8
+  arcReverseChance: 0.35
+  arcSecondsMin: 1.4
+  arcSecondsMax: 3.2
+  stalkSecondsMin: 2.6
+  stalkSecondsMax: 6
+  closeStrikeDistance: 3.2
+  telegraphMin: 0.5
+  telegraphMax: 1
+  aimLockSeconds: 0.2
+  telegraphTurnRate: 7
+  telegraphDrift: 0.35
+  chargeSpeed: 6.3
+  chargeMaxSeconds: 2.2
+  biteRadius: 0.55
+  biteShove: 1.1
+  overshootDistance: 3.6
+  overshootTurnRate: 95
+  passesPerHunt: 2
+  hitsToDisengage: 2
+  disengageCooldown: 8
+  bitesToAggressionReset: 2
+  satiatedCooldown: 16
+  lostInterestCooldown: 3
+  stunnedCooldown: 3.4

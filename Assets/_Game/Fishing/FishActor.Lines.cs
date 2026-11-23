@@ -226,7 +226,12 @@ namespace Raid
             state.SurgeWarning = !tired && fight.SurgeWarning;
             state.Surging = !tired && fight.Surging;
             state.TugStrength = tired ? 0 : fight.TugStrength;
-            if (fight.SurgeStarted && !tired) state.TugSequence++;
+            if (fight.SurgeStarted && !tired)
+            {
+                state.TugSequence++;
+                // A thrashing fish is heard by the reef angler; the director rate-limits how often it reacts.
+                ThreatDirector.ReportStruggle(transform.position);
+            }
             bool weakened = fight.Weakened;
 
             HookLine leader = null;
