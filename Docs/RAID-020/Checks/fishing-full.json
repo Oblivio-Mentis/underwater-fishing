@@ -1,0 +1,31 @@
+{
+    "phase": "Two independent impacts",
+    "status": "failed",
+    "error": "System.InvalidOperationException: Switching the partner's tool failed to remove only their line.\r\n  at Raid.FishingTrial+<Wait>d__55.MoveNext () [0x00067] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:771 \r\n  at Raid.FishingTrial+<Verify>d__36.MoveNext () [0x00060] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:73 ",
+    "host": 0,
+    "client": 1,
+    "checks": [
+        "Distinct connected owners 0 and 1",
+        "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Approach with a slack line and no reel did not wind or collect the fish.",
+        "Needlefish fight phases: HookShock>Lateral>SurgeWindup>Surge>Lateral",
+        "First fish reached the hand with 3,94 stamina remaining.",
+        "Needlefish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Inside the hand radius a confirmed shot alone did not collect the fish.",
+        "Lanternfish fight phases: HookShock>LastEscape>Lateral",
+        "Lanternfish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Needlefish fight phases: HookShock>Lateral",
+        "Needlefish captured and stowed by one diver.",
+        "Fight variety over 3 fights: 3 distinct sequences, phases HookShock,Lateral,SurgeWindup,Surge,LastEscape.",
+        "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+        "Server accepted the shot on a visible fourth small fish and retained exactly three pockets.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Confirmed hook widened the owned camera; zero intensity restored base FOV.",
+        "Camera sweep during server surge: camera 115°; toward fish 1,524 m; away 0,000 m; sideways 0,000 m; fish escape 2,694 m.",
+        "Host hook 0/#5, remote measured hook 1/#1, host/peer frames 3317/707, attached travel 21,213/4,099 m, worst tip drift 0,000005/0,000002 m, worst nock drift 0,000000/0,000000 m.",
+        "Both rendered and attached independent server-confirmed projectiles; opposing directions did not exhaust the fish."
+    ]
+}
