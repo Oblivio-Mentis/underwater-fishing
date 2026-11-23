@@ -66,8 +66,9 @@ namespace Raid
             yield return Wait(()=>ShipConsole.ResolveSight(host.Motor,host.Motor.GetComponentInChildren<Camera>())==processConsole &&
                 ShipConsole.CanUse(host.Motor,WorldAction.SendProcessingDraft),6,"Could not aim at the physical processor button.");
             Require(ui.QaClickReticle(),"The physical processor did not react to LMB.");
-            yield return Wait(()=>big.dispatchCommitted && world.FishRoute.active && !world.FishRoute.feeding,
-                5,"The processor asked for a new selection instead of using its existing draft.");
+            yield return Wait(()=>big.dispatchCommitted || !ui.CommandPending,6,"The physical press did not receive a reply.");
+            Require(big.dispatchCommitted && world.FishRoute.active && !world.FishRoute.feeding,
+                "Processor did not use its staged fish. Server response: "+ui.LastCommandReason);
             yield return Wait(()=>ReadClient()?.processingPresses==beforePress+1,4,"Other diver missed the physical processor press.");
             Require(!food.dispatchCommitted && food.destination==CatchDestination.Feed,
                 "The processor also dispatched the feeding draft.");

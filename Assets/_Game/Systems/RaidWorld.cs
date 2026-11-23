@@ -189,10 +189,30 @@ namespace Raid
             Vector3 destination=state.hoistPhase==HoistPhase.Raising || state.hoistPhase==HoistPhase.Unloading?tuning.terminalPosition:CargoLoadingPosition;
             container.position=Vector3.MoveTowards(container.position,destination,Time.deltaTime*4);
         }
-        public void Command(WorldAction action,long id) { Act(action,id); }
-        public void RequestCommand(WorldAction action,long id,int requestId) { Act(action,id,requestId); }
+        static ShipConsoleKind? DispatchControl(WorldAction action) => action switch
+        {
+            WorldAction.SendProcessingDraft or WorldAction.StopProcessing => ShipConsoleKind.Process,
+            WorldAction.SendFeedingDraft or WorldAction.StopFeeding => ShipConsoleKind.Feed,
+            _ => null
+        };
+
+        public void Command(WorldAction action,long id) => RequestCommand(action,id,0);
+
+        public void RequestCommand(WorldAction action,long id,int requestId)
+        {
+            var pointedAt=Vector3.zero;
+            if(DispatchControl(action).HasValue)
+            {
+                var actor=NetworkManager.ClientManager.Connection.FirstObject;
+                var camera=actor ? actor.GetComponentInChildren<Camera>() : null;
+                if(camera && Physics.Raycast(camera.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,
+                    4f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                    pointedAt=hit.point;
+            }
+            Act(action,id,requestId,pointedAt);
+        }
         [ServerRpc(RequireOwnership=false)]
-        private void Act(WorldAction action,long id,int requestId=0,NetworkConnection sender=null)
+        private void Act(WorldAction action,long id,int requestId,Vector3 pointedAt,NetworkConnection sender=null)
         {
             if(sender==null || sender.FirstObject==null || team==null || !Enum.IsDefined(typeof(WorldAction),action)) return;
             if(transitionRemaining>0) { Respond(sender,requestId,false,"travel"); return; }
@@ -218,15 +238,15 @@ namespace Raid
             {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
-            if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange)) { Respond(sender,requestId,false,"range"); return; }
-            ShipConsoleKind? switchKind=action switch
+            var switchKind=DispatchControl(action);
+            if(switchKind.HasValue)
             {
-                WorldAction.SendProcessingDraft or WorldAction.StopProcessing => ShipConsoleKind.Process,
-                WorldAction.SendFeedingDraft or WorldAction.StopFeeding => ShipConsoleKind.Feed,
-                _ => null
-            };
-            if(switchKind.HasValue && !ShipConsole.CanUseKind(diver,switchKind.Value))
-            {Respond(sender,requestId,false,"range");return;}
+                // Reliable click and its target travel together. Look/turn updates arrive on another tick.
+                if(!ShipConsole.CanPressAt(diver,switchKind.Value,pointedAt))
+                {Respond(sender,requestId,false,"range");return;}
+            }
+            else if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange))
+            { Respond(sender,requestId,false,"range"); return; }
             bool dispatch=action is WorldAction.SendFish or WorldAction.SendProcessingDraft or WorldAction.SendFeedingDraft;
             CatchDestination? dispatchDestination=action switch
             {
