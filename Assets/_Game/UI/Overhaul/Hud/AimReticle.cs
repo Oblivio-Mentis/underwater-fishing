@@ -3,71 +3,96 @@ using UnityEngine.UI;
 
 namespace Raid.UI
 {
-    // Frame-rate driven geometric marks; no hit marker or success state is fabricated.
-    [DisallowMultipleComponent,DefaultExecutionOrder(300)]
-    public sealed class AimReticle : MonoBehaviour
+    [DisallowMultipleComponent, DefaultExecutionOrder(300)]
+    public sealed class AimReticle : MaskableGraphic
     {
-        public Color ContextColor=UiTheme.Text;
-        readonly RectTransform[] bars=new RectTransform[4];
-        readonly RectTransform[] shadows=new RectTransform[4];
-        readonly Image[] ink=new Image[5];
+        public Color ContextColor = UiTheme.Text;
+        static readonly Color32 Outline = new(5, 14, 17, 223);
+        static readonly Vector2[] Axes = { Vector2.up, Vector2.right, Vector2.down, Vector2.left };
         IUiController app;
-        CanvasGroup visibility;
         DiverMotor observed;
-        Vector3 lastPosition;
-        float movement;
-        Camera camera;
+        Camera eye;
+        int sequence;
+        bool dotOnly;
+        float gap = 4f, kick;
+        Color32 ink;
 
         public void Initialize(IUiController controller)
         {
-            app=controller;visibility=gameObject.AddComponent<CanvasGroup>();visibility.interactable=false;visibility.blocksRaycasts=false;
-            for(int i=0;i<bars.Length;i++)
-            {
-                var shadow=UiKit.Panel(transform,"Reticle outline "+i,new Color(.005f,.012f,.014f,.9f));shadows[i]=shadow.rectTransform;
-                var line=UiKit.Panel(transform,"Reticle arm "+i,UiTheme.Text);bars[i]=line.rectTransform;ink[i]=line;
-            }
-            var dotEdge=UiKit.Panel(transform,"Reticle centre outline",new Color(.005f,.012f,.014f,.92f));Place(dotEdge.rectTransform,Vector2.zero,new Vector2(4.5f,4.5f));
-            var dot=UiKit.Panel(transform,"Reticle centre",UiTheme.Text);Place(dot.rectTransform,Vector2.zero,new Vector2(2.5f,2.5f));ink[4]=dot;
-            SetGeometry(8,8,2);
+            app = controller;
+            raycastTarget = false;
+            ink = ContextColor;
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            observed = null;
+            kick = 0f;
         }
 
         void LateUpdate()
         {
-            if(app==null||visibility==null)return;
-            var context=app.Context;var player=context.Player;
-            bool visible=context.Connected&&player!=null&&!UiInputGate.Modal;
-            visibility.alpha=visible?1:0;if(!visible){observed=null;camera=null;movement=0;return;}
-            if(observed!=player){observed=player;lastPosition=player.transform.position;camera=player.GetComponentInChildren<Camera>();movement=0;}
-            float dt=Mathf.Min(Time.unscaledDeltaTime,.05f);
-            float distance=Vector3.Distance(lastPosition,player.transform.position);lastPosition=player.transform.position;
-            float speed=dt>.0001f&&distance<.75f?distance/dt:0;
-            movement=Mathf.Lerp(movement,Mathf.Clamp01(speed/4),1-Mathf.Exp(-dt*12));
-            float aim=Nereid.NereidAim.Blend;
-            SetGeometry(Mathf.Lerp(8+movement*3,3,aim),Mathf.Lerp(8,6,aim),Mathf.Lerp(2,1.5f,aim));
-            var color=ContextColor;
-            if(camera!=null&&context.Harpoon!=null&&context.Harpoon.tuning!=null)
+            var ctx = app?.Context;
+            if (ctx == null || !ctx.Connected) return;
+            var tool = ctx.Harpoon;
+            var player = ctx.Player;
+            if (observed != player)
             {
-                RaycastHit hit;
-                if(Physics.Raycast(camera.transform.position,camera.transform.forward,out hit,context.Harpoon.tuning.maxRange,context.Harpoon.tuning.hitMask,QueryTriggerInteraction.Ignore))
+                observed = player;
+                eye = player.GetComponentInChildren<Camera>();
+                sequence = tool != null ? tool.ShotSequence : 0;
+            }
+            if (tool != null && sequence != tool.ShotSequence)
+            {
+                sequence = tool.ShotSequence;
+                kick = 3.5f;
+            }
+            kick = Mathf.MoveTowards(kick, 0f, Time.unscaledDeltaTime * 19f);
+            bool point = UiInputGate.PointerReserved || tool == null || !tool.HarpoonInHands;
+            float nextGap = Mathf.Lerp(4.2f, 2.5f, Nereid.NereidAim.Blend) + kick;
+            Color32 nextInk = ContextColor;
+            if (!point && eye && tool.tuning != null &&
+                Physics.Raycast(eye.transform.position, eye.transform.forward, out var hit, tool.tuning.maxRange,
+                    tool.tuning.hitMask, QueryTriggerInteraction.Ignore))
+            {
+                var teammate = hit.collider.GetComponentInParent<DiverMotor>();
+                if (teammate && teammate != player) nextInk = UiTheme.Green;
+            }
+            if (point == dotOnly && Mathf.Abs(nextGap - gap) < .04f && nextInk.Equals(ink)) return;
+            dotOnly = point;
+            gap = nextGap;
+            ink = nextInk;
+            SetVerticesDirty();
+        }
+
+        protected override void OnPopulateMesh(VertexHelper mesh)
+        {
+            mesh.Clear();
+            if (!dotOnly)
+            {
+                foreach (Vector2 axis in Axes)
                 {
-                    var diver=hit.collider.GetComponentInParent<DiverMotor>();if(diver!=null&&diver!=player)color=UiTheme.Green;
+                    Stroke(mesh, axis, gap - 1f, gap + 8.5f, 3.6f, Outline);
+                    Stroke(mesh, axis, gap, gap + 7.5f, 1.7f, ink);
                 }
             }
-            foreach(var mark in ink)if(mark.color!=color)mark.color=color;
+            float radius = dotOnly ? 2.35f : 1.65f;
+            Stroke(mesh, Vector2.up, -radius - .9f, radius + .9f, radius * 2f + 1.8f, Outline);
+            Stroke(mesh, Vector2.up, -radius, radius, radius * 2f, ink);
         }
 
-        void SetGeometry(float gap,float length,float thickness)
+        static void Stroke(VertexHelper mesh, Vector2 direction, float from, float to, float width, Color32 tint)
         {
-            for(int i=0;i<4;i++)
-            {
-                bool horizontal=i<2;float side=i%2==0?-1:1;
-                Vector2 position=horizontal?new Vector2(side*(gap+length*.5f),0):new Vector2(0,side*(gap+length*.5f));
-                Vector2 size=horizontal?new Vector2(length,thickness):new Vector2(thickness,length);
-                Place(shadows[i],position,size+Vector2.one*2);Place(bars[i],position,size);
-            }
+            Vector2 side = new Vector2(-direction.y, direction.x) * (width * .5f);
+            Vector2 tail = direction * from, tip = direction * to;
+            int first = mesh.currentVertCount;
+            mesh.AddVert(tail - side, tint, Vector2.zero);
+            mesh.AddVert(tail + side, tint, Vector2.zero);
+            mesh.AddVert(tip + side, tint, Vector2.zero);
+            mesh.AddVert(tip - side, tint, Vector2.zero);
+            mesh.AddTriangle(first, first + 1, first + 2);
+            mesh.AddTriangle(first, first + 2, first + 3);
         }
-
-        static void Place(RectTransform item,Vector2 position,Vector2 size)
-        {UiKit.Place(item,new Vector2(.5f,.5f),new Vector2(.5f,.5f),position,size);}
     }
 }

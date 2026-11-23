@@ -4,122 +4,111 @@ using UnityEngine.UI;
 
 namespace Raid.UI
 {
-    // Both participants see the same hook, tension and stamina snapshots.
     sealed class ReelReadout
     {
         readonly RectTransform root;
-        readonly TMP_Text species,range,load,instruction,strength;
-        readonly Image stamina,caution,speciesIcon;
-        float tensionTarget,energyTarget,tensionShown,energyShown;
-        bool surgeCue;
-        readonly Image[] ticks=new Image[24];
-        readonly RectTransform needle;
+        readonly LineTensionArc arc;
+        readonly TMP_Text species, range, hookCount;
+        readonly Image stamina, speciesIcon;
+        FishActor lastFish;
+        float targetLoad, shownLoad, targetStamina, shownStamina;
         public bool Visible => root.gameObject.activeSelf;
 
         public ReelReadout(Transform parent)
         {
-            var shell=UiKit.Panel(parent,"Line load instrument",new Color(.043f,.081f,.091f,.90f));UiKit.Tile(shell);
-            root=shell.rectTransform;
-            UiKit.Place(root,new Vector2(1,.44f),new Vector2(1,.5f),new Vector2(-28,0),new Vector2(438,170));
-            caution=UiKit.Panel(root,"Tension warning",UiTheme.Amber);
-            UiKit.Place(caution.rectTransform,new Vector2(0,1),new Vector2(0,1),new Vector2(12,-4),new Vector2(414,2));
-            var graphic=UiKit.Node(root,"Line gauge");
-            UiKit.Place(graphic,Vector2.up,Vector2.up,new Vector2(10,-20),new Vector2(118,118));
-            for(int i=0;i<ticks.Length;i++)
-            {
-                ticks[i]=UiKit.Panel(graphic,"Line graduation "+i,UiTheme.Muted);
-                SetTick(ticks[i].rectTransform,i/(ticks.Length-1f),new Vector2(5,9));
-            }
-            needle=UiKit.Panel(graphic,"Load needle",UiTheme.Text).rectTransform;
-            SetTick(needle,0,new Vector2(4,18));
-            load=Text(root,"Load",19,-66,100,32,28);
-            load.alignment=TextAlignmentOptions.Center;
-            var caption=Text(root,"Gauge legend",10,-110,118,24,17);caption.text="НАГРУЗКА";caption.alignment=TextAlignmentOptions.Center;
-            range=Text(root,"Distance",320,-12,101,30,21);range.alignment=TextAlignmentOptions.Right;range.color=UiTheme.Cyan;
-            speciesIcon=UiKit.Symbol(root,"Caught species",DiveInstruments.Mark.Lantern,Color.white);
-            UiKit.Place(speciesIcon.rectTransform,Vector2.up,Vector2.up,new Vector2(141,-14),new Vector2(32,32));
-            species=Text(root,"Species",177,-12,143,36,23);species.fontStyle=FontStyles.Bold;
-            species.enableAutoSizing=true;species.fontSizeMin=16;species.fontSizeMax=23;
-            species.textWrappingMode=TextWrappingModes.NoWrap;
-            strength=Text(root,"Stamina",143,-57,272,28,20);strength.color=UiTheme.Muted;
-            var track=UiKit.Panel(root,"Fish stamina track",new Color(.21f,.30f,.31f));
-            UiKit.Place(track.rectTransform,Vector2.up,Vector2.up,new Vector2(144,-85),new Vector2(266,9));
-            stamina=UiKit.Panel(track.transform,"Remaining stamina",UiTheme.Cyan);UiKit.Fill(stamina.rectTransform);
-            instruction=Text(root,"Action",142,-100,283,60,21);
+            root = UiKit.Node(parent, "Fishing instruments");
+            UiKit.Fill(root);
+            var gauge = UiKit.Node(root, "Line tension");
+            UiKit.Place(gauge, Vector2.one * .5f, Vector2.one * .5f, Vector2.zero, new Vector2(238, 238));
+            arc = gauge.gameObject.AddComponent<LineTensionArc>();
+            arc.raycastTarget = false;
+
+            var card = UiKit.Panel(root, "Hooked fish", new Color(.025f, .065f, .077f, .84f));
+            UiKit.Tile(card);
+            UiKit.Place(card.rectTransform, new Vector2(1f, .78f), Vector2.one, new Vector2(-26, 0), new Vector2(265, 72));
+            speciesIcon = UiKit.Symbol(card.transform, "Species icon", DiveInstruments.Mark.Lantern, Color.white);
+            UiKit.Place(speciesIcon.rectTransform, Vector2.up, Vector2.up, new Vector2(10, -7), new Vector2(29, 29));
+            species = Label(card.transform, "Species", 47, -5, 146, 33, 23);
+            species.fontStyle = FontStyles.Bold;
+            range = Label(card.transform, "Distance", 189, -5, 65, 33, 19);
+            range.color = UiTheme.Muted;
+            range.alignment = TextAlignmentOptions.MidlineRight;
+
+            var hook = UiKit.Symbol(card.transform, "Attached harpoons", DiveInstruments.Mark.Spear, UiTheme.Cyan);
+            UiKit.Place(hook.rectTransform, Vector2.up, Vector2.up, new Vector2(10, -43), new Vector2(21, 20));
+            hookCount = Label(card.transform, "Hook count", 35, -40, 42, 27, 17);
+            var track = UiKit.Panel(card.transform, "Fish stamina track", new Color(.19f, .29f, .32f));
+            UiKit.Place(track.rectTransform, Vector2.up, Vector2.up, new Vector2(83, -50), new Vector2(169, 7));
+            stamina = UiKit.Panel(track.transform, "Remaining stamina", UiTheme.Cyan);
+            UiKit.Fill(stamina.rectTransform);
             root.gameObject.SetActive(false);
         }
-        static TMP_Text Text(Transform parent,string name,float x,float y,float w,float h,float size)
+
+        static TMP_Text Label(Transform parent, string name, int x, int y, int width, int height, int size)
         {
-            var t=UiKit.Label(parent,name,"",size);
-            UiKit.Place(t.rectTransform,Vector2.up,Vector2.up,new Vector2(x,y),new Vector2(w,h));return t;
+            var label = UiKit.Label(parent, name, "", size);
+            UiKit.Place(label.rectTransform, Vector2.up, Vector2.up, new Vector2(x, y), new Vector2(width, height));
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            return label;
         }
-        static Color Signal(float load) => load>=.82f?UiTheme.Red:load>=.6f?UiTheme.Amber:UiTheme.Green;
-        static void SetTick(RectTransform rect,float value,Vector2 size)
+
+        internal static string Species(string id) => id switch
         {
-            float angle=219-258*value;
-            Vector2 direction=new Vector2(Mathf.Cos(angle*Mathf.Deg2Rad),Mathf.Sin(angle*Mathf.Deg2Rad));
-            UiKit.Place(rect,Vector2.one*.5f,Vector2.one*.5f,direction*50,size);
-            rect.localRotation=Quaternion.Euler(0,0,angle-90);
+            "Bristlefish" => "Щетинник", "Sailray" => "Парусный скат", "Lanternfish" => "Фонарная рыба",
+            "Needlefish" => "Иглорыба", _ => "Улов"
+        };
+
+        internal static string ActionHint(HarpoonTool tool, FishActor fish)
+        {
+            if (tool.LineTension >= LineTensionArc.Danger) return "Ослабить леску";
+            if (fish.Surging || fish.Behaviour == FishBehaviour.LastEscape) return "Отпустить на рывке";
+            if (fish.SurgeWarning || fish.Behaviour == FishBehaviour.SurgeWindup) return "Приготовиться отпустить";
+            if (fish.RequiresPartner && fish.HookCount < 2) return "Нужен второй гарпун";
+            if (fish.Mode == FishMode.Tired && fish.RequiresPartner) return "Тянуть и сблизиться";
+            if (fish.RequiresPartner && !fish.Coordinated) return "Тянуть в одну сторону";
+            return fish.Coordinated ? "Тянуть вместе" : "Подтягивать рыбу";
         }
-        internal static string Species(string id) => id switch {
-            "Bristlefish"=>"Щетинник","Sailray"=>"Парусный скат","Lanternfish"=>"Фонарная рыба",
-            "Needlefish"=>"Иглорыба",_=>"Улов" };
 
         public void Refresh(UiContext ctx)
         {
-            var tool=ctx.Harpoon;
-            bool helping=tool!=null&&tool.AssistTarget!=null;
-            if(helping)tool=tool.AssistTarget.GetComponent<HarpoonTool>();
-            var fish=tool!=null?tool.HookedFish:null;
-            bool active=!ctx.Player.IsDead && fish!=null && fish.Mode>=FishMode.Hooked && fish.Mode<=FishMode.Tired;
-            bool entering=active && !Visible;
-            root.gameObject.SetActive(active);
-            if(!active)return;
-            float t=tensionTarget=Mathf.Clamp01(tool.LineTension);
-            float energy=energyTarget=Mathf.Clamp01(fish.Stamina/Mathf.Max(.01f,fish.tuning.initialStamina*fish.power));
-            if(entering){tensionShown=t;energyShown=energy;}
-            surgeCue=fish.SurgeWarning || fish.Surging;
-            speciesIcon.sprite=DiveInstruments.Art(DiveInstruments.CatchMark(fish.SpeciesId));
-            UiKit.Set(species,Species(fish.SpeciesId));
-            UiKit.Set(range,Vector3.Distance(tool.transform.position,fish.transform.position).ToString("0.0")+" м");
-            UiKit.Set(strength, $"Гарпуны {fish.HookCount}/{(fish.RequiresPartner ? 2 : 1)}  ·  Силы {Mathf.RoundToInt(energy*100)}%");
-            string action = t>=.82f ? "Отпустите ЛКМ · леска натянута"
-                : fish.Surging ? "Рывок · ослабьте леску"
-                : fish.Behaviour == FishBehaviour.SurgeWindup || fish.SurgeWarning ? "Рывок через мгновение"
-                : fish.Behaviour == FishBehaviour.LastEscape ? "Последний рывок · ослабьте леску"
-                : fish.Behaviour == FishBehaviour.Lateral ? "Рыба уходит в сторону · тяните"
-                : fish.Behaviour == FishBehaviour.Weakened ? "Рыба сдаётся · ЛКМ — тянуть"
-                : fish.RequiresPartner && fish.HookCount < 2 ? "Нужно два гарпуна"
-                : fish.RequiresPartner && fish.Mode == FishMode.Tired ? "Подплывите к рыбе, удерживая ЛКМ"
-                : fish.RequiresPartner && !fish.Coordinated ? "Тяните в одну сторону"
-                : fish.Mode == FishMode.Tired ? "Рыба устала · ЛКМ — тянуть"
-                : fish.Coordinated ? "Тянете вместе" : "ЛКМ — сматывать";
-            if(tool.StabilizerCooldown>0)action+="\nСтабилизатор · "+tool.StabilizerCooldown+" с";
-            UiKit.Set(instruction,action);instruction.color=t>=.82f?UiTheme.Red:surgeCue?UiTheme.Amber:UiTheme.Text;
+            HarpoonTool tool = ctx.Harpoon;
+            if (tool != null && tool.AssistTarget != null) tool = tool.AssistTarget.GetComponent<HarpoonTool>();
+            FishActor fish = tool != null ? tool.HookedFish : null;
+            bool active = !ctx.Player.IsDead && !UiInputGate.Modal && fish != null &&
+                fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
+            bool entering = active && (!Visible || lastFish != fish);
+            if (Visible != active) root.gameObject.SetActive(active);
+            lastFish = active ? fish : null;
+            if (!active) return;
+
+            targetLoad = Mathf.Clamp01(tool.LineTension);
+            targetStamina = Mathf.Clamp01(fish.Stamina / Mathf.Max(.01f, fish.tuning.initialStamina * fish.power));
+            if (entering)
+            {
+                shownLoad = targetLoad;
+                shownStamina = targetStamina;
+                arc.ShowLoad(shownLoad);
+                UiKit.Fraction(stamina, shownStamina);
+            }
+
+            speciesIcon.sprite = DiveInstruments.Art(DiveInstruments.CatchMark(fish.SpeciesId));
+            UiKit.Set(species, Species(fish.SpeciesId));
+            UiKit.Set(range, Mathf.RoundToInt(Vector3.Distance(tool.transform.position, fish.transform.position)) + " м");
+            UiKit.Set(hookCount, fish.HookCount + "/" + (fish.RequiresPartner ? 2 : 1));
+            hookCount.color = fish.RequiresPartner && fish.HookCount < 2 ? UiTheme.Amber : UiTheme.Text;
         }
 
         internal void Animate()
         {
-            if(!root.gameObject.activeInHierarchy)return;
-            float blend=1-Mathf.Exp(-Time.unscaledDeltaTime*20f);
-            tensionShown=Mathf.Lerp(tensionShown,tensionTarget,blend);
-            energyShown=Mathf.Lerp(energyShown,energyTarget,blend);
-            SetTick(needle,tensionShown,new Vector2(4,18));
-            for(int i=0;i<ticks.Length;i++)
-            {
-                float step=i/(ticks.Length-1f);
-                var hue=Signal(step);
-                float lit=Mathf.Clamp01((tensionShown-step)*ticks.Length+.4f);
-                ticks[i].color=Color.Lerp(Color.Lerp(new Color(.10f,.15f,.15f),hue,.36f),hue,lit);
-            }
-            UiKit.Set(load,Mathf.RoundToInt(tensionShown*100)+"%");
-            load.color=Signal(Mathf.Max(tensionShown,tensionTarget));
-            UiKit.Fraction(stamina,energyShown);
-            bool dangerous=tensionTarget>=.82f;
-            var accent=dangerous?UiTheme.Red:surgeCue?UiTheme.Amber:UiTheme.Cyan;
-            accent.a=dangerous || surgeCue?.60f+.36f*Mathf.Sin(Time.unscaledTime*9f):.23f;
-            caution.color=accent;
+            if (!root.gameObject.activeInHierarchy) return;
+            float blend = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 24f);
+            // Show danger on the first confirmed snapshot, even during a fast surge.
+            shownLoad = targetLoad >= LineTensionArc.Danger && shownLoad < LineTensionArc.Danger
+                ? targetLoad : Mathf.Lerp(shownLoad, targetLoad, blend);
+            shownStamina = Mathf.Lerp(shownStamina, targetStamina, blend);
+            arc.ShowLoad(shownLoad);
+            UiKit.Fraction(stamina, shownStamina);
         }
     }
-
 }
