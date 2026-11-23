@@ -203,7 +203,7 @@ Shader "RAID/Nereid Hull Coating"
                 surface.smoothness=saturate(gloss-streak*.10-grime*.07+(plate-1.)*.075+wear*.14);
                 if (_DeckTread > .5)
                 {
-                    half joint = i.panelNormal.y > .65 ? DeckJoint(i.position.xz) : 0;
+                    half joint = i.panelNormal.y > .65 ? DeckJoint(i.panelPosition.xz) : 0;
                     surface.albedo = _BaseColor.rgb * (1. - .17 * joint);
                     surface.metallic = _Metallic;
                     surface.smoothness = _Smoothness * (1. - .12 * joint);
