@@ -12,6 +12,7 @@ namespace Raid.Nereid.Editor
     {
         readonly List<Vector3> vertices = new();
         readonly List<Vector2> uv = new();
+        readonly List<(int start,int count)> faces = new();
         readonly List<Material> finishes = new();
         readonly List<List<int>> indices = new();
         readonly Vector3 pivot;
@@ -39,6 +40,7 @@ namespace Raid.Nereid.Editor
         {
             var tris=Surface(mat);
             var start=vertices.Count;
+            faces.Add((start,points.Length));
             var along=(points[1]-points[0]).normalized;
             var across=Vector3.Cross(Vector3.Cross(along,points[2]-points[0]).normalized,along);
             foreach (var p in points)
@@ -146,6 +148,40 @@ namespace Raid.Nereid.Editor
             lamp.transform.SetParent(node,false);lamp.transform.localPosition=p-pivot;
             lamp.type=LightType.Point;lamp.color=color;lamp.intensity=intensity;lamp.range=worldRange;
             lamp.shadows=LightShadows.None;lamp.renderMode=LightRenderMode.Auto;
+        }
+
+        // All fittings in a room kit share one standard URP/Lit atlas, including metal and emission.
+        internal void StorePalette(string path, Material atlas, IReadOnlyDictionary<Material,Vector2> swatches)
+        {
+            var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if(!mesh)
+            {
+                var swatchUV=new Vector2[vertices.Count];
+                // Keep grain subtle on small fittings and limit stretching on large castings.
+                // All vertices in a polygon stay within its padded atlas tile, including at lower mips.
+                var detailUV=new Vector2[vertices.Count];
+                foreach(var face in faces)
+                {
+                    Vector2 lo=uv[face.start],hi=lo;
+                    for(int n=1;n<face.count;n++){lo=Vector2.Min(lo,uv[face.start+n]);hi=Vector2.Max(hi,uv[face.start+n]);}
+                    var center=(lo+hi)*.5f;
+                    float span=Mathf.Max(1.50f,Mathf.Max(hi.x-lo.x,hi.y-lo.y));
+                    for(int n=0;n<face.count;n++) detailUV[face.start+n]=(uv[face.start+n]-center)*(.213f/span);
+                }
+                var triangles=new List<int>();
+                for(int i=0;i<indices.Count;i++)
+                {
+                    Vector2 sample=swatches[finishes[i]];
+                    foreach(int v in indices[i])swatchUV[v]=sample+detailUV[v];
+                    triangles.AddRange(indices[i]);
+                }
+                mesh=new Mesh{name=node.name,indexFormat=vertices.Count>65000?IndexFormat.UInt32:IndexFormat.UInt16};
+                mesh.SetVertices(vertices);mesh.uv=swatchUV;mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();
+                AssetDatabase.CreateAsset(mesh,path);
+            }
+            node.gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+            var renderer=node.gameObject.AddComponent<MeshRenderer>();renderer.sharedMaterial=atlas;
+            renderer.shadowCastingMode=ShadowCastingMode.Off;
         }
 
         internal void Store(string path)
