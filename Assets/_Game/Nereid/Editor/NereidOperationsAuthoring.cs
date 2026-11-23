@@ -34,11 +34,9 @@ namespace Raid.Nereid.Editor
             Fit(layout, NereidRoomRole.Reservoir, ShipConsoleKind.Reservoir);
             Fit(layout, NereidRoomRole.Command, ShipConsoleKind.Depths);
             Fit(layout, NereidRoomRole.Equipment, ShipConsoleKind.SkillTree);
-            Fit(layout, NereidRoomRole.Workshop, ShipConsoleKind.Process);
-            Fit(layout, NereidRoomRole.Feeding, ShipConsoleKind.Feed);
             Fit(layout, NereidRoomRole.Cargo, ShipConsoleKind.CargoControl);
             NereidDispatchAuthoring.Install();
-            if (AlignOperatorStations(layout)) EditorSceneManager.MarkSceneDirty(scene);
+            AlignOperatorStations(layout);
             foreach (var station in Object.FindObjectsByType<ShipConsole>())
                 if (!station.dispatchButton && !station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
             var factory = Object.FindAnyObjectByType<Factory.FactoryVisuals>();
@@ -87,8 +85,6 @@ namespace Raid.Nereid.Editor
         static (Vector3 position,float yaw) Mount(ShipConsoleKind kind)=>kind switch
         {
             ShipConsoleKind.CargoControl=>(new(2.20f,0,-9.75f),142),     // Across from the outer airlock apron
-            ShipConsoleKind.Process=>(new(.72f,0,-2.45f),-18),            // Inside the arch, overlooking the conveyor
-            ShipConsoleKind.Feed=>(new(-.41f,0,-.45f),-42),              // Facing the approach from the tank
             ShipConsoleKind.Reservoir=>(new(.33f,0,.22f),-19),            // Stand on the solid starboard aisle
             ShipConsoleKind.SkillTree=>(new(.22f,0,-.29f),22),           // Readable from the equipment-room entrance
             ShipConsoleKind.Depths=>(new(-.15f,0,.59f),-16),             // Turned toward the bridge landing
@@ -104,11 +100,19 @@ namespace Raid.Nereid.Editor
 
         static bool AlignOperatorStations(NereidShipLayout layout)
         {
-            bool changed=false;
-            foreach(var instrument in layout.GetComponentsInChildren<NereidInstrument>(true))
+            NereidHoistSwitchAuthoring.Upgrade(Stations + "/CargoControl.prefab");
+            bool changed = false;
+            foreach (var instrument in layout.GetComponentsInChildren<NereidInstrument>(true))
             {
-                var station=instrument.console;
-                if(!station)continue;
+                if (instrument.Kind is not (ShipConsoleKind.Process or ShipConsoleKind.Feed)) continue;
+                var legacyPath = Stations + "/" + instrument.Kind + ".prefab";
+                if (PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(instrument) != legacyPath) continue;
+                Object.DestroyImmediate(instrument.gameObject);
+                changed = true;
+            }
+            foreach (var station in layout.GetComponentsInChildren<ShipConsole>(true))
+            {
+                if (!station.IsMonitor && station.kind != ShipConsoleKind.CargoControl) continue;
                 var t=station.transform;
                 bool atSocket=layout.stations.Any(s=>s.anchor==t.parent);
                 // A previous factory install attached each console flush to its socket. Hand-aligned
@@ -200,7 +204,7 @@ namespace Raid.Nereid.Editor
         static void Fit(NereidShipLayout layout, NereidRoomRole room, ShipConsoleKind kind)
         {
             // An existing instrument can be moved or replaced in Unity; installation preserves its placement.
-            if (layout.GetComponentsInChildren<NereidInstrument>(true).Any(i => i.Kind == kind)) return;
+            if (layout.GetComponentsInChildren<ShipConsole>(true).Any(station => station.kind == kind)) return;
             var socket = layout.Socket(room);
             if (!socket) throw new InvalidOperationException("Missing room socket for " + room);
             string path = Stations + "/" + kind + ".prefab";
@@ -244,6 +248,11 @@ namespace Raid.Nereid.Editor
             var station = go.AddComponent<ShipConsole>();
             station.kind = kind;
             station.range = 3.75f;
+            if (kind == ShipConsoleKind.CargoControl)
+            {
+                NereidHoistSwitchAuthoring.Build(station);
+                return go;
+            }
             float w = kind == ShipConsoleKind.Reservoir ? 3.32f : 2.64f;
             float h = kind == ShipConsoleKind.Reservoir ? 1.98f : 1.75f;
             float y = 1.57f;
@@ -289,7 +298,6 @@ namespace Raid.Nereid.Editor
             Block(strip,"Active signal",new Vector3(.62f,0,0),new Vector3(1.24f,.027f,.015f),"Lamp");
             instrument.gauge=strip;
             MountDisplay(station);
-            if (kind is ShipConsoleKind.Feed or ShipConsoleKind.Process) NereidDispatchAuthoring.MakeStatusDisplay(station);
             return go;
         }
     }

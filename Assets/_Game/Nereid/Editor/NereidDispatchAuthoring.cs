@@ -17,12 +17,6 @@ namespace Raid.Nereid.Editor
         [MenuItem("Tools/NEREID/Fit aquarium dispatch post")]
         public static void Install()
         {
-            foreach (var kind in new[] {ShipConsoleKind.Process, ShipConsoleKind.Feed})
-            {
-                using var prefab = new PrefabUtility.EditPrefabContentsScope(Stations+kind+".prefab");
-                var station=prefab.prefabContentsRoot.GetComponent<ShipConsole>();
-                if (station) MakeStatusDisplay(station);
-            }
             var post=AssetDatabase.LoadAssetAtPath<GameObject>(Post);
             if (!post)
             {
@@ -43,24 +37,6 @@ namespace Raid.Nereid.Editor
                 }
             }
             AssetDatabase.SaveAssets();
-        }
-
-        internal static void MakeStatusDisplay(ShipConsole station)
-        {
-            var instrument=station.GetComponent<NereidInstrument>();
-            var monitor=instrument.readout;
-            monitor.fontSize=1.19f;
-            monitor.rectTransform.localPosition=new Vector3(0,0,-.025f);
-            monitor.rectTransform.sizeDelta=new Vector2(2.36f,1.56f);
-            instrument.displayKind=station.kind;
-            instrument.console=null;
-            var root=station.transform;
-            var oldKey=root.Find("Dispatch key housing");
-            if(oldKey) Object.DestroyImmediate(oldKey.gameObject);
-            var desk=root.Find("Sloping operator deck");
-            if(desk) Object.DestroyImmediate(desk.gameObject);
-            if(station.dispatchButton) Object.DestroyImmediate(station.dispatchButton);
-            Object.DestroyImmediate(station);
         }
 
         static GameObject BuildPost()
@@ -152,17 +128,17 @@ namespace Raid.Nereid.Editor
             return material;
         }
 
-        static Material GetMaterial(string name)
+        internal static Material GetMaterial(string name)
             => AssetDatabase.LoadAssetAtPath<Material>(Materials+name+".mat");
 
-        static Transform Pivot(Transform parent,string name,Vector3 position)
+        internal static Transform Pivot(Transform parent,string name,Vector3 position)
         {
             var part=new GameObject(name).transform;
             part.SetParent(parent,false);part.localPosition=position;
             return part;
         }
 
-        static Transform Solid(Transform parent,string name,Vector3 position,Vector3 size,Material surface,PrimitiveType primitive)
+        internal static Transform Solid(Transform parent,string name,Vector3 position,Vector3 size,Material surface,PrimitiveType primitive)
         {
             var part=GameObject.CreatePrimitive(primitive);
             part.name=name;Object.DestroyImmediate(part.GetComponent<Collider>());
@@ -172,10 +148,10 @@ namespace Raid.Nereid.Editor
             return part.transform;
         }
 
-        static void Box(Transform parent,string name,Vector3 position,Vector3 size,Material surface)
+        internal static void Box(Transform parent,string name,Vector3 position,Vector3 size,Material surface)
             => Solid(parent,name,position,size,surface,PrimitiveType.Cube);
 
-        static Transform Disk(Transform parent,string name,Vector3 position,float diameter,float depth,Material surface)
+        internal static Transform Disk(Transform parent,string name,Vector3 position,float diameter,float depth,Material surface)
         {
             var disk=Solid(parent,name,position,new Vector3(diameter,depth*.5f,diameter),surface,PrimitiveType.Cylinder);
             disk.localRotation=Quaternion.Euler(90,0,0);return disk;
