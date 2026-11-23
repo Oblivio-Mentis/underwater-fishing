@@ -10,7 +10,8 @@ Shader "RAID/Nereid Hull Coating"
         _SurfaceTiling("Repeats per metre", Vector)=(1,1,0,0)
         _SurfaceDetail("Average, contrast, relief, enabled", Vector)=(1,0,0,0)
         _Marine("Exterior marine light", Range(0,1))=1
-        _DeckTread("Raised deck flutes", Range(0,1))=0
+        _DeckTread("Modular deck panels", Range(0,1))=0
+        _DeckPlateSize("Deck panel width and length (metres)", Vector)=(2.4,3.6,0,0)
     }
     SubShader
     {
@@ -34,7 +35,7 @@ Shader "RAID/Nereid Hull Coating"
             CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
             half _Metallic, _Smoothness, _Marine, _DeckTread;
-            float4 _SurfaceRegion, _SurfaceTiling, _SurfaceDetail;
+            float4 _SurfaceRegion, _SurfaceTiling, _SurfaceDetail, _DeckPlateSize;
             CBUFFER_END
             TEXTURE2D(_SurfaceAtlas);
             SAMPLER(sampler_SurfaceAtlas);
@@ -134,14 +135,15 @@ Shader "RAID/Nereid Hull Coating"
                     SamplePanel(i.panelPosition.xy)*alignment.z);
             }
 
-            half DeckFlutes(float2 metres)
+            half DeckJoint(float2 metres)
             {
-                float2 spacing=metres*float2(9.,9.);
-                float2 cell=frac(spacing+.5)-.5;
-                float angle=fmod(abs(floor(spacing.x+.5)+floor(spacing.y+.5)),2.)*2.-1.;
-                float rib=length(float2((cell.x+angle*cell.y)*.52,(cell.x-angle*cell.y)*2.6));
-                float aa=clamp(max(fwidth(spacing.x),fwidth(spacing.y)),.01,.15);
-                return 1.-smoothstep(.23-aa,.26+aa,rib);
+                float2 size = max(_DeckPlateSize.xy, .25);
+                float2 edge = (.5 - abs(frac(metres / size) - .5)) * size;
+                float2 footprint = max(fwidth(metres), .001);
+                float2 seam = 1. - smoothstep(.008, .008 + footprint, edge);
+                // Narrow joints gradually disappear at grazing angles.
+                seam *= saturate(.025 / footprint);
+                return max(seam.x, seam.y);
             }
 
             float3 ReliefNormal(float3 position,float3 normal,float height)
@@ -157,11 +159,9 @@ Shader "RAID/Nereid Hull Coating"
             {
                 half3 n=normalize(i.normal);
                 half plate=1;
-                if(_SurfaceDetail.w>.5)
+                if(_DeckTread < .5 && _SurfaceDetail.w > .5)
                 {
                     plate=clamp(PanelHeight(i),.45,2.32);
-                    if(_DeckTread>.5 && i.panelNormal.y>.85)
-                        plate=lerp(plate,plate*1.30,DeckFlutes(i.panelPosition.xz));
                     n=ReliefNormal(i.position,n,plate*_SurfaceDetail.z);
                 }
                 InputData lighting=(InputData)0;
@@ -201,6 +201,13 @@ Shader "RAID/Nereid Hull Coating"
                 surface.albedo=lerp(paint,paint*1.45+half3(.028,.036,.040)*(1.-chroma),wear*.42);
                 surface.metallic=saturate(_Metallic+wear*.35);
                 surface.smoothness=saturate(gloss-streak*.10-grime*.07+(plate-1.)*.075+wear*.14);
+                if (_DeckTread > .5)
+                {
+                    half joint = i.panelNormal.y > .65 ? DeckJoint(i.position.xz) : 0;
+                    surface.albedo = _BaseColor.rgb * (1. - .17 * joint);
+                    surface.metallic = _Metallic;
+                    surface.smoothness = _Smoothness * (1. - .12 * joint);
+                }
                 surface.normalTS=half3(0,0,1);
                 surface.occlusion=1;
                 surface.alpha=1;

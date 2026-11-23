@@ -104,7 +104,9 @@ namespace Raid.Nereid
                 Vector3.down,Vector3.right,Vector3.forward);
             Lining("Slotted deck",new(OuterX*.5f,-.055f,0),new(OuterX+.16f,.14f,6.4f),floor,
                 Vector3.up,Vector3.right,Vector3.back);
-            for(int i=0;i<15;i++)Box("Floor traction strip",new Vector3(.25f+i*.58f,.025f,0),new Vector3(.09f,.025f,5.95f),trim);
+            // Flush threshold inlays pick out the two doors across the matte deck.
+            foreach(float x in new[]{.42f,OuterX-.42f})
+                Box("Pressure threshold inlay",new Vector3(x,.025f,0),new Vector3(.072f,.014f,2.62f),paint);
             for(int side=-1;side<=1;side+=2)
             {
                 Lining("Pressure chamber flank",new(OuterX*.5f,Height*.5f,side*3.2f),new(OuterX+.32f,Height,.22f),

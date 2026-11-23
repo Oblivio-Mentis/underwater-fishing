@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Embossed graphite tread
+  m_Name: Matte graphite deck
   m_Shader: {fileID: 4800000, guid: 414bcd8628b1447f8798eab630f702ab, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -31,10 +31,10 @@ Material:
     m_Floats:
     - _DeckTread: 1
     - _Marine: 0
-    - _Metallic: 0.48
-    - _Smoothness: 0.45
+    - _Metallic: 0.19
+    - _Smoothness: 0.28
     m_Colors:
-    - _BaseColor: {r: 0.27, g: 0.3, b: 0.29, a: 1}
+    - _BaseColor: {r: 0.25, g: 0.29, b: 0.32, a: 1}
     - _SurfaceDetail: {r: 0.053, g: 0.65, b: 0.012, a: 1}
     - _SurfaceRegion: {r: 0.019, g: 0.074, b: 0.962, a: 0.412}
     - _SurfaceTiling: {r: 0.38, g: 0.67, b: 0, a: 0}

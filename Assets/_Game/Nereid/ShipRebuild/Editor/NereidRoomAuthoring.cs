@@ -199,7 +199,7 @@ namespace Raid.Nereid.Editor
             dark=Make("Graphite forged frames",new(.105f,.14f,.16f),.40f,.36f,coat:true);
             enamel=Make("Petrol marine enamel",new(.24f,.37f,.37f),.29f,.45f,coat:true);
             ceramic=Make("Ivory ceramic panels",new(.50f,.56f,.52f),.24f,.50f,coat:true);
-            deck=Make("Embossed graphite tread",new(.27f,.30f,.29f),.48f,.45f,coat:true,floor:true);
+            deck=Make("Matte graphite deck",new(.25f,.29f,.32f),.19f,.28f,coat:true,floor:true);
             steel=Make("Machined titanium",new(.44f,.51f,.53f),.68f,.55f);
             ochre=Make("Rescue ochre",new(.84f,.445f,.10f),.28f,.39f,coat:true);
             warm=Make("Amber work light",new(1,.66f,.30f),.02f,.44f,2.2f);
