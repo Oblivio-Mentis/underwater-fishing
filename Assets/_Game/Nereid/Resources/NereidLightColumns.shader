@@ -23,7 +23,8 @@ Shader "RAID/Nereid Light Columns"
                 float current=sin(dot(i.pos.xz,float2(.91,.37))+i.pos.y*.25+_Time.y*.36);
                 float fade=smoothstep(-16.5,-8,i.pos.y)*(1-smoothstep(14,23,i.pos.y))*smoothstep(1.4,7,distanceToEye)*(1-smoothstep(30,85,distanceToEye));
                 float murk=lerp(1,.46*(1-smoothstep(9,25,distanceToEye)),_NereidTurbidity);
-                return half4(.27,.72,.79,thickness*thickness*fade*murk*(.077+.018*current));
+                // Shelf-water shafts: a blue-grey column of scattered light, not a saturated teal blade.
+                return half4(.30,.60,.72,thickness*thickness*fade*murk*(.070+.016*current));
             }
             ENDHLSL
         }

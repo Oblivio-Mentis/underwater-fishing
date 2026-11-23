@@ -44,7 +44,8 @@ Shader "RAID/Tall laminaria"
                 }
                 p.xz+=push*_BendMetres*smoothstep(0,.43,h)/max(1.,length(push));
                 Vary o; o.clip=TransformWorldToHClip(p); o.pos=p;
-                o.color=v.color.rgb*(.72+.34*abs(dot(v.normal,normalize(float3(.45,.78,-.4)))));
+                // Olive laminaria from the palette: the top light is cool, so the blade loses the acid yellow.
+                o.color=v.color.rgb*half3(.90,1.,1.06)*(.72+.34*abs(dot(v.normal,normalize(float3(.45,.78,-.4)))));
                 return o;
             }
             half4 frag(Vary i):SV_Target
@@ -53,8 +54,8 @@ Shader "RAID/Tall laminaria"
                 float d=max(.001,length(ray));
                 float glint=NereidBeam(i.pos);
                 float3 close=i.color*(.83+.53*glint)+glint*half3(.013,.022,.009);
-                float transmission=exp2(-d*d*lerp(.00136,_NereidReefClarity.x,_NereidTurbidity));
-                return half4(lerp(WaterColumnColor(ray/d),close,transmission),1);
+                float extinction=lerp(.00136,_NereidReefClarity.x,_NereidTurbidity);
+                return half4(NereidWaterFade(close,ray/d,d*d,extinction),1);
             }
             ENDHLSL
         }

@@ -12,6 +12,7 @@ Shader "RAID/Nereid Water Distance"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "NereidWaterColumn.hlsl"
             float _NereidTurbidity;
+            float3 _NereidReefClarity;
             struct Input {float3 pos:POSITION;};
             struct Vary {float4 clip:SV_POSITION;float3 dir:TEXCOORD0;};
             Vary vert(Input i)
@@ -35,8 +36,10 @@ Shader "RAID/Nereid Water Distance"
                 half3 horizon=lerp(half3(.003,.021,.034),half3(.012,.083,.117),lower);
                 half3 sky=lerp(horizon,half3(.026,.179,.228),upper);
                 sky+=half3(.034,.135,.126)*pow(toward,8)*(.68+.32*shimmer);
-                half3 surfaceGlow=half3(.007,.024,.032)*pow(toward,6)*(.85+.15*shimmer);
-                return half4(lerp(sky,WaterColumnColor(dir)+surfaceGlow,_NereidTurbidity),1);
+                // The same column the object fog resolves to; the surface shimmer belongs to Depth I only.
+                half shallow=1-NereidDeepWater(_NereidReefClarity.x);
+                half3 surfaceGlow=half3(.007,.024,.032)*pow(toward,6)*(.85+.15*shimmer)*shallow;
+                return half4(lerp(sky,WaterColumnColor(dir,_NereidReefClarity.x)+surfaceGlow,_NereidTurbidity),1);
             }
             ENDHLSL
         }
