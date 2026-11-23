@@ -11,29 +11,96 @@ namespace Raid.Nereid.Editor
         const string Stations = Root + "Prefabs/Stations/";
         const string Materials = Root + "Materials/";
 
-        [MenuItem("Tools/NEREID/Fit fish dispatch buttons")]
+        const string Hall = Root+"Prefabs/Rooms/ObservationHall.prefab";
+        const string Post = Stations+"Aquarium dispatch post.prefab";
+
+        [MenuItem("Tools/NEREID/Fit aquarium dispatch post")]
         public static void Install()
         {
             foreach (var kind in new[] {ShipConsoleKind.Process, ShipConsoleKind.Feed})
             {
                 using var prefab = new PrefabUtility.EditPrefabContentsScope(Stations+kind+".prefab");
-                Fit(prefab.prefabContentsRoot.GetComponent<ShipConsole>());
+                var station=prefab.prefabContentsRoot.GetComponent<ShipConsole>();
+                if (station) MakeStatusDisplay(station);
+            }
+            var post=AssetDatabase.LoadAssetAtPath<GameObject>(Post);
+            if (!post)
+            {
+                var model=BuildPost();
+                try { post=PrefabUtility.SaveAsPrefabAsset(model,Post); }
+                finally { Object.DestroyImmediate(model); }
+            }
+            using (var prefab=new PrefabUtility.EditPrefabContentsScope(Hall))
+            {
+                var hall=prefab.prefabContentsRoot.transform;
+                if (!hall.GetComponentInChildren<NereidDispatchButton>(true))
+                {
+                    var installed=((GameObject)PrefabUtility.InstantiatePrefab(post,hall)).transform;
+                    // The hall origin is two vessel units aft of the vessel origin. All controls are built in metres.
+                    installed.SetLocalPositionAndRotation(new Vector3(3.12f,0,2.52f),Quaternion.Euler(0,107f,0));
+                    installed.localScale=Vector3.one*.5f;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(installed);
+                }
             }
             AssetDatabase.SaveAssets();
         }
 
-        internal static void Fit(ShipConsole station)
+        internal static void MakeStatusDisplay(ShipConsole station)
         {
-            if (station.dispatchButton) return;
-            bool feed = station.kind == ShipConsoleKind.Feed;
-            var root = station.transform;
-            var monitor = station.GetComponent<NereidInstrument>().readout;
-            monitor.fontSize = 1.03f;
-            monitor.rectTransform.localPosition = new Vector3(-.50f,.02f,-.025f);
-            monitor.rectTransform.sizeDelta = new Vector2(1.49f,1.46f);
-            var desk = root.Find("Sloping operator deck");
-            if (desk) Object.DestroyImmediate(desk.gameObject);
-            var chassis = Pivot(root,"Dispatch key housing",new Vector3(.72f,1.39f,-.14f));
+            var instrument=station.GetComponent<NereidInstrument>();
+            var monitor=instrument.readout;
+            monitor.fontSize=1.19f;
+            monitor.rectTransform.localPosition=new Vector3(0,0,-.025f);
+            monitor.rectTransform.sizeDelta=new Vector2(2.36f,1.56f);
+            instrument.displayKind=station.kind;
+            instrument.console=null;
+            var root=station.transform;
+            var oldKey=root.Find("Dispatch key housing");
+            if(oldKey) Object.DestroyImmediate(oldKey.gameObject);
+            var desk=root.Find("Sloping operator deck");
+            if(desk) Object.DestroyImmediate(desk.gameObject);
+            if(station.dispatchButton) Object.DestroyImmediate(station.dispatchButton);
+            Object.DestroyImmediate(station);
+        }
+
+        static GameObject BuildPost()
+        {
+            var root=new GameObject("Aquarium dispatch post");
+            var t=root.transform;
+            var frame=GetMaterial("Graphite forged frames");
+            var metal=GetMaterial("Machined titanium");
+            var ochre=GetMaterial("Rescue ochre");
+            var glow=Signal("Dispatch key inlay",new Color(.85f,.9f,.83f));
+            var foot=Solid(t,"Bolted deck flange",new Vector3(0,.043f,0),new(.89f,.086f,.65f),metal,PrimitiveType.Cube);
+            foot.gameObject.AddComponent<BoxCollider>();
+            for(int x=-1;x<=1;x+=2)
+                for(int z=-1;z<=1;z+=2)
+                    Solid(t,"Deck anchor",new Vector3(x*.32f,.092f,z*.224f),new(.074f,.015f,.074f),metal,PrimitiveType.Cylinder);
+            var column=Solid(t,"Switchgear column",new Vector3(0,.50f,.039f),new(.39f,.84f,.36f),frame,PrimitiveType.Cube);
+            column.gameObject.AddComponent<BoxCollider>();
+            Box(t,"Service door",new Vector3(0,.52f,-.154f),new(.31f,.58f,.05f),ochre);
+            Box(t,"Switchgear collar",new Vector3(0,.85f,.02f),new(.53f,.12f,.43f),metal);
+            var head=Pivot(t,"Paired valve head",new Vector3(0,1.22f,0));
+            head.localRotation=Quaternion.Euler(12f,0,0);
+            var back=Solid(head,"Common watertight casting",new Vector3(0,.02f,.037f),new(1.62f,.67f,.30f),frame,PrimitiveType.Cube);
+            back.gameObject.AddComponent<BoxCollider>();
+            Box(head,"Valve head wear rail",new Vector3(0,-.28f,-.098f),new(1.55f,.07f,.12f),metal);
+            Box(head,"Worklight hood",new Vector3(0,.35f,-.12f),new(1.3f,.085f,.22f),frame);
+            Box(head,"Worklight diffuser",new Vector3(0,.308f,-.16f),new(.94f,.02f,.09f),glow);
+            var lamp=Pivot(head,"Valve face lighting",new Vector3(0,.32f,-.57f)).gameObject.AddComponent<Light>();
+            lamp.type=LightType.Point;lamp.range=2.4f;lamp.intensity=.75f;
+            lamp.color=new Color(.91f,.94f,1f);lamp.shadows=LightShadows.None;
+            CreateKey(head,false);
+            CreateKey(head,true);
+            return root;
+        }
+
+        static void CreateKey(Transform head,bool feed)
+        {
+            var chassis=Pivot(head,feed?"Food pipe control":"Processor pipe control",new Vector3(feed?.395f:-.395f,.015f,-.11f));
+            var station=chassis.gameObject.AddComponent<ShipConsole>();
+            station.kind=feed?ShipConsoleKind.Feed:ShipConsoleKind.Process;
+            station.range=3.75f;
             var metal = GetMaterial("Machined titanium");
             var frame = GetMaterial("Graphite forged frames");
             var signal = Signal(feed ? "Feed key amber" : "Process key cyan",feed ? new Color(1f,.31f,.075f) : new Color(.13f,.84f,.86f));
@@ -41,22 +108,13 @@ namespace Raid.Nereid.Editor
             var body = GetMaterial(feed ? "Rescue ochre" : "Petrol marine enamel");
             var rubber = GetMaterial("Reinforced hose rubber");
 
-            Box(chassis,"Instrument island",new Vector3(0,0,-.025f),new Vector3(.97f,1.32f,.12f),frame);
-            Box(chassis,"Service enamel",new Vector3(0,.045f,-.095f),new Vector3(.84f,1.07f,.05f),body);
-            for (int side=-1;side<=1;side+=2)
+            Box(chassis,"Valve escutcheon",new Vector3(0,0,-.008f),new Vector3(.69f,.55f,.078f),body);
+            for(int side=-1;side<=1;side+=2)
             {
-                Box(chassis,"Guard lug",new Vector3(side*.33f,0,-.195f),new Vector3(.067f,.55f,.19f),metal);
-                Box(chassis,"Guard bumper",new Vector3(side*.33f,0,-.30f),new Vector3(.085f,.57f,.045f),rubber);
-                for (int vertical=-1;vertical<=1;vertical+=2)
-                    Disk(chassis,"Mount bolt",new Vector3(side*.386f,vertical*.57f,-.092f),.051f,.026f,metal);
+                Box(chassis,"Switch guard",new Vector3(side*.301f,0,-.14f),new(.060f,.40f,.14f),metal);
+                for(int vertical=-1;vertical<=1;vertical+=2)
+                    Disk(chassis,"Mount bolt",new Vector3(side*.298f,vertical*.224f,-.060f),.035f,.020f,metal);
             }
-            var hood=Pivot(chassis,"Recessed work lamp",new Vector3(0,.60f,-.20f));
-            Box(hood,"Lamp cowl",Vector3.zero,new Vector3(.62f,.089f,.29f),metal);
-            Box(hood,"Diffuser",new Vector3(0,-.046f,-.035f),new Vector3(.46f,.019f,.14f),ink);
-            var light=Pivot(hood,"Task light",new Vector3(-.03f,-.06f,-.39f)).gameObject.AddComponent<Light>();
-            light.type=LightType.Point;light.range=2.4f;light.intensity=.82f;
-            light.color=new Color(1f,.86f,.68f);light.shadows=LightShadows.None;
-            Box(chassis,"Line pilot",new Vector3(0,.424f,-.128f),new Vector3(.25f,.028f,.022f),signal);
             Disk(chassis,"Pressure seal",new Vector3(0,0,-.135f),.598f,.093f,rubber);
             Disk(chassis,"Retaining ring",new Vector3(0,0,-.188f),.549f,.083f,metal);
             Disk(chassis,"Illuminated collar",new Vector3(0,0,-.229f),.504f,.030f,signal);

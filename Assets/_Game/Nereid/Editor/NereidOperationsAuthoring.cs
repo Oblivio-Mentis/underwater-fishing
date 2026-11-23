@@ -37,9 +37,10 @@ namespace Raid.Nereid.Editor
             Fit(layout, NereidRoomRole.Workshop, ShipConsoleKind.Process);
             Fit(layout, NereidRoomRole.Feeding, ShipConsoleKind.Feed);
             Fit(layout, NereidRoomRole.Cargo, ShipConsoleKind.CargoControl);
+            NereidDispatchAuthoring.Install();
             if (AlignOperatorStations(layout)) EditorSceneManager.MarkSceneDirty(scene);
             foreach (var station in Object.FindObjectsByType<ShipConsole>())
-                if (!station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
+                if (!station.dispatchButton && !station.GetComponent<NereidInstrument>()) station.gameObject.SetActive(false);
             var factory = Object.FindAnyObjectByType<Factory.FactoryVisuals>();
             if (factory)
             {
@@ -199,7 +200,7 @@ namespace Raid.Nereid.Editor
         static void Fit(NereidShipLayout layout, NereidRoomRole room, ShipConsoleKind kind)
         {
             // An existing instrument can be moved or replaced in Unity; installation preserves its placement.
-            if (layout.GetComponentsInChildren<NereidInstrument>(true).Any(i => i.console && i.console.kind == kind)) return;
+            if (layout.GetComponentsInChildren<NereidInstrument>(true).Any(i => i.Kind == kind)) return;
             var socket = layout.Socket(room);
             if (!socket) throw new InvalidOperationException("Missing room socket for " + room);
             string path = Stations + "/" + kind + ".prefab";
@@ -288,7 +289,7 @@ namespace Raid.Nereid.Editor
             Block(strip,"Active signal",new Vector3(.62f,0,0),new Vector3(1.24f,.027f,.015f),"Lamp");
             instrument.gauge=strip;
             MountDisplay(station);
-            if (kind is ShipConsoleKind.Feed or ShipConsoleKind.Process) NereidDispatchAuthoring.Fit(station);
+            if (kind is ShipConsoleKind.Feed or ShipConsoleKind.Process) NereidDispatchAuthoring.MakeStatusDisplay(station);
             return go;
         }
     }

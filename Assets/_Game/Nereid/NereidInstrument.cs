@@ -7,15 +7,18 @@ namespace Raid.Nereid
     public sealed class NereidInstrument : MonoBehaviour
     {
         public ShipConsole console;
+        [Tooltip("Line tracked by a passive status screen.")]
+        public ShipConsoleKind displayKind;
+        public ShipConsoleKind Kind => console ? console.kind : displayKind;
         public TMP_Text readout;
         public Transform gauge;
         float nextSample;
 
         void LateUpdate()
         {
-            if (console == null || readout == null) return;
+            if (readout == null) return;
             var ui = UI.UiRoot.Instance;
-            bool open = ui != null && ui.Context.SelectedConsole == console &&
+            bool open = console && ui != null && ui.Context.SelectedConsole == console &&
                 (ui.Page == UI.UiPage.Terminal || ui.Page == UI.UiPage.SkillTree);
             if (readout.gameObject.activeSelf == open) readout.gameObject.SetActive(!open);
             if (open || Time.unscaledTime < nextSample) return;
@@ -26,11 +29,11 @@ namespace Raid.Nereid
             var route = world.FishRoute;
             string heading, value, detail;
             float ratio;
-            switch (console.kind)
+            switch (Kind)
             {
                 case ShipConsoleKind.Process:
                 case ShipConsoleKind.Feed:
-                    bool feed = console.kind == ShipConsoleKind.Feed;
+                    bool feed = Kind == ShipConsoleKind.Feed;
                     var target = feed ? CatchDestination.Feed : CatchDestination.Process;
                     int count = team.tank.FindAll(item => FishRouteQuote.IsDraft(item,target)).Count;
                     bool flowing = route.active && route.feeding == feed;
@@ -39,8 +42,8 @@ namespace Raid.Nereid
                     detail = feed
                         ? $"Рацион   {TeamProgress.FoodText(team.offeringPoints)} / {TeamProgress.FoodText(team.RequiredFood(world.progression))}\nДо кормления   {Mathf.CeilToInt(team.hungerRemaining)} с"
                         : "Линия разделки";
-                    detail += flowing ? (route.stopping ? "\nКлапан закрыт" : "\nОстановить  →") :
-                        (route.active ? "\nДругая линия занята" : count > 0 ? "\nПуск  →" : "\nОжидание назначения");
+                    detail += flowing ? (route.stopping ? "\nКлапан закрыт" : "\nТрубопровод открыт") :
+                        (route.active ? "\nДругая линия занята" : count > 0 ? "\nГотово к пуску" : "\nОжидание назначения");
                     ratio = flowing ? (float)route.completed / Mathf.Max(1,route.total) : (float)count / Mathf.Max(1,team.tank.Count);
                     break;
                 case ShipConsoleKind.CargoControl:
