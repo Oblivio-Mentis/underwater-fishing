@@ -201,18 +201,22 @@ namespace Raid
         public void RequestCommand(WorldAction action,long id,int requestId)
         {
             var pointedAt=Vector3.zero;
+            bool hasContact=false;
             if(DispatchControl(action).HasValue)
             {
                 var actor=NetworkManager.ClientManager.Connection.FirstObject;
                 var camera=actor ? actor.GetComponentInChildren<Camera>() : null;
                 if(camera && Physics.Raycast(camera.ViewportPointToRay(new Vector3(.5f,.5f,0)),out var hit,
                     4f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                {
                     pointedAt=hit.point;
+                    hasContact=true;
+                }
             }
-            Act(action,id,requestId,pointedAt);
+            Act(action,id,requestId,pointedAt,hasContact);
         }
         [ServerRpc(RequireOwnership=false)]
-        private void Act(WorldAction action,long id,int requestId,Vector3 pointedAt,NetworkConnection sender=null)
+        private void Act(WorldAction action,long id,int requestId,Vector3 pointedAt,bool hasContact,NetworkConnection sender=null)
         {
             if(sender==null || sender.FirstObject==null || team==null || !Enum.IsDefined(typeof(WorldAction),action)) return;
             if(transitionRemaining>0) { Respond(sender,requestId,false,"travel"); return; }
@@ -242,7 +246,7 @@ namespace Raid
             if(switchKind.HasValue)
             {
                 // Reliable click and its target travel together. Look/turn updates arrive on another tick.
-                if(!ShipConsole.CanPressAt(diver,switchKind.Value,pointedAt))
+                if(!hasContact || !ShipConsole.CanPressAt(diver,switchKind.Value,pointedAt))
                 {Respond(sender,requestId,false,"range");return;}
             }
             else if(!(factory && action==WorldAction.Hoist) && (stationCommand?!ShipConsole.CanUse(diver,action):Vector3.Distance(diver.transform.position,target)>tuning.interactionRange))
