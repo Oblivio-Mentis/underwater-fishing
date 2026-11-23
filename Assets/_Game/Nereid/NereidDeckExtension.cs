@@ -35,6 +35,8 @@ namespace Raid.Nereid
         internal static Vector3 StairMark(float z,float clearance)
             => new(StairX,UpperDeck*Mathf.InverseLerp(StairStart,StairEnd,z)+clearance,z);
 
+        internal static Vector3 CompanionwayFoot(float clearance) => StairMark(StairStart,clearance);
+
         internal static bool TryGround(Vector3 local,out float floor)
         {
             floor=0;

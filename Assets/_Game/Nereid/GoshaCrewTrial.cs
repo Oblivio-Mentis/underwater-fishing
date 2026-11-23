@@ -281,8 +281,8 @@ namespace Raid.Nereid
             host.LookAtConsole(world.Gosha.Position);yield return new WaitForSeconds(.08f);HostShot("gosha-fetch.png");
             yield return Wait("Returned to the diver who threw it",()=>world.HasGoshaBall(host),35);
             var hull=NereidVessel.Active.transform;
-            yield return RecoverStairBall(new Vector3(-3.98f,.09f,5.88f),"Forward left stair cheek");
-            yield return RecoverStairBall(new Vector3(-3.98f,.09f,-7.39f),"Aft left stair cheek");
+            yield return RecoverStairBall(new Vector3(-3.98f,.09f,NereidVessel.GalleryBowFoot-.12f),"Forward left stair cheek");
+            yield return RecoverStairBall(new Vector3(-3.98f,.09f,NereidVessel.GalleryAftFoot+.11f),"Aft left stair cheek");
             yield return RecoverStairBall(new Vector3(-4.7f,1.58f,-.7f),"Raised observation deck");
             var sphere=FindAnyObjectByType<GoshaBallBody>();
             Stage(host,hull.TransformPoint(new Vector3(0,.52f,3.8f)));

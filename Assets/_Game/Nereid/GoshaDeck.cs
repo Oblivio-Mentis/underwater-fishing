@@ -22,7 +22,11 @@ namespace Raid.Nereid
             new(0,Pivot,-16.72f),new(0,Pivot,-18.1f),new(1.6f,Pivot,-20.2f),new(1.6f,Pivot,-23.24f),
             NereidDeckExtension.StairMark(-17.14f,Pivot),NereidDeckExtension.StairMark(-19f,Pivot),
             NereidDeckExtension.StairMark(-22f,Pivot),
-            new(-2.58f,5.03f,-25.05f),new(-2.58f,5.03f,-26.85f),new(1.2f,5.03f,-26.76f)
+            new(-2.58f,5.03f,-25.05f),new(-2.58f,5.03f,-26.85f),new(1.2f,5.03f,-26.76f),
+            // Split the flat turns from the sloped edges. A single diagonal across
+            // both would leave the deck at the foot of the shorter stair flights.
+            new(StairX,Pivot,GalleryAftFoot),new(StairX,Pivot,GalleryBowFoot),
+            NereidDeckExtension.CompanionwayFoot(Pivot)
         };
         readonly RaycastHit[] hits=new RaycastHit[32];
         readonly Collider[] overlaps=new Collider[32];
