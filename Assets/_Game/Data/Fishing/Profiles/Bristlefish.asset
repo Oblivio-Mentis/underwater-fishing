@@ -25,7 +25,7 @@ MonoBehaviour:
   forageSpeed: 0.55
   fleeSpeed: 4.6
   acceleration: 1.5
-  turnRate: 85
+  turnRate: 70
   turnRadius: 1.8
   bankStrength: 11
   bodyRadiusMultiplier: 1.15

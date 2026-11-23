@@ -445,7 +445,7 @@ namespace Raid
             // Inertia: the heading turns no faster than the species allows at its current speed,
             // and speed changes by acceleration (braking harder, bolting much harder).
             Vector3 heading = speedNow > .02f ? velocity / speedNow : transform.forward;
-            float turnLimit = Mathf.Max(spec.turnRate * .45f, Mathf.Min(spec.turnRate, Mathf.Rad2Deg * speedNow / spec.turnRadius));
+            float turnLimit = Mathf.Max(spec.turnRate * .3f, Mathf.Min(spec.turnRate, Mathf.Rad2Deg * speedNow / spec.turnRadius));
             if (fleeing) turnLimit *= 1.8f;
             heading = Vector3.RotateTowards(heading, direction, turnLimit * Mathf.Deg2Rad * dt, 0);
             float accel = spec.acceleration * (desiredSpeed < speedNow ? 1.6f : 1f) * (fleeing ? 4f : 1f);
@@ -465,7 +465,7 @@ namespace Raid
                 stuckTime += dt * 2;
             }
             if (stuckTime > spec.stuckSeconds) Unstick(position);
-            FaceSwim(heading, dt, 20f, direction);
+            FaceSwim(heading, dt, 6f, direction);
             state.Behaviour = swim;
         }
 

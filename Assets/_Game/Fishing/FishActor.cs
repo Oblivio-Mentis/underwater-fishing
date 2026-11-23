@@ -331,7 +331,9 @@ namespace Raid
             {
                 float blend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.02f, tuning.snapshotInterval));
                 transform.position = Vector3.Lerp(transform.position, visual.Position, blend);
-                transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, blend);
+                // Heading settles over a longer window than position so turns read as arcs, not steps.
+                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .14f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, turnBlend);
             }
             lastVisualActive = visual.Active;
             bool collidable = !visual.Reserved && visual.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;

@@ -9,8 +9,18 @@ namespace Raid
         private sealed class Shape
         {
             public Mesh body, tail;
+            public Vector3[] restVertices;
             public Material[] colors, wildColors, catchColors;
         }
+        // Procedural spine: a travelling wave from head to tail plus a C-bend into the turn.
+        // The collider keeps the rest mesh; the harpoon anchor is displaced by the same function
+        // on every peer (see HarpoonContact.ResolveOn), so the bolt rides the bent body.
+        private Shape shape;
+        private Mesh spineMesh;
+        private Vector3[] spineWork;
+        private float wavePhase, waveAmplitude, bendCurve, lastYaw, yawRate, tailSlope;
+        private bool hasYaw;
+        private const float HeadZ = .52f, TailZ = -.47f;
 
         private static readonly Dictionary<string, Shape> Shapes = new();
         private Transform tail;
@@ -37,6 +47,7 @@ namespace Raid
             finish ??= shape.colors;
             var body = MakePart(species, parent, shape.body, finish);
             var model = body.AddComponent<CatchFishModel>();
+            model.shape = shape;
             model.tail = MakePart("Caudal fin", body.transform, shape.tail, finish).transform;
             model.tail.localPosition = Vector3.back * .43f;
             model.CargoId = cargoId;
@@ -61,6 +72,48 @@ namespace Raid
             part.AddComponent<MeshFilter>().sharedMesh = mesh;
             part.AddComponent<MeshRenderer>().sharedMaterials = materials;
             return part;
+        }
+
+        public Vector3 Displace(Vector3 local)
+        {
+            float t = Mathf.Clamp01((HeadZ - local.z) / (HeadZ - TailZ));
+            float envelope = t * t * (.2f + .8f * t);
+            float wave = Mathf.Sin(wavePhase - t * 2.6f) * waveAmplitude * envelope;
+            float bend = bendCurve * t * t;
+            if (ray)
+            {
+                // A ray ripples its wings vertically and barely bends its short body.
+                local.y += Mathf.Sin(wavePhase - Mathf.Abs(local.x) * 2.4f - t * 1.2f) * waveAmplitude * .9f * Mathf.Clamp01(Mathf.Abs(local.x) * 1.4f);
+                local.x += wave * .25f + bend * .6f;
+                return local;
+            }
+            local.x += wave + bend;
+            return local;
+        }
+
+        private void DeformSpine()
+        {
+            if (shape == null || shape.body == null) return;
+            if (spineMesh == null)
+            {
+                var filter = GetComponent<MeshFilter>();
+                shape.restVertices ??= shape.body.vertices;
+                spineMesh = Instantiate(shape.body);
+                spineMesh.name = shape.body.name + " / spine";
+                spineMesh.hideFlags = HideFlags.DontSave;
+                spineMesh.MarkDynamic();
+                spineWork = new Vector3[shape.restVertices.Length];
+                filter.sharedMesh = spineMesh;
+            }
+            var rest = shape.restVertices;
+            for (int i = 0; i < rest.Length; i++) spineWork[i] = Displace(rest[i]);
+            spineMesh.vertices = spineWork;
+            spineMesh.RecalculateNormals();
+            spineMesh.RecalculateBounds();
+            // The hinged caudal fin sits on the displaced spine end and follows its slope.
+            Vector3 root = Displace(Vector3.back * .43f), ahead = Displace(Vector3.back * .33f);
+            tail.localPosition = root;
+            tailSlope = Mathf.Atan2(ahead.x - root.x, ahead.z - root.z) * Mathf.Rad2Deg;
         }
 
         private void LateUpdate()
@@ -88,6 +141,11 @@ namespace Raid
                 if(actor.HookSequence!=seenHook){seenHook=actor.HookSequence;if(seenHook>0)hitRecoil=1;}
             }
             hitRecoil=Mathf.MoveTowards(hitRecoil,0,dt*4.2f);
+            // Turn rate of the body drives the C-bend: nose into the turn, tail trailing outside.
+            float yaw = transform.parent == null ? transform.eulerAngles.y : transform.parent.eulerAngles.y;
+            float yawDelta = hasYaw ? Mathf.DeltaAngle(lastYaw, yaw) / dt : 0;
+            hasYaw = true; lastYaw = yaw;
+            yawRate = Mathf.Lerp(yawRate, Mathf.Clamp(yawDelta, -360, 360), 1 - Mathf.Exp(-dt * 10));
             float clock=Time.time, offset=phase;
             if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
             {
@@ -106,14 +164,22 @@ namespace Raid
             float whip=Mathf.Lerp(Mathf.Sin(cruise-.9f)*25f,Mathf.Sin(sprint-.9f)*39f,strokeWeight)*amplitude;
             // Hook shock: a short asymmetric flinch of the whole tail, then back to the swim stroke.
             float flinch=hitRecoil>0?Mathf.Sin(hitRecoil*Mathf.PI)*Mathf.Sin(hitRecoil*22f)*28f:0;
-            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,(ray?whip*.42f:whip)+flinch,0);
+            // Spine wave: faster and larger with effort; bend follows the measured turn rate.
+            wavePhase = Mathf.Lerp(cruise, sprint, strokeWeight) - .9f;
+            waveAmplitude = Mathf.Lerp(ray ? .035f : .045f, ray ? .07f : .11f, Mathf.Max(strokeWeight, speedWeight)) * amplitude + Mathf.Abs(flinch) * .0025f;
+            float targetBend = Mathf.Clamp(-yawRate / 160f, -1, 1) * (ray ? .10f : .16f);
+            bendCurve = Mathf.Lerp(bendCurve, targetBend, 1 - Mathf.Exp(-dt * 8));
+            DeformSpine();
+            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,(ray?whip*.42f:whip)*.55f+flinch+tailSlope,0);
             if(actor!=null)
             {
-                float bank=ray?8f:3.5f;
-                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.8f-flinch*.12f,
-                    lead*Mathf.Lerp(3.5f,8f,strokeWeight)*amplitude+flinch*.25f,Mathf.Sin(cruise-.6f)*bank+flinch*.3f);
+                float bank=ray?6f:2.5f;
+                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.2f-flinch*.12f,
+                    lead*Mathf.Lerp(1.5f,3.5f,strokeWeight)*amplitude+flinch*.25f,Mathf.Sin(cruise-.6f)*bank+flinch*.3f);
             }
         }
+
+        private void OnDestroy() { if (spineMesh != null) Destroy(spineMesh); }
 
         private static Shape Build(string species)
         {

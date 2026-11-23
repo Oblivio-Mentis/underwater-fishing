@@ -45,7 +45,7 @@ MonoBehaviour:
   obstructedSurgeFactor: 0.25
   nearSurgeBias: 0.8
   lateralStrength: 1.1
-  turnRate: 2.8
+  turnRate: 2.2
   surgeSpeedMultiplier: 2
   weakenedSpeedMultiplier: 0.25
   weakenedRecovery: 2.5
