@@ -632,6 +632,66 @@
         "y": 2.65,
         "z": -20
       }
+    },
+    {
+      "name": "workshop-pump-wall",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.28,
+        "y": 0.48,
+        "z": -19.61
+      },
+      "look": {
+        "x": -3.92,
+        "y": 1.16,
+        "z": -23.12
+      }
+    },
+    {
+      "name": "feeding-service-wall",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -1.62,
+        "y": 0.54,
+        "z": 5.25
+      },
+      "look": {
+        "x": -5.91,
+        "y": 1.88,
+        "z": 6.62
+      }
+    },
+    {
+      "name": "feeding-pipe-inlet",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -3.26,
+        "y": 0.54,
+        "z": 6.61
+      },
+      "look": {
+        "x": -5.86,
+        "y": 3.1,
+        "z": 6.1
+      }
+    },
+    {
+      "name": "cargo-door-jambs",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 3.05,
+        "y": 0.51,
+        "z": -14.275
+      },
+      "look": {
+        "x": 5.95,
+        "y": 1.05,
+        "z": -13.98
+      }
     }
   ]
 }
