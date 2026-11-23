@@ -296,10 +296,29 @@ namespace Raid
             yield return Reel(heavy);
             remoteReeling=false;
             Send("fish_reel",0);
-            Require(!host.Motor.IsDead && host.HandsFull && host.CarriedFish == heavy && host.CatchCount == 4
-                && helper.HookedFish==null && heavy.HookCount==0,
-                $"Heavy carry mismatch: HP {host.Motor.Health:F1}, O2 {host.Motor.Oxygen:F1}, mode {heavy.Mode}, hands {host.HandsFull}, catches {host.CatchCount}.");
-            Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
+            long landedHeavyId = heavy.CargoId;
+            var carrier = host.CarriedFish == heavy ? host : helper;
+            Require(!carrier.Motor.IsDead && carrier.HandsFull && carrier.CarriedFish == heavy && host.CatchCount + helper.CatchCount == 4
+                && host.HookedFish == null && helper.HookedFish == null && heavy.HookCount == 0,
+                $"Heavy carry mismatch: mode {heavy.Mode}, hands {host.HandsFull}/{helper.HandsFull}, catches {host.CatchCount}/{helper.CatchCount}.");
+            if (carrier == host)
+                Require(!host.SelectSlot(1) && host.ActiveSlot == 0 && !host.QaFireOwned(), "Heavy catch allowed switching or firing.");
+            else
+            {
+                yield return Wait(() => ReadClient()?.handsFull == true, 5, "Second owner did not observe the heavy catch in their hands.");
+                var slotAttempt = Send("slot", 1);
+                yield return Wait(() => ReadClient() is { } peer && peer.request == slotAttempt && !string.IsNullOrEmpty(peer.error),
+                    5, "Heavy catch allowed the second owner to switch tools.");
+                var fireAttempt = Send("fire", 0);
+                yield return Wait(() => ReadClient() is { } peer && peer.request == fireAttempt && !string.IsNullOrEmpty(peer.error),
+                    5, "Heavy catch allowed the second owner to fire.");
+                helper.Motor.Teleport(HandoffWater);
+                yield return Pause(.35f);
+                Send("drop_selected", 0);
+                yield return Wait(() => !helper.HandsFull && WorldHas(landedHeavyId), 5, "Second owner did not drop the original heavy catch.");
+                yield return TakeBack(landedHeavyId);
+                Check("The second diver landed the heavy fish and transferred the original catch to the host for cage loading.");
+            }
             yield return Pause(.5f);
             yield return Shot("catch-heavy.png");
             Check("Heavy capture completed with all three small catches intact; tool switch and fire blocked.");
@@ -307,7 +326,6 @@ namespace Raid
             Check("Independent client observed replicated fight behaviours: " + string.Join(",", peerBehaviours) + ".");
 
             Vector3 fishingAim=host.Motor.AimDirection;
-            long landedHeavyId = heavy.CargoId;
             if (VerifyDropTransfers) yield return CatchHandoffs(landedHeavyId);
             Phase("Deposit and observe swimming cargo on both peers");
             var control=world.container.GetComponentInChildren<CargoDispatch>();
