@@ -164,6 +164,16 @@ namespace Raid
             host.SelectSlot(0);
             yield return Wait(() => host.ActiveSlot == 0, 3, "Host harpoon could not be equipped.");
 
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-raid-tug-only") >= 0)
+            {
+                yield return RefillOnDeck();
+                var fish = Fish("Bristlefish");
+                yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "Heavy school did not arrive.");
+                yield return Hook(fish);
+                yield return VerifySoloSurge(fish);
+                yield break;
+            }
+
             foreach (var species in new[] { "Needlefish", "Lanternfish", "Needlefish" })
             {
                 Phase("Solo capture / " + species);
@@ -247,26 +257,13 @@ namespace Raid
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.3f,3,"Disabling fishing camera did not restore the configured FOV.");
             ui.Settings.fishingCamera=pref;
             Check("Confirmed hook widened the owned camera; zero intensity restored base FOV.");
-            var beforeTug = host.transform.position;
-            float initial = heavy.Stamina;
-            Require(host.QaHoldOwned(false, 6), "Host could not hold reel.");
-            yield return Wait(()=>heavy.SurgeWarning,6,"No advance warning of solo surge.");
-            yield return Shot("catch-solo-warning.png");
-            yield return Wait(()=>heavy.Surging,3,"No solo surge.");
-            yield return Pause(.12f);
-            yield return Shot("catch-solo-surge.png");
-            yield return Wait(()=>Vector3.Distance(beforeTug,host.transform.position)>.45f,3,"Solo surge did not move the diver.");
-            yield return Shot("catch-solo-pulled.png");
-            Require(host.HookedFish==heavy && heavy.HookCount==1 && host.CatchCount==3 && heavy.Stamina>=initial-.05f,
-                "One harpoon progressed to a heavy catch.");
-            host.QaHoldOwned(false,0);
-            Check("Solo surge displaced the shooter "+Vector3.Distance(beforeTug,host.transform.position).ToString("F2")+" m.");
+            yield return VerifySoloSurge(heavy);
 
             Phase("Two independent impacts");
             yield return HookPeer(heavy);
             yield return Wait(()=>ReadClient()?.activeBoltOwners?.Distinct().Count()==2,6,"Independent view did not render both attachments.");
             // Opposed handles stay loaded and aim away from one another.
-            var axis=(host.HandAnchor-heavy.transform.position).normalized;
+            var axis=(host.FishingAnchor-heavy.transform.position).normalized;
             helper.Motor.Teleport(heavy.transform.position-axis*5f-Vector3.up*.6f);
             host.QaHoldOwned(false,1.5f);
             Send("fish_reel",1.5f);
@@ -484,6 +481,53 @@ namespace Raid
             yield return Wait(() => host.HookedFish == fish, 3, "Normal harpoon RPC missed " + fish.SpeciesId + ".");
         }
 
+        private IEnumerator VerifySoloSurge(FishActor fish)
+        {
+            Phase("Surge direction while turning the camera");
+            var camera = host.Motor.GetComponentInChildren<Camera>();
+            Vector3 initialAim = camera.transform.forward;
+            float initialStamina = fish.Stamina;
+            int initialCatches = host.CatchCount;
+            Require(host.QaHoldOwned(false, 9), "Host could not hold reel.");
+            yield return Wait(() => fish.SurgeWarning && host.HookedFish == fish, 7, "No advance warning of solo surge.");
+            yield return Shot("catch-solo-warning.png");
+            yield return Wait(() => fish.Surging && host.HookedFish == fish, 3, "No solo surge.");
+
+            const int steps = 24;
+            float forward = 0, backwards = 0, transverse = 0, escape = 0;
+            var waitPhysics = new WaitForFixedUpdate();
+            for (int step = 0; step < steps; step++)
+            {
+                Vector3 diverBefore = host.transform.position;
+                Vector3 fishBefore = fish.transform.position;
+                Vector3 towardFish = (fishBefore - host.FishingAnchor).normalized;
+                var side = Vector3.Cross(towardFish, Vector3.up).normalized;
+                // Only change the owned view. Movement is whatever the live server line applies.
+                var direction = Quaternion.AngleAxis(115f * (step+1)/steps, Vector3.up) * initialAim;
+                host.Motor.LookAtConsole(camera.transform.position + direction * 10f);
+                yield return waitPhysics;
+                Vector3 movement = host.transform.position - diverBefore;
+                float advance = Vector3.Dot(movement, towardFish);
+                forward += Mathf.Max(0, advance);
+                backwards += Mathf.Max(0, -advance);
+                transverse += Mathf.Abs(Vector3.Dot(movement, side));
+                escape += Vector3.Dot(fish.transform.position - fishBefore, towardFish);
+            }
+            yield return null;
+            float yaw = Vector3.Angle(Vector3.ProjectOnPlane(initialAim, Vector3.up),
+                Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up));
+            string measured = $"camera {yaw:F0}°; toward fish {forward:F3} m; away {backwards:F3} m; sideways {transverse:F3} m; fish escape {escape:F3} m.";
+            Require(yaw > 90f && forward > .18f && backwards < .035f && transverse < .065f && escape > .12f,
+                "Fish and diver did not follow the expected pull axes: " + measured);
+            Require(host.HookedFish==fish && fish.HookCount==1 && host.CatchCount==initialCatches &&
+                fish.Stamina>=initialStamina-.05f, "One harpoon progressed to a heavy catch.");
+            Check("Camera sweep during server surge: " + measured);
+            yield return Shot("catch-solo-pulled.png");
+            host.QaHoldOwned(false, 0);
+            host.Motor.LookAtConsole(camera.transform.position + initialAim * 10f);
+            yield return Pause(.2f);
+        }
+
         private IEnumerator HookPeer(FishActor fish)
         {
             // Stage only the pose. The second process fires the normal owned RPC.
@@ -513,7 +557,7 @@ namespace Raid
             // Find a clear water lane for the pair. Cliff-side hooks stay attached but
             // can require swimmers to reposition before both reels can close in.
             Vector3 center=fish.transform.position;
-            Vector3 current=Vector3.ProjectOnPlane(host.HandAnchor-center,Vector3.up).normalized;
+            Vector3 current=Vector3.ProjectOnPlane(host.FishingAnchor-center,Vector3.up).normalized;
             if(current.sqrMagnitude<.1f)current=Vector3.back;
             int mask=Physics.DefaultRaycastLayers;
             bool SeesFish(Vector3 eye)
@@ -555,7 +599,7 @@ namespace Raid
                 }
                 Require(Time.unscaledTime < deadline && host.HookedFish == fish && !host.Motor.IsHelpless,
                     $"Landing lost or expired at {fish.HabitatName}: {fish.SpeciesId} / {fish.Mode}, stamina {fish.Stamina:F2}, "+
-                    $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.HandAnchor,fish.transform.position):F2} m, "+
+                    $"hooks {fish.HookCount}, paired {fish.Coordinated}, range {Vector3.Distance(host.FishingAnchor,fish.transform.position):F2} m, "+
                     $"lines {host.LineLength:F2}/{helper.LineLength:F2} m.");
                 if (fish.Tension >= .58f) pulling = false;
                 else if (fish.Tension < .24f) pulling = true;

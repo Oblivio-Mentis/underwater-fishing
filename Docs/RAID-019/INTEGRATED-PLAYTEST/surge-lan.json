@@ -1,0 +1,13 @@
+{
+    "phase": "Surge direction while turning the camera",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+        "Distinct connected owners 0 and 1",
+        "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Camera sweep during server surge: camera 115°; toward fish 1,446 m; away 0,000 m; sideways 0,000 m; fish escape 0,920 m."
+    ]
+}

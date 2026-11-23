@@ -12,7 +12,7 @@ namespace Raid
             public HarpoonContact Contact;
             public FishingLine Spool;
             public float Distance, Tension, BlockedTime, TugSpeed, TurnLoad;
-            public Vector3 TowardHand, PullDirection;
+            public Vector3 PullDirection;
             public bool Working, Paired;
         }
 
@@ -38,7 +38,7 @@ namespace Raid
             bool first = lines.Count == 0;
             if (first && (Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt)) return false;
             if (!first && (!RequiresPartner || DesiredState < FishMode.Hooked || DesiredState > FishMode.Tired)) return false;
-            float length = Vector3.Distance(tool.HandAnchor, point);
+            float length = Vector3.Distance(tool.FishingAnchor, point);
             if (!lines.Attach(new HookLine { OwnerId = tool.OwnerId, Tool = tool, Contact = contact,
                 Spool = new FishingLine(length), Tension = .1f })) return false;
             tool.UpdateFishingLine(length, .1f);
@@ -134,13 +134,14 @@ namespace Raid
                     || tool.Motor.IsHelpless || tool.ActiveSlot != 0 || tool.HookedFish != this
                     || !line.Contact.Resolve(out _, out var contact, out _, out _))
                 { RemoveLine(i); continue; }
-                line.TowardHand = tool.HandAnchor - contact;
-                line.Distance = line.TowardHand.magnitude;
-                var direction=(tool.HandAnchor-transform.position).normalized;
+                // The spool and the force use the diver's body, independent of where the gun is pointing.
+                Vector3 anchor = tool.FishingAnchor;
+                line.Distance = Vector3.Distance(anchor, contact);
+                var direction=(anchor-transform.position).normalized;
                 line.TurnLoad=line.PullDirection.sqrMagnitude>.01f && direction.sqrMagnitude>.01f
                     ? Mathf.Clamp01(Vector3.Angle(line.PullDirection,direction)/Mathf.Max(.01f,120*dt)) : 0;
                 line.PullDirection=direction;
-                bool blocked = SolidAhead(tool.HandAnchor, contact);
+                bool blocked = SolidAhead(anchor, contact);
                 line.BlockedTime = blocked ? line.BlockedTime + dt : 0;
                 if (line.Distance > tuning.maxRange || line.BlockedTime > tuning.obstructionGrace || line.Tension >= 1)
                 { RemoveLine(i); continue; }
@@ -169,7 +170,7 @@ namespace Raid
         {
             foreach (var candidate in lines)
             {
-                if (!ReadyForLanding(candidate, candidate, true) || !WithinHandReach(candidate.Tool.HandAnchor)) continue;
+                if (!ReadyForLanding(candidate, candidate, true) || !WithinHandReach(candidate.Tool.FishingAnchor)) continue;
                 foreach (var support in lines)
                 {
                     if (support == candidate || !ReadyForLanding(support, candidate, true)) continue;
@@ -236,6 +237,7 @@ namespace Raid
                 ThreatDirector.ReportStruggle(transform.position);
             }
             bool weakened = fight.Weakened;
+            bool bolting = state.Surging && !tired;
 
             HookLine leader = null;
             state.Tension = 0;
@@ -266,16 +268,18 @@ namespace Raid
                 state.Tension = Mathf.Max(state.Tension, line.Tension);
                 line.Tool.UpdateFishingLine(line.Spool.PaidOut, line.Tension);
                 // Two hooks share the body's pull: weaker per diver, never zero (the brain scales TugStrength).
-                float tug = state.Surging && line.BlockedTime == 0 && line.Spool.Loaded(line.Distance, tuning.slackAllowance)
-                    ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
-                line.TugSpeed = Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt);
+                bool taut = line.BlockedTime == 0 && line.Tension < 1 &&
+                    line.Spool.Loaded(line.Distance, tuning.slackAllowance);
+                float tug = bolting ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
+                line.TugSpeed = taut ? Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt) : 0;
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
                 {
+                    var towardFish = -line.PullDirection;
                     float damp=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Damper)??0,0,.42f);
-                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt * (1-damp);
-                    Vector3 swimAxis=Vector3.ProjectOnPlane(motor.AimDirection,Vector3.up).normalized;
-                    Vector3 lateral=Vector3.ProjectOnPlane(tugMotion,Vector3.up)-Vector3.Project(tugMotion,swimAxis);
-                    tugMotion-=lateral*Mathf.Clamp(world?.SkillFactor(motor,SkillLine.TugStability)??0,0,.31f);
+                    float stability=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.TugStability)??0,0,.31f);
+                    // Reduce the strength of horizontal pulls while keeping the force on the same axis.
+                    float horizontal = Vector3.ProjectOnPlane(towardFish, Vector3.up).magnitude;
+                    Vector3 tugMotion = towardFish * (line.TugSpeed * dt * (1-damp) * (1-stability*horizontal));
                     float verticalLimit = Mathf.Max(0, motor.tuning.verticalSpeed) * dt;
                     tugMotion.y = Mathf.Clamp(tugMotion.y, -verticalLimit, verticalLimit);
                     // Sweep the controller while exempting forced ascent from the swimmer's own ascent penalty.
@@ -290,21 +294,15 @@ namespace Raid
             if (side.sqrMagnitude < .01f) side = transform.right;
             side.Normalize();
 
-            // During a surge the fish bolts away along the line and the taut line drags the
-            // angler after it. If we kept reeling the body toward the hand at the same time,
-            // the two would cross and the pull would read as the diver being pushed away.
-            bool bolting = state.Surging && !tired;
+            // During a surge the fish bolts away and the taut line drags the angler after it.
             if (leader != null && !bolting)
             {
                 float assistance=leader.Paired?1+tuning.assistBonus+(world?.SkillFactor(leader.Tool.Motor,SkillLine.SyncPull)??0):1;
                 float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier,.1f,2.2f)
-                    * (state.Surging ? Mathf.Lerp(1, .25f, state.TugStrength) : weakened ? 1.35f : 1) * assistance;
+                    * (weakened ? 1.35f : 1) * assistance;
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
-                // Once exhausted, tow the body rather than steering on the off-centre
-                // implant as it swings across the surface during animation.
-                Vector3 pull=tired?leader.PullDirection:leader.TowardHand.normalized;
-                Vector3 motion = pull * Mathf.Min(excess, speed * dt);
+                Vector3 motion = leader.PullDirection * Mathf.Min(excess, speed * dt);
                 if (!SolidAhead(transform.position, transform.position + motion)) transform.position += motion;
                 // Lateral arcs under the reel: sideways within the paid-out line, so the fish
                 // swings across the diver instead of walking straight to the hand.
@@ -330,13 +328,16 @@ namespace Raid
                     : state.Surging ? Mathf.Lerp(1, profile.surgeSpeedMultiplier, state.TugStrength)
                     : weakened ? profile.weakenedSpeedMultiplier : 1);
                 Vector3 desired = away;
-                if (Nereid.NereidVessel.Active != null && !tired) desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
+                if (Nereid.NereidVessel.Active != null && !tired && !bolting)
+                    desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
                 Vector3 dir = ClearHeading(transform.position, desired, 1);
                 if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) fight.Deflect();
-                // Turn inertia: heavy species carry their heading into the next arc.
-                fightHeading = Vector3.RotateTowards(fightHeading.sqrMagnitude < .01f ? dir : fightHeading, dir, profile.turnRate * dt, 0);
+                // A surge starts in the escape direction. Normal swimming retains the species' turn inertia.
+                fightHeading = bolting || fightHeading.sqrMagnitude < .01f ? dir :
+                    Vector3.RotateTowards(fightHeading, dir, profile.turnRate * dt, 0);
                 Vector3 move = fightHeading * (escape * dt);
-                if (!SolidAhead(transform.position, transform.position + move)) transform.position += move;
+                if ((!bolting || Vector3.Dot(fightHeading, away) > 0f) &&
+                    !SolidAhead(transform.position, transform.position + move)) transform.position += move;
                 else fight.Deflect();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
                 // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
@@ -352,7 +353,7 @@ namespace Raid
             Vector3 step = side * (lateral * dt);
             Vector3 next = transform.position + step;
             // The line is a leash: never swing further from the hand than the spool allows.
-            if ((leader.Tool.HandAnchor - next).magnitude > leader.Spool.PaidOut + tuning.slackAllowance) { fight.Deflect(); return; }
+            if ((leader.Tool.FishingAnchor - next).magnitude > leader.Spool.PaidOut + tuning.slackAllowance) { fight.Deflect(); return; }
             if (SolidAhead(transform.position, next)) { fight.Deflect(); return; }
             transform.position = next;
         }

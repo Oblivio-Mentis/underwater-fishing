@@ -60,8 +60,8 @@ namespace Raid
         public float LineLength => _lineReadout.Value.length;
         public float LineTension => _lineReadout.Value.tension;
         public int StabilizerCooldown => _stabilizerCooldown.Value;
-        internal Vector3 HandAnchor => transform.position + Vector3.up * .6f
-            + transform.right * .16f + Motor.AimDirection * .32f;
+        internal Vector3 FishingAnchor => transform.position + Vector3.up * .6f;
+        internal Vector3 HandAnchor => FishingAnchor + transform.right * .16f + Motor.AimDirection * .32f;
         internal void UpdateFishingLine(float length, float load)
         {
             _lineReadout.Value = new LineReadout { length = length, tension = load };

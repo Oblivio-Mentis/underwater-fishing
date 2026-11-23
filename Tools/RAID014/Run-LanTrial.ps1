@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Fishing', 'Gosha', 'Water', 'Skills')][string] $Case,
+    [Parameter(Mandatory)][ValidateSet('Fishing', 'Tug', 'Gosha', 'Water', 'Skills')][string] $Case,
     [Parameter(Mandatory)][string] $Player,
     [Parameter(Mandatory)][string] $OutputDirectory,
     [int] $Port = 18149,
@@ -33,6 +33,10 @@ switch ($Case) {
     'Fishing' {
         $report = "$results/fishing.json"
         $hostArgs += @('-batchmode', '-raid-fishing-peer', $peerDir, '-raid-fishing-report', $report)
+    }
+    'Tug' {
+        $report = "$results/fishing.json"
+        $hostArgs += @('-batchmode', '-raid-tug-only', '-raid-fishing-peer', $peerDir, '-raid-fishing-report', $report)
     }
     'Gosha' {
         $report = "$results/gosha-crew.json"

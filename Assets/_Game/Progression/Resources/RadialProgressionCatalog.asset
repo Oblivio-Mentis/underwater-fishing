@@ -409,7 +409,7 @@ MonoBehaviour:
   - line: 16
     key: mobility.tug-stability
     title: "Устойчивость под тягой"
-    effect: "Сила бокового рывка"
+    effect: "Сила горизонтальной тяги"
     team: 0
     unit: 1
     ranks:
