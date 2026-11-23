@@ -21,7 +21,7 @@ namespace Raid.Nereid
             if (open || Time.unscaledTime < nextSample) return;
             nextSample = Time.unscaledTime + .25f;
             var world = RaidWorld.Instance;
-            if (world == null || !world.IsClientInitialized || world.View == null) return;
+            if (!world || !world.NetworkObject || !world.IsClientInitialized || world.View == null) return;
             var team = world.View;
             var route = world.FishRoute;
             string heading, value, detail;

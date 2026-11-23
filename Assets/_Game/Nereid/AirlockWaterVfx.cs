@@ -27,19 +27,12 @@ namespace Raid.Nereid
             return vfx;
         }
 
-        Material ParticleMaterial(float brightness)
+        Material ParticleMaterial()
         {
             if (particleMaterial == null)
             {
-                var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-                particleMaterial = new Material(shader) { name = "Lock spray" };
-                particleMaterial.SetFloat("_Surface", 1);
-                particleMaterial.SetFloat("_Blend", 0);
-                particleMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
-                particleMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
-                particleMaterial.SetFloat("_ZWrite", 0);
-                particleMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                particleMaterial.renderQueue = 3100;
+                var template = Resources.Load<Material>("LockSpray");
+                particleMaterial = new Material(template) { name = "Lock spray" };
                 particleMaterial.SetTexture("_BaseMap", SoftDisc());
             }
             return particleMaterial;
@@ -74,7 +67,7 @@ namespace Raid.Nereid
             main.loop = true;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             var renderer = go.GetComponent<ParticleSystemRenderer>();
-            renderer.sharedMaterial = ParticleMaterial(1);
+            renderer.sharedMaterial = ParticleMaterial();
             renderer.renderMode = ParticleSystemRenderMode.Billboard;
             renderer.shadowCastingMode = ShadowCastingMode.Off;
             renderer.receiveShadows = false;
