@@ -10,400 +10,787 @@ namespace Raid.UI
 {
     internal sealed class SkillTreeView
     {
-        static readonly Vector2 Center = new(.5f, .5f);
-        static readonly Color Glass = new(.025f,.065f,.071f,1);
-        static readonly Color Panel = new(.053f,.115f,.123f,1);
-        static readonly Color Cyan = new(.43f,.93f,.84f);
-        static readonly Color Gold = new(1f,.72f,.32f);
-        static readonly Color Rest = new(.43f,.57f,.59f);
-        static readonly string[] Branch = {"Гарпун","Костюм","Плавание","Сканирование","Добыча","Гоша","Контейнер","Переработка","Кормление"};
-        static readonly DiveInstruments.Mark[] Icon = {
-            DiveInstruments.Mark.Spear,DiveInstruments.Mark.Bottle,DiveInstruments.Mark.Glove,
-            DiveInstruments.Mark.Compass,DiveInstruments.Mark.Bristle,DiveInstruments.Mark.Lantern,
-            DiveInstruments.Mark.Tile,DiveInstruments.Mark.Shield,DiveInstruments.Mark.Jaw
+        const float Width=1180, Height=810, GraphWidth=754, GraphHeight=564;
+        const float TransitionSeconds=.48f, PurchaseSeconds=.38f;
+        const string ReduceMotionKey="RAID019.skillMotion";
+        static readonly Vector2 Center=new(.5f,.5f), Entry=new(-330,0);
+        static readonly Color Ink=new(.89f,.95f,.97f), Muted=new(.55f,.68f,.72f);
+        static readonly Color Night=new(.025f,.059f,.079f), Steel=new(.047f,.098f,.125f), Border=new(.16f,.28f,.33f);
+        static readonly Color Cyan=new(.40f,.82f,.86f), Amber=new(.98f,.71f,.39f);
+        static readonly SkillId[] Empty=Array.Empty<SkillId>();
+        static readonly string[] StageNames={"Подготовка","Модернизация","Профессиональное оборудование","Глубинные технологии","Экспериментальные разработки"};
+        static readonly string[] MaterialNames={"Биомасса","Хитин","Металлолом","Электроника"};
+        static readonly Color[] MaterialColors={new(.56f,.85f,.63f),new(.81f,.74f,.92f),new(.94f,.75f,.48f),new(.45f,.83f,.89f)};
+        static readonly DiveInstruments.Mark[] BranchMarks={
+            DiveInstruments.Mark.Spear,DiveInstruments.Mark.Helmet,DiveInstruments.Mark.Needle,DiveInstruments.Mark.Submarine,
+            DiveInstruments.Mark.Tile,DiveInstruments.Mark.Shield,DiveInstruments.Mark.Jaw,DiveInstruments.Mark.Bristle
         };
-        static readonly SkillId[] Empty = Array.Empty<SkillId>();
+        static readonly DiveInstruments.Mark[] LaneMarks={
+            DiveInstruments.Mark.Spear,DiveInstruments.Mark.Bristle,DiveInstruments.Mark.Shield,
+            DiveInstruments.Mark.Needle,DiveInstruments.Mark.Glove
+        };
+
+        sealed class Sector
+        {
+            internal SkillSectorGraphic Face;
+            internal TMP_Text Count;
+        }
 
         sealed class Card
         {
-            internal SkillId Id;
-            internal int Branch, Step;
-            internal RectTransform Root;
-            internal Image Border, Background, Symbol;
-            internal TMP_Text Title, Scope, State;
+            internal SkillNode Node;
+            internal SkillNodeBadge Face;
+            internal Image Symbol;
+            internal TMP_Text Rank, Name;
         }
 
         readonly UiRoot app;
-        readonly List<Card> cards = new(36);
-        readonly Vector2[] positions = new Vector2[37];
-        readonly TMP_Text playerLabel, teamBalance, detailTitle, detailBody, detailCost, detailState, response;
-        readonly RectTransform graph, graphArea;
-        readonly Button focus;
+        readonly RectTransform overview, dial, detail, graphArea, graph, dataPanel, hintPanel;
+        readonly CanvasGroup overviewGroup, detailGroup;
+        readonly TMP_Text section, stageTitle, title, scope, description, before, after, note, response;
+        readonly TMP_Text[] treasury, costs, requirements=new TMP_Text[3];
+        readonly Sector[] sectors=new Sector[SkillTreeDefinition.BranchCount];
+        readonly Sprite[] sprites=new Sprite[SkillTreeDefinition.BranchCount];
+        readonly Card[] cards=new Card[SkillTreeDefinition.NodesPerBranch];
+        readonly Button buy, motion;
+        readonly Button[] stageKeys=new Button[5];
+        readonly Dictionary<SkillId,Vector2> positions=new(31);
         readonly SkillWires wires;
+        readonly Image rootSymbol, detailSymbol;
+        Texture2D sectorAtlas;
         RaidWorld subscribed;
-        SkillId selected;
-        Vector2 pan, targetPan;
-        float zoom = 1, targetZoom = 1, pendingUntil;
-        bool awaiting;
-        int previousRevision, displayedPlayer = int.MinValue, displayedTeam = int.MinValue;
-        bool confirmed;
-        SkillId displayedSelection = (SkillId)(-1);
-        float lastLod = -1;
+        SkillId selected, pending, filled;
+        MaterialCost shownTreasury;
+        int branch=-1, targetBranch=-1, stage;
+        int shownPlayer=int.MinValue, shownTeam=int.MinValue;
+        float transition=1, fill=1, zoom=1, targetZoom=1, deadline, responseUntil, fillTime;
+        Vector2 pan, targetPan, overviewFocus;
+        bool revised, approved, detailLabels, reducedMotion;
+
         public RectTransform Root { get; }
 
-        internal SkillTreeView(Transform parent, UiRoot app)
+        internal SkillTreeView(Transform parent,UiRoot app)
         {
-            this.app = app;
-            var surface = UiKit.Frame(parent,"SkillTreeView",1180,810);
-            Root = (RectTransform)surface.parent;
-            var heading = Image(surface,"Header",Vector2.up,new(14,-12),new(1148,95),Panel);
-            Label(heading.transform,"Section title",Vector2.up,new(13,-7),new(708,32),
-                "СНАРЯЖЕНИЕ ЭКИПАЖА",30,Cyan);
-            playerLabel = Label(heading.transform,"Viewing diver",Vector2.up,new(14,-40),new(620,25),"",17,UiTheme.Muted);
-            playerLabel.overflowMode = TextOverflowModes.Overflow;
-            teamBalance = Label(heading.transform,"Ship treasury",Vector2.up,new(14,-66),new(1090,23),"",19,Gold);
-            Key(heading.transform,"ResetSkillView","Сбросить вид",new(948,-10),186,Reset);
+            this.app=app;
+            var surface=UiKit.Frame(parent,"SkillTreeView",Width,Height);
+            Root=(RectTransform)surface.parent;
+            var backing=UiKit.Panel(surface,"Screen glass",Night);
+            UiKit.Fill(backing.rectTransform);
+            Box(surface,"Display rail",19,18,1142,71,Steel);
+            Box(surface,"Rail edge",19,88,1142,2,Border);
+            section=Label(surface,"Screen title",38,32,394,43,"МОДУЛИ NEREID",32,Ink);
+            treasury=MaterialStrip(surface,"Treasury",432,30,440,46);
+            motion=Key(surface,"ProgressionMotion","",914,31,226,42,ToggleMotion);
+            reducedMotion=PlayerPrefs.GetInt(ReduceMotionKey,0)!=0;
+            ShowMotion();
 
-            graphArea = Image(surface,"Skill graph viewport",Vector2.up,new(14,-114),new(1148,531),Glass,true).rectTransform;
-            graphArea.gameObject.AddComponent<RectMask2D>();
-            graphArea.gameObject.AddComponent<SkillGraphPan>().View = this;
-            graph = UiKit.Node(graphArea,"Skill tree geometry");
-            UiKit.Place(graph,Center,Center,Vector2.zero,new(1148,531));
-            var wireObject = UiKit.Node(graph,"Nine branches").gameObject;
-            wireObject.AddComponent<CanvasRenderer>();
-            wires = wireObject.AddComponent<SkillWires>();
-            UiKit.Fill(wires.rectTransform);
-            wires.raycastTarget = false;
+            overview=UiKit.Node(surface,"Progression sectors");
+            Place(overview,0,94,1176,662);
+            overview.gameObject.AddComponent<RectMask2D>();
+            overviewGroup=overview.gameObject.AddComponent<CanvasGroup>();
+            dial=UiKit.Node(overview,"Eight directions");
+            UiKit.Place(dial,Center,Center,Vector2.zero,new(622,622));
+            sectorAtlas=Resources.Load<Texture2D>("NereidProgression/Sectors");
+            DrawOverview();
 
-            for (int branch=0;branch<Branch.Length;branch++)
+            detail=UiKit.Node(surface,"Progression branch");
+            Place(detail,0,94,1176,658);
+            detailGroup=detail.gameObject.AddComponent<CanvasGroup>();
+            Key(detail,"ProgressionOverview","‹  Все ветки",19,7,158,43,()=>Back());
+            for(int i=0;i<stageKeys.Length;i++)
             {
-                float angle = (90-SkillTreeDefinition.Angles[branch])*Mathf.Deg2Rad;
-                for (int step=0;step<4;step++)
-                {
-                    int index = branch*4+step+1;
-                    float radial = step==0?.60f:step==3?.96f:.85f;
-                    float angular = step==1?-.182f:step==2?.182f:0;
-                    float a = angle+angular;
-                    positions[index] = new Vector2(535*Mathf.Cos(a),246*Mathf.Sin(a))*radial;
-                    cards.Add(MakeCard((SkillId)index,branch,step,positions[index]));
-                }
+                int index=i+1;
+                stageKeys[i]=Key(detail,"ProgressionStage"+index,SkillTreeDefinition.Roman(index),
+                    196+i*58,7,51,43,()=>FocusStage(index));
             }
-            wires.Build(positions);
-            var start = Image(graph,"ROOT",Center,Vector2.zero,new(144,65),new(.15f,.32f,.32f));
-            var core = Image(start.transform,"Start node",Center,Vector2.zero,new(139,60),Glass);
-            Label(core.transform,"NEREID",Center,new(0,12),new(135,32),"NEREID",24,Cyan,true);
-            Label(core.transform,"Starting equipment",Center,new(0,-13),new(132,20),"СНАРЯЖЕНИЕ",13,UiTheme.Text,true);
-            start.raycastTarget=true;
-            var resetSelection=start.gameObject.AddComponent<Button>();
-            resetSelection.onClick.AddListener(()=>Select(SkillId.None));
+            stageTitle=Label(detail,"Technology stage",502,8,368,42,"",20,Muted);
+            Key(detail,"ProgressionCenter","Центр",949,7,212,43,ResetGraph);
 
-            var info = Image(surface,"Selected skill",Vector2.up,new(14,-652),new(1148,97),Panel,true).rectTransform;
-            detailTitle = Label(info,"Skill and scope",Vector2.up,new(14,-5),new(765,29),"",23,Cyan);
-            detailBody = Label(info,"Skill benefit",Vector2.up,new(14,-33),new(765,26),"",17);
-            detailCost = Label(info,"Cost and prerequisite",Vector2.up,new(14,-62),new(765,28),"",15,UiTheme.Muted);
-            detailState = Label(info,"Skill state",Vector2.up,new(793,-48),new(340,37),"",17,UiTheme.Amber);
-            focus = Key(info,"FocusSkillBranch","Фокус на ветке",new(793,-6),340,Focus);
-            response = Label(surface,"Server result",Vector2.up,new(22,-774),new(1118,22),"",16,Cyan);
-            Label(surface,"Controls",Vector2.up,new(22,-752),new(1118,22),
-                "ЛКМ — выбрать  ·  ПКМ — купить  ·  Колесо — масштаб  ·  Зажать ЛКМ на поле — переместить  ·  Esc — выйти",16,UiTheme.Muted);
+            graphArea=Box(detail,"ProgressionGraphViewport",19,61,GraphWidth,GraphHeight,Steel,true).rectTransform;
+            graphArea.gameObject.AddComponent<RectMask2D>();
+            graphArea.gameObject.AddComponent<SkillGraphPan>().View=this;
+            graph=UiKit.Node(graphArea,"Skill branch graph");
+            UiKit.Place(graph,Center,Center,Vector2.zero,new(GraphWidth,GraphHeight));
+            for(int i=0;i<5;i++)
+            {
+                float left=103+i*109;
+                Box(graph,"Stage division",left,20,1,524,new Color(.106f,.192f,.226f));
+                Label(graph,"Stage marker",left+4,22,108,29,SkillTreeDefinition.Roman(i+1),18,Muted,true);
+            }
+            var ink=UiKit.Node(graph,"Rank links");
+            UiKit.Fill(ink);
+            wires=ink.gameObject.AddComponent<SkillWires>();
+            wires.raycastTarget=false;
+            rootSymbol=CenterIcon(Emblem(graph,"Branch entry",Entry,45),"Entry icon",29);
+            for(int i=0;i<cards.Length;i++)cards[i]=MakeCard();
 
+            var card=Box(detail,"Selected perk",793,61,368,GraphHeight,Night).rectTransform;
+            Box(card,"Selected perimeter",0,0,368,2,Border);
+            Box(card,"Selected divider",0,0,2,GraphHeight,Border);
+            dataPanel=UiKit.Node(card,"Perk readout");
+            UiKit.Fill(dataPanel);
+            var module=Box(dataPanel,"Selected icon mount",19,18,52,52,Steel).rectTransform;
+            detailSymbol=CenterIcon(module,"Selected icon",31);
+            scope=Label(dataPanel,"Scope",88,25,250,38,"",22,Muted);
+            title=Paragraph(dataPanel,"Full perk name",22,83,325,78,31,Ink,20);
+            description=Paragraph(dataPanel,"Real effect",22,164,325,69,22,Muted,17);
+            Box(dataPanel,"Effect strip",22,242,324,82,Steel);
+            Label(dataPanel,"Current value caption",29,245,134,20,"СЕЙЧАС",16,Muted,true);
+            Label(dataPanel,"Target value caption",204,245,134,20,"ПОСЛЕ",16,Muted,true);
+            before=Label(dataPanel,"Current value",30,270,132,44,"",29,Ink,true);
+            Label(dataPanel,"Effect direction",162,270,42,44,"→",26,Muted,true);
+            after=Label(dataPanel,"New value",201,270,137,44,"",29,Cyan,true);
+            for(int i=0;i<requirements.Length;i++)
+                requirements[i]=Label(dataPanel,"Requirement "+(i+1),23,335+i*25,323,24,"",18,Muted);
+            costs=MaterialStrip(dataPanel,"Purchase cost",19,421,330,47);
+            note=Label(dataPanel,"Availability",22,471,324,31,"",18,Muted,true);
+            buy=Key(dataPanel,"BuySkill","Купить  ·  ПКМ по узлу",22,509,324,42,()=>Buy(selected));
+
+            hintPanel=UiKit.Node(card,"Branch guidance");
+            UiKit.Fill(hintPanel);
+            var hintIcon=CenterIcon(hintPanel,"Selected perk hint icon",64);
+            hintIcon.sprite=DiveInstruments.Art(DiveInstruments.Mark.Compass);
+            hintIcon.rectTransform.anchoredPosition=new Vector2(0,38);
+            Label(hintPanel,"Selected perk hint",18,322,332,35,"Выберите узел",24,Muted,true);
+
+            Label(detail,"Graph controls",20,628,750,29,"ЛКМ — выбор   ·   ПКМ — покупка   ·   Колесо — масштаб   ·   ЛКМ на поле — сдвиг",18,Muted);
+            response=Label(surface,"Purchase reply",24,762,1128,35,"",20,Ink,true);
+            ResetMode();
             Root.gameObject.SetActive(false);
         }
 
-        Card MakeCard(SkillId id,int branch,int step,Vector2 position)
+        void DrawOverview()
         {
-            Color accent = branch < 6 ? Cyan : Gold;
-            var border = Image(graph,id.ToString(),Center,position,new(35,35),accent,true);
-            var button = border.gameObject.AddComponent<SkillPurchaseButton>();
-            button.targetGraphic = border;
-            button.transition = Selectable.Transition.None;
-            button.onClick.AddListener(()=>Select(id));
-            button.Purchase = ()=>Buy(id);
-            var background = Image(border.transform,"Instrument face",Center,Vector2.zero,new(31,31),Panel);
-            var symbol = UiKit.Symbol(background.transform,"Branch symbol",Icon[branch],accent);
-            UiKit.Place(symbol.rectTransform,Center,Center,Vector2.zero,new(22,22));
-            var title = Label(background.transform,"Node title",Vector2.up,new(33,-.5f),new(122,32),"",16);
-            title.enableAutoSizing=true;title.fontSizeMin=13;title.fontSizeMax=16;
-            title.textWrappingMode=TextWrappingModes.Normal;
-            title.overflowMode=TextOverflowModes.Overflow;
-            var scope = Label(background.transform,"Skill scope",Vector2.up,new(33,-31),new(123,18),"",13,accent);
-            scope.overflowMode=TextOverflowModes.Overflow;
-            var state=Label(background.transform,"Node state",Vector2.up,new(34,-35),new(119,18),"",13,UiTheme.Muted);
-            state.overflowMode=TextOverflowModes.Overflow;
-            return new Card { Id=id, Branch=branch, Step=step, Root=border.rectTransform,
-                Border=border, Background=background, Symbol=symbol, Title=title, Scope=scope, State=state };
+            for(int i=0;i<sectors.Length;i++)
+            {
+                var info=SkillTreeDefinition.Branches[i];
+                int index=info.Index;
+                Vector2 axis=SkillBoardMesh.At(index*45);
+                Color accent=index>=3 && index<=6?Amber:Cyan;
+                var container=UiKit.Node(dial,"Sector"+index);
+                UiKit.Place(container,Center,Center,Vector2.zero,new(622,622));
+                var face=container.gameObject.AddComponent<SkillSectorGraphic>();
+                face.Bind(index,accent);
+                var click=container.gameObject.AddComponent<SkillSectorButton>();
+                click.Face=face;
+                click.targetGraphic=face;
+                click.transition=Selectable.Transition.None;
+                click.onClick.AddListener(()=>ChangeBranch(index));
+                var icon=CenterIcon(container,"Direction icon",68);
+                icon.sprite=SectorArt(index);
+                icon.color=Color.white;
+                UiKit.Place(icon.rectTransform,Center,Center,axis*216+Vector2.up*28,new(68,68));
+                TMP_Text Centered(string name,Vector2 point,Vector2 size,string caption,int font,Color tint)
+                {
+                    var label=Label(container,name,0,0,size.x,size.y,caption,font,tint,true);
+                    UiKit.Place(label.rectTransform,Center,Center,point,size);
+                    return label;
+                }
+                Centered("Direction",axis*216-Vector2.up*16,new(150,30),info.ShortName,23,Ink);
+                var count=Centered("Owned direction ranks",axis*216-Vector2.up*46,new(80,24),"",19,accent);
+                sectors[index]=new Sector { Face=face, Count=count };
+            }
+            var hub=Emblem(dial,"NEREID",Vector2.zero,195);
+            var ship=CenterIcon(hub,"NEREID silhouette",65);
+            ship.sprite=SectorArt(3);
+            ship.color=Color.white;
+            ship.rectTransform.anchoredPosition=new(0,19);
+            Label(hub,"NEREID hull type",16,111,163,38,"NEREID",30,Ink,true);
         }
+
+        Sprite SectorArt(int index)
+        {
+            if(sprites[index]!=null)return sprites[index];
+            if(sectorAtlas==null)return DiveInstruments.Art(BranchMarks[index]);
+            float w=sectorAtlas.width/4f,h=sectorAtlas.height/2f;
+            var cell=new Rect(index%4*w,(index<4?1:0)*h,w,h);
+            return sprites[index]=Sprite.Create(sectorAtlas,cell,Center,100,0,SpriteMeshType.FullRect);
+        }
+
+        Card MakeCard()
+        {
+            var rect=UiKit.Node(graph,"Rank");
+            UiKit.Place(rect,Center,Center,Vector2.zero,new(48,48));
+            var face=rect.gameObject.AddComponent<SkillNodeBadge>();
+            var button=rect.gameObject.AddComponent<SkillPurchaseButton>();
+            button.targetGraphic=face;
+            button.transition=Selectable.Transition.None;
+            var icon=CenterIcon(rect,"Rank symbol",19);
+            var rank=Label(rect,"Rank",0,20,48,28,"",23,Ink,true);
+            var name=Label(rect,"Nearby node name",-49,-18,147,19,"",14,Ink,true);
+            name.gameObject.SetActive(false);
+            var result=new Card{Face=face,Symbol=icon,Rank=rank,Name=name};
+            button.onClick.AddListener(()=>Select(result.Node.Id));
+            button.Purchase=()=>Buy(result.Node.Id);
+            return result;
+        }
+
+        static RectTransform Emblem(Transform parent,string name,Vector2 position,float size)
+        {
+            var rect=UiKit.Node(parent,name);
+            UiKit.Place(rect,Center,Center,position,new(size,size));
+            var face=rect.gameObject.AddComponent<SkillNodeBadge>();
+            face.raycastTarget=false;
+            face.Accent=Cyan;
+            face.State=SkillNodeState.Purchased;
+            return rect;
+        }
+
+        void ToggleMotion()
+        {
+            reducedMotion=!reducedMotion;
+            PlayerPrefs.SetInt(ReduceMotionKey,reducedMotion?1:0);
+            PlayerPrefs.Save();
+            ShowMotion();
+            if(reducedMotion && transition<1)CompleteTransition();
+        }
+
+        void ShowMotion()=>UiKit.Caption(motion,reducedMotion?"Без анимации":"Плавная анимация");
 
         internal void Open()
         {
-            selected=SkillId.None;
-            displayedSelection=(SkillId)(-1);
-            pendingUntil=0;
-            awaiting=false;
-            confirmed=false;
+            pending=filled=SkillId.None;
+            approved=false;
+            deadline=responseUntil=0;
             UiKit.Set(response,"");
-            Reset();
+            ResetMode();
         }
 
-        internal void Close()
+        internal void Close()=>Subscribe(null);
+
+        internal bool Back()
         {
-            Subscribe(null);
+            if(transition<1)return true;
+            if(branch<0)return false;
+            ChangeBranch(-1);
+            return true;
         }
 
-        void Subscribe(RaidWorld world)
+        void ResetMode()
         {
-            if (subscribed==world) return;
-            if(subscribed!=null)subscribed.SkillResponded-=OnReply;
-            subscribed=world;
-            if(subscribed!=null)subscribed.SkillResponded+=OnReply;
-            displayedPlayer=int.MinValue;
-            displayedTeam=int.MinValue;
+            branch=targetBranch=-1;
+            transition=1;
+            selected=SkillId.None;
+            overview.gameObject.SetActive(true);
+            detail.gameObject.SetActive(false);
+            overviewGroup.alpha=1;
+            overviewGroup.blocksRaycasts=true;
+            dial.localScale=Vector3.one;
+            dial.anchoredPosition=Vector2.zero;
+            UiKit.Set(section,"МОДУЛИ NEREID");
+            Invalidate();
         }
 
-        internal void Refresh()
+        void ChangeBranch(int index)
         {
-            if (!Root.gameObject.activeInHierarchy) return;
-            var context=app.Context;
-            Subscribe(context.World);
-            var profile=context.World?.LocalProgress;
-            var team=context.View;
-            UiKit.Set(playerLabel,context.Player==null ? "" : "Водолаз "+UiText.HudPlayerName(context.Player));
-            UiKit.Set(teamBalance,team==null?"КАЗНА NEREID     Загрузка…":"КАЗНА NEREID     "+Compact(team.Treasury));
-
-            int playerRevision=profile?.revision ?? -1;
-            int teamRevision=team?.teamRevision ?? -1;
-            if(awaiting && pendingUntil<Time.unscaledTime)
+            if(transition<1 || branch==index)return;
+            targetBranch=index;
+            transition=0;
+            overviewFocus=SkillBoardMesh.At(45*(index>=0?index:branch))*216;
+            overviewGroup.blocksRaycasts=false;
+            detailGroup.blocksRaycasts=false;
+            if(index>=0)
             {
-                awaiting=false;
-                SetMessage("Ответ не получен. Проверьте казну перед повтором.",false);
+                BindBranch(index);
+                detail.gameObject.SetActive(true);
+                detailGroup.alpha=0;
             }
-            if(awaiting && confirmed && teamRevision>previousRevision)
-                awaiting=false;
-
-            if (displayedPlayer!=playerRevision || displayedTeam!=teamRevision || displayedSelection!=selected)
+            else
             {
-                displayedPlayer=playerRevision;displayedTeam=teamRevision;displayedSelection=selected;
-                foreach(var card in cards) DisplayCard(card);
-                DisplayDetails();
+                overview.gameObject.SetActive(true);
+                overviewGroup.alpha=0;
             }
+            if(reducedMotion)CompleteTransition();
+        }
+
+        void CompleteTransition()
+        {
+            branch=targetBranch;
+            transition=1;
+            overview.gameObject.SetActive(branch<0);
+            detail.gameObject.SetActive(branch>=0);
+            overviewGroup.alpha=detailGroup.alpha=1;
+            overviewGroup.blocksRaycasts=branch<0;
+            detailGroup.blocksRaycasts=branch>=0;
+            dial.localScale=Vector3.one;
+            dial.anchoredPosition=Vector2.zero;
+            detail.localScale=Vector3.one;
+            UiKit.Set(section,branch<0?"МОДУЛИ NEREID":SkillTreeDefinition.Branches[branch].Name);
+            Invalidate();
+            Refresh();
+        }
+
+        void BindBranch(int index)
+        {
+            positions.Clear();
+            int used=0;
+            rootSymbol.sprite=SectorArt(index);
+            foreach(var node in SkillTreeDefinition.All)
+            {
+                if(node.Branch!=index)continue;
+                var card=cards[used++];
+                card.Node=node;
+                card.Face.Capstone=node.Capstone;
+                card.Face.Accent=Accent(node);
+                var point=NodePosition(node);
+                var rect=card.Face.rectTransform;
+                rect.name=node.Key;
+                rect.sizeDelta=Vector2.one*(node.Capstone?82:48);
+                rect.anchoredPosition=point;
+                card.Symbol.sprite=NodeArt(node);
+                UiKit.Place(card.Symbol.rectTransform,Center,Center,node.Capstone?Vector2.zero:new Vector2(0,9),
+                    Vector2.one*(node.Capstone?34:19));
+                UiKit.Place(card.Rank.rectTransform,Center,Center,new(0,-10),new(43,20));
+                UiKit.Set(card.Rank,node.Capstone?"":SkillTreeDefinition.Roman(node.Rank));
+                UiKit.Set(card.Name,node.LineName);
+                card.Name.gameObject.SetActive(false);
+                positions.Add(node.Id,point);
+                rect.gameObject.SetActive(true);
+            }
+            for(int i=used;i<cards.Length;i++)cards[i].Face.gameObject.SetActive(false);
+            wires.SetLinks(BranchLinks(used));
+            selected=SkillId.None;
+            ResetGraph();
+            ApplyLod();
+            Invalidate();
+        }
+
+        List<SkillWires.Link> BranchLinks(int count)
+        {
+            var links=new List<SkillWires.Link>(40);
+            for(int i=0;i<count;i++)
+            {
+                var node=cards[i].Node;
+                Vector2 p=positions[node.Id];
+                Color accent=Accent(node);
+                var deps=SkillTreeDefinition.Dependencies(node.Id);
+                if(deps.Count==0)
+                {
+                    links.Add(new(SkillId.None,node.Id,accent,Entry,new(-289,0),new(-270,p.y),p));
+                    continue;
+                }
+                foreach(var dep in deps)
+                {
+                    if(!positions.TryGetValue(dep,out var from))continue;
+                    if(node.Capstone)
+                    {
+                        int lane=(int)SkillTreeDefinition.Get(dep).Line%SkillTreeDefinition.LinesPerBranch;
+                        float shelf=from.y+(lane<=2?29:-29);
+                        float turn=273+lane*5;
+                        links.Add(new(dep,node.Id,accent,from,new(from.x,shelf),new(turn,shelf),new(turn,p.y),p));
+                    }
+                    else if(Mathf.Approximately(from.y,p.y))
+                        links.Add(new(dep,node.Id,accent,from,p));
+                    else
+                        links.Add(new(dep,node.Id,accent,from,new((p.x+from.x)*.5f,p.y),p));
+                }
+            }
+            return links;
+        }
+
+        Sprite NodeArt(SkillNode node)
+        {
+            if(node.Capstone)return SectorArt(node.Branch);
+            int lane=(int)node.Line%SkillTreeDefinition.LinesPerBranch;
+            var mark=lane==0?BranchMarks[node.Branch]:LaneMarks[lane];
+            return DiveInstruments.Art(mark);
+        }
+
+        static Vector2 NodePosition(SkillNode node)
+        {
+            int lane=(int)node.Line%SkillTreeDefinition.LinesPerBranch;
+            if(node.Capstone)return new(330,0);
+            if(lane==0)return new(-248+(node.Rank-1)*54,0);
+            float row=lane switch { 1=>169,2=>84,3=>-85,_=>-170 };
+            return new(-221+(node.Rank-1)*108,row);
+        }
+
+        void ResetGraph()
+        {
+            stage=0;
+            targetPan=Vector2.zero;
+            targetZoom=1;
+            ShowStage();
+        }
+
+        void FocusStage(int index)
+        {
+            if(transition<1 || branch<0)return;
+            stage=index;
+            targetZoom=1.75f;
+            float column=-221+(index-1)*108;
+            targetPan=ClampPan(new(-column*targetZoom,0),targetZoom);
+            ShowStage();
+        }
+
+        void ShowStage()
+        {
+            UiKit.Set(stageTitle,stage==0?"":StageNames[stage-1]);
+            for(int i=0;i<stageKeys.Length;i++)
+                stageKeys[i].targetGraphic.color=stage==i+1?new Color(.14f,.27f,.32f):Steel;
+        }
+
+        internal void Pan(Vector2 delta)
+        {
+            if(transition<1 || branch<0)return;
+            targetPan=ClampPan(targetPan+delta,targetZoom);
+        }
+
+        internal void Zoom(PointerEventData pointer)
+        {
+            if(transition<1 || branch<0 ||
+                !RectTransformUtility.ScreenPointToLocalPointInRectangle(graphArea,pointer.position,pointer.enterEventCamera,out var point))
+                return;
+            float next=Mathf.Clamp(targetZoom*Mathf.Pow(1.22f,pointer.scrollDelta.y),1,2.65f);
+            targetPan=ClampPan(point-(point-targetPan)*(next/targetZoom),next);
+            targetZoom=next;
+        }
+
+        static Vector2 ClampPan(Vector2 requested,float scale)
+        {
+            Vector2 limit=new Vector2(GraphWidth,GraphHeight)*(scale-1)*.5f;
+            return new(Mathf.Clamp(requested.x,-limit.x,limit.x),Mathf.Clamp(requested.y,-limit.y,limit.y));
         }
 
         internal void Animate(float dt)
         {
             if(!Root.gameObject.activeInHierarchy)return;
-            float blend=1-Mathf.Exp(-dt*15);
-            if(Mathf.Abs(zoom-targetZoom)>.0001f || lastLod<0)
+            if(transition<1)
             {
-                zoom=Mathf.Abs(zoom-targetZoom)<.002f?targetZoom:Mathf.Lerp(zoom,targetZoom,blend);
-                graph.localScale=Vector3.one*zoom;
-                foreach(var card in cards)card.Root.localScale=Vector3.one/zoom;
+                transition=Mathf.Min(1,transition+dt/TransitionSeconds);
+                float blend=Mathf.SmoothStep(0,1,transition);
+                float phase=targetBranch>=0?blend:1-blend;
+                dial.localScale=Vector3.one*Mathf.Lerp(1,1.36f,phase);
+                dial.anchoredPosition=-overviewFocus*(.38f*phase);
+                overviewGroup.alpha=1-phase;
+                detailGroup.alpha=phase;
+                detail.localScale=Vector3.one*Mathf.Lerp(.97f,1,phase);
+                if(transition>=1)CompleteTransition();
             }
-            if((pan-targetPan).sqrMagnitude>.001f)
+
+            float ease=reducedMotion?1:1-Mathf.Exp(-16*dt);
+            if(Mathf.Abs(zoom-targetZoom)>.0001f || (pan-targetPan).sqrMagnitude>.001f)
             {
-                pan=(pan-targetPan).sqrMagnitude<.025f?targetPan:Vector2.Lerp(pan,targetPan,blend);
+                zoom=Mathf.Abs(zoom-targetZoom)<.002f?targetZoom:Mathf.Lerp(zoom,targetZoom,ease);
+                pan=(pan-targetPan).sqrMagnitude<.02f?targetPan:Vector2.Lerp(pan,targetPan,ease);
+                graph.localScale=Vector3.one*zoom;
                 graph.anchoredPosition=pan;
             }
-            float lod=zoom<2.04f?0:1;
-            if(lod==lastLod)return;
-            lastLod=lod;
-            foreach(var card in cards) DisplayLod(card,lod>0);
-        }
-
-        void DisplayLod(Card card,bool detail)
-        {
-            bool expanded=card.Step==0 || detail;
-            float width=expanded?159:35;
-            float height=expanded?54:35;
-            card.Root.sizeDelta=new(width,height);
-            card.Background.rectTransform.sizeDelta=new(width-4,height-4);
-            card.Title.gameObject.SetActive(expanded);
-            card.Scope.gameObject.SetActive(expanded && !detail);
-            card.State.gameObject.SetActive(expanded && detail);
-            card.Symbol.rectTransform.anchoredPosition=expanded?new(-width*.5f+18,0):Vector2.zero;
-        }
-
-        void DisplayCard(Card card)
-        {
-            var node=Node(card.Id);
-            var owner=Owned(node);
-            bool purchased=owner.Contains(node.Id);
-            bool available=SkillTreeDefinition.IsAvailable(node.Id,owner);
-            bool funded=(app.Context.View?.Treasury ?? default).Covers(node.Cost);
-            Color theme=node.Team?Gold:Cyan;
-            Color edge=purchased?theme:available&&funded?Color.Lerp(theme,Rest,.36f):Rest;
-            float brightness=purchased?.26f:available&&funded?.15f:.07f;
-            card.Border.color=card.Id==selected?UiTheme.Text:edge;
-            card.Background.color=Color.Lerp(Glass,theme,brightness);
-            card.Symbol.color=edge;
-            UiKit.Set(card.Title,node.Name);
-            UiKit.Set(card.Scope,card.Step==0?Branch[card.Branch]+" · "+(node.Team?"Команда":"Личное"):node.Id+" · "+(node.Team?"Команда":"Личное"));
-            UiKit.Set(card.State,purchased?"Куплено":available?ShortCost(node.Cost):"Нужна предпосылка");
-        }
-
-        void DisplayDetails()
-        {
-            focus.interactable=selected!=SkillId.None;
-            if(selected==SkillId.None)
+            bool showNames=zoom>=1.55f;
+            if(detailLabels!=showNames)
             {
-                UiKit.Set(detailTitle,"NEREID / Снаряжение экипажа");
-                UiKit.Set(detailBody,"Бирюзовые навыки действуют лично. Янтарные действуют на весь экипаж.");
-                UiKit.Set(detailCost,"Выберите узел, чтобы узнать условия и цену. Покупки оплачиваются из казны NEREID.");
-                UiKit.Set(detailState,"Стартовый узел открыт");
-                return;
+                detailLabels=showNames;
+                ApplyLod();
             }
-            var node=Node(selected);
-            var owner=Owned(node);
-            bool bought=owner.Contains(selected);
-            var conditions=SkillTreeDefinition.Dependencies(selected);
-            bool unlocked=SkillTreeDefinition.IsAvailable(selected,owner);
-            bool funded=(app.Context.View?.Treasury ?? default).Covers(node.Cost);
-            UiKit.Set(detailTitle,node.Name+" · "+(node.Team?"Для всей команды":"Личное"));
-            UiKit.Set(detailBody,(bought?"Действует · ":"После покупки · ")+node.Effect+EffectAmount(node));
-            UiKit.Set(detailCost,"Цена из казны NEREID  "+Compact(node.Cost)+
-                (conditions.Count==0?"":"    ·    Нужен "+string.Join(" или ",conditions)));
-            detailState.color=bought?Cyan:unlocked&&funded?UiTheme.Green:Gold;
-            UiKit.Set(detailState,bought?(node.Team?"Уже улучшено экипажем":"Куплено лично"):
-                unlocked?(funded?"Доступно · ПКМ — купить":"Недостаточно материалов в казне"):"Закрыто · нужна предпосылка");
-        }
 
-        static string EffectAmount(SkillNode node)
-        {
-            if(node.Id is SkillId.G1 or SkillId.G2 or SkillId.G3 or SkillId.R2 or SkillId.C3)return "";
-            return node.Id switch
+            if(fill<1 && filled!=SkillId.None)
             {
-                SkillId.S2 or SkillId.S4 or SkillId.R1 or SkillId.R3 or SkillId.R4 => " · "+node.Magnitude,
-                SkillId.C1 or SkillId.C4 or SkillId.K1 or SkillId.K2 or SkillId.K3 or SkillId.K4 => " · +"+node.Magnitude,
-                SkillId.S3 or SkillId.H3 or SkillId.F3 or SkillId.C2 or SkillId.G4 => " · −"+node.Magnitude+"%",
-                _ => " · +"+node.Magnitude+"%"
-            };
+                fillTime+=dt;
+                fill=reducedMotion?1:Mathf.Clamp01(fillTime/PurchaseSeconds);
+                PresentPurchaseFill();
+            }
+            if(responseUntil>0 && Time.unscaledTime>responseUntil)
+            {
+                responseUntil=0;
+                UiKit.Set(response,"");
+            }
         }
 
-        SkillNode Node(SkillId id) => app.Context.Tuning?.Skill(id) ?? SkillTreeDefinition.Get(id);
-        IReadOnlyCollection<SkillId> Owned(SkillNode node)
+        void PresentPurchaseFill()
         {
-            IReadOnlyCollection<SkillId> owned=node.Team?app.Context.View?.teamSkills:app.Context.World?.LocalProgress?.skills;
-            return owned ?? Empty;
+            foreach(var card in cards)
+            {
+                if(card.Node?.Id!=filled)continue;
+                card.Face.PurchaseFill=fill;
+                card.Face.SetVerticesDirty();
+                break;
+            }
+            wires.AnimateLink(filled,fill);
+        }
+
+        void ApplyLod()
+        {
+            foreach(var card in cards)
+            {
+                if(card.Node==null)continue;
+                bool show=detailLabels&&(card.Node.Id==selected || card.Node.Rank==1 || card.Node.Capstone);
+                if(card.Node.Id==selected && !card.Node.Capstone)UiKit.Set(card.Name,card.Node.Name);
+                else UiKit.Set(card.Name,card.Node.LineName);
+                card.Name.gameObject.SetActive(show);
+            }
+        }
+
+        void Subscribe(RaidWorld world)
+        {
+            if(subscribed==world)return;
+            if(subscribed!=null)subscribed.SkillResponded-=OnReply;
+            subscribed=world;
+            if(subscribed!=null)subscribed.SkillResponded+=OnReply;
+            Invalidate();
+        }
+
+        void Invalidate()=>revised=true;
+
+        internal void Refresh()
+        {
+            if(!Root.gameObject.activeInHierarchy)return;
+            Subscribe(app.Context.World);
+            var profile=subscribed?.LocalProgress;
+            var team=app.Context.View;
+            int p=profile?.revision??-1, t=team?.teamRevision??-1;
+            var money=team?.Treasury??default;
+            if(pending!=SkillId.None)
+            {
+                if(approved && Owned(SkillTreeDefinition.Get(pending)).Contains(pending))
+                {
+                    filled=pending;
+                    fill=reducedMotion?1:0;
+                    fillTime=0;
+                    pending=SkillId.None;
+                    approved=false;
+                    PresentPurchaseFill();
+                    Invalidate();
+                }
+                else if(Time.unscaledTime>deadline)
+                {
+                    pending=SkillId.None;
+                    approved=false;
+                    ShowResponse("Хост не ответил",false);
+                    Invalidate();
+                }
+            }
+
+            if(!revised && shownPlayer==p && shownTeam==t && SameMaterials(shownTreasury,money))return;
+            revised=false;
+            shownPlayer=p;
+            shownTeam=t;
+            shownTreasury=money;
+            PresentMaterials(treasury,money);
+            RefreshSectors();
+            if(branch<0 && targetBranch<0)return;
+            wires.SetOwned(PersonalSkills(),TeamSkills());
+            foreach(var card in cards) if(card.Node!=null)DisplayCard(card,money);
+            DisplayDetails(money);
+        }
+
+        void RefreshSectors()
+        {
+            Span<int> count=stackalloc int[SkillTreeDefinition.BranchCount];
+            count.Clear();
+            foreach(var id in PersonalSkills())
+            {
+                var item=SkillTreeDefinition.Get(id);
+                if(item!=null)count[item.Branch]++;
+            }
+            foreach(var id in TeamSkills())
+            {
+                var item=SkillTreeDefinition.Get(id);
+                if(item!=null)count[item.Branch]++;
+            }
+            for(int i=0;i<sectors.Length;i++)
+            {
+                sectors[i].Face.SetProgress(count[i]/(float)SkillTreeDefinition.NodesPerBranch);
+                UiKit.Set(sectors[i].Count,count[i]+" / "+SkillTreeDefinition.NodesPerBranch);
+            }
+        }
+
+        void DisplayCard(Card card,MaterialCost money)
+        {
+            var node=card.Node;
+            var owned=Owned(node);
+            SkillNodeState state=Status(node,owned,money);
+            card.Face.State=state;
+            card.Face.Selected=selected==node.Id;
+            card.Face.PurchaseFill=filled==node.Id?fill:1;
+            card.Symbol.color=state==SkillNodeState.MissingRank?Muted:Accent(node);
+            card.Rank.color=state==SkillNodeState.MissingRank?Muted:Ink;
+            card.Face.SetVerticesDirty();
+        }
+
+        static SkillNodeState Status(SkillNode node,IReadOnlyCollection<SkillId> owned,MaterialCost money)
+        {
+            if(owned.Contains(node.Id))return SkillNodeState.Purchased;
+            if(!SkillTreeDefinition.IsAvailable(node.Id,owned))return SkillNodeState.MissingRank;
+            return money.Covers(node.Cost)?SkillNodeState.Available:SkillNodeState.MissingMaterials;
+        }
+
+        void DisplayDetails(MaterialCost money)
+        {
+            var node=SkillTreeDefinition.Get(selected);
+            dataPanel.gameObject.SetActive(node!=null);
+            hintPanel.gameObject.SetActive(node==null);
+            if(node==null)return;
+            var owned=Owned(node);
+            var state=Status(node,owned,money);
+            Color accent=Accent(node);
+            detailSymbol.sprite=NodeArt(node);
+            detailSymbol.color=accent;
+            scope.color=accent;
+            UiKit.Set(scope,node.Team?"КОМАНДА":"ЛИЧНОЕ");
+            UiKit.Set(title,node.Name);
+            UiKit.Set(description,node.Effect);
+            int magnitude=SkillTreeDefinition.Value(owned,node.Line);
+            UiKit.Set(before,SkillTreeDefinition.FormatValue(node.Line,magnitude));
+            UiKit.Set(after,state==SkillNodeState.Purchased?"—":node.ValueText);
+            after.color=accent;
+
+            var deps=SkillTreeDefinition.Dependencies(node.Id);
+            for(int i=0;i<requirements.Length;i++)
+            {
+                string requirement="";
+                if(i<deps.Count)
+                {
+                    bool complete=owned.Contains(deps[i]);
+                    requirement=(complete?"+  ":"—  ")+SkillTreeDefinition.Get(deps[i]).Name;
+                    requirements[i].color=complete?Muted:Amber;
+                }
+                UiKit.Set(requirements[i],requirement);
+            }
+            PresentMaterials(costs,node.Cost,money);
+            bool waiting=pending!=SkillId.None;
+            bool awaitingProfile=subscribed?.LocalProgress==null;
+            note.color=state==SkillNodeState.Available?Cyan:state==SkillNodeState.Purchased?Muted:Amber;
+            UiKit.Set(note,waiting?"Подтверждение хоста…":awaitingProfile?"Подключение профиля…":state switch
+            {
+                SkillNodeState.Purchased=>"Куплено",
+                SkillNodeState.MissingRank=>"Требуются предыдущие ранги",
+                SkillNodeState.MissingMaterials=>"Не хватает материалов",
+                _=>"Готово к покупке"
+            });
+            buy.interactable=!waiting && !awaitingProfile && state==SkillNodeState.Available;
         }
 
         void Select(SkillId id)
         {
+            if(transition<1 || branch<0 || SkillTreeDefinition.Get(id)?.Branch!=branch)return;
             selected=id;
+            Invalidate();
+            ApplyLod();
             Refresh();
         }
 
         void Buy(SkillId id)
         {
-            if(awaiting || app.Context.World?.LocalProgress==null || app.Context.View==null ||
-                app.Context.Player==null || app.Context.Player.IsHelpless || !app.Context.NearTerminal) return;
+            var context=app.Context;
+            var profile=context.World?.LocalProgress;
+            var team=context.View;
+            var node=SkillTreeDefinition.Get(id);
+            if(transition<1 || pending!=SkillId.None || profile==null || team==null ||
+                context.Player==null || context.Player.IsHelpless || !context.NearTerminal || node?.Branch!=branch)return;
             Select(id);
-            var definition=Node(id);
-            var owner=Owned(definition);
-            if(owner.Contains(id))
-            {
-                SetMessage(definition.Team?"Уже улучшено экипажем":"Навык уже куплен",false);
-                return;
-            }
-            if(!SkillTreeDefinition.IsAvailable(id,owner)) {SetMessage("Сначала откройте предыдущий узел",false);return;}
-            var team=app.Context.View;
-            if(!team.Treasury.Covers(definition.Cost)) {SetMessage("Недостаточно материалов в казне",false);return;}
-            int revision=team.teamRevision;
-            BeginRequest(revision);
-            app.Context.World.RequestSkill(id,revision);
+            if(Status(node,Owned(node),team.Treasury)!=SkillNodeState.Available)return;
+            pending=id;
+            approved=false;
+            deadline=Time.unscaledTime+7;
+            Invalidate();
+            Refresh();
+            context.World.RequestSkill(id,team.teamRevision,profile.revision);
         }
 
-        void BeginRequest(int revision)
+        void OnReply(bool success,string explanation)
         {
-            awaiting=true;
-            confirmed=false;
-            previousRevision=revision;
-            pendingUntil=Time.unscaledTime+5f;
-            SetMessage("Ожидаем подтверждение хоста…",true);
-        }
-
-        void OnReply(bool success,string reason)
-        {
-            if(!awaiting)return;
-            confirmed=success;
-            if(!success)awaiting=false;
-            SetMessage(reason,success);
+            if(pending==SkillId.None)return;
+            approved=success;
+            if(!success)pending=SkillId.None;
+            ShowResponse(success?"Модуль открыт":explanation,success);
+            Invalidate();
             Refresh();
         }
 
-        void SetMessage(string reason,bool success)
+        void ShowResponse(string reason,bool success)
         {
-            response.color=success?Cyan:Gold;
+            response.color=success?Cyan:Amber;
+            responseUntil=Time.unscaledTime+3.5f;
             UiKit.Set(response,reason);
         }
 
-        static string Compact(MaterialCost cost) => $"B {cost.biomass}    C {cost.chitin}    S {cost.scrap}    E {cost.electronics}";
-        static string ShortCost(MaterialCost cost) => $"B{cost.biomass} C{cost.chitin} S{cost.scrap} E{cost.electronics}";
+        IReadOnlyList<SkillId> PersonalSkills()=>subscribed?.LocalProgress?.skills??(IReadOnlyList<SkillId>)Empty;
+        IReadOnlyList<SkillId> TeamSkills()=>app.Context.View?.teamSkills??(IReadOnlyList<SkillId>)Empty;
+        IReadOnlyList<SkillId> Owned(SkillNode node)=>node.Team?TeamSkills():PersonalSkills();
+        static Color Accent(SkillNode node)=>node.Team?Amber:Cyan;
 
-        void Reset()
+        static TMP_Text[] MaterialStrip(Transform parent,string name,float x,float y,float width,float h)
         {
-            targetZoom=1;
-            targetPan=Vector2.zero;
-            if(!Root.gameObject.activeInHierarchy)
+            var strip=Box(parent,name,x,y,width,h,Steel).rectTransform;
+            var values=new TMP_Text[4];
+            for(int i=0;i<4;i++)
             {
-                zoom=1;pan=Vector2.zero;
-                graph.anchoredPosition=pan;
-                graph.localScale=Vector3.one;
-                lastLod=-1;
+                float column=(width/4)*i;
+                var tile=Box(strip,MaterialNames[i]+" counter",column+2,1,width/4-4,h-2,Night).rectTransform;
+                var shape=UiKit.Node(tile,MaterialNames[i]);
+                Place(shape,4,(h-24)*.5f,24,24);
+                var mark=shape.gameObject.AddComponent<SkillMaterialGlyph>();
+                mark.raycastTarget=false;
+                mark.Kind=(SkillMaterial)i;
+                mark.color=MaterialColors[i];
+                values[i]=Label(tile,"Amount",30,0,width/4-36,h-3,"—",23,Ink,true);
+            }
+            return values;
+        }
+
+        static int Amount(MaterialCost amount,int i)=>i switch
+        {
+            0=>amount.biomass,1=>amount.chitin,2=>amount.scrap,_=>amount.electronics
+        };
+
+        static bool SameMaterials(MaterialCost a,MaterialCost b)=>
+            a.biomass==b.biomass&&a.chitin==b.chitin&&a.scrap==b.scrap&&a.electronics==b.electronics;
+
+        static void PresentMaterials(TMP_Text[] text,MaterialCost amount,MaterialCost? available=null)
+        {
+            for(int i=0;i<text.Length;i++)
+            {
+                int number=Amount(amount,i);
+                text[i].color=available.HasValue && number>Amount(available.Value,i)?Amber:Ink;
+                UiKit.Set(text[i],number.ToString());
             }
         }
 
-        void Focus()
-        {
-            if(selected==SkillId.None)return;
-            int branch=((int)selected-1)/4;
-            targetZoom=2.18f;
-            Vector2 center=Vector2.Lerp(positions[branch*4+1],positions[branch*4+4],.55f);
-            targetPan=ClampPan(-center*targetZoom,targetZoom);
-        }
+        static void Place(RectTransform rect,float x,float y,float width,float height) =>
+            UiKit.Place(rect,Vector2.up,Vector2.up,new(x,-y),new(width,height));
 
-        internal void Pan(Vector2 delta) => targetPan=ClampPan(targetPan+delta,targetZoom);
-
-        internal void Zoom(PointerEventData pointer)
-        {
-            if(!RectTransformUtility.ScreenPointToLocalPointInRectangle(graphArea,pointer.position,pointer.enterEventCamera,out var point))return;
-            ApplyZoom(point,pointer.scrollDelta.y);
-        }
-
-        void ApplyZoom(Vector2 point,float ticks)
-        {
-            float next=Mathf.Clamp(targetZoom*Mathf.Pow(1.24f,ticks),1,3.25f);
-            targetPan=ClampPan(point-(point-targetPan)*(next/targetZoom),next);
-            targetZoom=next;
-        }
-
-        Vector2 ClampPan(Vector2 offset,float scale)
-        {
-            if(scale<=1)return Vector2.zero;
-            var limit=graphArea.rect.size*(scale-1)*.5f;
-            return new Vector2(Mathf.Clamp(offset.x,-limit.x,limit.x),Mathf.Clamp(offset.y,-limit.y,limit.y));
-        }
-
-        static Image Image(Transform parent,string name,Vector2 anchor,Vector2 offset,Vector2 size,Color color,bool raycast=false)
+        static Image Box(Transform parent,string name,float x,float y,float width,float height,Color color,bool raycast=false)
         {
             var image=UiKit.Panel(parent,name,color,raycast);
-            UiKit.Place(image.rectTransform,anchor,anchor,offset,size);
+            Place(image.rectTransform,x,y,width,height);
             return image;
         }
 
-        static TMP_Text Label(Transform parent,string name,Vector2 anchor,Vector2 point,Vector2 size,string content,
-            float font,Color? color=null,bool align=false)
+        static Image CenterIcon(Transform parent,string name,float side)
         {
-            var label=UiKit.Label(parent,name,content,font,color);
-            UiKit.Place(label.rectTransform,anchor,anchor,point,size);
+            var icon=UiKit.Panel(parent,name,Ink);
+            icon.preserveAspect=true;
+            UiKit.Place(icon.rectTransform,Center,Center,Vector2.zero,new(side,side));
+            return icon;
+        }
+
+        static TMP_Text Label(Transform parent,string name,float x,float y,float w,float h,string value,
+            float font,Color color,bool center=false)
+        {
+            var label=UiKit.Label(parent,name,value,font,color);
+            Place(label.rectTransform,x,y,w,h);
+            label.alignment=center?TextAlignmentOptions.Center:TextAlignmentOptions.MidlineLeft;
             label.textWrappingMode=TextWrappingModes.NoWrap;
             label.overflowMode=TextOverflowModes.Ellipsis;
-            label.alignment=align?TextAlignmentOptions.Center:TextAlignmentOptions.MidlineLeft;
+            label.fontSizeMin=Mathf.Min(15,font);
             return label;
         }
 
-        static Button Key(Transform parent,string name,string label,Vector2 point,float width,Action action,float height=35)
+        static TMP_Text Paragraph(Transform parent,string name,float x,float y,float w,float h,
+            float font,Color color,float min)
         {
-            var button=UiKit.Button(parent,name,label,()=>action(),false,height);
-            UiKit.Place((RectTransform)button.transform,Vector2.up,Vector2.up,point,new(width,height));
+            var label=Label(parent,name,x,y,w,h,"",font,color);
+            label.textWrappingMode=TextWrappingModes.Normal;
+            label.alignment=TextAlignmentOptions.TopLeft;
+            label.fontSizeMin=min;
+            return label;
+        }
+
+        static Button Key(Transform parent,string name,string caption,float x,float y,float w,float h,Action command)
+        {
+            var button=UiKit.Button(parent,name,caption,()=>command(),false,h);
+            Place((RectTransform)button.transform,x,y,w,h);
+            button.targetGraphic.color=Steel;
             return button;
         }
     }
@@ -419,57 +806,7 @@ namespace Raid.UI
         public void OnPointerDown(PointerEventData data) { }
         public void OnBeginDrag(PointerEventData data) { }
         public void OnEndDrag(PointerEventData data) { }
-        public void OnDrag(PointerEventData data) => View.Pan(data.delta);
-        public void OnScroll(PointerEventData data) => View.Zoom(data);
-    }
-
-    internal sealed class SkillWires : MaskableGraphic
-    {
-        readonly List<(Vector2 Start,Vector2 End,Color Color,float Width)> strokes = new(260);
-
-        internal void Build(Vector2[] position)
-        {
-            for(int ring=1;ring<=4;ring++)
-            {
-                const int sides=40;
-                float radius=ring*.25f;
-                Vector2 last=new(535*radius,0);
-                for(int i=1;i<=sides;i++)
-                {
-                    float angle=i*Mathf.PI*2/sides;
-                    Vector2 next=new Vector2(535*Mathf.Cos(angle),246*Mathf.Sin(angle))*radius;
-                    strokes.Add((last,next,new Color(.31f,.61f,.60f,.12f),1.5f));
-                    last=next;
-                }
-            }
-            for(int branch=0;branch<9;branch++)
-            {
-                Color line=branch<6?new Color(.33f,.82f,.74f,.62f):new Color(.94f,.62f,.28f,.65f);
-                int first=branch*4+1;
-                strokes.Add((Vector2.zero,position[first],line,3));
-                for(int variant=1;variant<=2;variant++)
-                {
-                    strokes.Add((position[first],position[first+variant],line,2.5f));
-                    strokes.Add((position[first+variant],position[first+3],line,2.5f));
-                }
-            }
-            SetVerticesDirty();
-        }
-
-        protected override void OnPopulateMesh(VertexHelper vertices)
-        {
-            vertices.Clear();
-            foreach(var stroke in strokes)
-            {
-                Vector2 offset=Vector2.Perpendicular((stroke.End-stroke.Start).normalized)*stroke.Width*.5f;
-                int i=vertices.currentVertCount;
-                vertices.AddVert(stroke.Start-offset,stroke.Color,Vector2.zero);
-                vertices.AddVert(stroke.Start+offset,stroke.Color,Vector2.zero);
-                vertices.AddVert(stroke.End+offset,stroke.Color,Vector2.zero);
-                vertices.AddVert(stroke.End-offset,stroke.Color,Vector2.zero);
-                vertices.AddTriangle(i,i+1,i+2);
-                vertices.AddTriangle(i,i+2,i+3);
-            }
-        }
+        public void OnDrag(PointerEventData data)=>View.Pan(data.delta);
+        public void OnScroll(PointerEventData data)=>View.Zoom(data);
     }
 }
