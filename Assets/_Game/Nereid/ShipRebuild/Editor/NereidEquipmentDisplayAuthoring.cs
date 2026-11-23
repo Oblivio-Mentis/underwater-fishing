@@ -19,22 +19,44 @@ namespace Raid.Nereid.Editor
             var room = PrefabUtility.LoadPrefabContents(Room);
             try
             {
-                if (room.transform.Find(Exhibit)) return;
-                var rack = room.transform.Find("Diving equipment drying rack");
-                var fitter = room.transform.Find("Harpoon fitter display");
-                var battery = room.transform.Find("Workshop battery cabinet");
-                if (!rack || !fitter || !battery)
-                    throw new System.InvalidOperationException("The equipment room is missing its original prop mounts.");
-                Object.DestroyImmediate(rack.gameObject);
-                Object.DestroyImmediate(fitter.gameObject);
-                battery.localPosition = new Vector3(2.31f,.73f,-4.58f);
-                var exhibit = Group(room.transform,Exhibit,Vector3.zero);
-                var palette = new Finishes();
+                var exhibit=room.transform.Find(Exhibit);
+                const string crewLockers="Second watch suit lockers";
+                if(exhibit && exhibit.Find(crewLockers)) return;
+                var palette=new Finishes();
+                var battery=room.transform.Find("Workshop battery cabinet");
+                if(!battery) throw new System.InvalidOperationException("The battery cabinet mount is missing.");
+                if(!exhibit)
+                {
+                    var oldRack=room.transform.Find("Diving equipment drying rack");
+                    var oldBench=room.transform.Find("Harpoon fitter display");
+                    if(!oldRack || !oldBench)
+                        throw new System.InvalidOperationException("The equipment room is missing its original prop mounts.");
+                    Object.DestroyImmediate(oldRack.gameObject);
+                    Object.DestroyImmediate(oldBench.gameObject);
+                    battery.localPosition=new Vector3(2.31f,.73f,-4.58f);
+                    exhibit=Group(room.transform,Exhibit,Vector3.zero);
+                    Suit(exhibit,palette,-.38f,"Port suit locker",0);
+                    Suit(exhibit,palette,.20f,"Starboard suit locker",1);
+                    GunCabinet(exhibit,palette);
+                    ServiceBench(exhibit,palette);
+                }
 
-                Suit(exhibit,palette,-.38f,0);
-                Suit(exhibit,palette,.20f,1);
-                GunCabinet(exhibit,palette);
-                ServiceBench(exhibit,palette);
+                var charging=exhibit.Find("Harpoon charging cabinet");
+                var bench=exhibit.Find("Barrel inspection bench");
+                if(!charging || !bench)
+                    throw new System.InvalidOperationException("The charging rack or inspection bench is missing.");
+                // Slide only the two original factory-mounted fixtures to make room alongside the open stair.
+                if(Vector3.Distance(charging.localPosition,new Vector3(1,0,-4.60f))<.001f)
+                    charging.localPosition=new Vector3(1.60f,0,-4.60f);
+                if(Vector3.Distance(battery.localPosition,new Vector3(2.31f,.73f,-4.58f))<.001f)
+                    battery.localPosition=new Vector3(2.79f,.73f,-4.58f);
+                var secondWatch=Group(exhibit,crewLockers,Vector3.zero);
+                Suit(secondWatch,palette,-.96f,"Port relief suit locker",2);
+                Suit(secondWatch,palette,.78f,"Starboard relief suit locker",3);
+                // The rear charging panel serves two buddies per row. The bench has a spare and a service mount.
+                MountedHarpoon(charging,palette,new(.56f,.78f,.26f),7,0);
+                MountedHarpoon(charging,palette,new(.56f,1.50f,.26f),7,0);
+                MountedHarpoon(bench,palette,new(.60f,1.27f,.11f),0,-11);
 
                 if (exhibit.GetComponentsInChildren<Collider>(true).Length != 0)
                     throw new System.InvalidOperationException("Equipment on display must leave the walking volume free.");
@@ -53,7 +75,7 @@ namespace Raid.Nereid.Editor
             public readonly Material ochre = Material("Rescue ochre");
             public readonly Material warm = Lens("Amber work light","Locker glass - warm",new Color(1f,.69f,.37f));
             public readonly Material blue = Lens("Reservoir teal light","Locker glass - cool",new Color(.32f,.80f,.97f));
-            public readonly Material grate = Material("Embossed graphite tread");
+            public readonly Material grate = Material("Matte graphite deck");
             static Material Lens(string source,string name,Color color)
             {
                 var existing=Material(name);
@@ -88,9 +110,9 @@ namespace Raid.Nereid.Editor
             PrefabUtility.RecordPrefabInstancePropertyModifications(bone);
         }
 
-        static void Suit(Transform parent,Finishes m,float x,int index)
+        static void Suit(Transform parent,Finishes m,float x,string label,int index)
         {
-            var bay=Group(parent,index==0?"Port suit locker":"Starboard suit locker",new(x,0,-4.60f));
+            var bay=Group(parent,label,new(x,0,-4.60f));
             bay.localScale=Vector3.one*.5f;
             var s=new ShipSectionMesh(bay,Vector3.zero,"Drying cabinet",Vector3.zero);
             s.Box(m.frame,new(0,1.11f,-.22f),new(1.10f,2.20f,.16f));
@@ -126,14 +148,14 @@ namespace Raid.Nereid.Editor
             s.Store(Root+"/Meshes/Equipment display - suit cabinet.asset");
 
             var suit=(GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(Diver),bay);
-            Mount(suit.transform,new(0,1.135f,.17f),Quaternion.Euler(0,index==0?7:-8,0));
+            Mount(suit.transform,new(0,1.135f,.17f),Quaternion.Euler(0,index%2==0?7:-8,0));
             var rig=suit.GetComponent<DiverAvatarRig>();
             var axis=suit.transform;
             Tilt(rig.leftArm.upper,axis,new(-4,0,6));
             Tilt(rig.rightArm.upper,axis,new(-3,0,-5));
-            Tilt(rig.leftArm.lower,axis,new(index==0?-12:-7,0,0));
-            Tilt(rig.rightArm.lower,axis,new(index==0?-8:-13,0,0));
-            Tilt(rig.head,axis,new(3,index==0?-4:6,0));
+            Tilt(rig.leftArm.lower,axis,new(index%2==0?-12:-7,0,0));
+            Tilt(rig.rightArm.lower,axis,new(index%2==0?-8:-13,0,0));
+            Tilt(rig.head,axis,new(3,index%2==0?-4:6,0));
             rig.enabled=false;
             PrefabUtility.RecordPrefabInstancePropertyModifications(rig);
             if(index==0)
@@ -184,6 +206,16 @@ namespace Raid.Nereid.Editor
                 s.Box(m.rubber,at+new Vector3(0,-.007f,.009f),new(.085f,.031f,.15f));
                 s.Box(m.ochre,at+new Vector3(0,.03f,.086f),new(.081f,.102f,.037f));
             }
+        }
+
+        static void MountedHarpoon(Transform parent,Finishes m,Vector3 position,float tilt,float roll)
+        {
+            var mount=Group(parent,"Additional harpoon cradle",position);
+            mount.localRotation=Quaternion.AngleAxis(tilt,Vector3.forward);
+            var rails=new ShipSectionMesh(mount,Vector3.zero,"Padded receiver blocks",Vector3.zero);
+            GunCradle(rails,m,Vector3.zero,0);
+            rails.Store(Root+"/Meshes/Equipment display - receiver blocks.asset");
+            Gun(mount,Vector3.zero,Quaternion.Euler(0,90,roll));
         }
 
         static void Gun(Transform parent,Vector3 at,Quaternion rotation)
