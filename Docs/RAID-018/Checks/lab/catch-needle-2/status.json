@@ -1,0 +1,9 @@
+{
+    "scenario": "catch",
+    "phase": "failed",
+    "error": "could not hook Needlefish (shots 0)",
+    "frames": 0,
+    "notes": [
+        "hooking Needlefish in Kelp Gate"
+    ]
+}

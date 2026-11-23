@@ -57,6 +57,11 @@ namespace Raid
             }
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
 
+            if (fish != null && controlling && camera != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired)
+            {
+                float strain = Mathf.Clamp01(tool.LineTension * .9f + fish.TugStrength * .8f + (fish.SurgeWarning ? .25f : 0));
+                camera.SetStrain(strain * Setting(s => s.cameraShake));
+            }
             if (fish != null && fish.HookSequence != hookSequence)
             {
                 hookSequence = fish.HookSequence;
@@ -73,7 +78,10 @@ namespace Raid
                 if (controlling && fish.Surging)
                 {
                     ui.PushFishingPunch(3.5f * Setting(s => s.fishingCamera));
-                    if (camera != null) camera.Hit(.018f + .02f * Mathf.Clamp(fish.power, .5f, 3f) * .5f, 2.4f, RandomSign());
+                    // The kick follows the fish: it yanks the view toward the side the fish bolts to.
+                    Vector3 toFish = fish.transform.position - owner.transform.position;
+                    float side = Mathf.Sign(Vector3.Dot(owner.transform.right, toFish));
+                    if (camera != null) camera.Hit(.018f + .02f * Mathf.Clamp(fish.power, .5f, 3f) * .5f, 2.4f, side);
                 }
             }
             if (threats != null && threats.BiteSequence != biteSequence)
@@ -88,7 +96,5 @@ namespace Raid
                 }
             }
         }
-
-        static float RandomSign() => Time.unscaledTime % 2 < 1 ? -1 : 1;
     }
 }

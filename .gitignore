@@ -57,3 +57,6 @@ crashlytics-build.properties
 # Local reef models extracted from the creator's original archive.
 /Assets/_Game/Nereid/Resources/ExpeditionAssets/ReodesuxzLocal/
 /Assets/_Game/Nereid/Resources/ExpeditionAssets/ReodesuxzLocal.meta
+
+# RAID-018 feel lab: recorded frame sequences stay on disk, contact sheets and clips are kept
+Docs/RAID-018/Checks/lab/*/frame-*.png

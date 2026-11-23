@@ -339,10 +339,10 @@ namespace Raid
                     bool carried = visual.Mode == FishMode.Captured || visual.Mode == FishMode.Transported;
                     float age = Mathf.Clamp(Time.time - netReceivedAt, 0, .25f);
                     Vector3 target = carried ? visual.Position : visual.Position + netVelocity * age;
-                    transform.position = Vector3.SmoothDamp(transform.position, target, ref followVelocity, carried ? .03f : .11f, 40f, Time.deltaTime);
+                    transform.position = Vector3.SmoothDamp(transform.position, target, ref followVelocity, carried ? .03f : .14f, 40f, Time.deltaTime);
                 }
                 // Heading settles over a longer window than position so turns read as arcs, not steps.
-                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .16f);
+                float turnBlend = snap ? 1 : 1f - Mathf.Exp(-Time.deltaTime / .22f);
                 transform.rotation = Quaternion.Slerp(transform.rotation, visual.Rotation, turnBlend);
             }
             lastVisualActive = visual.Active;

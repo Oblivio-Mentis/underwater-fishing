@@ -494,7 +494,8 @@ namespace Raid
             if (intent.sqrMagnitude < .0001f) intent = direction;
             Vector3 heading = Vector3.RotateTowards(transform.forward,direction.normalized,dt * turnRate,0);
             float turn = Vector3.Dot(Vector3.Cross(transform.forward,intent.normalized),Vector3.up);
-            bank = Mathf.MoveTowards(bank,-turn * Profile.bankStrength,90 * dt);
+            // Bank eases in and out instead of slamming to the target each tick.
+            bank = Mathf.Lerp(bank,-turn * Profile.bankStrength,1 - Mathf.Exp(-dt * 5f));
             transform.rotation = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(bank,Vector3.forward);
         }
     }

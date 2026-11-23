@@ -21,13 +21,13 @@ MonoBehaviour:
   roamSpeed: 1.45
   burstPeriod: 3
   burstDuration: 0.8
-  initialStamina: 7
+  initialStamina: 12
   exhaustionRate: 1
   staminaRecovery: 0.15
   tensionRise: 0.09
   burstTensionMultiplier: 4
   tensionRelease: 0.5
-  reelSpeed: 2.5
+  reelSpeed: 1.8
   escapeSpeed: 1.5
   tugSpeed: 3.5
   tugAcceleration: 12

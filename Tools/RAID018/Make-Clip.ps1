@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory)][string]$Frames,
     [Parameter(Mandatory)][string]$Output,
     [int]$Fps = 20,
-    [string]$Ffmpeg = "$env:LOCALAPPDATA\ms-playwright\ffmpeg-1013\ffmpeg-win64.exe"
+    [string]$Ffmpeg = "$env:LOCALAPPDATA\Programs\Buzz\_internal\ffmpeg.exe"
 )
 # Stitches frame-%05d.png from FishingRecorder into an H.264 mp4 (plus a 480p GIF preview next to it).
 $ErrorActionPreference = 'Stop'

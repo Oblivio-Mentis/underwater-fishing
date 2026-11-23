@@ -1,0 +1,10 @@
+{
+    "scenario": "catch",
+    "phase": "done",
+    "error": "",
+    "frames": 296,
+    "notes": [
+        "hooking Lanternfish in Far Ridge",
+        "landed Lanternfish phases: HookShock>Lateral>SurgeWindup>Surge>Lateral>SurgeWindup>Surge>Weakened"
+    ]
+}

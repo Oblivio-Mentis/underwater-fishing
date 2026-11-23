@@ -34,8 +34,9 @@ namespace Raid
         float nextSuitCheck;
         int observedShot;
         Renderer statusLamp;
-        Vector3 sway, tugPull;
-        float searchAt,recoil,recoilVelocity,monitorRest;
+        Vector3 sway, tugPull, fightOffset;
+        Vector3 fightAngles;
+        float searchAt,recoil,recoilVelocity,monitorRest,fightTremble;
         int observedTug; float tugVelocity,tugKick;
 
         void OnEnable()
@@ -131,6 +132,40 @@ namespace Raid
             }
             float tensionPull=hooked!=null && hooked.Mode>=FishMode.Hooked&&hooked.Mode<=FishMode.Tired?viewedTool.LineTension:0;
             tugPull=Vector3.Lerp(tugPull,Vector3.back*(tensionPull*.012f),1-Mathf.Exp(-dt*8));
+            // Fight pose: the line of pull drags the gun and both arms toward the fish, reeling
+            // braces the receiver back into the shoulder with the barrel up, a tired fish lets the
+            // arms sink. Tremble grows with tension. Aim is untouched: only the viewmodel moves.
+            Vector3 wantOffset=Vector3.zero, wantAngles=Vector3.zero; float wantTremble=0;
+            if(hooked!=null && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired && actor!=null)
+            {
+                Vector3 toFish=view.transform.InverseTransformDirection((hooked.transform.position-view.transform.position).normalized);
+                float pull=Mathf.Clamp01(hooked.TugStrength);
+                float load=Mathf.Clamp01(tensionPull);
+                float reach=.035f+.075f*pull+.03f*load;
+                wantOffset+=new Vector3(toFish.x,toFish.y,Mathf.Max(0,toFish.z))*reach;      // arms stretch toward the pull
+                wantAngles+=new Vector3(-toFish.y*14f*(0.4f+pull),toFish.x*16f*(0.4f+pull),-toFish.x*9f*pull); // barrel swings after the line
+                if(viewedTool.Reeling && pull<.3f)
+                {
+                    wantOffset+=new Vector3(.012f,-.006f,-.045f);                                 // brace into the shoulder
+                    wantAngles+=new Vector3(-5.5f,0,2.5f);                                       // barrel up, slight cant
+                }
+                if(hooked.Behaviour==FishBehaviour.Weakened || hooked.Mode==FishMode.Tired)
+                {
+                    wantOffset+=new Vector3(0,-.02f,-.015f);
+                    wantAngles+=new Vector3(4f,0,0);                                             // arms sink, barrel dips
+                }
+                if(hooked.Behaviour==FishBehaviour.SurgeWindup)
+                {
+                    wantOffset+=new Vector3(0,.006f,.012f);                                      // leaning in, expecting it
+                }
+                wantTremble=load*load*.0028f+pull*.0022f;
+            }
+            float poseRate=hooked!=null && hooked.Surging?14f:5f;
+            fightOffset=Vector3.Lerp(fightOffset,wantOffset,1-Mathf.Exp(-dt*poseRate));
+            fightAngles=Vector3.Lerp(fightAngles,wantAngles,1-Mathf.Exp(-dt*poseRate));
+            fightTremble=Mathf.Lerp(fightTremble,wantTremble,1-Mathf.Exp(-dt*6));
+            float tt=Time.unscaledTime;
+            Vector3 tremble=new Vector3(Mathf.Sin(tt*53f)+.5f*Mathf.Sin(tt*87f),Mathf.Sin(tt*61f+1.1f)+.5f*Mathf.Sin(tt*97f),Mathf.Sin(tt*44f)*.4f)*fightTremble;
             if(statusLamp!=null)statusLamp.enabled=hasLine;
             // The receiver's damped spring is kicked only by the accepted server-shot event.
             float remaining=dt;
@@ -142,8 +177,9 @@ namespace Raid
             float aim=actor==owner?Nereid.NereidAim.Blend:0;
             Vector3 rest=Vector3.Lerp(RestPosition,new Vector3(0,-.080f,.55f),aim);
             float steadiness=Mathf.Lerp(1,.18f,aim),kick=Mathf.Lerp(1,.4f,aim);
-            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick)+tugPull+Vector3.back*(tugKick*kick);
-            model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness,sway.x*60*steadiness,tugKick*140*kick);
+            model.localPosition=rest+sway*steadiness+Vector3.back*(recoil*kick)+tugPull+Vector3.back*(tugKick*kick)+fightOffset*Mathf.Lerp(1,.35f,aim)+tremble;
+            model.localRotation=Quaternion.Euler(-2.1f*aim-recoil*65*kick-sway.y*90*steadiness+fightAngles.x*Mathf.Lerp(1,.35f,aim)+tremble.y*220,
+                sway.x*60*steadiness+fightAngles.y*Mathf.Lerp(1,.35f,aim)+tremble.x*160,tugKick*140*kick+fightAngles.z);
             model.gameObject.SetActive(hands.Animate(actor,viewedTool,model,aim,dt,panelPress,monitorRest));
             if(slide!=null)slide.localPosition=Vector3.back*Mathf.Max(0,recoil*1.3f);
         }
@@ -366,7 +402,7 @@ namespace Raid
             if(model!=null){model.gameObject.SetActive(false);Destroy(model.gameObject);}
             foreach(var mesh in meshes)if(mesh!=null)Destroy(mesh);
             meshes.Clear();model=null;reel=null;loadedBolt=null;slide=null;statusLamp=null;legacyModel=null;view=null;owner=null;tool=null;
-            sway=Vector3.zero;recoil=0;recoilVelocity=0;tugPull=Vector3.zero;observedTug=0;tugVelocity=0;tugKick=0;
+            sway=Vector3.zero;recoil=0;recoilVelocity=0;tugPull=Vector3.zero;observedTug=0;tugVelocity=0;tugKick=0;fightOffset=Vector3.zero;fightAngles=Vector3.zero;fightTremble=0;
         }
         void OnDisable() { ReleaseModel();if(active==this)active=null; }
         void OnDestroy() { ReleaseModel();if(active==this)active=null; }

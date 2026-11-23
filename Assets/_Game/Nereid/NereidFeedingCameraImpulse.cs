@@ -46,6 +46,9 @@ namespace Raid.Nereid
         public void Release(Vector3 point,float strength)
         {origin=point;severity=Mathf.Clamp(strength,1,2.35f);releaseAt=Time.time;chargeUntil=-10;AppliedPeakMetres=AppliedPeakDegrees=0;}
         public void Cancel() => swallowAt=releaseAt=chargeUntil=-10;
+        float strain, strainTarget;
+        /// <summary>0..1 sustained fishing strain for this frame; decays on its own when not set.</summary>
+        public void SetStrain(float amount) => strainTarget=Mathf.Clamp01(amount);
 
         void LateUpdate()
         {
@@ -66,7 +69,8 @@ namespace Raid.Nereid
             float gulp=gulpAge>=0&&gulpAge<.38f?Mathf.Sin(gulpAge/.38f*Mathf.PI):0;
             float charge=chargeUntil>Time.time?1-(chargeUntil-Time.time)/chargeDuration:0;
             float distance=Mathf.Clamp01(1-Vector3.Distance(transform.position,origin)/36);
-            float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance*shakeScale;
+            strain=Mathf.Lerp(strain,strainTarget,1-Mathf.Exp(-Time.unscaledDeltaTime*7));strainTarget*=Mathf.Exp(-Time.unscaledDeltaTime*4);
+            float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance*shakeScale+strain*strain*.0075f*shakeScale;
             float hitAge=Time.unscaledTime-hitAt;
             float hit=hitAge>=0 && hitAge<.42f ? Mathf.Exp(-hitAge*7.5f) : 0;
             if(hitAge>=.42f){hitMetres=hitDegrees=0;}
