@@ -21,7 +21,7 @@ namespace Raid.Nereid.Editor
                 for(int k=0;k<6;k++)
                 {
                     float a=k*60;
-                    Band(mill,center+z*.255f,x,y,.67f,.57f,.028f,k%2==0?warm:ochre,dark,a+6,a+49,5);
+                    Band(mill,center+z*.255f,x,y,.67f,.57f,.028f,k==4?ochre:deck,dark,a+6,a+49,5);
                 }
                 var hub=center+z*.17f;
                 for(int k=0;k<6;k++)
@@ -30,7 +30,23 @@ namespace Raid.Nereid.Editor
                     var blade=new[]{new Vector2(.13f,-.02f),new Vector2(.43f,-.20f),new Vector2(.51f,-.04f),new Vector2(.24f,.13f)};
                     Casting(mill,hub,u,v,blade,.065f,deck,steel,dark);
                 }
-                Lens(mill,hub+z*.064f,x,y,.177f,ochre);
+                SocketBolt(mill,hub+z*.074f,x,y,.161f);
+                // Two partial guards bridge each service hatch. The face of the impeller
+                // remains legible between rounded guards and the exposed rolled lip.
+                for(int rail=-1;rail<=1;rail+=2)
+                {
+                    var post=center+x*(rail*.33f)+z*.31f;
+                    var crest=post+z*.10f;
+                    mill.Tube(deck,post-y*.62f,crest-y*.40f,.037f,-1,8);
+                    mill.Tube(deck,crest-y*.40f,crest+y*.40f,.037f,-1,8);
+                    mill.Tube(deck,crest+y*.40f,post+y*.62f,.037f,-1,8);
+                }
+                AbradedEdge(mill,center+x*.43f+y*.43f+z*.265f,center+x*.17f+y*.61f+z*.265f,-y,z,.015f);
+                for(int stud=0;stud<8;stud++)
+                {
+                    float t=stud*Mathf.PI/4f+.20f;
+                    SocketBolt(mill,center+(x*Mathf.Cos(t)+y*Mathf.Sin(t))*.735f+z*.269f,x,y,.054f);
+                }
             }
             for(int j=0;j<2;j++)
             {
@@ -39,13 +55,16 @@ namespace Raid.Nereid.Editor
                 mill.Beam(dark,top,top+new Vector3(sx*.23f,.58f,-.37f),.42f,.51f);
                 mill.Beam(ochre,top+z*.11f,top+new Vector3(sx*.22f,.46f,-.06f),.22f,.26f);
             }
-            mill.Lamp("Furnace return",new Color(1,.59f,.34f),carrier+new Vector3(.21f,.30f,1.08f),25,6.6f);
+            HoodedLamp(mill,carrier+new Vector3(.09f,.70f,.42f),x,y,.66f,.22f);
+            mill.Lamp("Furnace return",new Color(.90f,.83f,.74f),carrier+new Vector3(.12f,1.06f,.91f),7.5f,6.2f);
             var hood=Part("Cyclone extraction cowl",new(-2.59f,3.29f,-11.05f));
             var cap=new Vector3(-2.57f,3.49f,-11.19f);
             Casting(hood,cap,x,z,Shield(4.67f,1.27f,.65f),.32f,ceramic,steel,enamel,.81f);
             Casting(hood,cap+Vector3.down*.33f,x,z,Shield(3.26f,.66f,.62f),.085f,dark,ochre,rubber);
-            foreach(float dx in new[]{-1.04f,0,1.04f})
-                Casting(hood,cap+new Vector3(dx,-.422f,0),x,z,Shield(.68f,.25f,.6f),.018f,warm,dark,dark);
+            AbradedEdge(hood,cap+new Vector3(-1.62f,-.32f,-.35f),cap+new Vector3(1.64f,-.32f,-.35f),z,Vector3.down,.021f);
+            foreach(float dx in new[]{-1.02f,1.02f})
+                HoodedLamp(hood,cap+new Vector3(dx,-.422f,0),x,z,.66f,.23f);
+            Intake(hood,cap+Vector3.down*.423f,x,z,.76f,.52f,4);
 
             var winch=Part("Suspended twin drum drive",new(2.28f,2.94f,-14.30f));
             var drum=new Vector3(2.03f,2.88f,-14.75f);
@@ -68,23 +87,16 @@ namespace Raid.Nereid.Editor
             var panel=new Vector3(3.69f,1.92f,-15.90f);
             Casting(frame,panel,x,y,Shield(3.78f,2.32f,.47f),.22f,ceramic,deck,dark,.93f);
             Casting(frame,panel+new Vector3(-.30f,0,.225f),x,y,Shield(2.50f,1.55f,.55f),.09f,dark,steel,enamel,.94f);
-            for(int j=0;j<3;j++)
+            AbradedEdge(frame,panel+new Vector3(-1.22f,-.94f,.22f),panel+new Vector3(1.18f,-.94f,.22f),y,z,.030f);
+            Intake(frame,panel+new Vector3(-.54f,-.12f,.33f),x,y,1.68f,.85f,5);
+            for(int side=-1;side<=1;side+=2)
             {
-                var chev=new[]{new Vector2(-.38f,-.47f),new Vector2(-.15f,-.47f),new Vector2(.31f,0),
-                    new Vector2(-.15f,.47f),new Vector2(-.38f,.47f),new Vector2(.06f,0)};
-                // Split the concave mark into two solid prismatic fins.
-                var at=panel+new Vector3(-1.00f+j*.64f,0,.33f);
-                Casting(frame,at,x,y,new[]{chev[0],chev[1],chev[2],chev[5]},.035f,ochre,dark,dark);
-                Casting(frame,at,x,y,new[]{chev[5],chev[2],chev[3],chev[4]},.035f,j==2?warm:ochre,dark,dark);
+                SocketBolt(frame,panel+new Vector3(side*1.39f,.78f,.24f),x,y,.082f);
+                SocketBolt(frame,panel+new Vector3(side*1.39f,-.78f,.24f),x,y,.082f);
             }
-            Lens(frame,panel+new Vector3(1.30f,.33f,.23f),x,y,.25f,cyan);
-            CastSmallSignals(frame,panel+new Vector3(1.31f,-.28f,.24f),x,y);
-            frame.Lamp("Cargo signal bounce",new Color(.88f,.74f,.54f),panel+new Vector3(-.44f,.50f,.93f),19,7);
-        }
-
-        static void CastSmallSignals(ShipSectionMesh s,Vector3 p,Vector3 u,Vector3 v)
-        {
-            for(int k=0;k<2;k++)Casting(s,p+v*(k*-.22f),u,v,Shield(.47f,.105f,.6f),.045f,k==0?cyan:deck,steel,dark);
+            BourdonGauge(frame,panel+new Vector3(.96f,.21f,.24f),x,y,.31f,34);
+            HoodedLamp(frame,panel+new Vector3(.94f,-.46f,.24f),x,y,.61f,.20f);
+            frame.Lamp("Cargo signal bounce",new Color(.84f,.81f,.71f),panel+new Vector3(.89f,-.32f,.93f),9f,6.5f);
         }
 
         static void FitContainment()
@@ -97,19 +109,21 @@ namespace Raid.Nereid.Editor
                 float a=side<0?24:103,b=side<0?77:156;
                 Band(brace,center,x*1.20f,y,2.53f,2.26f,.28f,dark,steel,a,b,12);
                 Band(brace,center+n*.28f,x*1.20f,y,2.48f,2.32f,.10f,ceramic,hull,a+2,b-2,12);
-                Band(brace,center+n*.381f,x*1.20f,y,2.405f,2.35f,.030f,alarm,dark,a+7,b-7,10);
+                Band(brace,center+n*.381f,x*1.20f,y,2.405f,2.35f,.030f,deck,dark,a+7,b-7,10);
                 var u=Vector3.right*side;
                 var bearing=center+u*2.96f+Vector3.up*.20f+n*.18f;
                 Casting(brace,bearing,x,y,Shield(1.04f,1.65f,.72f),.30f,hull,ceramic,dark,.88f);
-                Lens(brace,bearing+n*.315f,x,y,.39f,alarm);
+                var boss=bearing+n*.315f;
+                SocketBolt(brace,boss,x,y,.23f);
+                HoodedLamp(brace,boss-y*.47f,x,y,.48f,.18f);
                 var shoulder=bearing+u*1.65f+Vector3.up*.98f;
                 brace.Tube(dark,bearing+u*.48f,shoulder,.19f,-1,16);
                 brace.Tube(steel,bearing+u*.49f,bearing+u*.94f+Vector3.up*.24f,.135f,-1,16);
                 brace.Tube(ochre,bearing+u*.87f+Vector3.up*.29f,shoulder,.245f,.19f,16);
                 var baffle=new Vector3(side*4.72f,2.75f,7.80f);
                 Casting(brace,baffle,x,y,Shield(1.88f,1.44f,.70f),.18f,enamel,steel,dark);
-                for(int k=0;k<3;k++)
-                    Casting(brace,baffle+new Vector3(0,.31f-k*.32f,-.185f),x,y,Shield(1.07f-k*.10f,.12f,.8f),.055f,k==0?alarm:rubber,deck,dark);
+                Intake(brace,baffle+n*.19f,x,y,1.08f,.62f,4);
+                SocketBolt(brace,baffle+n*.19f+u*.62f+y*.34f,x,y,.066f);
             }
             var crown=Part("Containment bifurcated vault",new(0,4.07f,6.37f));
             for(int side=-1;side<=1;side+=2)
@@ -117,10 +131,10 @@ namespace Raid.Nereid.Editor
                 var p=new Vector3(side*3.68f,4.32f,6.10f);
                 Casting(crown,p,Vector3.right,Vector3.forward,Shield(3.55f,2.15f,.8f),.27f,dark,ceramic,enamel,.86f);
                 Band(crown,p+Vector3.down*.28f,Vector3.right*1.31f,Vector3.forward,.62f,.43f,.13f,steel,dark,15,339,24);
-                Lens(crown,p+Vector3.down*.28f,Vector3.right,Vector3.forward,.37f,alarm);
+                HoodedLamp(crown,p+Vector3.down*.30f,Vector3.right,Vector3.forward,.57f,.21f);
                 crown.Beam(steel,new(side*.86f,4.19f,7.80f),new(side*2.57f,4.19f,6.64f),.14f,.15f);
             }
-            crown.Lamp("Containment reflected task light",new Color(1,.52f,.39f),new Vector3(-2.70f,3.06f,6.20f),20,7);
+            crown.Lamp("Containment reflected task light",new Color(.92f,.71f,.56f),new Vector3(-3.27f,3.55f,6.20f),10,7);
         }
 
         static void FitEngineering()
@@ -136,9 +150,10 @@ namespace Raid.Nereid.Editor
                 Casting(engine,cap,x,z,Shield(2.95f,1.52f,.64f),.13f,ceramic,steel,dark,.90f);
                 var c=cap+Vector3.down*.135f;
                 Band(engine,c,x,z,.51f,.32f,.065f,dark,steel,-42,296,22);
-                Lens(engine,c,x,z,.27f,i==0?warm:glass);
+                BourdonGauge(engine,c,x,z,.265f,24+i*29);
                 for(int side=-1;side<=1;side+=2)
-                    Casting(engine,c+x*(side*.94f),x,z,Shield(.37f,.59f,.6f),.030f,side<0?warm:steel,enamel,dark);
+                    if(side<0 && i==0)HoodedLamp(engine,c+x*(side*.94f),x,z,.34f,.40f);
+                    else Intake(engine,c+x*(side*.94f),x,z,.40f,.58f,3);
             }
             var riser=Part("Engine room upper cooling bank",new(1.04f,2.70f,-24.65f));
             p=new Vector3(1.10f,2.61f,-24.77f);
@@ -147,10 +162,10 @@ namespace Raid.Nereid.Editor
             {
                 var face=p+new Vector3(i*1.09f,0,.23f);
                 Casting(riser,face,x,Vector3.up,Shield(.84f,.56f,.51f),.045f,hull,steel,dark);
-                for(int k=0;k<2;k++)
-                    Casting(riser,face+new Vector3(0,.09f-.19f*k,.05f),x,Vector3.up,Shield(.56f,.072f),.031f,k==0?rubber:ochre,deck,dark);
+                Intake(riser,face+z*.053f,x,Vector3.up,.68f,.38f,3);
             }
-            riser.Lamp("Service task bounce",new Color(.97f,.77f,.53f),p+new Vector3(-.47f,.18f,.83f),21,8);
+            HoodedLamp(riser,p+new Vector3(.21f,-.43f,.23f),x,Vector3.up,.73f,.19f);
+            riser.Lamp("Service task bounce",new Color(.93f,.83f,.69f),p+new Vector3(.21f,-.38f,.87f),11,8);
         }
     }
 }

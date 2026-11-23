@@ -17,8 +17,9 @@ namespace Raid.Nereid.Editor
                     var p=new[]{new Vector2(-2.04f,-.24f),new(-1.64f,-.48f),new(-.91f,-.48f),new(-.60f,-.28f),new(1.48f,-.28f),
                         new(2.04f,.06f),new(1.93f,.47f),new(-1.87f,.47f)};
                     Casting(wall,brow,u,v,p,.37f,ceramic,enamel,dark,.91f);
-                    Casting(wall,brow+n*.37f+u*.23f+v*.04f,u,v,Shield(1.76f,.19f,.8f),.055f,dark,steel,rubber);
-                    Casting(wall,brow+n*.43f+u*.15f+v*.05f,u,v,Shield(1.24f,.083f,.83f),.018f,cyan,enamel,dark);
+                    HoodedLamp(wall,brow+n*.38f+u*.25f+v*.04f,u,v,.85f,.28f);
+                    foreach(float offset in new[]{-1.31f,1.36f})
+                        SocketBolt(wall,brow+n*.375f+u*offset+v*.12f,u,v,.073f);
                     var foot=new Vector3(side*5.76f,.45f,z);
                     Casting(wall,foot,u,v,Shield(3.66f,.58f,.62f),.20f,enamel,steel,dark,.95f);
                     for(int j=-1;j<=1;j+=2)
@@ -38,7 +39,9 @@ namespace Raid.Nereid.Editor
                     var c=new Vector3(side*1.35f,4.34f,z+.01f);
                     spine.Beam(dark,a,b,.49f,.42f);spine.Beam(ceramic,a+Vector3.down*.08f,b+Vector3.down*.12f,.31f,.31f);
                     spine.Beam(enamel,b,c,.43f,.33f);spine.Beam(steel,b-Vector3.up*.085f,c-Vector3.up*.12f,.235f,.23f);
-                    spine.Beam(cyan,Vector3.Lerp(b,c,.11f)-Vector3.up*.22f,Vector3.Lerp(b,c,.78f)-Vector3.up*.22f,.047f,.078f);
+                    var yoke=Vector3.Lerp(b,c,.46f)-Vector3.up*.235f;
+                    Casting(spine,yoke,Vector3.right,Vector3.forward,Shield(.32f,.41f),.048f,deck,steel,dark);
+                    SocketBolt(spine,yoke+Vector3.down*.05f,Vector3.right,Vector3.forward,.071f);
                 }
             }
             var o=Part("Bathymetric lens housing",new(0,4.18f,1.92f));
@@ -48,10 +51,12 @@ namespace Raid.Nereid.Editor
             for(int i=0;i<4;i++)
             {
                 float a=i*90;
-                Band(o,pos+Vector3.down*.355f,x*1.25f,zAxis,.89f,.79f,.029f,cyan,hull,a+6,a+75,8);
+                Band(o,pos+Vector3.down*.355f,x*1.25f,zAxis,.89f,.79f,.029f,deck,hull,a+6,a+68,7);
             }
             Lens(o,pos+Vector3.down*.24f,x*1.25f,zAxis,.60f,glass);
-            o.Lamp("Reservoir optical bounce",new Color(.45f,.80f,.86f),pos+Vector3.down*.65f,28f,11f);
+            for(int side=-1;side<=1;side+=2)
+                HoodedLamp(o,pos+new Vector3(side*.98f,-.37f,0),zAxis,Vector3.left,.45f,.185f);
+            o.Lamp("Reservoir optical bounce",new Color(.76f,.85f,.84f),pos+Vector3.down*.68f,15f,10f);
         }
 
         static Vector2[] ShoulderOutline()
@@ -72,10 +77,15 @@ namespace Raid.Nereid.Editor
             for(int k=0;k<3;k++)
             {
                 float a=k*120f;
-                Band(nav,p-Vector3.up*.22f,x*1.31f,z,1.04f,.972f,.028f,cyan,dark,a+12,a+100,11);
+                Band(nav,p-Vector3.up*.22f,x*1.31f,z,1.04f,.972f,.028f,deck,dark,a+11,a+106,11);
             }
-            Lens(nav,p-Vector3.up*.17f,x,z,.49f,cyan);
-            nav.Lamp("Chart canopy indirect light",new Color(.56f,.80f,1),p-Vector3.up*.58f,17,8);
+            Lens(nav,p-Vector3.up*.17f,x,z,.49f,glass);
+            for(int side=-1;side<=1;side+=2)
+            {
+                HoodedLamp(nav,p+new Vector3(side*1.21f,-.20f,0),z,Vector3.left,.62f,.21f);
+                SocketBolt(nav,p+new Vector3(side*.68f,-.22f,.66f),x,z,.08f);
+            }
+            nav.Lamp("Chart canopy indirect light",new Color(.78f,.84f,.83f),p-Vector3.up*.58f,10,8);
             foreach(int side in new[]{-1,1})
             {
                 var console=Part((side<0?"Port":"Starboard")+" navigation binnacle",new(side*3.09f,6.5f,-29.22f));
@@ -99,7 +109,7 @@ namespace Raid.Nereid.Editor
                 for(int j=0;j<2;j++)
                 {
                     var at=dial+Vector3.right*(j==0?-.33f:.33f)+Vector3.Cross(x,slope).normalized*.111f;
-                    Lens(console,at,x,slope,j==0?.21f:.15f,j==0?glass:cyan);
+                    BourdonGauge(console,at,x,slope,j==0?.21f:.15f,j==0?-37:62);
                 }
             }
             var bulk=Part("Bridge vector plot",new(2.06f,6.32f,-24.99f));

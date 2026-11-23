@@ -62,13 +62,13 @@ namespace Raid.Nereid.Editor
             // Colour, metalness, polished finish and emissive inlays occupy corresponding texels.
             // The ordinary URP/Lit maps remain directly paintable and replaceable in Unity.
             var chips=new (Material key, string rgb,float metal,float smooth,float light)[]{
-                (dark,"303D49",.35f,.35f,0),(hull,"314C58",.42f,.44f,0),(enamel,"4C7479",.28f,.40f,0),
-                (ceramic,"9DAFA8",.22f,.50f,0),(steel,"A4B6B9",.72f,.55f,0),(ochre,"D88837",.37f,.43f,0),
-                (rubber,"232A33",.09f,.27f,0),(deck,"505861",.41f,.39f,0),(warm,"FFBE72",.04f,.48f,1),
-                (cyan,"80F0EB",.03f,.48f,.90f),(alarm,"FF7052",.06f,.42f,.88f),
-                (glass,"375884",.40f,.69f,0),(water,"986B88",.15f,.45f,0) };
+                (dark,"353B3E",.37f,.27f,0),(hull,"465252",.35f,.32f,0),(enamel,"4D5A56",.28f,.34f,0),
+                (ceramic,"6A7068",.25f,.29f,0),(steel,"767C79",.68f,.46f,0),(ochre,"806548",.33f,.34f,0),
+                (rubber,"35373A",.04f,.22f,0),(deck,"4C524F",.49f,.34f,0),(warm,"E4C69C",.04f,.38f,.72f),
+                (cyan,"A5C4BF",.05f,.42f,.48f),(alarm,"AE6144",.06f,.43f,.46f),
+                (glass,"435758",.41f,.63f,0),(water,"53574C",.06f,.28f,0) };
             const int tile=128,size=tile*4;
-            var buffers=new[]{new Color32[size*size],new Color32[size*size],new Color32[size*size]};
+            var buffers=new[]{new Color32[size*size],new Color32[size*size],new Color32[size*size],new Color32[size*size]};
             cabinSwatches=new Dictionary<Material,Vector2>();
             for(int i=0;i<16;i++)
             {
@@ -81,17 +81,30 @@ namespace Raid.Nereid.Editor
                     float u=x/(tile-1f),v=y/(tile-1f);
                     float powder=Mathf.PerlinNoise(i*13.7f+u*4.4f,v*4.4f+1.9f)-.5f;
                     float brushed=Mathf.PerlinNoise(u*(1.4f+c.metal),v*(18+24*c.metal)+i*3.6f)-.5f;
-                    float pigment=1+(powder*.13f+brushed*.10f)*(1-c.light);
-                    float finish=Mathf.Clamp01(c.smooth+brushed*.21f+powder*.12f);
+                    // Short scuffs and displaced paint collect on pressed lips. On large panels variation stays broad.
+                    float scratch=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.74f,.90f,
+                        Mathf.PerlinNoise(u*3.1f+i*13.5f,v*61.0f+i*3.4f)));
+                    float crust=Mathf.PerlinNoise(i*3.71f+u*21f,v*16f);
+                    float bare=(i==4 || i==5)?scratch*.42f:0;
+                    float pitting=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.68f,.84f,crust))*(1-c.light);
+                    float pigment=1+(powder*.40f+brushed*.28f)*(1-c.light)-pitting*.13f;
+                    Color paint=Color.Lerp(rgb,new Color(.53f,.54f,.49f),bare);
+                    float finish=Mathf.Clamp01(c.smooth+brushed*.28f+powder*.22f-pitting*.20f+bare*.22f);
                     int index=(row*tile+y)*size+column*tile+x;
-                    buffers[0][index]=new Color(rgb.r*pigment,rgb.g*pigment,rgb.b*pigment,1);
+                    buffers[0][index]=new Color(paint.r*pigment,paint.g*pigment,paint.b*pigment,1);
                     buffers[1][index]=new Color(c.metal,0,0,finish);
                     buffers[2][index]=new Color(rgb.r*c.light,rgb.g*c.light,rgb.b*c.light);
+                    if(i>=13)InstrumentFinish(i,u,v,index,buffers);
+                    const float step=1f/(tile-1);
+                    float relief=FinishRelief(i,u,v);
+                    Vector3 normal=new Vector3((relief-FinishRelief(i,u+step,v))*1.85f,
+                        (relief-FinishRelief(i,u,v+step))*1.85f,1f).normalized;
+                    buffers[3][index]=new Color(normal.x*.5f+.5f,normal.y*.5f+.5f,normal.z*.5f+.5f);
                 }
             }
-            var maps=new Texture2D[3];
-            string[] names={"Anodized cabin finishes","Metal and smoothness","Luminous ceramics"};
-            for(int i=0;i<3;i++)
+            var maps=new Texture2D[4];
+            string[] names={"Anodized cabin finishes","Metal and smoothness","Luminous ceramics","Brushed and pitted relief"};
+            for(int i=0;i<maps.Length;i++)
             {
                 string path=FinishFolder+"/"+names[i]+".png";
                 if(!File.Exists(path))
@@ -100,7 +113,8 @@ namespace Raid.Nereid.Editor
                     texture.SetPixels32(buffers[i]);texture.Apply();File.WriteAllBytes(path,texture.EncodeToPNG());UnityEngine.Object.DestroyImmediate(texture);
                     AssetDatabase.ImportAsset(path);
                     var importer=(TextureImporter)AssetImporter.GetAtPath(path);
-                    importer.sRGBTexture=i!=1;importer.textureCompression=TextureImporterCompression.Uncompressed;
+                    if(i==3)importer.textureType=TextureImporterType.NormalMap;
+                    importer.sRGBTexture=i==0 || i==2;importer.textureCompression=TextureImporterCompression.Uncompressed;
                     importer.mipmapEnabled=true;importer.filterMode=FilterMode.Trilinear;importer.anisoLevel=2;importer.wrapMode=TextureWrapMode.Clamp;importer.SaveAndReimport();
                 }
                 maps[i]=AssetDatabase.LoadAssetAtPath<Texture2D>(path);
@@ -111,7 +125,8 @@ namespace Raid.Nereid.Editor
             m=new Material(Shader.Find("Universal Render Pipeline/Lit")){name="Cabin inlays",enableInstancing=true};
             m.SetTexture("_BaseMap",maps[0]);m.SetColor("_BaseColor",Color.white);
             m.SetTexture("_MetallicGlossMap",maps[1]);m.EnableKeyword("_METALLICSPECGLOSSMAP");m.SetFloat("_Smoothness",.87f);
-            m.SetTexture("_EmissionMap",maps[2]);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",Color.white*1.50f);
+            m.SetTexture("_BumpMap",maps[3]);m.EnableKeyword("_NORMALMAP");m.SetFloat("_BumpScale",.32f);
+            m.SetTexture("_EmissionMap",maps[2]);m.EnableKeyword("_EMISSION");m.SetColor("_EmissionColor",Color.white*.86f);
             AssetDatabase.CreateAsset(m,materialPath);return m;
         }
 

@@ -15,6 +15,7 @@ namespace Raid.Nereid.Editor
         readonly List<(int start,int count)> faces = new();
         readonly List<Material> finishes = new();
         readonly List<List<int>> indices = new();
+        readonly List<(int vertex,Vector2 atlasUV)> printed = new();
         readonly Vector3 pivot;
         internal readonly Transform node;
 
@@ -49,6 +50,20 @@ namespace Raid.Nereid.Editor
                 uv.Add(new Vector2(Vector3.Dot(p-points[0],along),Vector3.Dot(p-points[0],across)));
             }
             for (int i=1;i<points.Length-1;i++) { tris.Add(start); tris.Add(start+i); tris.Add(start+i+1); }
+        }
+
+        internal void PrintedFace(Material baseMaterial, int tile, Vector3 center, Vector3 u, Vector3 v,
+            float halfWidth, float halfHeight, params Vector3[] polygon)
+        {
+            int start=vertices.Count;
+            Face(baseMaterial,polygon);
+            var chip=new Vector2(((tile%4)+.5f)*.25f,((tile/4)+.5f)*.25f);
+            for(int i=0;i<polygon.Length;i++)
+            {
+                Vector3 delta=polygon[i]-center;
+                var offset=new Vector2(Vector3.Dot(delta,u.normalized)/halfWidth,Vector3.Dot(delta,v.normalized)/halfHeight);
+                printed.Add((start+i,chip+offset*.118f));
+            }
         }
 
         internal void Box(Material m, Vector3 c, Vector3 size, Quaternion rotation=default, float bevel=.055f)
@@ -175,6 +190,7 @@ namespace Raid.Nereid.Editor
                     foreach(int v in indices[i])swatchUV[v]=sample+detailUV[v];
                     triangles.AddRange(indices[i]);
                 }
+                foreach(var mark in printed)swatchUV[mark.vertex]=mark.atlasUV;
                 mesh=new Mesh{name=node.name,indexFormat=vertices.Count>65000?IndexFormat.UInt32:IndexFormat.UInt16};
                 mesh.SetVertices(vertices);mesh.uv=swatchUV;mesh.SetTriangles(triangles,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();
                 AssetDatabase.CreateAsset(mesh,path);

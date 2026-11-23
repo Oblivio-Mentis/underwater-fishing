@@ -20,7 +20,10 @@ namespace Raid.Nereid.Editor
                     jacket.Beam(dark,p,high,.20f,.22f);
                     jacket.Beam(steel,high,top,.18f,.17f);
                     jacket.Beam(enamel,p-Vector3.up*.41f,p,.20f,.12f);
-                    jacket.Beam(cyan,Vector3.Lerp(high,top,.19f)-Vector3.up*.09f,Vector3.Lerp(high,top,.78f)-Vector3.up*.09f,.052f,.041f);
+                    if(x==8.69f)
+                        HoodedLamp(jacket,Vector3.Lerp(high,top,.50f)-Vector3.up*.10f,Vector3.right,Vector3.forward,.45f,.18f);
+                    else
+                        SocketBolt(jacket,Vector3.Lerp(high,top,.36f)-Vector3.up*.093f,Vector3.right,Vector3.forward,.046f);
                 }
             }
             var control=Part("Ballast pressure compensator",new(8.43f,1.33f,-15.43f));
@@ -28,14 +31,21 @@ namespace Raid.Nereid.Editor
             var at=new Vector3(8.50f,1.34f,-15.46f);
             Casting(control,at,u,v,Shield(2.50f,.97f,.64f),.15f,ceramic,steel,hull,.90f);
             var head=at+new Vector3(-.49f,.015f,.16f);
-            Lens(control,head,u,v,.36f,glass);
-            for(int j=0;j<3;j++)Band(control,head+n*.115f,u,v,.31f,.259f,.018f,j<2?cyan:ochre,dark,10+j*100,91+j*100,7);
-            control.Beam(warm,head+n*.15f,head+n*.15f+new Vector3(.12f,.13f,0),.026f,.022f);
-            var valve=at+new Vector3(.49f,.02f,.16f);
-            Casting(control,valve,u,v,Shield(.75f,.63f,.72f),.05f,hull,enamel,dark);
-            for(int j=0;j<2;j++)
-                Casting(control,valve+new Vector3(0,.12f-j*.24f,.059f),u,v,Shield(.49f,.115f,.75f),.035f,j==0?cyan:steel,deck,dark);
-            control.Lamp("Pressure gauge wash",new Color(.49f,.80f,.88f),at+new Vector3(-.34f,.32f,.46f),6,4.6f);
+            BourdonGauge(control,head,u,v,.37f,-31);
+            var valve=at+new Vector3(.48f,.03f,.16f);
+            Casting(control,valve,u,v,Shield(.77f,.64f,.37f),.055f,hull,enamel,dark);
+            var arm=valve+n*.070f;
+            SocketBolt(control,arm,u,v,.108f);
+            var lever=arm+n*.060f;
+            control.Beam(deck,lever,lever-u*.165f+v*.17f,.066f,.07f);
+            control.Tube(ochre,lever-u*.165f+v*.17f,lever-u*.165f+v*.17f+n*.09f,.059f,-1,9);
+            foreach(float dx in new[]{-.92f,.92f})
+            {
+                SocketBolt(control,at+u*dx+v*.27f+n*.15f,u,v,.055f);
+                SocketBolt(control,at+u*dx-v*.27f+n*.15f,u,v,.055f);
+            }
+            control.Lamp("Pressure gauge wash",new Color(.82f,.86f,.81f),at+new Vector3(-.38f,.51f,.65f),2.8f,4.2f);
+
         }
 
         static void FitBerth()
@@ -58,16 +68,22 @@ namespace Raid.Nereid.Editor
                 Casting(shell,p,new Vector3(1,.25f,0).normalized,Vector3.forward,wing,.17f,k==0?ceramic:enamel,steel,dark,.82f);
             }
             var center=back+n*.265f+v*.13f;
-            Band(shell,center,u,v,.296f,.23f,.030f,steel,dark);
             var track=Part("Bunk reading lamp and pressure controls",new(5.40f,1.12f,3.06f));
-            Lens(track,center,u,v,.192f,warm);
-            for(int i=-1;i<=1;i+=2)
+            // The bunk is a wall-mounted field berth: a caged sleeper light above an upholstery pad
+            // and an offset service vent, cushioned face exposed to the animal.
+            Intake(track,center-u*.47f+v*.10f,u,v,.44f,.39f,4);
+            HoodedLamp(track,center+u*.30f+v*.27f,u,v,.57f,.21f);
+            var pad=center+u*.17f-v*.11f;
+            Casting(track,pad,u,v,Shield(.97f,.32f,.36f),.057f,rubber,deck,water,.94f);
+            for(int i=0;i<3;i++)
             {
-                var p=back+u*(i*.63f)+v*.19f+n*.27f;
-                Casting(track,p,u,v,Shield(.28f,.36f,.62f),.038f,dark,steel,ceramic);
-                Casting(track,p+n*.04f,u,v,Shield(.17f,.17f,.82f),.018f,i<0?cyan:ochre,dark,dark);
+                var seam=pad+n*.061f+u*(-.29f+i*.29f);
+                track.Tube(water,seam-v*.11f,seam+v*.11f,.012f,-1,6);
             }
-            track.Lamp("Bunk reading pool",new Color(1,.69f,.43f),a+new Vector3(-.55f,.09f,-.24f),10,4.3f);
+            foreach(float offset in new[]{-.69f,.69f})
+                SocketBolt(track,back+u*offset-v*.24f+n*.272f,u,v,.046f);
+            track.Lamp("Bunk reading pool",new Color(.95f,.82f,.63f),a+new Vector3(-.65f,.34f,.35f),3.4f,3.7f);
+
         }
     }
 }
