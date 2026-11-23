@@ -8,7 +8,7 @@ namespace Raid.Nereid
     internal sealed class GoshaDeck
     {
         const float Pivot=.14f, StairX=-4.7f, Gallery=1.5f;
-        readonly Vector3[] marks={
+        public static readonly Vector3[] DefaultMarks={
             new(4,Pivot,-14),new(0,Pivot,-14),new(0,Pivot,-9),new(0,Pivot,-7),
             new(3,Pivot,-6),new(3,Pivot,-2),new(3,Pivot,1.6f),new(0,Pivot,2),
             new(-3,Pivot,1.6f),new(-3,Pivot,-2),new(-3,Pivot,-6),
@@ -35,10 +35,14 @@ namespace Raid.Nereid
         readonly int[] first;
         readonly bool[] visited;
         bool baked;
-        public GoshaDeck(){int n=marks.Length;edges=new float[n,n];cost=new float[n];first=new int[n];visited=new bool[n];}
+        public GoshaDeck(){int n=DefaultMarks.Length;edges=new float[n,n];cost=new float[n];first=new int[n];visited=new bool[n];}
         Transform Hull=>NereidVessel.Active.transform;
-        public Vector3 Mark(int id)=>Hull.TransformPoint(marks[id]);
-        public int Count=>marks.Length;
+        public Vector3 Mark(int id)
+        {
+            var nodes=NereidDeckNavigation.Active?.companionWaypoints;
+            return nodes!=null && id<nodes.Length && nodes[id] ? nodes[id].position : Hull.TransformPoint(DefaultMarks[id]);
+        }
+        public int Count=>DefaultMarks.Length;
 
         public Vector3 RecoveryMark(Vector3 position)
         {
@@ -55,8 +59,8 @@ namespace Raid.Nereid
             var vessel=NereidVessel.Active;
             if(vessel==null || !vessel.ContainsSealed(world) || NereidAirlock.Active.Contains(world))return false;
             var p=Hull.InverseTransformPoint(world);
-            if(vessel.DeckExtension!=null && NereidDeckExtension.TryGround(p,out float floor))return p.y<=floor+1.22f;
-            return p.z<6.72f && p.y<3.35f && (new Vector2(p.x,p.z+3)).sqrMagnitude>3.72f;
+            if((vessel.DeckExtension!=null || NereidDeckNavigation.Active) && NereidDeckExtension.TryGround(p,out float floor))return p.y<=floor+1.22f;
+            return p.z<6.72f && p.y<3.35f && (NereidDeckNavigation.Active || (new Vector2(p.x,p.z+3)).sqrMagnitude>3.72f);
         }
         public bool Mouth(Vector3 world)
         {
@@ -81,7 +85,7 @@ namespace Raid.Nereid
         public Vector3 Ground(Vector3 world)
         {
             var p=Hull.InverseTransformPoint(world);
-            float floor=NereidVessel.Active.DeckExtension!=null && NereidDeckExtension.TryGround(p,out var extensionFloor)
+            float floor=(NereidVessel.Active.DeckExtension!=null || NereidDeckNavigation.Active) && NereidDeckExtension.TryGround(p,out var extensionFloor)
                 ? extensionFloor : Surface(p);
             p.y=floor+Pivot;
             return Hull.TransformPoint(p);

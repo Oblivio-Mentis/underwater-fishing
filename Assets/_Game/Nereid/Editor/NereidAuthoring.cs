@@ -29,6 +29,8 @@ namespace Raid.Nereid.Editor
         {
             if(EditorApplication.isPlaying||UnityEngine.SceneManagement.SceneManager.GetActiveScene().path!=Scene)
                 throw new InvalidOperationException("NEREID authoring requires the stopped InterfaceVerticalSlice scene");
+            if(Object.FindAnyObjectByType<NereidShipLayout>()!=null)
+                throw new InvalidOperationException("This scene uses editable NEREID room prefabs. Open Tools / NEREID to edit the installed vessel.");
             if(UnityEngine.SceneManagement.SceneManager.GetActiveScene().isDirty)throw new InvalidOperationException("Save scene before rebuild");
             if(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Game/Nereid/Art/Nereid_Interior.fbx")==null)
                 throw new InvalidOperationException("Import Nereid_Interior.fbx and Nereid_Exterior.fbx first");

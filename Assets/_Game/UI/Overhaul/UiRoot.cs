@@ -427,7 +427,10 @@ namespace Raid.UI
             if(station==null&&ShipConsole.Stations.Count>0)return;
             if(station!=null && !station.IsMonitor)
             {
-                ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
+                if(station.kind==ShipConsoleKind.CargoControl)
+                    Send(WorldAction.Hoist);
+                else
+                    ToggleFishRoute(station.kind==ShipConsoleKind.Feed);
                 return;
             }
             Context.SelectedConsole=station;

@@ -132,7 +132,7 @@ namespace Raid
         [ServerRpc]
         public void RequestRespawn()
         {
-            if(CanRespawn)ReviveAt(new Vector3((OwnerId%4-1.5f)*1.05f,1.2f,1));
+            if(CanRespawn)ReviveAt(Nereid.NereidDeckNavigation.CrewSpawn(OwnerId,new Vector3((OwnerId%4-1.5f)*1.05f,1.2f,1)));
         }
 
         void ReviveAt(Vector3 position)

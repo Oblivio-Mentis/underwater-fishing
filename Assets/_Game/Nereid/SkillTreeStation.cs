@@ -21,7 +21,7 @@ namespace Raid.Nereid
         {
             var vessel=NereidVessel.Active;
             if(vessel==null || vessel.gameObject.scene!=scene || vessel.DeckExtension==null ||
-                vessel.GetComponentInChildren<SkillTreeStation>()!=null)return;
+                vessel.GetComponentInChildren<NereidShipLayout>()!=null || vessel.GetComponentInChildren<SkillTreeStation>()!=null)return;
 
             var station=new GameObject("SkillTreeConsole");
             station.SetActive(false);

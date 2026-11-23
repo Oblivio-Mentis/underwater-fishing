@@ -377,7 +377,7 @@ namespace Raid
             _helplessTime = state.Oxygen <= 0f ? _helplessTime+Time.fixedDeltaTime : 0f;
             if (vesselHere==null && _helplessTime >= tuning.helplessWindow)
             {
-                Teleport(new Vector3(0,1.2f,1));
+                Teleport(Nereid.NereidDeckNavigation.CrewSpawn(OwnerId,new Vector3(0,1.2f,1)));
                 Rescue();
             }
         }

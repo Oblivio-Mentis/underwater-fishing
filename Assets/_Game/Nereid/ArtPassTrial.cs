@@ -28,6 +28,7 @@ namespace Raid.Nereid
         {
             public string name;
             public int depth, samples;
+            public long workingSetBytes;
             public Vector3 eye, direction;
             public bool inside;
             public double frameMedianMs, frameP95Ms, cpuMedianMs, cpuP95Ms, gpuMedianMs, gpuP95Ms;
@@ -143,6 +144,8 @@ namespace Raid.Nereid
             if(GraphicsSettings.currentRenderPipeline is UniversalRenderPipelineAsset urp)
             {result.pipeline=urp.name;result.msaa=urp.msaaSampleCount;result.renderScale=urp.renderScale;}
             foreach(var mark in marks)yield return CaptureMark(mark);
+            if(Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-transit-film")>=0)
+                yield return NereidTransitFilm.Record(world,eye,folder);
         }
 
         IEnumerator CaptureMark(Mark mark)
@@ -227,6 +230,7 @@ namespace Raid.Nereid
             var sample=new Sample{name=mark.name,depth=mark.depth,eye=eye.transform.position,direction=eye.transform.forward,inside=owner.IsInside};
             if(mark.benchmark && Array.IndexOf(Environment.GetCommandLineArgs(),"-raid-art-timing")>=0)
                 yield return Measure(sample);
+            using(var process=System.Diagnostics.Process.GetCurrentProcess()) sample.workingSetBytes=process.WorkingSet64;
             result.views.Add(sample);Write();
         }
 

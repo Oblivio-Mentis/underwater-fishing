@@ -54,6 +54,8 @@ namespace Raid.Nereid
         public bool ContainsSealed(Vector3 point)
         {
             if(airlock!=null&&airlock.Contains(point))return !airlock.IsSubmerged(point+Vector3.up*.6f);
+            var navigation=NereidDeckNavigation.Active;
+            if(navigation && navigation.rooms) return navigation.rooms.ContainsSealed(point);
             point=transform.InverseTransformPoint(point);
             if(DeckExtension!=null && NereidDeckExtension.TryGround(point,out _))return true;
             if(sealedRooms==null)return false;

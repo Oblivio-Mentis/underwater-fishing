@@ -111,7 +111,8 @@ namespace Raid
             next.WaveActive = true; next.WavePosition = tuning.waveSpawn;
             next.WaveHeading = Vector3.forward;
             var vessel = Nereid.NereidVessel.Active;
-            reservoirWall = vessel == null ? null : vessel.transform.Find("Cylindrical tank collision")?.GetComponent<Collider>();
+            var navigation = Nereid.NereidDeckNavigation.Active;
+            reservoirWall = navigation ? navigation.reservoirGlass : vessel == null ? null : vessel.transform.Find("Cylindrical tank collision")?.GetComponent<Collider>();
             next.WaveHealth = tuning.waveHealth * Mathf.Max(1, masteredDepth - 1) * Mathf.Lerp(.5f, 1f, waveDeficit);
             next.Message = "ГОЛОД: мелководный налётчик идёт к резервуару! Защитите запас гарпунами.";
             waveRemaining = Mathf.Max(1f, tuning.waveSeconds); stockCooldown = 0f; stockAttacks = 0; throughAirlock = false;factoryWaypoint=0;
@@ -132,8 +133,10 @@ namespace Raid
             if (next.WaveActive)
             {
                 waveRemaining -= dt;
-                bool factoryPath=factoryWaveRoute!=null&&factoryWaveRoute.Length>0;
-                Vector3 goal = factoryPath?factoryWaveRoute[Mathf.Min(factoryWaypoint,factoryWaveRoute.Length-1)]:throughAirlock ? tuning.reservoirPoint + tuning.reservoirApproachOffset : tuning.airlockWaypoint;
+                var approach = Nereid.NereidDeckNavigation.Active?.raiderApproach;
+                int waypointCount = approach?.Length ?? factoryWaveRoute?.Length ?? 0;
+                bool factoryPath = waypointCount > 0;
+                Vector3 goal = approach != null && waypointCount > 0 ? approach[Mathf.Min(factoryWaypoint,waypointCount-1)].position : factoryPath?factoryWaveRoute[Mathf.Min(factoryWaypoint,waypointCount-1)]:throughAirlock ? tuning.reservoirPoint + tuning.reservoirApproachOffset : tuning.airlockWaypoint;
                 Vector3 delta = goal - next.WavePosition;
                 bool atTank = false;
                 if (delta.sqrMagnitude > .0001f)
@@ -146,11 +149,11 @@ namespace Raid
                         step + .03f, obstacleMask, QueryTriggerInteraction.Ignore);
                     if (blocked) step = Mathf.Clamp(hit.distance - .03f, 0, step);
                     next.WavePosition += direction * step;
-                    atTank = blocked && hit.collider == reservoirWall && hit.distance <= .04f && factoryPath && factoryWaypoint == factoryWaveRoute.Length - 1;
+                    atTank = blocked && hit.collider == reservoirWall && hit.distance <= .04f && factoryPath && factoryWaypoint == waypointCount - 1;
                 }
                 if (atTank || Vector3.Distance(next.WavePosition, goal) < .2f)
                 {
-                    if(factoryPath&&factoryWaypoint<factoryWaveRoute.Length-1)factoryWaypoint++;
+                    if(factoryPath&&factoryWaypoint<waypointCount-1)factoryWaypoint++;
                     else if (!factoryPath&&!throughAirlock) throughAirlock = true;
                     else if ((Nereid.NereidVessel.Active == null || atTank) && (stockCooldown -= dt) <= 0f)
                     {

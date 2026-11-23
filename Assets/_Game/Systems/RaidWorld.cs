@@ -203,7 +203,7 @@ namespace Raid
             bool factory=Nereid.NereidVessel.Active!=null;
             if(factory && (action==WorldAction.LoadCargo || action==WorldAction.ProcessAll || action==WorldAction.FeedAll))
             {Respond(sender,requestId,false,"unavailable");return;}
-            if(factory && action==WorldAction.Hoist && !CargoDispatch.CanUse(diver))
+            if(factory && action==WorldAction.Hoist && !CargoDispatch.CanUse(diver) && !ShipConsole.CanUseKind(diver,ShipConsoleKind.CargoControl))
             {Respond(sender,requestId,false,"range");return;}
             bool stationCommand=!cargo && ShipConsole.Stations.Count>0;
             if(!cargo && !diver.IsInside) { Respond(sender,requestId,false,"onboard"); return; }
@@ -277,7 +277,7 @@ namespace Raid
             depth.Value=pendingDepth;
             team.expeditionDepth=pendingDepth;
             Save();
-            for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(new Vector3((i-2)*1.5f,1.2f,1));
+            for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(Nereid.NereidDeckNavigation.CrewSpawn(i,new Vector3((i-2)*1.5f,1.2f,1)));
             foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(fish.depthTier==pendingDepth);
             foreach(var loot in FindObjectsByType<LootActor>()) loot.SetDepth(pendingDepth);
             if(threats!=null) threats.SetDepth(pendingDepth);

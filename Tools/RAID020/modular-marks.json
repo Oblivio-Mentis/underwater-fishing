@@ -1,0 +1,196 @@
+{
+  "cameras": [
+    {
+      "name": "exterior",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 19,
+        "y": 4,
+        "z": -27
+      },
+      "look": {
+        "x": 0,
+        "y": 1,
+        "z": -13
+      },
+      "station": ""
+    },
+    {
+      "name": "aquarium",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 3.35,
+        "y": 0.54,
+        "z": 1.5
+      },
+      "look": {
+        "x": -0.6,
+        "y": -0.95,
+        "z": -3.6
+      },
+      "station": ""
+    },
+    {
+      "name": "workshop",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0.9,
+        "y": 0.55,
+        "z": -19.4
+      },
+      "look": {
+        "x": 3.3,
+        "y": 1,
+        "z": -22.4
+      },
+      "station": ""
+    },
+    {
+      "name": "bridge",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 2.7,
+        "y": 5.43,
+        "z": -25.6
+      },
+      "look": {
+        "x": -0.5,
+        "y": 5.9,
+        "z": -28.5
+      },
+      "station": ""
+    },
+    {
+      "name": "processor",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -1.4,
+        "y": 0.54,
+        "z": -8.8
+      },
+      "look": {
+        "x": -4.85,
+        "y": 0.9,
+        "z": -10
+      },
+      "station": ""
+    },
+    {
+      "name": "feeding",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.75,
+        "y": 0.55,
+        "z": 5.2
+      },
+      "look": {
+        "x": 0.5,
+        "y": 1.25,
+        "z": 8.9
+      },
+      "station": ""
+    },
+    {
+      "name": "cargo",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -0.8,
+        "y": 0.55,
+        "z": -14.75
+      },
+      "look": {
+        "x": -4.85,
+        "y": 0.88,
+        "z": -14.25
+      },
+      "station": ""
+    },
+    {
+      "name": "airlock",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 1.7,
+        "y": 0.55,
+        "z": -14
+      },
+      "look": {
+        "x": 7.9,
+        "y": 1.1,
+        "z": -14
+      },
+      "station": ""
+    },
+    {
+      "name": "gosha",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 2.45,
+        "y": 0.55,
+        "z": 1.35
+      },
+      "look": {
+        "x": 4.65,
+        "y": 0.45,
+        "z": 2.65
+      },
+      "station": ""
+    },
+    {
+      "name": "reservoir-monitor",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "station": "Reservoir"
+    },
+    {
+      "name": "skills-monitor",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "station": "SkillTree"
+    },
+    {
+      "name": "navigation-monitor",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "look": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "station": "Depths"
+    }
+  ]
+}

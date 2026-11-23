@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum ShipConsoleKind { Process, Feed, Workshop, Depths, Reservoir, SkillTree }
+    public enum ShipConsoleKind { Process, Feed, Workshop, Depths, Reservoir, SkillTree, CargoControl }
 
     // Physical, scene-authored access points. Server validates its own station list.
     public sealed class ShipConsole : MonoBehaviour
@@ -24,7 +24,7 @@ namespace Raid
             }
         }
         public static readonly List<ShipConsole> Stations=new List<ShipConsole>();
-        public string Caption => kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Workshop?"Сервисный пульт":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
+        public string Caption => kind==ShipConsoleKind.CargoControl?"Грузовой подъёмник":kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Workshop?"Сервисный пульт":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
         void OnEnable() { if(kind!=ShipConsoleKind.Workshop && !Stations.Contains(this))Stations.Add(this); }
         void OnDisable() { Stations.Remove(this); }
         public bool InRange(DiverMotor diver) => diver!=null && (diver.transform.position-transform.position).sqrMagnitude<=range*range;
