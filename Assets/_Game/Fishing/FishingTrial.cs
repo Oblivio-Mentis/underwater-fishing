@@ -650,7 +650,7 @@ namespace Raid
         private IEnumerator Reel(FishActor fish)
         {
             bool pulling = true;
-            float deadline = Time.unscaledTime + 65;
+            float deadline = Time.unscaledTime + (fish.RequiresPartner ? 130 : 65);
             long capturedId = fish.CargoId;
             currentFight = new List<FishBehaviour>();
             float nextPeerSample = 0;
