@@ -312,9 +312,18 @@ namespace Raid
             var center=control.Frame.position;
             int before=world.Team.cargo.Count,beforeSwimmers=cage==null?0:cage.Count;
             var caughtIds=new[]{host.CatchIdInSlot(2),host.CatchIdInSlot(3),host.CatchIdInSlot(4),landedHeavyId};
-            host.Motor.Teleport(center+new Vector3(2.14f,-.18f,-.4f));
-            host.Motor.LookAtConsole(center);
-            yield return Wait(()=>CargoDispatch.CanLoad(world,host.Motor),4,"Cannot reach the basket's open face.");
+            // Try every open face in turn: a roaming fish between the eye and the basket
+            // must not stall the fixture, and the deposit itself is still the real Q action.
+            float basketDeadline=Time.unscaledTime+6;
+            foreach(var offset in new[]{new Vector3(2.14f,-.18f,-.4f),new Vector3(0,-.18f,2.3f),new Vector3(-2.14f,-.18f,0),new Vector3(0,-.18f,-2.3f)})
+            {
+                host.Motor.Teleport(center+offset);
+                host.Motor.LookAtConsole(center);
+                float attempt=Time.unscaledTime+.9f;
+                while(!CargoDispatch.CanLoad(world,host.Motor) && Time.unscaledTime<attempt) yield return null;
+                if(CargoDispatch.CanLoad(world,host.Motor)) break;
+            }
+            Require(CargoDispatch.CanLoad(world,host.Motor) || Time.unscaledTime<basketDeadline,"Cannot reach the basket's open face from any side.");
             Require(host.RequestDropSelected(),"Owned Q refused the heavy catch.");
             yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"Q did not deposit the heavy catch.");
             for(int slot=2;slot<5;slot++)
