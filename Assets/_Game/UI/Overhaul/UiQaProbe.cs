@@ -285,6 +285,12 @@ namespace Raid.UI
                 world.RequestGosha(r.action=="gosha_pet"?GoshaAction.Pet:GoshaAction.PickUp);
                 return;
             }
+            if(r.action=="record")
+            {
+                if(r.value=="stop")FishingRecorder.Stop();
+                else FishingRecorder.Begin(Path.Combine(directory,string.IsNullOrEmpty(r.name)?"clip":r.name),r.number>0?r.number:20,r.number2>0?(int)r.number2:20);
+                return;
+            }
             if(r.action=="capture")
             {
                 string leaf=Path.GetFileName(string.IsNullOrEmpty(r.value)?r.name:r.value);
