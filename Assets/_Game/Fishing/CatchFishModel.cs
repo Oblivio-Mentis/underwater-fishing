@@ -16,7 +16,9 @@ namespace Raid
         private Transform tail;
         public Transform Tail => tail;
         public long CargoId { get; internal set; }
-        private float phase, strokeWeight;
+        private float phase, strokeWeight, speedWeight, hitRecoil;
+        private int seenHook;
+        private Vector3 lastPosition;
         private bool ray;
         private FishActor actor;
         private float escapeAt = -1;
@@ -71,6 +73,21 @@ namespace Raid
                 transform.localScale = Vector3.one * (.65f*Mathf.Clamp01(2.3f-age));
             }
             bool burst = escapeAt >= 0 || actor != null && (actor.Mode == FishMode.Struggling || actor.Mode == FishMode.Escaped || actor.Startled);
+            // Actual travel speed drives tail frequency and amplitude; a hover barely moves, a surge whips.
+            float dt=Mathf.Max(Time.deltaTime,.0001f);
+            Vector3 anchor=transform.parent==null?transform.position:transform.parent.position;
+            float travel=Vector3.Distance(anchor,lastPosition)/dt;
+            lastPosition=anchor;
+            if(actor!=null)
+            {
+                var behaviour=actor.Behaviour;
+                float wanted=Mathf.InverseLerp(.25f,4.5f,travel);
+                if(behaviour==FishBehaviour.Hover||behaviour==FishBehaviour.Weakened)wanted*=.55f;
+                if(behaviour==FishBehaviour.Surge||behaviour==FishBehaviour.Flee||behaviour==FishBehaviour.LastEscape)wanted=Mathf.Max(wanted,.85f);
+                speedWeight=Mathf.MoveTowards(speedWeight,Mathf.Clamp01(wanted),dt*4f);
+                if(actor.HookSequence!=seenHook){seenHook=actor.HookSequence;if(seenHook>0)hitRecoil=1;}
+            }
+            hitRecoil=Mathf.MoveTowards(hitRecoil,0,dt*4.2f);
             float clock=Time.time, offset=phase;
             if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
             {
@@ -82,16 +99,19 @@ namespace Raid
             // The head leads each stroke; the hinged caudal fin follows out of phase.
             // Animate the meshes that own the hit colliders so an attached bolt rides
             // the same moving surface for the angler and observers.
-            strokeWeight=Mathf.MoveTowards(strokeWeight,burst?1f:0f,Time.deltaTime*6f);
+            strokeWeight=Mathf.MoveTowards(strokeWeight,Mathf.Max(burst?1f:0f,speedWeight),Time.deltaTime*6f);
             float cruise=clock*(ray?3.7f:7.1f)+offset, sprint=clock*14f+offset;
             float lead=Mathf.Lerp(Mathf.Sin(cruise),Mathf.Sin(sprint),strokeWeight);
-            float whip=Mathf.Lerp(Mathf.Sin(cruise-.9f)*25f,Mathf.Sin(sprint-.9f)*39f,strokeWeight);
-            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,ray?whip*.42f:whip,0);
+            float amplitude=Mathf.Lerp(.55f,1f,Mathf.Max(strokeWeight,speedWeight));
+            float whip=Mathf.Lerp(Mathf.Sin(cruise-.9f)*25f,Mathf.Sin(sprint-.9f)*39f,strokeWeight)*amplitude;
+            // Hook shock: a short asymmetric flinch of the whole tail, then back to the swim stroke.
+            float flinch=hitRecoil>0?Mathf.Sin(hitRecoil*Mathf.PI)*Mathf.Sin(hitRecoil*22f)*28f:0;
+            tail.localRotation=Quaternion.Euler(ray?whip*.52f:0,(ray?whip*.42f:whip)+flinch,0);
             if(actor!=null)
             {
                 float bank=ray?8f:3.5f;
-                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.8f,
-                    lead*Mathf.Lerp(3.5f,8f,strokeWeight),Mathf.Sin(cruise-.6f)*bank);
+                transform.localRotation=Quaternion.Euler(Mathf.Sin(cruise*.48f)*1.8f-flinch*.12f,
+                    lead*Mathf.Lerp(3.5f,8f,strokeWeight)*amplitude+flinch*.25f,Mathf.Sin(cruise-.6f)*bank+flinch*.3f);
             }
         }
 

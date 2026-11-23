@@ -336,12 +336,13 @@ namespace Raid
             bool collidable = !visual.Reserved && visual.Active && Mode != FishMode.Transported && Mode != FishMode.Captured;
             bool visible = visual.Active && Mode != FishMode.Transported && !visual.Stowed && !IsHeldByLocalPlayer;
             PresentWake(visual,visible && !visual.Reserved,snap);
+            PresentFx(visual,visible && !visual.Reserved);
             if(_model!=null && _model.TryGetComponent<CatchFishModel>(out var specimen) && specimen.CargoId!=CargoId)specimen.CargoId=CargoId;
             foreach (var body in _renderers) body.enabled = visible;
             if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = collidable;
         }
 
-        private void OnDestroy() => DisposeWake();
+        private void OnDestroy() { DisposeWake(); DisposeFx(); }
 
         private void OnSnapshotChanged(FishSnapshot previous, FishSnapshot next, bool asServer)
         {
