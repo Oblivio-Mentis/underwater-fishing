@@ -57,6 +57,17 @@ namespace Raid
             var angles=Quaternion.LookRotation(direction).eulerAngles;
             _yaw=angles.y;_pitch=Mathf.Clamp(Mathf.DeltaAngle(0,angles.x),-85,85);
         }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private Vector3 qaSwimTarget;
+        private float qaSwimUntil;
+
+        internal void QaSwimToward(Vector3 point, float seconds)
+        {
+            if (!IsOwner) return;
+            qaSwimTarget = point;
+            qaSwimUntil = Time.unscaledTime + seconds;
+        }
+#endif
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
         public bool IsWalking => UsesIndoorWalking(_state.Value.Position);
@@ -210,7 +221,18 @@ namespace Raid
             _nextSend = Time.unscaledTime + Mathf.Max(0.02f, tuning.sendInterval);
             Vector2 move = controlling ? _move.ReadValue<Vector2>() : Vector2.zero;
             float vertical = walking ? (controlling&&_localJumpQueued?1f:0f) : controlling ? _rise.ReadValue<float>() - _sink.ReadValue<float>() : 0f;
-            SubmitInput(new Vector3(move.x, vertical, move.y), _yaw, _pitch, controlling && _sprint.IsPressed());
+            bool sprint = controlling && _sprint.IsPressed();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (!walking && !UI.UiInputGate.Blocked && Time.unscaledTime < qaSwimUntil &&
+                (qaSwimTarget - transform.position).sqrMagnitude > 9f)
+            {
+                LookAtConsole(qaSwimTarget);
+                move = Vector2.up;
+                vertical = 0;
+                sprint = true;
+            }
+#endif
+            SubmitInput(new Vector3(move.x, vertical, move.y), _yaw, _pitch, sprint);
             _localJumpQueued=false;
         }
 

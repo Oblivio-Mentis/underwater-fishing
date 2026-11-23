@@ -18,7 +18,7 @@ namespace Raid.UI
     [DefaultExecutionOrder(350)]
     public sealed class UiQaProbe : MonoBehaviour
     {
-        [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2; }
+        [Serializable] public sealed class Request { public string id,action,name,value;public float number,number2;public Vector3 point; }
         [Serializable] public sealed class Snapshot
         {
             public bool dead,consumed,canReturn,hypoxic,pointerReserved;
@@ -239,6 +239,7 @@ namespace Raid.UI
                 bool accepted = tool != null && (r.action == "slot" ? tool.SelectSlot(Mathf.RoundToInt(r.number))
                     : tool.QaHoldOwned(r.action == "fish_grip", r.number));
                 if (!accepted) throw new InvalidOperationException("Owned fishing controls are currently unavailable");
+                if (r.action == "fish_reel") tool.Motor.QaSwimToward(r.point, r.value == "follow" ? 1 : 0);
                 return;
             }
             if(r.action=="drop_selected" || r.action=="pickup_drop")
