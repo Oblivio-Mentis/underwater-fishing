@@ -66,8 +66,9 @@ namespace Raid.Nereid.Editor
             }
             var instruments=layout.GetComponentsInChildren<NereidInstrument>();
             var stations=Object.FindObjectsByType<ShipConsole>();
-            Check(instruments.Length==6 && stations.Length==6 && stations.Select(s=>s.kind).Distinct().Count()==6,
-                "Six operational stations and six instruments with unique controls.");
+            Check(instruments.Length==3 && instruments.All(i=>i.console && i.console.IsMonitor) &&
+                  stations.Length==6 && stations.Select(s=>s.kind).Distinct().Count()==6,
+                "Three crew displays: reservoir, navigation and upgrades. Three action keys are independent.");
             var discharge=stations.Single(s=>s.kind==ShipConsoleKind.Process);
             var feeding=stations.Single(s=>s.kind==ShipConsoleKind.Feed);
             var hallRoom=layout.Socket(NereidRoomRole.Reservoir).parent;
@@ -76,8 +77,9 @@ namespace Raid.Nereid.Editor
                   separation>.15f && separation<2f && !discharge.GetComponentInParent<NereidInstrument>() &&
                   !feeding.GetComponentInParent<NereidInstrument>(),
                 "The two physical switches are adjacent in the aquarium hall, independent of display housings.");
-            Check(instruments.Count(i=>!i.console)==2,
-                "The machinery keeps two separate status displays.");
+            var cargoKey=stations.Single(s=>s.kind==ShipConsoleKind.CargoControl);
+            Check(cargoKey.dispatchButton && cargoKey.dispatchButton.hitFace && !cargoKey.GetComponent<NereidInstrument>(),
+                "The internal hoist control has a pressable cap without a screen.");
             Physics.SyncTransforms();
             var centre=(discharge.screenAnchor.position+feeding.screenAnchor.position)*.5f;
             var operatorEye=centre-(discharge.screenAnchor.forward+feeding.screenAnchor.forward).normalized*1.25f;
