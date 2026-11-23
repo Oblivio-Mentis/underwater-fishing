@@ -112,13 +112,13 @@ namespace Raid.Nereid
         }
         bool EvadesReef()
         {
-            // Both swimmers encounter the same live seabed trap. Only G3 rejects a clear route towards the jaws.
+            // Both swimmers encounter the same live seabed trap. The trained swimmer rejects a clear route towards the jaws.
             for(int i=0;i<12;i++)
             {
                 var axis=Quaternion.Euler(0,30*i,0)*Vector3.forward;
                 var center=ThreatDirector.ClamBed+Vector3.up*.7f;var from=center-axis*4.85f;
-                var direct=new GoshaSwimRoute().Step(from,center+axis,.65f,true,false);
-                var safe=new GoshaSwimRoute().Step(from,center+axis,.65f,true,true);
+                var direct=new GoshaSwimRoute().Step(from,center+axis,.65f,true,0);
+                var safe=new GoshaSwimRoute().Step(from,center+axis,.65f,true,.40f);
                 if(Vector3.Dot(direct-from,axis)>.63f && Vector3.Distance(direct,safe)>.2f && GoshaSwimRoute.Risk(safe)<GoshaSwimRoute.Risk(direct))return true;
             }
             return false;
@@ -140,24 +140,24 @@ namespace Raid.Nereid
             world.PreparePetOrderTrial(host,guest);
             yield return Wait("Remote owner sees their two unlocked keys on the HUD",()=>PeerSignal()?.hint?.Contains("H —")==true);
             world.RequestGoshaOrder(GoshaOrder.CatchFish);
-            yield return Wait("G1 alone cannot order fish",()=>world.LastGoshaOrderReply=="Эта команда ещё не изучена");
-            Check("Caller has only the G1 hint",world.GoshaTrainingHint(host).Contains("Ко мне",StringComparison.OrdinalIgnoreCase) && !world.GoshaTrainingHint(host).Contains("H"));
+            yield return Wait("Recall alone cannot order fish",()=>world.LastGoshaOrderReply=="Эта команда ещё не изучена");
+            Check("Caller has only the recall hint",world.GoshaTrainingHint(host).Contains("Ко мне",StringComparison.OrdinalIgnoreCase) && !world.GoshaTrainingHint(host).Contains("H"));
             var hull=NereidVessel.Active.transform;
             host.Teleport(hull.TransformPoint(new Vector3(2.8f,.52f,2.85f)));
             guest.Teleport(hull.TransformPoint(new Vector3(2.8f,.52f,-12.6f)));
             world.RequestGoshaOrder(GoshaOrder.Come);
-            yield return Wait("G1 started coming to its caller",()=>world.Gosha.Mode==GoshaMode.Coming);
-            yield return Wait("G1 reached the caller on foot",()=>world.LastGoshaOrderReply=="Гоша рядом");
+            yield return Wait("Recall started coming to its caller",()=>world.Gosha.Mode==GoshaMode.Coming);
+            yield return Wait("Recall reached the caller on foot",()=>world.LastGoshaOrderReply=="Гоша рядом");
             world.ResetGosha();
             Check("Depth-transition reset puts Gosha back on board and preserves the shared cooldown",
                 world.Gosha.Mode==GoshaMode.Roaming && world.OrderRemaining(host)>0);
-            world.Team.Player(world.ProgressKey(host)).skills.Add(SkillId.G2);
+            world.Team.Player(world.ProgressKey(host)).skills.Add(SkillTreeDefinition.Id(SkillLine.Fetch,1));
             result.baseRadius=world.OrderRadius(host);result.expertRadius=world.OrderRadius(guest);
             result.baseCooldown=world.OrderCooldown(host);result.expertCooldown=world.OrderCooldown(guest);
-            Check("G4 gives exactly 25% less cooldown and a larger search radius",Mathf.Abs(result.expertCooldown/result.baseCooldown-.75f)<.001f && result.expertRadius>result.baseRadius);
+            Check("Trained recall and delivery shorten cooldown and trained fetch extends range",result.expertCooldown<result.baseCooldown && result.expertRadius>result.baseRadius);
             PeerKey("H");
             yield return Wait("Other player shares the current order cooldown",()=>PeerSignal()?.reply?.StartsWith("Гоша отдыхает")==true);
-            Check("G3 swimmer diverts around the real reef trap",EvadesReef());
+            Check("Trained swimmer diverts around the real reef trap",EvadesReef());
             yield return Wait("A free real small fish entered the current habitat",()=>FindObjectsByType<FishActor>().Any(f=>f.IsAvailableForGosha),60);
             yield return Wait("Expert cooldown ended before ordinary cooldown",()=>world.OrderRemaining(guest)<=0 && world.OrderRemaining(host)>0,result.baseCooldown+4);
             PeerKey("H");

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum GoshaOrder : byte { Come, CatchFish }
+    public enum GoshaOrder : byte { Come, CatchFish, Follow }
 
     public sealed partial class RaidWorld
     {
@@ -13,8 +13,8 @@ namespace Raid
         FishActor orderFish;
         long orderFishId;
         string orderProfile;
-        bool carefulSwimmer, clearingSeaDoor;
-        float lastOrderAt = float.NegativeInfinity, orderEnds, pocketWait;
+        bool followingOrder, clearingSeaDoor;
+        float caution, lastOrderAt = float.NegativeInfinity, orderEnds, pocketWait;
         Vector3 fishWaterPosition;
         readonly GoshaSwimRoute swimRoute = new();
 
@@ -23,7 +23,11 @@ namespace Raid
 
         public string GoshaTrainingHint(DiverMotor diver)
         {
-            if(diver==null || !Gosha.Active || View?.goshaTamed!=true || !diver.IsOwner || LocalProgress?.skills.Contains(SkillId.G1)!=true)return "";
+            if(diver==null || !Gosha.Active || View?.goshaTamed!=true || !diver.IsOwner || LocalProgress==null)return "";
+            bool recall=SkillTreeDefinition.Rank(LocalProgress.skills,SkillLine.Recall)>0;
+            bool fetch=SkillTreeDefinition.Rank(LocalProgress.skills,SkillLine.Fetch)>0;
+            bool follow=SkillTreeDefinition.Rank(LocalProgress.skills,SkillLine.Faithful)>0;
+            if(!recall && !fetch && !follow)return "";
             if(Training(Gosha.Mode) && Gosha.Mode!=GoshaMode.GoingHome)
             {
                 if(Gosha.OrderOwner!=diver.OwnerId)return "Гоша выполняет поручение напарника";
@@ -34,12 +38,20 @@ namespace Raid
                     _ => "Гоша несёт вашу рыбу"
                 };
             }
-            return LocalProgress.skills.Contains(SkillId.G2)?"G — ко мне  ·  H — принести рыбку":"G — Гоша, ко мне";
+            string hint=recall?"G — ко мне":"";
+            if(fetch)hint+=(hint.Length>0?"  ·  ":"")+"H — принести рыбку";
+            if(follow)hint+=(hint.Length>0?"  ·  ":"")+"J — сопровождение";
+            return hint;
         }
 
-        internal float OrderCooldown(DiverMotor diver) => tuning.petOrderCooldown*(1-Mathf.Clamp(SkillValue(diver,SkillId.G4),0,99)*.01f);
-        internal float OrderRadius(DiverMotor diver) => tuning.petSearchRadius*(HasSkill(diver,SkillId.G4)?1.2f:1);
+        internal float OrderCooldown(DiverMotor diver) =>
+            tuning.petOrderCooldown*(1-Mathf.Clamp(SkillFactor(diver,SkillLine.Recall)+.5f*SkillFactor(diver,SkillLine.Delivery),0,.45f));
+        internal float OrderRadius(DiverMotor diver) => tuning.petSearchRadius*(1+SkillFactor(diver,SkillLine.Fetch));
         internal float OrderRemaining(DiverMotor diver) => Mathf.Max(0,lastOrderAt+OrderCooldown(diver)-Time.time);
+        float OrderSpeed =>
+            (1+SkillFactor(orderDiver,SkillLine.GoshaSpeed))*
+            (1+(pet.Mode==GoshaMode.BringingFish?SkillFactor(orderDiver,SkillLine.Delivery):0))*
+            (1+(followingOrder?SkillFactor(orderDiver,SkillLine.Faithful):0));
 
         [ServerRpc(RequireOwnership=false)]
         public void RequestGoshaOrder(GoshaOrder order,NetworkConnection sender=null)
@@ -49,10 +61,13 @@ namespace Raid
             if(diver==null || diver.Owner!=sender || !Alive(diver) || diver.IsTrapped || transitionRemaining>0)return;
             if(!pet.Active || team?.goshaTamed!=true){OrderReply(sender,"Сначала подружитесь с Гошей и верните его на борт");return;}
             bool catchFish=order==GoshaOrder.CatchFish;
-            if(order!=GoshaOrder.Come && !catchFish)return;
+            bool follow=order==GoshaOrder.Follow;
+            if(order!=GoshaOrder.Come && !catchFish && !follow)return;
             string profile=ProgressKey(diver);
-            if(string.IsNullOrEmpty(profile) || !HasSkill(diver,SkillId.G1) || (catchFish&&!HasSkill(diver,SkillId.G2)))
+            var required=catchFish?SkillLine.Fetch:follow?SkillLine.Faithful:SkillLine.Recall;
+            if(string.IsNullOrEmpty(profile) || !HasSkill(diver,required))
             {OrderReply(sender,"Эта команда ещё не изучена");return;}
+            if(follow && followingOrder && orderDiver==diver){EndOrder("Сопровождение завершено");return;}
             if((!RestingPet(pet.Mode) && pet.Mode!=GoshaMode.GoingHome) || pet.Ball==GoshaBallMode.Carried ||
                 (pet.Ball==GoshaBallMode.Flying && pet.Thrower>=0))
             {OrderReply(sender,"Гоша занят");return;}
@@ -61,30 +76,31 @@ namespace Raid
             var tool=diver.GetComponent<HarpoonTool>();
             if(catchFish && (tool==null || tool.HasFullCreel))
             {OrderReply(sender,"Освободите карман для улова");return;}
-            bool careful=HasSkill(diver,SkillId.G3);
+            float riskTolerance=SkillFactor(diver,SkillLine.SafeSwim);
             if(catchFish)
             {
                 var origin=SwimZone(diver.transform.position)==PetZone.Sea?diver.transform.position:LockPoint(11.2f);
-                orderFish=ClosestFish(origin,OrderRadius(diver),careful);
+                orderFish=ClosestFish(origin,OrderRadius(diver),riskTolerance);
                 if(orderFish==null || !orderFish.TryReserveForGosha())
                 {orderFish=null;OrderReply(sender,"Поблизости нет доступной малой рыбы");return;}
                 orderFishId=orderFish.CargoId;fishWaterPosition=orderFish.transform.position;
             }
-            lastOrderAt=Time.time;orderEnds=Time.time+tuning.petOrderTimeout;pocketWait=0;
-            orderDiver=diver;orderProfile=profile;carefulSwimmer=careful;pet.OrderOwner=diver.OwnerId;
+            lastOrderAt=Time.time;orderEnds=Time.time+(follow?Mathf.Min(24f,tuning.petOrderTimeout):tuning.petOrderTimeout);pocketWait=0;
+            orderDiver=diver;orderProfile=profile;caution=riskTolerance;followingOrder=follow;pet.OrderOwner=diver.OwnerId;
             swimRoute.Reset();SetMode(catchFish?GoshaMode.Fishing:GoshaMode.Coming);
             gosha.Value=pet;
-            OrderReply(sender,catchFish?"Гоша отправился за рыбой":"Гоша идёт к вам");
+            OrderReply(sender,catchFish?"Гоша отправился за рыбой":follow?"Гоша сопровождает вас":"Гоша идёт к вам");
         }
 
-        FishActor ClosestFish(Vector3 origin,float radius,bool careful)
+        FishActor ClosestFish(Vector3 origin,float radius,float riskTolerance)
         {
             FishActor nearest=null;float best=radius*radius;
             foreach(var f in FishActor.ServerSchool)
             {
                 if(!f.IsAvailableForGosha)continue;
                 Vector3 at=f.transform.position;float distance=(at-origin).sqrMagnitude;
-                if(distance>best || SwimZone(at)!=PetZone.Sea || (careful&&GoshaSwimRoute.Risk(at)>.68f))continue;
+                if(distance>best || SwimZone(at)!=PetZone.Sea ||
+                    (riskTolerance>0 && GoshaSwimRoute.Risk(at)>GoshaSwimRoute.RiskLimit(riskTolerance)))continue;
                 nearest=f;best=distance;
             }
             return nearest;
@@ -103,8 +119,10 @@ namespace Raid
         internal void PreparePetOrderTrial(DiverMotor host,DiverMotor guest)
         {
             team.goshaMet=team.goshaTamed=true;ResetGosha();
-            team.Player(ProgressKey(host)).skills.Add(SkillId.G1);
-            team.Player(ProgressKey(guest)).skills.AddRange(new[]{SkillId.G1,SkillId.G2,SkillId.G3,SkillId.G4});
+            team.Player(ProgressKey(host)).skills.Add(SkillTreeDefinition.Id(SkillLine.Recall,1));
+            var expert=team.Player(ProgressKey(guest)).skills;
+            foreach(var line in new[]{SkillLine.Recall,SkillLine.Fetch,SkillLine.SafeSwim,SkillLine.Delivery})
+                for(int rank=1;rank<=5;rank++)expert.Add(SkillTreeDefinition.Id(line,rank));
             PublishProfiles();Publish();
         }
 #endif
@@ -117,16 +135,19 @@ namespace Raid
                 orderFish.ReleaseGoshaReservation();
             }
             orderFish=null;orderDiver=null;orderProfile=null;orderFishId=0;pet.OrderOwner=-1;
+            followingOrder=false;caution=0;
         }
         void EndOrder(string response)
         {
             if(orderDiver!=null && orderDiver.Owner!=null && orderDiver.Owner.IsActive)OrderReply(orderDiver.Owner,response);
+            float returnCaution=caution;
             ReleaseOrder();swimRoute.Reset();
             if(SwimZone(pet.Position)==PetZone.Deck)ResumeDeck();
-            else SetMode(GoshaMode.GoingHome);
+            else {caution=returnCaution;SetMode(GoshaMode.GoingHome);}
         }
         void ResumeDeck()
         {
+            caution=0;
             if(pet.Ball==GoshaBallMode.Deck && pet.Thrower>=0 && deck.Interior(pet.BallPosition))SetMode(GoshaMode.Fetching,tuning.fetchTimeout);
             else if(pet.Ball==GoshaBallMode.Held && pet.Thrower>=0 && pet.Holder!=pet.Thrower && OnDeck(CrewMember(pet.Holder)))SetMode(GoshaMode.Chasing,20);
             else SetMode(GoshaMode.Resting,2);
@@ -141,9 +162,15 @@ namespace Raid
             }
             if(!Alive(orderDiver) || orderDiver.IsTrapped || orderDiver.Owner==null || !orderDiver.Owner.IsActive ||
                 Time.time>orderEnds || transitionRemaining>0)
-            {EndOrder("Гоша вернулся без улова");return true;}
+            {EndOrder(followingOrder?"Сопровождение завершено":"Гоша вернулся без улова");return true;}
             if(pet.Mode==GoshaMode.Coming)
             {
+                if(followingOrder)
+                {
+                    var caller=orderDiver.transform.position;
+                    if((pet.Position-caller).sqrMagnitude>2.72f || SwimZone(pet.Position)!=SwimZone(caller))TravelTo(caller,dt);
+                    return true;
+                }
                 if(TravelTo(orderDiver.transform.position,dt))EndOrder("Гоша рядом");
                 return true;
             }
@@ -166,7 +193,8 @@ namespace Raid
             {orderFish=null;EndOrder("Гоша принёс рыбу · улов в вашем кармане");return true;}
             if(pocketWait<=0)OrderReply(orderDiver.Owner,"Гоша рядом с рыбой · освободите карман");
             pocketWait+=dt;
-            if(pocketWait>=tuning.petPocketWait)EndOrder("Карманы заняты · Гоша отпустил рыбу");
+            if(pocketWait>=tuning.petPocketWait*(1+SkillFactor(orderDiver,SkillLine.Delivery)))
+                EndOrder("Карманы заняты · Гоша отпустил рыбу");
             return true;
         }
 
@@ -193,7 +221,7 @@ namespace Raid
                 clearingSeaDoor=false;
             }
             if(here==there)
-                return here==PetZone.Deck?Walk(goal,tuning.petFetchSpeed,dt):SwimTo(goal,dt,here==PetZone.Sea);
+                return here==PetZone.Deck?Walk(goal,tuning.petFetchSpeed*OrderSpeed,dt):SwimTo(goal,dt,here==PetZone.Sea);
             var chamber=NereidAirlock.Active;
             if(here==PetZone.Lock)
             {
@@ -214,7 +242,7 @@ namespace Raid
             if(!aligned)
             {
                 if(outside)SwimTo(entrance,dt,true);
-                else Walk(entrance,tuning.petFetchSpeed,dt);
+                else Walk(entrance,tuning.petFetchSpeed*OrderSpeed,dt);
                 return false;
             }
             if(!GateOpen(outside)){RequestPetGate(outside);return false;}
@@ -236,7 +264,7 @@ namespace Raid
         {
             var from=pet.Position;
             if(Vector3.Distance(from,target)<.68f && swimRoute.Clear(from,target))return true;
-            var next=swimRoute.Step(from,target,tuning.petCatchUpSpeed*dt,sea,sea&&carefulSwimmer);
+            var next=swimRoute.Step(from,target,tuning.petCatchUpSpeed*OrderSpeed*dt,sea,sea?caution:0);
             Face(next-from);pet.Position=next;
             return false;
         }

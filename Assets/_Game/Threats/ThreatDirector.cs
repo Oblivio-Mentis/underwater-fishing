@@ -197,7 +197,7 @@ namespace Raid
             if (target == null || predatorCooldown > 0f || Vector3.Distance(next.PredatorPosition, goal) > tuning.attackRange) return;
             if (Physics.Linecast(next.PredatorPosition, goal, out RaycastHit hit, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
                 !hit.transform.IsChildOf(target.transform)) return;
-            target.DamageOxygen(tuning.attackDamage * Strength);
+            target.DamageFromCreature(tuning.attackDamage * Strength);
             target.GetComponent<HarpoonTool>()?.DropCargo();
             predatorCooldown = Mathf.Max(.1f, tuning.attackInterval);
             next.Message = "Хищник ударил водолаза и сорвал улов. Укройтесь в подлодке или за скалой!";

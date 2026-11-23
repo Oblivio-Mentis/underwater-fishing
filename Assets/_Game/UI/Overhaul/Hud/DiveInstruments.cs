@@ -16,9 +16,9 @@ namespace Raid.UI
         static readonly Color Gold=new Color(1f,.76f,.32f);
         static readonly Vector2 Center=new Vector2(.5f,.5f);
         static Sprite[] art;
-        readonly Image[] slotRim=new Image[7], slotArt=new Image[7], crewGauge=new Image[5], contacts=new Image[5];
-        readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[7];
-        readonly DeckBallIcon[] ballIcons=new DeckBallIcon[7];
+        readonly Image[] slotRim=new Image[HarpoonTool.MaximumSlots], slotArt=new Image[HarpoonTool.MaximumSlots], crewGauge=new Image[5], contacts=new Image[5];
+        readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[HarpoonTool.MaximumSlots];
+        readonly DeckBallIcon[] ballIcons=new DeckBallIcon[HarpoonTool.MaximumSlots];
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
@@ -99,9 +99,7 @@ namespace Raid.UI
         public void Refresh(UiContext c,float air,bool unobstructed)
         {
             var diver=c.Player.Spectating!=null?c.Player.Spectating:c.Player;
-            // A pure client applies team equipment/depth tuning to its owned motor only.
-            float capacityBonus=c.View!=null&&c.Tuning!=null?1+c.View.tankLevel*c.Tuning.oxygenPerTankLevel:c.Player.OxygenMultiplier;
-            if(diver!=c.Player)air=Mathf.Clamp01(diver.Oxygen/Mathf.Max(1,diver.tuning.oxygenCapacity*capacityBonus));
+            if(diver!=c.Player)air=Mathf.Clamp01(diver.Oxygen/diver.AirCapacity);
             int count=0;
             foreach(var player in c.Players)
             {

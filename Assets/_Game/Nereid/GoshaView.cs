@@ -91,6 +91,7 @@ namespace Raid.Nereid
                 ui.Context.Player==null || ui.Context.Player.IsHelpless || ui.Context.Player.IsTrapped)return;
             if(keyboard.gKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Come);
             else if(keyboard.hKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.CatchFish);
+            else if(keyboard.jKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Follow);
         }
 
         void Show(GoshaSnapshot s)

@@ -11,7 +11,7 @@ namespace Raid
             public HarpoonTool Tool;
             public HarpoonContact Contact;
             public FishingLine Spool;
-            public float Distance, Tension, BlockedTime, TugSpeed;
+            public float Distance, Tension, BlockedTime, TugSpeed, TurnLoad;
             public Vector3 TowardHand, PullDirection;
             public bool Working, Paired;
         }
@@ -123,7 +123,10 @@ namespace Raid
                 { RemoveLine(i); continue; }
                 line.TowardHand = tool.HandAnchor - contact;
                 line.Distance = line.TowardHand.magnitude;
-                line.PullDirection = (tool.HandAnchor - transform.position).normalized;
+                var direction=(tool.HandAnchor-transform.position).normalized;
+                line.TurnLoad=line.PullDirection.sqrMagnitude>.01f && direction.sqrMagnitude>.01f
+                    ? Mathf.Clamp01(Vector3.Angle(line.PullDirection,direction)/Mathf.Max(.01f,120*dt)) : 0;
+                line.PullDirection=direction;
                 bool blocked = SolidAhead(tool.HandAnchor, contact);
                 line.BlockedTime = blocked ? line.BlockedTime + dt : 0;
                 if (line.Distance > tuning.maxRange || line.BlockedTime > tuning.obstructionGrace || line.Tension >= 1)
@@ -153,13 +156,15 @@ namespace Raid
             state.Surging = !tired && fightClock >= period && Mathf.Repeat(fightClock, period) < tuning.burstDuration;
             HookLine leader = null;
             state.Tension = 0;
+            var world=RaidWorld.Instance;
             foreach (var line in lines)
             {
                 bool working = line.Working && (!RequiresPartner || line.Paired);
-                var world=RaidWorld.Instance;
-                float teamTiming=line.Paired?(world?.SkillFactor(line.Tool.Motor,SkillId.H4)??0):0;
-                float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,10);
-                float lineStrength=1+(world?.SkillFactor(line.Tool.Motor,SkillId.H2)??0);
+                var motor=line.Tool.Motor;
+                float teamTiming=line.Paired?(world?.SkillFactor(motor,SkillLine.SyncPull)??0):0;
+                float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,2.2f);
+                float lineStrength=1+Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Cable)??0,0,.85f);
+                float tip=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Tip)??0,0,.40f);
                 float resistance = state.Surging ? tuning.burstTensionMultiplier : 1;
                 if (working)
                 {
@@ -170,8 +175,10 @@ namespace Raid
                 else if (!line.Working || !line.Tool.Reeling) line.Spool.Slip(line.Distance);
                 bool strained = line.Working || (state.SurgeWarning && line.Spool.Loaded(line.Distance, tuning.slackAllowance));
                 if (strained)
-                    line.Tension += tuning.tensionRise * resistance * power * dt / (lineStrength*(line.Paired ? 1 + tuning.assistBonus : 1));
+                    line.Tension += tuning.tensionRise * resistance * power * dt * (1+.20f*line.TurnLoad*(1-tip)) /
+                        (lineStrength*(line.Paired ? 1 + tuning.assistBonus : 1));
                 else line.Tension -= tuning.tensionRelease * dt;
+                if(state.Surging && line.Tension>=1 && line.Tool.TryStabilizeDeepLine())line.Tension=.65f;
                 line.Tension = Mathf.Clamp01(line.Tension);
                 state.Tension = Mathf.Max(state.Tension, line.Tension);
                 line.Tool.UpdateFishingLine(line.Spool.PaidOut, line.Tension);
@@ -180,23 +187,29 @@ namespace Raid
                 line.TugSpeed = Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt);
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
                 {
-                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt * (1-(world?.SkillFactor(line.Tool.Motor,SkillId.H3)??0));
-                    float verticalLimit = Mathf.Max(0, line.Tool.Motor.tuning.verticalSpeed) * dt;
+                    float damp=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Damper)??0,0,.42f);
+                    Vector3 tugMotion = -line.TowardHand.normalized * line.TugSpeed * dt * (1-damp);
+                    Vector3 swimAxis=Vector3.ProjectOnPlane(motor.AimDirection,Vector3.up).normalized;
+                    Vector3 lateral=Vector3.ProjectOnPlane(tugMotion,Vector3.up)-Vector3.Project(tugMotion,swimAxis);
+                    tugMotion-=lateral*Mathf.Clamp(world?.SkillFactor(motor,SkillLine.TugStability)??0,0,.31f);
+                    float verticalLimit = Mathf.Max(0, motor.tuning.verticalSpeed) * dt;
                     tugMotion.y = Mathf.Clamp(tugMotion.y, -verticalLimit, verticalLimit);
                     // Sweep the controller while exempting forced ascent from the swimmer's own ascent penalty.
-                    line.Tool.Motor.ApplyTetherMotion(tugMotion);
+                    motor.ApplyTetherMotion(tugMotion);
                 }
             }
 
             if (leader != null)
             {
-                float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier, .1f, 10)
-                    * (state.Surging ? .25f : 1) * (leader.Paired ? 1 + tuning.assistBonus + (RaidWorld.Instance?.SkillFactor(leader.Tool.Motor,SkillId.H4)??0) : 1);
+                float assistance=leader.Paired?1+tuning.assistBonus+(world?.SkillFactor(leader.Tool.Motor,SkillLine.SyncPull)??0):1;
+                float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier,.1f,2.2f)
+                    * (state.Surging ? .25f : 1) * assistance;
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.
                 float excess = Mathf.Max(0, leader.Distance - leader.Spool.PaidOut);
                 Vector3 motion = leader.TowardHand.normalized * Mathf.Min(excess, speed * dt);
                 if (!SolidAhead(transform.position, transform.position + motion)) transform.position += motion;
-                state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * dt * (leader.Paired ? 1 + tuning.assistBonus : 1));
+                float fatigue=1+.5f*(world?.SkillFactor(leader.Tool.Motor,SkillLine.Tip)??0);
+                state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * dt * assistance * fatigue);
                 bool partnerReady = !RequiresPartner;
                 foreach (var other in lines)
                     if (other != leader && other.Working && other.Tension < 1 && other.Spool.WindingTime >= tuning.minimumWindingSeconds

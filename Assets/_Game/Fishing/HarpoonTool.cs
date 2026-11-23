@@ -41,7 +41,7 @@ namespace Raid
         private readonly SyncVar<int> pocketCapacity = new(3);
         public int PocketCapacity => pocketCapacity.Value;
         public int SlotCount => PocketCapacity+2;
-        const int MaximumSlots=7;
+        internal const int MaximumSlots=9;
         internal void SetPocketCapacity(int value)
         {
             value=Mathf.Clamp(value,3,MaximumSlots-2);
@@ -55,12 +55,26 @@ namespace Raid
 
         public struct LineReadout { public float length, tension; }
         readonly SyncVar<LineReadout> _lineReadout = new();
+        readonly SyncVar<int> _stabilizerCooldown = new();
+        float stabilizerReadyAt;
         public float LineLength => _lineReadout.Value.length;
         public float LineTension => _lineReadout.Value.tension;
+        public int StabilizerCooldown => _stabilizerCooldown.Value;
         internal Vector3 HandAnchor => transform.position + Vector3.up * .6f
             + transform.right * .16f + Motor.AimDirection * .32f;
-        internal void UpdateFishingLine(float length, float load) =>
+        internal void UpdateFishingLine(float length, float load)
+        {
             _lineReadout.Value = new LineReadout { length = length, tension = load };
+            _stabilizerCooldown.Value=Mathf.CeilToInt(Mathf.Max(0,stabilizerReadyAt-Time.time));
+        }
+        internal bool TryStabilizeDeepLine()
+        {
+            if(!IsServerInitialized || Time.time<stabilizerReadyAt)return false;
+            int cooldown=RaidWorld.Instance?.SkillValue(Motor,SkillLine.HarpoonModule)??0;
+            if(cooldown<=0)return false;
+            stabilizerReadyAt=Time.time+cooldown;
+            return true;
+        }
         internal void FinishFishingLine()
         {
             _impact.Value = default;
@@ -297,7 +311,7 @@ namespace Raid
                     contact = candidate;
                 }
             }
-            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,ReelMultiplier,hit);
+            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,1f,hit);
             if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
             _impact.Value=contact;
             _shotSequence.Value++;
