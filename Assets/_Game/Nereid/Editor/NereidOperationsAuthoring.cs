@@ -102,6 +102,19 @@ namespace Raid.Nereid.Editor
         {
             NereidHoistSwitchAuthoring.Upgrade(Stations + "/CargoControl.prefab");
             bool changed = false;
+            // The original mouth lamps were mounted on the old bulkhead. Their loose
+            // covers sit in the operator's sightline to the new containment-room jaws.
+            var vessel = layout.GetComponentInParent<NereidVessel>();
+            if (vessel)
+            {
+                foreach (Transform part in vessel.transform)
+                {
+                    if (part.name is not ("Mouth inspection lamp casing" or "Mouth inspection lamp lens")) continue;
+                    if (!part.gameObject.activeSelf) continue;
+                    part.gameObject.SetActive(false);
+                    changed = true;
+                }
+            }
             foreach (var instrument in layout.GetComponentsInChildren<NereidInstrument>(true))
             {
                 if (instrument.Kind is not (ShipConsoleKind.Process or ShipConsoleKind.Feed)) continue;
