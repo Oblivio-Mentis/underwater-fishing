@@ -19,6 +19,9 @@ namespace Raid
             public bool WaveActive;
             public Vector3 WaveHeading;
             public int WaveHits;
+            // One confirmed bite = one increment. Victim is the bitten diver's owner id; direction is from attacker to victim.
+            public int BiteSequence, BiteVictim;
+            public Vector3 BiteDirection;
             public string Message;
         }
         private readonly SyncVar<ThreatSnapshot> state = new();

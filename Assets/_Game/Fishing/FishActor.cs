@@ -22,9 +22,10 @@ namespace Raid
             public Vector3 Position;
             public Quaternion Rotation;
             public FishMode Mode;
-            public float Tension, Stamina;
+            public FishBehaviour Behaviour;
+            public float Tension, Stamina, TugStrength;
             public bool Active, Stowed, Reserved, Startled, Coordinated, SurgeWarning, Surging;
-            public int HookCount;
+            public int HookCount, HookSequence, TugSequence;
             public int Holder;
             public long CaptureId;
         }
@@ -52,6 +53,13 @@ namespace Raid
         public bool Coordinated => _snapshot.Value.Coordinated;
         public bool SurgeWarning => _snapshot.Value.SurgeWarning;
         public bool Surging => _snapshot.Value.Surging;
+        public FishBehaviour Behaviour => _snapshot.Value.Behaviour;
+        /// <summary>Increments once per server-confirmed hook attachment (any line).</summary>
+        public int HookSequence => _snapshot.Value.HookSequence;
+        /// <summary>Increments once at the start of each confirmed power surge or tug.</summary>
+        public int TugSequence => _snapshot.Value.TugSequence;
+        /// <summary>0..1 normalized current pull on the lines, for viewmodel and camera only.</summary>
+        public float TugStrength => _snapshot.Value.TugStrength;
         public string SpeciesId => fishId;
         public bool RequiresPartner => cargoSize > 1;
         public long CargoId => IsServerInitialized ? _cargoId : _snapshot.Value.CaptureId;
