@@ -117,7 +117,7 @@ namespace Raid
                 tugVelocity-= (hooked.RequiresPartner?.5f:.9f)*(0.35f+strength);
             }
             else if(hooked==null) observedTug=0;
-            float tugRest=0, remainingTug=dt;
+            float remainingTug=dt;
             while(remainingTug>0)
             {
                 float step=Mathf.Min(remainingTug,.008f);remainingTug-=step;
