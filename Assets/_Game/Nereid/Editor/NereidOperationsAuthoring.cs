@@ -288,6 +288,7 @@ namespace Raid.Nereid.Editor
             Block(strip,"Active signal",new Vector3(.62f,0,0),new Vector3(1.24f,.027f,.015f),"Lamp");
             instrument.gauge=strip;
             MountDisplay(station);
+            if (kind is ShipConsoleKind.Feed or ShipConsoleKind.Process) NereidDispatchAuthoring.Fit(station);
             return go;
         }
     }

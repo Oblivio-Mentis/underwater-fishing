@@ -10,6 +10,7 @@ namespace Raid
     {
         public ShipConsoleKind kind;
         public Transform screenAnchor;
+        public Nereid.NereidDispatchButton dispatchButton;
         public float range=3.2f;
         public float screenScale=.0018f;
         [Tooltip("Visible display width and height in world metres.")]
@@ -43,6 +44,8 @@ namespace Raid
             if(!Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore))return null;
             var station=hit.collider.GetComponentInParent<ShipConsole>();
             if(station==null || station.kind==ShipConsoleKind.Workshop || !station.isActiveAndEnabled || !station.InRange(player))return null;
+            if(station.dispatchButton)
+                return hit.collider==station.dispatchButton.hitFace && Vector3.Dot(ray.direction,station.screenAnchor.forward)>.12f ? station : null;
             if(!station.IsMonitor)return station;
             var anchor=station.screenAnchor;
             if(anchor==null || Vector3.Dot(ray.direction,anchor.forward)<=.015f)return null;

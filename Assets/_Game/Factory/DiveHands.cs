@@ -21,6 +21,8 @@ namespace Raid
         LootActor salvageSource;
         internal bool BallVisible { get; private set; }
         internal Vector3 BallCenter { get; private set; }
+        Quaternion leftPalmFrame = Quaternion.identity;
+        Vector3 leftPalmOffset = new(-.02f,.03f,.09f);
         DiverMotor viewed;
         int sequence,displaySlot,targetSlot,shotSequence;
         bool displayedHeavy,targetHeavy;
@@ -48,7 +50,27 @@ namespace Raid
                     ForearmLength=Vector3.Distance(elbow,wrist)
                 };
             }
+            CalibrateLeftPalm(avatar.leftArm);
             fishAnchor=DiveOutfit.Pivot(root,"Presented catch",Vector3.zero);
+        }
+
+        // Bind the surface of the actual glove to the cap while preserving both arm lengths.
+        void CalibrateLeftPalm(DiverAvatarRig.Chain arm)
+        {
+            Transform index=null,pinky=null,middle=null;
+            foreach(Transform child in arm.end)
+            {
+                if (child.name.EndsWith("Index1")) index=child;
+                if (child.name.EndsWith("Pinky1")) pinky=child;
+                if (child.name.EndsWith("Middle1")) middle=child;
+            }
+            if (!index || !pinky || !middle) return;
+            Quaternion toWrist = arm.endBind * Quaternion.Inverse(arm.end.rotation);
+            var distal = toWrist*(middle.position-arm.end.position);
+            var side = toWrist*(index.position-pinky.position);
+            var normal = Vector3.Cross(side,distal).normalized;
+            leftPalmFrame = Quaternion.LookRotation(normal, distal);
+            leftPalmOffset = distal*.68f + normal*.021f;
         }
 
         public void SetVisible(bool value)
@@ -74,7 +96,8 @@ namespace Raid
             {
                 targetSlot=equipment.ActiveSlot;targetHeavy=equipment.HandsFull;switchTime=GoshaBallGrip.SwapDuration;
             }
-            if(sequence!=actor.InteractionSequence){sequence=actor.InteractionSequence;press=.46f;}
+            bool keyPress=Nereid.NereidDispatchButton.TryPalm(actor,out var contact,out float keyReach);
+            if(sequence!=actor.InteractionSequence){sequence=actor.InteractionSequence;press=keyPress?0:.46f;}
             if(shotSequence!=equipment.ShotSequence){shotSequence=equipment.ShotSequence;shot=.16f;}
             shot=Mathf.Max(0,shot-dt);
             switchTime=Mathf.Max(0,switchTime-dt);press=Mathf.Max(0,press-dt);
@@ -172,7 +195,16 @@ namespace Raid
                     angles=new Vector3(8,-s*18,-s*35)+tilt;
                     if(grip)wrist=Vector3.Lerp(wrist,new Vector3(s*.14f,-.14f,.46f),.85f);
                 }
-                if(s<0&&push>0&&!ball&&!cuddling&&!displayedHeavy)
+                if(s<0 && keyPress && !cuddling && !displayedHeavy)
+                {
+                    var point=root.InverseTransformPoint(contact.position);
+                    var facing=Quaternion.Inverse(root.rotation)*contact.rotation*Quaternion.Inverse(leftPalmFrame);
+                    // If the diver turns away mid-stroke, the glove slips off and returns to its grip.
+                    float weight=keyReach*Mathf.InverseLerp(.05f,.35f,point.normalized.z);
+                    wrist=Vector3.Lerp(wrist,point-facing*leftPalmOffset,weight);
+                    angles=Quaternion.Slerp(Quaternion.Euler(angles),facing,weight).eulerAngles;
+                }
+                else if(s<0&&push>0&&!ball&&!cuddling&&!displayedHeavy)
                 {
                     wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.46f),push);
                     angles=Quaternion.Slerp(Quaternion.Euler(angles),Quaternion.Euler(-12,1,12),push).eulerAngles;
@@ -181,7 +213,7 @@ namespace Raid
                 arm.Wrist.localRotation=Quaternion.Euler(angles);
                 avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);
             }
-            var motion=push>0||panelPress?Action.PressPanel:releaseStroke>0?Action.Throw:switchTime>0?Action.SwapEquipment:
+            var motion=keyPress||push>0||panelPress?Action.PressPanel:releaseStroke>0?Action.Throw:switchTime>0?Action.SwapEquipment:
                 cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
                 salvage!=null?Action.CarrySalvage:caught!=null?Action.CarryFish:
                 shot>0?Action.Shoot:grip||equipment.HookedFish!=null?Action.Reel:ranged?(aim>.1f?Action.Aim:Action.Harpoon):

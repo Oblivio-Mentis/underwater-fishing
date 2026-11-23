@@ -38,9 +38,9 @@ namespace Raid.Nereid
                     value = flowing ? $"Поток   {route.completed} / {route.total}" : $"Назначено   {count}";
                     detail = feed
                         ? $"Рацион   {TeamProgress.FoodText(team.offeringPoints)} / {TeamProgress.FoodText(team.RequiredFood(world.progression))}\nДо кормления   {Mathf.CeilToInt(team.hungerRemaining)} с"
-                        : $"Биомасса  {team.biomass}     Хитин  {team.chitin}\nМеталл  {team.scrap}     Электроника  {team.electronics}";
-                    detail += flowing ? (route.stopping ? "\nКлапан закрыт" : "\nЛКМ  ·  остановить подачу") :
-                        (route.active ? "\nДругая линия занята" : count > 0 ? "\nЛКМ  ·  начать подачу" : "\nОжидание назначения");
+                        : "Линия разделки";
+                    detail += flowing ? (route.stopping ? "\nКлапан закрыт" : "\nОстановить  →") :
+                        (route.active ? "\nДругая линия занята" : count > 0 ? "\nПуск  →" : "\nОжидание назначения");
                     ratio = flowing ? (float)route.completed / Mathf.Max(1,route.total) : (float)count / Mathf.Max(1,team.tank.Count);
                     break;
                 case ShipConsoleKind.CargoControl:
