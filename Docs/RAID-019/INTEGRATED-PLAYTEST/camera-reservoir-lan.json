@@ -1,0 +1,12 @@
+{
+    "phase": "Stage fish through the real monitor and use the physical processor",
+    "status": "passed",
+    "error": "",
+    "host": 0,
+    "client": 1,
+    "checks": [
+        "Distinct connected owners 0 and 1",
+        "A selected fish left on LMB at the physical processor; the feeding draft remained in the tank.",
+        "Aquarium Send launches both draft routes once, and the unassigned fish remains in the tank."
+    ]
+}
