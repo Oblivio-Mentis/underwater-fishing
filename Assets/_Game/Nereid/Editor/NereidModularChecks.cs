@@ -50,6 +50,11 @@ namespace Raid.Nereid.Editor
             Check(new[]{lockRig.innerPort,lockRig.innerStarboard,lockRig.outerPort,lockRig.outerStarboard}.All(
                 t=>t && t.GetComponent<BoxCollider>() && t.GetComponent<MeshFilter>().sharedMesh),
                 "All four sliding leaves have a saved mesh and a physical seal.");
+            var passages=layout.GetComponentsInChildren<NereidPassageDoor>();
+            Check(passages.Length==2 && passages.Select(p=>p.passage).Distinct().Count()==2 &&
+                  passages.All(p=>p.portLeaf && p.starboardLeaf && p.portSeal && p.starboardSeal &&
+                                  p.portSeal.enabled && p.starboardSeal.enabled),
+                "The equipment room and pump room each have a pair of solid automatic doors.");
             var decks=Object.FindAnyObjectByType<NereidDeckNavigation>();
             Check(decks && decks.reservoirGlass && decks.reservoirGlass.enabled,"The reservoir floor has solid physical glass.");
             Check(decks.crewSpawns.All(s=>s && layout.ContainsSealed(s.position)),"Every crew spawn is in a dry compartment.");
