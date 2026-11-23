@@ -78,7 +78,8 @@ namespace Raid.Nereid
             float cove=1-IslandMask(x,z,35,-38,18,36);
             float lane=Mathf.PerlinNoise(x*.065f+5,z*.082f+21);
             float dune=.38f*Mathf.Sin(x*.34f+z*.25f+lane*3.1f)+.74f*(lane-.55f);
-            return BedHeight(x,z)+(dune*cove+ExpeditionShelf(x,z)+FlankRelief(x,z,false))*FishingFloorMask(x,z);
+            return BedHeight(x,z)+(dune*cove+ShoalRelief(x,z)+FlankRelief(x,z,false))*
+                FishingFloorMask(x,z)*LandingPadMask(x,z);
         }
 
         static float RiftAxis(float z)=>43.6f-(z+48)*.22f+1.7f*Mathf.Sin((z+46)*.10f);
@@ -88,11 +89,21 @@ namespace Raid.Nereid
             float extent=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-24,-40,z))*
                 Mathf.SmoothStep(0,1,Mathf.InverseLerp(-92,-66,z));
             float across=Mathf.Abs(x-RiftAxis(z));
-            float ravine=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.5f,8.6f,across));
+            // The throat narrows and deepens the ravine between the landing and the outer seam.
+            float throat=Mathf.Exp(-Mathf.Pow((z+61)/7f,2));
+            float edging=1-.28f*throat;
+            float ravine=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.5f*edging,8.6f*edging,across));
             float jagged=.62f+.38f*Mathf.PerlinNoise(x*.38f+6,z*.31f+14);
             // A real recessed bed replaces the shallows collider. Stay at the original height under gameplay fixtures.
-            float bay=8.8f+2.4f*Mathf.Sin(z*.17f+4.9f);
-            return BedHeight(x,z)+(ExpeditionRift(x,z)+FlankRelief(x,z,true)-extent*ravine*jagged*bay)*FishingFloorMask(x,z);
+            float bay=(8.8f+2.4f*Mathf.Sin(z*.17f+4.9f))*(1+.75f*throat);
+            // Berth terraces fill the ravine where salvage must sit at the shallow bed height.
+            float fill=Mathf.Max(CausewayMask(x,z),EastStep(x,z));
+            float bed=BedHeight(x,z);
+            float floor=bed+(ExpeditionRift(x,z)+FlankRelief(x,z,true)-extent*ravine*jagged*bay*(1-fill))*
+                FishingFloorMask(x,z)*LandingPadMask(x,z);
+            // The lantern shelf is cut into the throat's west bank: a terrace 5.2 m under the bed,
+            // above the ravine floor and below the lip.
+            return Mathf.Lerp(floor,bed-5.2f,LanternShelf(x,z));
         }
 
         static float TerrainX(int i)
@@ -137,7 +148,7 @@ namespace Raid.Nereid
             return origin+Mathf.Max(u,v)*(edge-origin)+Mathf.Min(u,v)*(corner-edge);
         }
 
-        static ReefGeometry Terrain(Func<float,float,float> height,bool deep)
+        static ReefGeometry Terrain(Func<float,float,float> height,bool deep,Func<float,float,float> route=null)
         {
             const int columns=Columns,rows=Rows;
             var bed=new ReefGeometry();
@@ -153,6 +164,8 @@ namespace Raid.Nereid
                     Color.Lerp(Silt,Chalk,Mathf.Clamp01(tide*.85f+current));
                 var stratum=deep?new Color(.073f,.096f,.126f):new Color(.102f,.150f,.148f);
                 grit=Color.Lerp(grit,stratum,Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,1.16f,bedSlope))*.82f);
+                // The route is lighter sand than the reef around it, so the eye follows the floor.
+                if(route!=null)grit=Color.Lerp(grit,deep?Mineral*.93f:PathSand,route(wx,wz)*.62f);
                 bed.Add(new Vector3(wx,y,wz),grit);
                 if(x>0 && z>0)
                 {
@@ -166,7 +179,7 @@ namespace Raid.Nereid
         void BuildCoralGarden(ReefGeometry life,ReefGeometry rubble)
         {
             // The shore breaks into two islands. Swim the wide sandy channel between them from the hoist.
-            Vector2[] islands={new(29,-18.8f),new(35,-39.6f),new(39,-43),new(45,-58.4f)};
+            Vector2[] islands={new(29,-18.8f),new(49,-34),new(29,-42.5f),new(38.5f,-59.5f)};
             for(int j=0;j<islands.Length;j++)
             {
                 for(int i=0;i<13;i++)
@@ -175,7 +188,7 @@ namespace Raid.Nereid
                     float radius=.7f+Mathf.Sqrt(i)*.64f;
                     float x=islands[j].x+Mathf.Cos(angle)*radius;
                     float z=islands[j].y+Mathf.Sin(angle)*radius;
-                    if(NereidSalvage.Reserved(x,z))continue;
+                    if(!ShallowClear(x,z,.8f))continue;
                     var at=new Vector3(x,ShoalHeight(x,z)-.1f,z);
                     ScatterStone(rubble,at,Range(.64f,1.75f),Color.Lerp(Silt,Chalk,Range(.45f,.74f)));
                     at.y+=.22f;
@@ -258,37 +271,14 @@ namespace Raid.Nereid
 
         MeshCollider BuildRift()
         {
-            var bed=Terrain(RiftHeight,true);
+            var bed=Terrain(RiftHeight,true,DeepRouteTint);
             var rocks=new ReefGeometry();
             var glow=new ReefGeometry();
-            // Fractured vertical silhouettes frame a swim-through central corridor east of the hoist.
-            Vector4[] formations={
-                new(35,-30,1.25f,7.5f),new(36.5f,-35.5f,1.5f,9.5f),new(29,-39.5f,2.0f,13.7f),
-                new(32,-41,1.25f,10.7f),new(32.5f,-45,1.9f,12.2f),new(35,-51,1.45f,11.8f),
-                new(37,-55,2.3f,17.1f),new(39,-60,2.2f,13.5f),new(41,-64,1.6f,9.5f),
-                new(51,-30,1.5f,8.4f),new(52,-34,1.5f,11.0f),new(53.7f,-43,2.4f,13.3f),
-                new(56,-46.5f,1.9f,14.2f),new(55,-55,1.7f,13.8f),new(54.5f,-59.5f,2.8f,12.1f),
-                new(46,-63,1.35f,15.3f),new(51,-64,2.0f,18.1f),new(58.8f,-64,1.9f,11.3f),
-                new(62,-69,2.1f,10.2f),new(44.5f,-71,2.25f,14.1f)
-            };
-            foreach(var f in formations)
-            {
-                var root=new Vector3(f.x,RiftHeight(f.x,f.y)-.47f,f.y);
-                BasaltNeedle(bed,root,f.z,f.w);
-                var slope=new Vector3(f.x+.89f,0,f.y-1.52f);
-                slope.y=RiftHeight(slope.x,slope.z)-.33f;
-                BasaltNeedle(bed,slope,f.z*.69f,f.w*Range(.43f,.59f));
-                for(int i=0;i<6;i++)
-                {
-                    float angle=Range(0,Mathf.PI*2),distance=Range(1.04f,2.7f)*f.z;
-                    float x=f.x+Mathf.Cos(angle)*distance,z=f.y+Mathf.Sin(angle)*distance;
-                    if(NereidSalvage.Reserved(x,z))continue;
-                    ScatterStone(rocks,new Vector3(x,RiftHeight(x,z)-.11f,z),Range(.74f,1.82f),RiftSlate);
-                }
-            }
+            // Named needle groups hold the walls; the gaps between them are the swim-throughs.
+            BuildDeepLandmarks(bed,rocks,glow);
             RiftSaddle(bed,rocks,glow);
             SurveyTrail(true,abyss.transform);
-            Vector2[] vents={new(38,-40.5f),new(41,-46.2f),new(45.5f,-58),new(52,-52.2f),new(48,-65.5f)};
+            Vector2[] vents={new(31.5f,-44.5f),new(43,-46.5f),new(53.5f,-53.5f),new(55.6f,-52.4f),new(50.5f,-66.5f)};
             foreach(var at in vents)Vent(rocks,glow,new Vector3(at.x,RiftHeight(at.x,at.y)-.09f,at.y));
             Publish("Deep talus and extinct mineral vents",rocks,basalt,false,abyss.transform);
             Publish("Fissure vents and cold-light lantern colonies",glow,bioluminescence,false,abyss.transform)
@@ -297,7 +287,7 @@ namespace Raid.Nereid
             return ground.GetComponent<MeshCollider>();
         }
 
-        void BasaltNeedle(ReefGeometry mesh,Vector3 at,float radius,float height)
+        Vector3 BasaltNeedle(ReefGeometry mesh,Vector3 at,float radius,float height)
         {
             const int sides=6;
             float heading=Range(0,6.28f),lean=Range(-.20f,.21f);
@@ -314,6 +304,7 @@ namespace Raid.Nereid
                 ridge[row,i]=at+new Vector3(Mathf.Cos(a)*r+t*height*lean,height*(t+.041f*Mathf.Sin(a)*t),Mathf.Sin(a)*r*.81f+t*radius*.43f);
             }
             int last=layers.Length-1;
+            var crown=at+new Vector3(height*lean,height+.19f,radius*.43f);
             for(int i=0;i<sides;i++)
             {
                 float tone=Range(.79f,1.14f);
@@ -321,10 +312,11 @@ namespace Raid.Nereid
                 for(int row=1;row<=last;row++)
                     Flat(mesh,ridge[row-1,i],ridge[row,i],ridge[row,j],ridge[row-1,j],
                         Color.Lerp(RiftSlate,Mineral,layers[row]*.56f)*tone*(row==3?.57f:1));
-                int center=mesh.Add(at+new Vector3(height*lean,height+.19f,radius*.43f),Mineral*tone);
+                int center=mesh.Add(crown,Mineral*tone);
                 int a=mesh.Add(ridge[last,j],Mineral),b=mesh.Add(ridge[last,i],Mineral);
                 mesh.Face(center,a,b);
             }
+            return crown;
         }
 
         void Vent(ReefGeometry rocks,ReefGeometry glow,Vector3 at)

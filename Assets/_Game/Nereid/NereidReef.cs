@@ -91,25 +91,24 @@ namespace Raid.Nereid
 
         MeshCollider BuildShoal()
         {
-            var land=Terrain(ShoalHeight,false);
-            // The first pool is open from the cargo lift. A split arch marks the far haul route.
+            var land=Terrain(ShoalHeight,false,ShoalRouteTint);
+            // Low far mounds only; the plaza is framed by the named masses in BuildShoalLandmarks.
             var shelves=new[]{
-                new Vector4(30,-39,3.5f,6.3f),new(34,-41,2.8f,4.6f),new(40,-24,4,5.5f),
-                new(50,-43,2.7f,4.4f),new(55,-41,3.6f,6.5f),new(17,-48,4,4),
-                new(23,-53,3.6f,4.5f),new(61,-59,4.4f,9.2f),new(56,-63,3.7f,5.1f),
-                new(42,-10,5.3f,5.2f),new(65,-29,4.9f,10),new(29,-44,2.0f,3.2f)
+                new Vector4(55,-41,3.6f,6.5f),new(61,-59,4.4f,9.2f),new(56,-63,3.7f,5.1f),
+                new(42,-10,5.3f,5.2f),new(65,-29,4.9f,10),new(17,-48,4,4),new(23,-53,3.6f,4.5f)
             };
             var tops=new List<Vector3>();
             foreach(var s in shelves)tops.Add(Rock(land,new Vector3(s.x,ShoalHeight(s.x,s.y)-.32f,s.y),s.z,s.w));
             var life=new ReefGeometry();
             ShelfGate(land,life);
             Escarpment(land,0);Escarpment(land,1);
+            BuildShoalLandmarks(land,life);
             var ground=Publish("Pale Shoals / shelf terraces and sand channels",land,bedMaterial,true,shoal.transform);
 
             for(int group=0;group<30;group++)
             {
                 float x=Range(16,60),z=Range(-65,-15);
-                if(Vector2.Distance(new Vector2(x,z),new Vector2(23,-28))<5)continue;
+                if(!ShallowClear(x,z,2.2f))continue;
                 var place=new Vector3(x,ShoalHeight(x,z),z);
                 int fronds=random.Next(4,9);
                 for(int i=0;i<fronds;i++) Kelp(life,place+new Vector3(Range(-1.6f,1.6f),0,Range(-1.6f,1.6f)),Range(.65f,2.1f));
@@ -123,7 +122,7 @@ namespace Raid.Nereid
                 {
                     float angle=Range(0,6.28f),radius=Range(.96f,1.8f)*s.z;
                     float x=s.x+Mathf.Cos(angle)*radius,z=s.y+Mathf.Sin(angle)*radius;
-                    if(NereidSalvage.Reserved(x,z))continue;
+                    if(!ShallowClear(x,z,.9f))continue;
                     var p=new Vector3(x,ShoalHeight(x,z)-.12f,z);
                     float pebble=Range(.28f,1.02f);
                     ScatterStone(rubble,p,pebble,new Color(.16f,.213f,.186f));
@@ -150,7 +149,9 @@ namespace Raid.Nereid
             ExpeditionWreck();
             SurveyTrail(false,shoal.transform);
             var beams=new ReefGeometry();
-            Vector2[] pools={new(22,-34),new(29,-24),new(32,-38),new(39,-43),new(49,-52),new(52,-43),new(43,-64),new(57,-74),new(35,-65),new(-19,14),new(19,10),new(14,27)};
+            // Three shafts land on the runway so the route reads from above as well as ahead.
+            Vector2[] pools={new(22,-34),new(30.5f,-34.5f),new(36,-41),new(42,-47),new(46,-57),
+                new(50,-66),new(57,-74),new(35,-65),new(-19,14),new(19,10),new(14,27)};
             foreach(var pool in pools)
             {
                 var bottom=new Vector3(pool.x,ShoalHeight(pool.x,pool.y)+.1f,pool.y);

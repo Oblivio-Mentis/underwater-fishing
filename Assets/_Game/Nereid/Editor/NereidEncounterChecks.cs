@@ -122,6 +122,8 @@ namespace Raid.Nereid.Editor
             yield return Wait("Nearby passive angler watches the diver in murky water",()=>
                 threats.AnglerStage==ThreatDirector.HuntStage.Watching && threats.NearbyDanger(diver.transform.position)>.16f &&
                 UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.03f && RenderSettings.fogDensity<.05f);
+            float shelfFog=RenderSettings.fogDensity;
+            float shelfExtinction=Shader.GetGlobalVector("_NereidReefClarity").x;
             float health=diver.Oxygen;int bites=threats.BiteSequence;
             Place(AnglerWater(3.6f));
             yield return Wait("Angler notices the diver and starts circling",()=>threats.AnglerStage==ThreatDirector.HuntStage.Circle);
@@ -172,7 +174,8 @@ namespace Raid.Nereid.Editor
             tool.DropCargo();
             FillCreel();
             Place(threats.Reef.Eel+Vector3.forward*1.2f);
-            yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f && RenderSettings.fogDensity>.10f);
+            yield return Wait("Deep water keeps its shorter sightline",()=>UnderwaterLook.Instance.WaterBlend>.95f &&
+                RenderSettings.fogDensity>shelfFog && Shader.GetGlobalVector("_NereidReefClarity").x>shelfExtinction*2f);
             yield return Wait("Eel warns with three pocket fish",()=>threats.Reef.EelPhase==1&&tool.CatchCount==3);
             if(!tool.DropOneCatch())throw new InvalidOperationException("Could not drop the selected catch.");
             yield return Wait("Dropped fish diverts eel",()=>threats.Reef.EelPhase==3&&tool.CatchCount==2);

@@ -111,7 +111,7 @@ namespace Raid.Nereid
                 new(48.7f,-5.7f,-48.1f),new(51.5f,-10.3f,-48.8f),
                 new(53.5f,ShoalHeight(53.5f,-49.6f)-.8f,-49.6f)
             };
-            RockSpan(arch,curve,new[]{2.75f,2.48f,2.18f,1.96f,2.22f,2.08f,2.51f,2.8f},
+            RockSpan(arch,curve,new[]{2.75f,2.7f,2.5f,2.3f,2.5f,2.4f,2.75f,2.8f},
                 new Color(.105f,.163f,.148f),.67f);
             for(int i=1;i<curve.Length-1;i++)
             {
@@ -126,6 +126,7 @@ namespace Raid.Nereid
             for(int i=0;i<13;i++)
             {
                 float x=43+bank*Range(6.8f,10.7f),z=-45-i*.91f;
+                if(!ShallowClear(x,z,1.2f))continue;
                 var point=new Vector3(x,Seafloor(false,x,z)-.13f,z);
                 ScatterStone(life,point,Range(.70f,2.35f),Chalk*Range(.54f,.90f));
                 if(i%3!=1)Coral(life,point+Vector3.up*.24f,Range(.71f,1.35f),i%4!=1);
@@ -344,8 +345,8 @@ namespace Raid.Nereid
         void SurveyTrail(bool deep,Transform region)
         {
             Vector2[] route=deep
-                ? new Vector2[]{new(26,-29),new(32,-37.5f),new(39,-45.4f),new(46,-55.8f),
-                    new(50,-65),new(47.8f,-73.4f),new(46,-82),new(47,-91.2f)}
+                ? new Vector2[]{new(26,-29),new(32,-36),new(38.5f,-44),new(43,-51),new(46.5f,-58),
+                    new(48.2f,-64.5f),new(46.5f,-74.5f),new(45,-83),new(45.5f,-91)}
                 : new Vector2[]{new(26,-29),new(33,-36),new(41,-43),new(44.2f,-54),
                     new(44,-62.6f),new(49.5f,-72.8f),new(54,-82)};
             var towers=new ReefGeometry();
@@ -360,6 +361,9 @@ namespace Raid.Nereid
                 towers.Tube(new[]{light-Vector3.up*.19f,light+Vector3.up*.30f},new[]{.28f,.23f},TapeGold*.80f,8);
                 var tone=i<=1?ReturnMarker:CyanMarker;
                 lights.Tube(new[]{light+Vector3.up*.135f,light+Vector3.up*.265f},new[]{.287f,.244f},tone,8);
+                // A second amber lens on the hull side points the way home from every beacon.
+                if(deep)lights.Tube(new[]{light-new Vector3(.31f,.06f,0),light-new Vector3(.19f,-.06f,0)},
+                    new[]{.11f,.085f},ReturnMarker,6);
                 for(int foot=0;foot<3;foot++)
                 {
                     float a=foot*Mathf.PI*2/3;
