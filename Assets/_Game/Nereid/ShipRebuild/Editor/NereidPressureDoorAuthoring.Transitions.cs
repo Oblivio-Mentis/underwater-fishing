@@ -13,6 +13,7 @@ namespace Raid.Nereid.Editor
                 var frame=asset.prefabContentsRoot.transform;
                 var rig=frame.GetComponent<NereidPressureDoors>();
                 if(!rig.seaAdapter) rig.seaAdapter=SeaAdapter(frame);
+                if(!rig.cabinFrame.Find("Cargo bulkhead returns")) CabinReturns(rig.cabinFrame);
             }
             using (var asset=new PrefabUtility.EditPrefabContentsScope(Root+"/Prefabs/Rooms/AftTransfer.prefab"))
             {
@@ -33,6 +34,27 @@ namespace Raid.Nereid.Editor
         {
             if(Vector3.Dot(Vector3.Cross(b-a,c-a),outward)<0) casting.Face(paint,d,c,b,a);
             else casting.Face(paint,a,b,c,d);
+        }
+
+        static void CabinReturns(Transform frame)
+        {
+            // Metres in the inner door's plane. The cassette ends at 3.27 m and the
+            // surrounding cargo-room plating starts at 3.62 m to either side.
+            var casting=new ShipSectionMesh(frame,Vector3.zero,"Cargo bulkhead returns",Vector3.zero);
+            const float inside=3.22f, outside=3.87f, bottom=-.065f, top=4.95f;
+            foreach(int side in new[]{-1,1})
+            {
+                var centre=new Vector3(side*(inside+outside)*.5f,(top+bottom)*.5f,0);
+                casting.Box(Blue,centre,new(outside-inside,top-bottom,.48f),default,.018f);
+                foreach(int face in new[]{-1,1})
+                {
+                    casting.Box(Iron,new(side*3.31f,2.42f,face*.26f),new(.115f,4.94f,.11f));
+                    casting.Box(Enamel,new(side*3.60f,2.43f,face*.254f),new(.38f,4.61f,.051f));
+                    foreach(float height in new[]{.46f,2.41f,4.16f})
+                        casting.Box(Steel,new(side*3.45f,height,face*.295f),new(.16f,.078f,.045f));
+                }
+            }
+            PhysicalShell(casting,"Cargo bulkhead jamb returns");
         }
 
         static void PumpCoffer(Transform door)
