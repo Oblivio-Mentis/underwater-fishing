@@ -57,6 +57,10 @@ namespace Raid.Nereid.Editor
             var rail=Object.FindAnyObjectByType<NereidCargoRail>();
             Check(rail && rail.Ready && rail.aquarium && !layout.ContainsSealed(rail.aquarium.position),"The aquarium below the floor is wet.");
             Check((rail.Point(0)-rail.Point(1)).sqrMagnitude>25,"The hoist connects distinct loading and unloading points.");
+            Check(rail.davit && rail.davit.bearing && rail.davit.innerBoom && rail.davit.flyJib && rail.davit.head &&
+                  rail.davit.drum && rail.davit.sheave, "The cargo basket is served by the articulated deck crane.");
+            var cargoClearance=TransitClearanceChecks.Cargo(rail);
+            Check(cargoClearance.Count==0,"Cargo route clearance: "+string.Join("; ",cargoClearance));
             var lines=Object.FindObjectsByType<NereidPipeRoute>();
             Check(lines.Length==3 && lines.Select(p=>p.line).Distinct().Count()==3,"Three uniquely assigned pipelines.");
             foreach(var line in lines)
