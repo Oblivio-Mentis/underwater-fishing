@@ -40,6 +40,7 @@ namespace Raid.Nereid.Editor
                     }
                     finally { parts.Clear();UnityEngine.Object.DestroyImmediate(assembly); }
                 }
+                FitFloorGroup(module.id,module.at,path,finish);
                 var host=PrefabUtility.LoadPrefabContents(hostPath);
                 try
                 {
