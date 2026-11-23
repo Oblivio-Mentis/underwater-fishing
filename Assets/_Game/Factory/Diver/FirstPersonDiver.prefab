@@ -78,6 +78,8 @@ MonoBehaviour:
     endBind: {x: 0.31199837, y: 0.48928243, z: 0.8143036, w: 0.0130211925}
   leftSleeve: {fileID: 1421253651760265266}
   rightSleeve: {fileID: 5657666711778879847}
+  movingSupportShoulder: {x: 0.035, y: -0.065, z: 0.076}
+  movingSupportPole: {x: -0.06, y: -1, z: 0.05}
   shoulderOrigin: {x: 0.18, y: -0.19, z: 0.045}
   shoulderReturn: {x: 0.18, y: -0.26, z: -0.235}
   shoulderTravel: 0.045

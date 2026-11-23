@@ -222,7 +222,9 @@ namespace Raid
                     back.x*=s;
                     arm.Clavicle.position=root.TransformPoint(back);
                 }
-                BendArm(arm,s,wrist,ranged && s<0);
+                bool support=ranged && s<0;
+                float carry=support && !keyPress && press<=0 ? stride.Weight*(1f-aim)*(1f-monitorRest) : 0f;
+                BendArm(arm,s,wrist,support,carry);
                 arm.Wrist.localRotation=Quaternion.Euler(angles);
                 avatar.Arm(i).Drive(arm.Upper,arm.Sleeve,arm.Wrist,Quaternion.identity);
             }
@@ -236,10 +238,11 @@ namespace Raid
             return ranged&&!panelPress;
         }
 
-        void BendArm(Arm arm,int side,Vector3 target,bool support)
+        void BendArm(Arm arm,int side,Vector3 target,bool support,float carry)
         {
             Vector3 shoulder=avatar.shoulderOrigin;
             shoulder.x*=side;
+            shoulder+=avatar.movingSupportShoulder*carry;
             Vector3 reach=target-shoulder;
             Vector3 axis=reach.sqrMagnitude>.000001f?reach.normalized:Vector3.forward;
             float upper=arm.UpperLength, forearm=arm.ForearmLength;
@@ -250,7 +253,8 @@ namespace Raid
             Vector3 wrist=shoulder+axis*distance;
             float along=(upper*upper-forearm*forearm+distance*distance)/(2f*distance);
             float bend=Mathf.Sqrt(Mathf.Max(0f,upper*upper-along*along));
-            var elbowDirection=Vector3.ProjectOnPlane(new Vector3(side*(support?.40f:.75f),support?-1.23f:-1f,-.22f),axis).normalized;
+            var restingPole=new Vector3(side*(support?.40f:.75f),support?-1.23f:-1f,-.22f);
+            var elbowDirection=Vector3.ProjectOnPlane(Vector3.Lerp(restingPole,avatar.movingSupportPole,carry),axis).normalized;
             if (elbowDirection.sqrMagnitude<.01f) elbowDirection=Vector3.Cross(axis,Vector3.right).normalized;
             var elbow=shoulder+axis*along+elbowDirection*bend;
             PoseSleeve(arm.Upper,shoulder,elbow);

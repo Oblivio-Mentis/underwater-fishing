@@ -17,6 +17,7 @@ namespace Raid
         DiverMotor diver;
         HarpoonTool tool;
         Transform body,head,gun,fishAnchor;
+        Vector3 leftShoulderRest;
         internal Transform GoshaPerch {get;private set;}
         GameObject fishModel;
         string fishSpecies;
@@ -49,6 +50,7 @@ namespace Raid
                 arms[i]=Chain("Arm "+i,avatar.Arm(i));
                 legs[i]=Chain("Leg "+i,avatar.Leg(i));
             }
+            leftShoulderRest=arms[0].Upper.localPosition;
             gun=DiveOutfit.Pivot(body,"Service harpoon",Vector3.zero);
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
@@ -127,6 +129,7 @@ namespace Raid
             long shownId=tool.HoldingHeavyCatch?tool.HeldCargoId:tool.CatchIdInSlot(displaySlot);
             UpdateFish(!diver.IsDead?shownFish?.SpeciesId:null,shownFish!=null?shownId:0);
             avatar.BeginPose();
+            arms[0].Upper.localPosition=leftShoulderRest;
             if(diver.IsDead)
             {
                 body.localPosition=Vector3.zero;body.localRotation=Quaternion.identity;
@@ -226,8 +229,11 @@ namespace Raid
             ReachGrip(arms[1],gun.TransformPoint(V(.022f,-.103f,-.087f)),aim*Quaternion.Euler(0,-12,-66),
                 yaw*V(.78f,-.75f,-.42f));
             if(reach<.015f)
-                ReachGrip(arms[0],gun.TransformPoint(V(-.034f,-.047f,.117f)),aim*Quaternion.Euler(-9,9,64),
-                    yaw*V(-.41f,-1.17f,-.4f));
+            {
+                arms[0].Upper.position+=yaw*(avatar.movingSupportShoulder*stride);
+                var pole=Vector3.Lerp(V(-.41f,-1.17f,-.4f),avatar.movingSupportPole,stride);
+                ReachGrip(arms[0],gun.TransformPoint(V(-.034f,-.047f,.117f)),aim*Quaternion.Euler(-9,9,64),yaw*pole);
+            }
         }
 
         static void ReachGrip(Limb arm,Vector3 grip,Quaternion handRotation,Vector3 elbowPole)

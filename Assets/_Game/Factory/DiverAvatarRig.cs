@@ -41,6 +41,12 @@ namespace Raid
         public Chain leftArm, rightArm, leftLeg, rightLeg;
         public Renderer leftSleeve, rightSleeve;
 
+        [Header("Harpoon support while moving")]
+        [Tooltip("Travel of the left shoulder in metres. X is right, Y is up and Z is forward. The support glove stays on the barrel.")]
+        public Vector3 movingSupportShoulder = new(.035f, -.065f, .076f);
+        [Tooltip("Elbow bend direction for the moving support arm, in view or character space.")]
+        public Vector3 movingSupportPole = new(-.06f, -1f, .05f);
+
         [Header("First-person hand targets")]
         [Tooltip("Camera-space resting position of the right shoulder. The left arm mirrors X.")]
         public Vector3 shoulderOrigin = new Vector3(.18f, -.19f, .045f);
