@@ -5,8 +5,8 @@ namespace Raid.Nereid
     public sealed class AirlockPad : MonoBehaviour
     {
         public const float Reach=3.4f;
-        public byte Id {get;internal set;}
-        public bool Sea {get;internal set;}
+        [field: SerializeField] public byte Id {get;set;}
+        [field: SerializeField] public bool Sea {get;set;}
         public bool CanRequest => RaidWorld.Instance!=null && RaidWorld.Instance.Airlock.CanRequest(Sea);
         public string Caption => CanRequest?(Sea?"Затопить · выход в море":"Осушить · вход на борт"):(RaidWorld.Instance==null?"Шлюз":RaidWorld.Instance.Airlock.Caption);
 

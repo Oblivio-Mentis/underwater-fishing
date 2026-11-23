@@ -213,8 +213,12 @@ namespace Raid.Nereid
                 yield return Wait("Exactly one model and deck pet replicated to returning crew",()=>FindObjectsByType<GoshaView>().Length==1 && world.Gosha.Mode!=GoshaMode.Waiting && Remote()?.gosha.Active==true && Remote()?.gosha.Mode==world.Gosha.Mode);
                 yield break;
             }
+            Stage(host,chamber.transform.TransformPoint(new Vector3(-1.65f,1,0)));
+            yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(2.25f,1,0)));
+            Check("Diver entered the dry chamber through the open inner gate",chamber.Contains(host.transform.position));
             yield return PressPad(2);
             yield return Wait("Outer gate open",()=>world.Airlock.Phase==AirlockPhase.OuterOpen,30);
+            yield return Wait("Second diver sees the flooded sea door open",()=>Remote()?.airlockPhase=="OuterOpen" && Remote()?.outerDoor>.99f && Remote()?.innerDoor<.01f);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(10.5f,1,0)));
             yield return WatchFirstMeeting();
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(14.5f,2.1f,-1.5f)));
@@ -227,6 +231,7 @@ namespace Raid.Nereid
             Check("Shoulder occupied in flooded pressure lock",chamber.Contains(host.transform.position)&&world.Gosha.Mode==GoshaMode.Riding);
             yield return PressPad(1);
             yield return Wait("Inner gate open after draining",()=>world.Airlock.Phase==AirlockPhase.InnerOpen,30);
+            yield return Wait("Second diver sees the drained inner door open",()=>Remote()?.airlockPhase=="InnerOpen" && Remote()?.innerDoor>.99f && Remote()?.outerDoor<.01f);
             yield return MoveThroughDoor(chamber.transform.TransformPoint(new Vector3(-1.25f,1,0)));
             yield return Wait("Pet returned through inner door and persisted to checksum save",()=>world.Team.goshaTamed&&TeamSave.Load(save).goshaTamed);
             yield return Wait("Dismounted onto the interior deck",()=>Mathf.Abs(world.Gosha.Position.y-NereidVessel.Active.transform.position.y)<.4f);

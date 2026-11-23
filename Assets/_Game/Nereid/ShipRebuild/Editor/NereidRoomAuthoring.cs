@@ -113,6 +113,7 @@ namespace Raid.Nereid.Editor
                 finally { Object.DestroyImmediate(assembly); }
             }
             if(prefab==null)throw new InvalidOperationException("NEREID prefab save failed");
+            NereidPressureDoorAuthoring.Install();
             CompletePressureFairings();
             OceanEnvelopeAuthoring.Install();
             RetireOldShip(vessel);

@@ -42,6 +42,14 @@ namespace Raid.Nereid.Editor
                 .SelectMany(r=>r.sharedMaterials)).Distinct();
             Check(paints.All(m=>m && m.shader.name=="RAID/Faceted Expedition Equipment" && !m.HasProperty("_BaseMap")),
                 "Suit and harpoon surfaces are painted by solid part colours.");
+            var lockRig=layout.GetComponentInChildren<NereidPressureDoors>();
+            Check(lockRig && lockRig.controls.Length==4 && lockRig.controls.All(p=>p && p.GetComponent<Collider>()) &&
+                lockRig.controls.Select(p=>p.Id).Distinct().Count()==4 && lockRig.waterSurface &&
+                lockRig.waterSurface.GetComponent<MeshRenderer>().sharedMaterial.shader.name=="RAID/Pressure Lock Water",
+                "Editable pressure lock has four reach controls and a water surface.");
+            Check(new[]{lockRig.innerPort,lockRig.innerStarboard,lockRig.outerPort,lockRig.outerStarboard}.All(
+                t=>t && t.GetComponent<BoxCollider>() && t.GetComponent<MeshFilter>().sharedMesh),
+                "All four sliding leaves have a saved mesh and a physical seal.");
             var decks=Object.FindAnyObjectByType<NereidDeckNavigation>();
             Check(decks && decks.reservoirGlass && decks.reservoirGlass.enabled,"The reservoir floor has solid physical glass.");
             Check(decks.crewSpawns.All(s=>s && layout.ContainsSealed(s.position)),"Every crew spawn is in a dry compartment.");
