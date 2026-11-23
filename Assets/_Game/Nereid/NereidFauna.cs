@@ -46,34 +46,65 @@ namespace Raid.Nereid
             return piece;
         }
 
+        // The bottom trap is an open bud: a fleshy base disc and a ring of petals that hinge shut.
+        Transform[] petals;
+        const int PetalCount=7;
         void MakeClam()
         {
-            var clam=Node(transform,"Донный капкан",ThreatDirector.ClamBed);
-            clam.rotation=Quaternion.Euler(0,-28,0);
-            for(int half=0;half<2;half++)
+            var bud=Node(transform,"Донный капкан",ThreatDirector.ClamBed);
+            bud.rotation=Quaternion.Euler(0,-28,0);
+            var seat=new ReefGeometry();
+            // Soft base disc with a darker throat where the petals meet.
+            const int rim=18;
+            int centre=seat.Add(new Vector3(0,.08f,0),Soft*.6f);
+            int[] ring=new int[rim];
+            for(int i=0;i<rim;i++)
             {
-                var shell=new ReefGeometry();
-                float sign=half==0?-1:1;
-                const int rays=19,rings=5;
-                for(int ring=0;ring<rings;ring++)for(int i=0;i<rays;i++)
-                {
-                    float r=ring/(rings-1f);
-                    float angle=Mathf.Lerp(-1.37f,1.37f,i/(rays-1f));
-                    float fluting=i%2==0?.064f:-.026f;
-                    var point=new Vector3(Mathf.Sin(angle)*r*1.38f,sign*r*(.2f+Mathf.Sin(r*Mathf.PI)*.41f+fluting),Mathf.Cos(angle)*r*1.8f);
-                    var colour=Color.Lerp(Soft,(i%2==0?Armour:Pale)*.85f,r);
-                    int v=shell.Add(point,colour);
-                    if(i>0&&ring>0){shell.Quad(v-rays-1,v-1,v,v-rays);}
-                }
-                for(int i=-3;i<=3;i++)
-                {
-                    float angle=i*.32f;
-                    var edge=new Vector3(Mathf.Sin(angle)*1.32f,.2f*sign,Mathf.Cos(angle)*1.76f);
-                    shell.Tube(new[]{edge,edge+new Vector3(0,-sign*.17f,-.02f)},new[]{.085f,.009f},Pale,5);
-                }
-                var piece=Part(clam,half==0?"Lower shell":"Hinged shell",shell,skin);
-                if(half==1)clamShell=piece;
+                float a=i*Mathf.PI*2/rim;
+                ring[i]=seat.Add(new Vector3(Mathf.Cos(a)*1.25f,.02f+Mathf.Sin(a*3)*.04f,Mathf.Sin(a)*1.25f),Color.Lerp(Soft,Armour,.55f));
             }
+            for(int i=0;i<rim;i++)seat.Face(centre,ring[(i+1)%rim],ring[i]);
+            // Root tendrils spread into the sand so the bud reads as grown in place.
+            for(int i=0;i<5;i++)
+            {
+                float a=i*1.26f+.4f;
+                var d=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));
+                seat.Tube(new[]{d*1.05f,d*1.7f+Vector3.down*.05f,d*2.3f+Vector3.down*.1f},new[]{.12f,.07f,.015f},Armour*.8f,6);
+            }
+            Part(bud,"Fleshy base",seat,skin);
+            petals=new Transform[PetalCount];
+            for(int i=0;i<PetalCount;i++)
+            {
+                float a=i*Mathf.PI*2/PetalCount;
+                var hinge=Node(bud,"Petal hinge "+i,new Vector3(Mathf.Cos(a)*1.12f,.06f,Mathf.Sin(a)*1.12f));
+                hinge.localRotation=Quaternion.Euler(0,-a*Mathf.Rad2Deg+90,0);
+                var petal=new ReefGeometry();
+                // Petal in hinge space: +Z points outward, so it closes by rotating about local X toward the centre.
+                const int rows=5,cols=5;
+                int[,] grid=new int[rows,cols];
+                for(int r=0;r<rows;r++)for(int c=0;c<cols;c++)
+                {
+                    float v=r/(rows-1f),u=c/(cols-1f)-.5f;
+                    float width=Mathf.Sin(Mathf.Lerp(.25f,1,v)*Mathf.PI)*.62f+.08f;
+                    var point=new Vector3(u*width*2,v*.3f+Mathf.Sin(v*Mathf.PI)*.18f,-v*1.35f);
+                    var colour=Color.Lerp(Soft,Pale,v*.75f);
+                    if(c%2==0)colour=Color.Lerp(colour,Armour,.25f);
+                    grid[r,c]=petal.Add(point,colour);
+                }
+                for(int r=0;r<rows-1;r++)for(int c=0;c<cols-1;c++)
+                {
+                    petal.Quad(grid[r,c],grid[r,c+1],grid[r+1,c+1],grid[r+1,c]);
+                    petal.Quad(grid[r,c],grid[r+1,c],grid[r+1,c+1],grid[r,c+1]);
+                }
+                // Pale sensory hairs along the inner rim trigger the snap.
+                for(int h=0;h<3;h++)
+                {
+                    var root=new Vector3((h-1)*.3f,.42f,-1.1f);
+                    petal.Tube(new[]{root,root+new Vector3(0,.16f,.07f)},new[]{.025f,.004f},Pale,5);
+                }
+                petals[i]=Part(hinge,"Petal",petal,skin);
+            }
+            clamShell=petals[0];
         }
 
         void MakeEel()
@@ -235,7 +266,15 @@ namespace Raid.Nereid
         {
             float t=Time.time,blend=first?1:1-Mathf.Exp(-Time.deltaTime*9);
             var angler=ThreatDirector.Instance.AnglerStage;
-            clamShell.localRotation=Quaternion.Slerp(clamShell.localRotation,Quaternion.Euler(state.ClamClosed?-1:-34+2*Mathf.Sin(t*.85f),0,0),1-Mathf.Exp(-Time.deltaTime*10));
+            // Open bud: petals lie back near the sand and breathe. Closed: they fold up over the centre.
+            if(petals!=null)
+                for(int i=0;i<petals.Length;i++)
+                {
+                    float breathe=Mathf.Sin(t*.85f+i*.9f)*3f;
+                    float openAngle=-12+breathe, closedAngle=78;
+                    petals[i].localRotation=Quaternion.Slerp(petals[i].localRotation,
+                        Quaternion.Euler(state.ClamClosed?closedAngle:openAngle,0,0),1-Mathf.Exp(-Time.deltaTime*(state.ClamClosed?14:5)));
+                }
             eel.gameObject.SetActive(state.Deep);kraken.gameObject.SetActive(state.Deep);
             if(state.Deep)
             {
