@@ -1,4 +1,5 @@
 using UnityEngine;
+using static Raid.Nereid.NereidVessel;
 
 namespace Raid.Nereid
 {
@@ -11,14 +12,15 @@ namespace Raid.Nereid
             new(4,Pivot,-14),new(0,Pivot,-14),new(0,Pivot,-9),new(0,Pivot,-7),
             new(3,Pivot,-6),new(3,Pivot,-2),new(3,Pivot,1.6f),new(0,Pivot,2),
             new(-3,Pivot,1.6f),new(-3,Pivot,-2),new(-3,Pivot,-6),
-            new(-3.55f,Pivot,-7.25f),new(-3.55f,Pivot,5.85f),
-            new(-4.7f,Pivot,-7.74f),new(-4.7f,.89f,-6),new(-4.7f,Gallery+Pivot,-4.5f),
-            new(-4.7f,Gallery+Pivot,-.75f),new(-4.7f,Gallery+Pivot,3),new(-4.7f,.89f,4.5f),
-            new(-4.7f,Pivot,6.27f),new(-2.75f,Pivot,5.8f),new(0,Pivot,5.75f),
+            new(-3.55f,Pivot,GalleryAftFoot-.56f),new(-3.55f,Pivot,GalleryBowFoot+.60f),
+            new(StairX,Pivot,GalleryAftFoot-.56f),new(StairX,Gallery*.5f+Pivot,(GalleryAftFoot+GalleryAftTop)*.5f),new(StairX,Gallery+Pivot,GalleryAftTop),
+            new(StairX,Gallery+Pivot,-.75f),new(StairX,Gallery+Pivot,GalleryBowTop),
+            new(StairX,Gallery*.5f+Pivot,(GalleryBowFoot+GalleryBowTop)*.5f),
+            new(StairX,Pivot,GalleryBowFoot+.60f),new(-2.75f,Pivot,5.8f),new(0,Pivot,5.75f),
             new(3.2f,Pivot,5.5f),new(3,Pivot,-11f),
             new(-3.65f,Pivot,2.9f),new(-3.6f,Pivot,-4.65f),
             new(0,Pivot,-16.72f),new(0,Pivot,-18.1f),new(1.6f,Pivot,-20.2f),new(1.6f,Pivot,-23.24f),
-            NereidDeckExtension.StairMark(-16.54f,Pivot),NereidDeckExtension.StairMark(-19f,Pivot),
+            NereidDeckExtension.StairMark(-17.14f,Pivot),NereidDeckExtension.StairMark(-19f,Pivot),
             NereidDeckExtension.StairMark(-22f,Pivot),
             new(-2.58f,5.03f,-25.05f),new(-2.58f,5.03f,-26.85f),new(1.2f,5.03f,-26.76f)
         };
@@ -66,9 +68,9 @@ namespace Raid.Nereid
         }
         static float Surface(Vector3 p)
         {
-            if(Mathf.Abs(p.x-StairX)>.63f || p.z< -7.5f || p.z>6)return 0;
-            if(p.z< -4.5f)return Gallery*Mathf.Clamp01((p.z+7.5f)/3);
-            if(p.z>3)return Gallery*Mathf.Clamp01((6-p.z)/3);
+            if(Mathf.Abs(p.x-StairX)>.63f || p.z<GalleryAftFoot || p.z>GalleryBowFoot)return 0;
+            if(p.z<GalleryAftTop)return Gallery*Mathf.InverseLerp(GalleryAftFoot,GalleryAftTop,p.z);
+            if(p.z>GalleryBowTop)return Gallery*Mathf.InverseLerp(GalleryBowFoot,GalleryBowTop,p.z);
             // The level below the gallery is traversable between its supports.
             return p.y<Gallery-.32f?0:Gallery;
         }

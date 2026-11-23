@@ -50,7 +50,7 @@ namespace Raid.Nereid
                 Panel("Caged task strip",new(.86f,2.86f,z-.73f),new(1.17f,.055f,.092f),i<2?warm:cold);
                 if(i%2==0)
                 {
-                    const float lightX=-2.42f;
+                    const float lightX=-3.82f;
                     Lamp(new(.92f,2.80f,z-.73f),i<2?AmberFill:WaterFill,7.8f,170);
                     Panel("Port wall inspection light",new(lightX,2.91f,z),new(.094f,.055f,1.10f),warm);
                     Wash(new(lightX,2.83f,z),new(-4.09f,.95f,z-.40f),AmberFill,7.5f,190);
@@ -85,7 +85,6 @@ namespace Raid.Nereid
                 Panel("Coolant indicator",new(x,1.60f,back+.676f),new(.132f,.027f,.027f),i==0?warm:cold);
                 Wheel(new(x+.37f,1.14f,back+.59f),.116f,ochre);
             }
-            Sign(archive,"КОНТУРЫ ТЯГИ",new(1.81f,2.53f,back+.085f),Quaternion.Euler(0,180,0),3.41f,.20f);
             Wash(new(1.87f,2.77f,-23.12f),new(1.64f,.87f,back+.34f),AmberFill,8.9f,170);
             Wash(new(-1.31f,2.74f,-17.82f),new(-3.70f,.80f,-18.90f),WaterFill,8.1f,110);
         }

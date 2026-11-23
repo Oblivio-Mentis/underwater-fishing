@@ -48,7 +48,7 @@ namespace Raid.Nereid.Editor
             HideOldArchitecture();
             Import("Nereid_Exterior");Import("Nereid_Interior");
             ImportCreature();
-            PhysicalRooms();Lighting();ServiceExit(vessel);Labels();RerouteFeed();ConfigureProcessingHall();TankBarrier();OceanSilhouettes();TraversableDecks();
+            PhysicalRooms();Lighting();ServiceExit(vessel);RerouteFeed();ConfigureProcessingHall();TankBarrier();OceanSilhouettes();TraversableDecks();
             NereidEquipmentAuthoring.Upgrade();BindIdleScreens();
             RemoveWorkshopGlazing();PlaceFishingGrounds();
             foreach(var text in factory.GetComponentsInChildren<TMPro.TMP_Text>(true))
@@ -211,12 +211,6 @@ namespace Raid.Nereid.Editor
             foreach(var light in root.GetComponentsInChildren<Light>()){light.range*=VesselScale;light.intensity*=VesselScale*VesselScale;}
         }
 
-        static void Labels()
-        {
-            Label("ЦЕХ",new Vector3(0,3.2f,-7.85f),Quaternion.Euler(0,180,0),.2f);
-            Label("КОРМОВОЙ ШЛЮЗ",new Vector3(5.72f,2.8f,-14),Quaternion.Euler(0,90,0),.14f);
-        }
-
         static void TraversableDecks()
         {
             // A useful observation route around the real reservoir, reached from either end by walkable stairs.
@@ -231,26 +225,34 @@ namespace Raid.Nereid.Editor
             }
             for(float z=-3.9f;z<3;z+=2.2f)foreach(int side in new[]{-1,1})
                 Solid("Gallery structural foot",new Vector3(x+side*.5f,.71f,z),new Vector3(.085f,1.42f,.12f),"Nereid_Dark",true);
-            const int steps=20;const float run=.15f;
-            for(int i=0;i<steps;i++)
+            const int steps=20;
+            foreach(var (foot,top,name) in new[]{
+                (NereidVessel.GalleryAftFoot,NereidVessel.GalleryAftTop,"Aft gallery stair "),
+                (NereidVessel.GalleryBowFoot,NereidVessel.GalleryBowTop,"Forward gallery stair ")})
             {
-                float h=level*(i+1)/steps;
-                Solid("Aft gallery stair "+i,new Vector3(x,h*.5f,-7.5f+(i+.5f)*run),new Vector3(1.25f,h,run+.008f),"Nereid_Steel",true);
-                Solid("Forward gallery stair "+i,new Vector3(x,h*.5f,6-(i+.5f)*run),new Vector3(1.25f,h,run+.008f),"Nereid_Steel",true);
-                foreach(float z in new[]{-7.5f+(i+1)*run,6-(i+1)*run})
-                    Solid("Stair nosing",new Vector3(x,h+.003f,z),new Vector3(1.22f,.012f,.022f),"Nereid_Ochre");
-            }
-            foreach(int side in new[]{-1,1})for(int i=0;i<=5;i++)
-            {
-                float t=i/5f,edge=x+side*.61f;
-                foreach(float z in new[]{Mathf.Lerp(-7.5f,-4.5f,t),Mathf.Lerp(6,3,t)})
-                    Solid("Stair safety post",new Vector3(edge,level*t+.27f,z),new Vector3(.035f,.54f,.035f),"Nereid_Trim",true);
-            }
-            foreach(int side in new[]{-1,1})
-            {
-                float edge=x+side*.61f;
-                Rail(new Vector3(edge,.54f,-7.5f),new Vector3(edge,level+.54f,-4.5f));
-                Rail(new Vector3(edge,level+.54f,3),new Vector3(edge,.54f,6));
+                float run=Mathf.Abs(top-foot)/steps;
+                for(int i=0;i<steps;i++)
+                {
+                    float h=level*(i+1)/steps;
+                    float z=Mathf.Lerp(foot,top,(i+.5f)/steps);
+                    Solid(name+i,new Vector3(x,h*.5f,z),new Vector3(1.25f,h,run+.008f),"Nereid_Steel",true);
+                    float nosing=Mathf.Lerp(foot,top,(i+1f)/steps);
+                    Solid("Stair nosing",new Vector3(x,h+.003f,nosing),new Vector3(1.22f,.012f,.022f),"Nereid_Ochre");
+                }
+                foreach(int side in new[]{-1,1})
+                {
+                    float edge=x+side*.61f;
+                    for(int i=0;i<=5;i++)
+                    {
+                        float t=i/5f;
+                        Solid("Stair safety post",new Vector3(edge,level*t+.27f,Mathf.Lerp(foot,top,t)),
+                            new Vector3(.035f,.54f,.035f),"Nereid_Trim",true);
+                    }
+                    var footRail=new Vector3(edge,.54f,foot);
+                    var topRail=new Vector3(edge,level+.54f,top);
+                    if(foot<top)Rail(footRail,topRail);
+                    else Rail(topRail,footRail);
+                }
             }
         }
 
@@ -491,13 +493,6 @@ namespace Raid.Nereid.Editor
         static void Light(string name,Vector3 p,Color color,float intensity,float range,bool shadows)
         {
             var go=new GameObject(name);go.transform.SetParent(root,false);go.transform.localPosition=p;var l=go.AddComponent<Light>();l.type=LightType.Point;l.color=color;l.intensity=intensity;l.range=range;l.shadows=shadows?LightShadows.Soft:LightShadows.None;l.shadowBias=.025f;l.shadowNormalBias=.18f;
-        }
-        static void Label(string text,Vector3 p,Quaternion rotation,float size)
-        {
-            Solid("Navigation sign backing",p+rotation*Vector3.forward*.025f,new Vector3(2.6f,.38f,.035f),"Nereid_Dark");
-            root.GetChild(root.childCount-1).localRotation=rotation;
-            var go=new GameObject("Sign "+text);go.transform.SetParent(root,false);go.transform.localPosition=p;go.transform.localRotation=rotation;
-            var label=go.AddComponent<TMPro.TextMeshPro>();label.font=AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>("Assets/_Game/UI/Overhaul/Fonts/PTSans-SDF.asset");label.text=text;label.fontSize=size*10;label.alignment=TMPro.TextAlignmentOptions.Center;label.color=new Color(.7f,.78f,.73f);label.rectTransform.sizeDelta=new Vector2(4,.45f);
         }
     }
 }

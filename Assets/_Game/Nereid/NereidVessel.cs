@@ -9,6 +9,7 @@ namespace Raid.Nereid
     public sealed class NereidVessel : MonoBehaviour
     {
         public static NereidVessel Active { get; private set; }
+        public const float GalleryAftFoot=-6.75f, GalleryAftTop=-4.5f, GalleryBowTop=3f, GalleryBowFoot=5.45f;
         public Bounds[] sealedRooms;
         [Min(.1f)] public float indoorGravity=18f;
         [Min(0)] public float indoorJumpHeight=.8f;

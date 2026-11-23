@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Rendering;
-using Raid.UI;
 
 namespace Raid.Nereid
 {
@@ -10,7 +9,7 @@ namespace Raid.Nereid
     // identical bulkheads and stairs without changing the baked hull's origin.
     internal sealed partial class NereidDeckExtension : MonoBehaviour
     {
-        const float StairX=-2.58f, StairWidth=1.88f, StairStart=-16.95f, StairEnd=-24.85f, UpperDeck=4.85f;
+        const float StairX=-2.58f, StairWidth=1.88f, StairStart=-17.65f, StairEnd=-24.85f, UpperDeck=4.85f;
         const float BridgeFront=-24.78f, BridgeBack=-30.42f, BridgeHalfWidth=4.32f;
         static readonly Bounds Machinery=new(new Vector3(0,1.63f,-20.27f),new Vector3(8.44f,3.50f,8.87f));
         internal static readonly Vector3 SkillStation=new(3.30f,0,-22.40f);
@@ -64,8 +63,23 @@ namespace Raid.Nereid
             BuildMachinery();
             BuildStairway();
             BuildBridge();
-            Wayfinding();
+            BuildGalleryLandings();
             FitExistingMonitors(hull);
+        }
+
+        void BuildGalleryLandings()
+        {
+            archive=Node(transform,"Observation gallery turning landings",Vector3.zero);
+            batch=new PanelBatch(archive,owned);
+            foreach(float z in new[]{NereidVessel.GalleryAftFoot-.54f,NereidVessel.GalleryBowFoot+.54f})
+            {
+                Panel("Inset turning plate",new(-4.17f,.018f,z),new(2.22f,.025f,1.01f),centerDeckTexture);
+                for(int i=0;i<3;i++)
+                    foreach(int side in new[]{-1,1})
+                        Beam("Painted turn chevron",new(-4.75f+i*.46f,.034f,z+side*.26f),
+                            new(-4.53f+i*.46f,.034f,z),.052f,.009f,ochre);
+            }
+            batch.Build();
         }
 
         void CreateMaterials(Transform hull)
@@ -155,6 +169,12 @@ namespace Raid.Nereid
                 Panel("Raised traction tread",new(StairX,y-.085f,z),new(StairWidth,.17f,run+.024f),gunmetal,true);
                 Panel("Machined amber nosing",new(StairX,y-.033f,z+run*.50f),new(StairWidth-.11f,.049f,.024f),step%4==0?ochre:steel);
             }
+            Panel("Companionway turning plate",new(-1.73f,.017f,StairStart+.71f),new(3.55f,.025f,1.33f),centerDeckTexture);
+            foreach(int side in new[]{-1,1})
+            {
+                Panel("Companionway landing edge",new(-1.73f,.033f,StairStart+.71f+side*.63f),new(3.49f,.009f,.046f),ochre);
+                Panel("Companionway sill",new(StairX+side*.94f,.036f,StairStart+.30f),new(.046f,.009f,.57f),ochre);
+            }
             foreach(int side in new[]{-1,1})
             {
                 float x=StairX+side*StairWidth*.51f;
@@ -170,10 +190,10 @@ namespace Raid.Nereid
 
             // The external part of the inclining companionway has its own
             // pressure cheeks. At the lower end it opens inside the machinery room.
-            float exposedStart=-21.30f;
-            float baseHeight=UpperDeck*Mathf.InverseLerp(StairStart,StairEnd,exposedStart);
-            Beam("Companionway roof",new(StairX,baseHeight+1.95f,exposedStart),
-                new(StairX,UpperDeck+1.95f,StairEnd),2.27f,.21f,coating,true);
+            const float exposedStart=-19.54f, headroom=1.94f;
+            float baseHeight=StairMark(exposedStart,0).y;
+            Beam("Companionway roof",new(StairX,baseHeight+headroom,exposedStart),
+                new(StairX,UpperDeck+headroom,StairEnd),2.27f,.21f,coating,true);
             foreach(int side in new[]{-1,1})
             {
                 float x=StairX+side*1.04f;
@@ -181,8 +201,13 @@ namespace Raid.Nereid
                 Beam("Ascent indicator strip",new(x-side*.13f,baseHeight+.92f,exposedStart),new(x-side*.13f,UpperDeck+.92f,StairEnd),
                     .048f,.052f,cold);
             }
-            Lamp(new(StairX,3.14f,-19.68f),new(1,.60f,.30f),6.0f,91);
-            Lamp(new(StairX,6.27f,-24.19f),new(.39f,.8f,1),5.0f,103);
+            foreach(float z in new[]{-19.84f,-21.78f,-23.72f})
+            {
+                var tread=StairMark(z,0);
+                Beam("Recessed companionway ceiling light",StairMark(z+.29f,headroom-.13f),
+                    StairMark(z-.29f,headroom-.13f),.54f,.028f,warm);
+                Lamp(tread+Vector3.up*(headroom-.20f),new(.66f,.87f,1),5.6f,125);
+            }
             batch.Build();
         }
 
@@ -257,17 +282,6 @@ namespace Raid.Nereid
             Rail("Panorama glazing",new(0,1.19f,0),new(width-.16f,1.14f,.035f),glass,true);
             Rail("Panorama upper band",new(0,1.95f,0),new(width+.03f,.36f,.24f),gunmetal);
             Rail("Panorama keeper",new(width*.5f-.04f,1.21f,0),new(.095f,1.37f,.20f),steel,true);
-        }
-
-        void Wayfinding()
-        {
-            Sign(transform,"03   МАШИННЫЙ ОТСЕК",new(0,2.80f,-15.82f),Quaternion.Euler(0,180,0),2.57f,.17f);
-            Sign(transform,"01   РЕЗЕРВУАР   ↑",new(0,2.75f,-16.17f),Quaternion.identity,2.46f,.17f);
-            Sign(transform,"05   МОСТИК   ↑",new(StairX,1.46f,-16.47f),Quaternion.Euler(0,180,0),2.02f,.16f);
-            Sign(transform,"04   СНАРЯЖЕНИЕ",new(4.005f,2.08f,-20.61f),Quaternion.Euler(0,90,0),2.36f,.21f);
-            Sign(transform,"02   ←   ШЛЮЗ",new(1.83f,2.36f,-14.35f),Quaternion.Euler(0,180,0),2.00f,.17f);
-            Sign(transform,"NEREID   /   07",new(0,UpperDeck+.265f,BridgeBack-.124f),Quaternion.identity,5.75f,.31f);
-            Sign(transform,"КОМАНДНЫЙ МОСТИК",new(1.09f,UpperDeck+1.75f,BridgeFront-.165f),Quaternion.identity,3.20f,.23f);
         }
 
         void FitExistingMonitors(Transform hull)
@@ -356,23 +370,6 @@ namespace Raid.Nereid
             copy.transform.localPosition-=Vector3.Scale(bounds.center,new Vector3(size.x/bounds.size.x,size.y/bounds.size.y,size.z/bounds.size.z));
             seat.localRotation=rotation;
             if(solid)Collision(seat,"Furniture collision",Vector3.zero,size,Quaternion.identity);
-        }
-
-        static void Sign(Transform parent,string value,Vector3 point,Quaternion rotation,float width,float size)
-        {
-            var font=UiRoot.Instance?.font;
-            if(font==null)return;
-            var sign=Node(parent,value,point);
-            sign.localRotation=rotation;
-            var glyph=sign.gameObject.AddComponent<TextMeshPro>();
-            glyph.font=font;
-            glyph.text=value;
-            glyph.color=new Color(.77f,.87f,.84f);
-            glyph.fontSize=size*10;
-            glyph.rectTransform.sizeDelta=new Vector2(width,size*2.5f);
-            glyph.alignment=TextAlignmentOptions.Center;
-            glyph.textWrappingMode=TextWrappingModes.NoWrap;
-            glyph.overflowMode=TextOverflowModes.Ellipsis;
         }
 
         void Lamp(Vector3 at,Color tint,float range,float power)

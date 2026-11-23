@@ -112,7 +112,11 @@ namespace Raid.Editor
                     await Until(() => !Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("Running"), "reef regression", 240);
                     Check(Raid.Nereid.Editor.NereidEncounterChecks.Status.StartsWith("PASS"), Raid.Nereid.Editor.NereidEncounterChecks.Status);
                 }
-                else if(Arg("-raid-case")=="new-decks") await CheckExpeditionDecks(diver);
+                else if(Arg("-raid-case")=="new-decks")
+                {
+                    await CheckStairRoutes(diver);
+                    await CheckExpeditionDecks(diver);
+                }
                 else
                 {
                     await AirAndDefense(diver);
@@ -261,6 +265,85 @@ namespace Raid.Editor
             await Awaitable.WaitForSecondsAsync(5);
             Check(attacks == previousAttacks && t.WavePosition.x > gate.x,
                 "Repeat wave is stopped again by the closed outer door");
+        }
+
+        static async Awaitable CheckStairRoutes(DiverMotor diver)
+        {
+            const BindingFlags instance = BindingFlags.Instance | BindingFlags.NonPublic;
+            var submit = typeof(DiverMotor).GetMethod("SubmitInput", instance);
+            var nextSend = typeof(DiverMotor).GetField("_nextSend", instance);
+            var hull = NereidVessel.Active.transform;
+            var controller = diver.GetComponent<CharacterController>();
+            var blocked = new List<string>();
+
+            async Awaitable Route(string name, Vector3 start, params Vector3[] goals)
+            {
+                diver.Teleport(hull.TransformPoint(start));
+                await Until(() => diver.IsGrounded, name + " start", 4);
+                foreach (var goal in goals)
+                {
+                    float deadline = Time.realtimeSinceStartup + 8;
+                    Vector3 target = hull.TransformPoint(goal);
+                    while (true)
+                    {
+                        Vector3 direction = Vector3.ProjectOnPlane(target - diver.transform.position, Vector3.up);
+                        if (direction.sqrMagnitude < .09f) break;
+                        float yaw = Quaternion.LookRotation(direction).eulerAngles.y;
+                        submit.Invoke(diver, new object[] { Vector3.forward, yaw, 0f, false });
+                        if (Time.realtimeSinceStartup > deadline || !diver.IsWalking)
+                        {
+                            var p = diver.transform.position;
+                            float radius = controller.radius - controller.skinWidth;
+                            Vector3 axial = Vector3.up * (controller.height * .5f - radius);
+                            var blockers = Physics.CapsuleCastAll(p + axial, p - axial, radius, direction.normalized, .6f,
+                                Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                                .Where(hit => hit.collider != controller && hit.normal.y < .6f)
+                                .Select(hit => hit.collider.name).Distinct();
+                            throw new InvalidOperationException($"stopped at {hull.InverseTransformPoint(p):F2} toward {goal:F2}, " +
+                                $"walking={diver.IsWalking}, ahead: {string.Join(", ", blockers)}");
+                        }
+                        await Awaitable.FixedUpdateAsync();
+                    }
+                    submit.Invoke(diver, new object[] { Vector3.zero, 0f, 0f, false });
+                    await Until(() => diver.IsGrounded, name + " landing " + goal, 4);
+                    if (Mathf.Abs(hull.InverseTransformPoint(diver.transform.position).y - goal.y) >= .30f)
+                        throw new InvalidOperationException($"arrived on the wrong level at {goal:F2}");
+                }
+                observations.Add(name);
+            }
+
+            async Awaitable TryRoute(string name, Vector3 start, params Vector3[] goals)
+            {
+                try { await Route(name, start, goals); }
+                catch (Exception e) { blocked.Add(name + ": " + e.Message); }
+            }
+
+            nextSend.SetValue(diver, float.PositiveInfinity);
+            try
+            {
+                await TryRoute("Walk from the aft gallery entrance to the forward lower deck",
+                    new(-3.35f,.45f,NereidVessel.GalleryAftFoot-.54f), new(-4.7f,.45f,NereidVessel.GalleryAftFoot-.54f),
+                    new(-4.7f,1.95f,-.70f), new(-4.7f,.45f,NereidVessel.GalleryBowFoot+.54f), new(-3.35f,.45f,NereidVessel.GalleryBowFoot+.54f));
+                await TryRoute("Walk from the forward gallery entrance to the aft lower deck",
+                    new(-3.35f,.45f,NereidVessel.GalleryBowFoot+.54f), new(-4.7f,.45f,NereidVessel.GalleryBowFoot+.54f),
+                    new(-4.7f,1.95f,-.70f), new(-4.7f,.45f,NereidVessel.GalleryAftFoot-.54f), new(-3.35f,.45f,NereidVessel.GalleryAftFoot-.54f));
+                await TryRoute("Climb from the machinery deck into the bridge",
+                    new(-.85f,.45f,-16.75f), new(-2.58f,.45f,-16.70f), new(-2.58f,5.30f,-26.15f),
+                    new(.55f,5.30f,-26.15f));
+                await TryRoute("Descend from the bridge into the machinery deck",
+                    new(.55f,5.30f,-26.15f), new(-2.58f,5.30f,-26.15f), new(-2.58f,.45f,-16.70f),
+                    new(-.85f,.45f,-16.75f));
+            }
+            finally
+            {
+                submit.Invoke(diver, new object[] { Vector3.zero, 0f, 0f, false });
+                nextSend.SetValue(diver, 0f);
+            }
+            Check(blocked.Count == 0, blocked.Count == 0 ? "All three stair flights walk in both directions" : string.Join("\n", blocked));
+            Check(!hull.GetComponentsInChildren<TMPro.TMP_Text>().Any(label =>
+                label.name.StartsWith("Sign ", StringComparison.Ordinal) || label.text.Contains("КОМАНДНЫЙ МОСТИК") ||
+                label.text.Contains("МАШИННЫЙ ОТСЕК") || label.text.Contains("КОНТУРЫ ТЯГИ")),
+                "Detached compartment signs are absent");
         }
 
         static async Awaitable CheckExpeditionDecks(DiverMotor diver)
