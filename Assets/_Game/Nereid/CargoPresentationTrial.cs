@@ -132,7 +132,7 @@ namespace Raid
                 var vessel=NereidVessel.Active;
                 host.LookAtConsole(vessel.transform.TransformPoint(new Vector3(0,3.1f,-3)));
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Unloading,"Cage reaches the reservoir hopper",30);
-                float duration=world.progression.unloadingSeconds/Mathf.Max(1,1+world.Team.winchLevel*world.progression.winchSpeedPerLevel);
+                float duration=world.Team.HoistDuration(HoistPhase.Unloading,world.progression);
                 if(motion)
                     await Track(host,()=>vessel.transform.TransformPoint(new Vector3(0,2.70f,-3)),"discharge",20,.125f);
                 else await Until(()=>world.Team.hoistRemaining<duration*.28f,"Cage trapdoor opens and water descends");

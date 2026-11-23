@@ -43,8 +43,8 @@ namespace Raid.Nereid
             console.kind = ShipConsoleKind.SkillTree;
             console.range = 3.65f;
             console.screenScale = .0018f;
-            Material frame = FindSurface(ShipConsoleKind.Upgrades);
-            Material baseMat = FindSurface(ShipConsoleKind.Depths) ?? frame;
+            Material frame = FindSurface(ShipConsoleKind.Depths);
+            Material baseMat = frame;
             Cube("Skill computer foot", new Vector3(0, .11f, .075f), new Vector3(1.4f, .16f, .66f), baseMat);
             Cube("Skill computer pedestal", new Vector3(0, .60f, .12f), new Vector3(.46f, .88f, .31f), frame);
             Cube("Skill computer frame", new Vector3(0, 1.33f, .06f), new Vector3(2.24f, 1.53f, .19f), baseMat);
@@ -68,7 +68,7 @@ namespace Raid.Nereid
             idle.textWrappingMode = TextWrappingModes.NoWrap;
             idle.fontSize = .17f;
             idle.color = UI.UiTheme.Cyan;
-            idle.text = "NEREID\n\nСНАРЯЖЕНИЕ ЭКИПАЖА\n\nЛКМ · ОТКРЫТЬ ДЕРЕВО";
+            idle.text = "NEREID\nЛКМ · ПРОКАЧКА";
         }
 
         static Material FindSurface(ShipConsoleKind kind)

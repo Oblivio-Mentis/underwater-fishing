@@ -175,7 +175,7 @@ namespace Raid.Nereid.Editor
         {
             var old=station.transform.Find(RootName);if(old!=null)Object.DestroyImmediate(old.gameObject);
             var root=Group(RootName,station.transform);
-            bool monitor=station.kind==ShipConsoleKind.Upgrades||station.kind==ShipConsoleKind.Depths||station.kind==ShipConsoleKind.Reservoir;
+            bool monitor=station.kind==ShipConsoleKind.Workshop||station.kind==ShipConsoleKind.Depths||station.kind==ShipConsoleKind.Reservoir;
             if(!monitor)
             {
                 RouteConsole(station,root);

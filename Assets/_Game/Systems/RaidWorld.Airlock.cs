@@ -35,7 +35,8 @@ namespace Raid
             var chamber=NereidAirlock.Active;
             var state=airlock.Value;
             if(chamber==null || !state.Busy)return;
-            state.Step(Time.fixedDeltaTime,chamber.DoorOccupied(false),chamber.DoorOccupied(true));
+            float multiplier=1/Mathf.Max(.62f,1-TeamSkillFactor(SkillLine.Airlock));
+            state.Step(Time.fixedDeltaTime*multiplier,chamber.DoorOccupied(false),chamber.DoorOccupied(true));
             airlock.Value=state;
             chamber.ApplyDoors(state);
         }

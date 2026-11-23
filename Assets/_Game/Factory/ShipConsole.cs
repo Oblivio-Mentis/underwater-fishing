@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum ShipConsoleKind { Process, Feed, Upgrades, Depths, Reservoir, SkillTree }
+    public enum ShipConsoleKind { Process, Feed, Workshop, Depths, Reservoir, SkillTree }
 
     // Physical, scene-authored access points. Server validates its own station list.
     public sealed class ShipConsole : MonoBehaviour
@@ -13,11 +13,11 @@ namespace Raid
         public float range=3.2f;
         public float screenScale=.0018f;
         public static readonly List<ShipConsole> Stations=new List<ShipConsole>();
-        public string Caption => kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Upgrades?"Бортовой компьютер":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
-        void OnEnable() { if(!Stations.Contains(this))Stations.Add(this); }
+        public string Caption => kind==ShipConsoleKind.SkillTree?"Дерево навыков":kind==ShipConsoleKind.Process?"Переработчик":kind==ShipConsoleKind.Feed?"Кормление":kind==ShipConsoleKind.Workshop?"Сервисный пульт":kind==ShipConsoleKind.Depths?"Навигация":"Резервуар";
+        void OnEnable() { if(kind!=ShipConsoleKind.Workshop && !Stations.Contains(this))Stations.Add(this); }
         void OnDisable() { Stations.Remove(this); }
         public bool InRange(DiverMotor diver) => diver!=null && (diver.transform.position-transform.position).sqrMagnitude<=range*range;
-        public bool IsMonitor => kind==ShipConsoleKind.Upgrades || kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Reservoir || kind==ShipConsoleKind.SkillTree;
+        public bool IsMonitor => kind==ShipConsoleKind.Depths || kind==ShipConsoleKind.Reservoir || kind==ShipConsoleKind.SkillTree;
 
         // Use the physical face collider and its actual world-space display plane. Hull props occlude the ray.
         public static ShipConsole ResolveSight(DiverMotor player,Camera camera)
@@ -31,7 +31,7 @@ namespace Raid
         {
             if(!Physics.Raycast(ray,out var hit,4f,~0,QueryTriggerInteraction.Ignore))return null;
             var station=hit.collider.GetComponentInParent<ShipConsole>();
-            if(station==null || !station.InRange(player))return null;
+            if(station==null || station.kind==ShipConsoleKind.Workshop || !station.isActiveAndEnabled || !station.InRange(player))return null;
             if(!station.IsMonitor)return station;
             var anchor=station.screenAnchor;
             if(anchor==null || Vector3.Dot(ray.direction,anchor.forward)<=.015f)return null;
@@ -52,7 +52,7 @@ namespace Raid
         {
             if(action==WorldAction.ProcessAll||action==WorldAction.StopProcessing)return kind==ShipConsoleKind.Process;
             if(action==WorldAction.FeedAll||action==WorldAction.StopFeeding)return kind==ShipConsoleKind.Feed;
-            if(action>=WorldAction.Reel && action<=WorldAction.Winch)return kind==ShipConsoleKind.Upgrades;
+            if(kind==ShipConsoleKind.Workshop || kind==ShipConsoleKind.SkillTree)return false;
             if(action==WorldAction.DiveOne || action==WorldAction.DiveTwo)return kind==ShipConsoleKind.Depths;
             return kind==ShipConsoleKind.Reservoir;
         }

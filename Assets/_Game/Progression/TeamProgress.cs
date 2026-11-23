@@ -31,7 +31,7 @@ namespace Raid
     {
         public FeedingOutcome outcome;
         public int required, paid;
-        public float deficit;
+        public float deficit, mitigation;
         public bool Attack => outcome == FeedingOutcome.None;
     }
 
@@ -39,13 +39,14 @@ namespace Raid
     [Serializable]
     public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 3;
+        public const int CurrentSchema = 4;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
-        public int reelLevel, finsLevel, tankLevel, hullLevel, winchLevel;
         public bool goshaMet,goshaTamed;
-        public int highestDepth = 1;
+        public int expeditionDepth = 1;
+        public int highestDepth => TeamRank(SkillLine.Hull)>0 ? 2 : 1;
+        public int rationCyclesUntilReady;
         public float hungerRemaining = 180f;
         public List<CatchItem> tank = new List<CatchItem>();
         public List<CatchItem> cargo = new List<CatchItem>();
@@ -56,52 +57,15 @@ namespace Raid
         public TeamProgress(ProgressionTuning tuning) { hungerRemaining = Math.Max(1f, tuning.hungerInterval); }
         public int CargoUsed { get { int used = 0; foreach (CatchItem fish in cargo) used = checked(used + fish.cargoSize); return used; } }
 
-        public int Level(Upgrade upgrade)
-        {
-            switch (upgrade)
-            {
-                case Upgrade.Reel: return reelLevel;
-                case Upgrade.Fins: return finsLevel;
-                case Upgrade.Tank: return tankLevel;
-                case Upgrade.Hull: return hullLevel;
-                case Upgrade.Winch: return winchLevel;
-                default: throw new ArgumentOutOfRangeException(nameof(upgrade));
-            }
-        }
-
-        public MaterialCost Cost(Upgrade upgrade, ProgressionTuning tuning)
-        {
-            UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (recipe == null || !recipe.initialCost.IsValid || !recipe.additionalPerLevel.IsValid || recipe.costMultiplier < 1f)
-                throw new ArgumentException("Invalid upgrade recipe: " + upgrade);
-            double scale = Math.Pow(recipe.costMultiplier, Level(upgrade));
-            int level=Level(upgrade);
-            return new MaterialCost(checked(Price(recipe.initialCost.biomass, scale)+level*recipe.additionalPerLevel.biomass),
-                checked(Price(recipe.initialCost.chitin, scale)+level*recipe.additionalPerLevel.chitin),
-                checked(Price(recipe.initialCost.scrap, scale)+level*recipe.additionalPerLevel.scrap),
-                checked(Price(recipe.initialCost.electronics, scale)+level*recipe.additionalPerLevel.electronics));
-        }
-
-        private static int Price(int value, double scale) => checked((int)Math.Ceiling(Math.Round(value * scale, 6)));
-        public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + legacyCargoCapacityBonus + Bonus(SkillId.K1,tuning) + Bonus(SkillId.K2,tuning) + Bonus(SkillId.K3,tuning) + Bonus(SkillId.K4,tuning));
+        public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + TeamValue(SkillLine.Cage));
+        public int ReservoirCapacity(ProgressionTuning tuning=null) =>
+            checked((tuning!=null ? tuning.reservoirCapacity : 24) + TeamValue(SkillLine.Reservoir));
         public bool CanVisitDepth(int depth) => depth >= 1 && depth <= highestDepth;
 
-        public bool Buy(Upgrade upgrade, bool onBoard, ProgressionTuning tuning)
-        {
-            UpgradeRecipe recipe = tuning.Recipe(upgrade);
-            if (teamRevision==int.MaxValue || upgrade<Upgrade.Hull || !onBoard || recipe == null || Level(upgrade) >= recipe.maximumLevel) return false;
-            if (upgrade == Upgrade.Hull && lifetimeCatch < tuning.depthTwoLifetimeCatch) return false;
-            MaterialCost cost = Cost(upgrade, tuning);
-            if (biomass < cost.biomass || chitin < cost.chitin || scrap < cost.scrap || electronics < cost.electronics) return false;
-            biomass -= cost.biomass; chitin -= cost.chitin; scrap -= cost.scrap; electronics -= cost.electronics;
-            teamRevision++;
-            switch (upgrade)
-            {
-                case Upgrade.Hull: ++hullLevel; highestDepth = Math.Max(highestDepth, 2); break;
-                case Upgrade.Winch: ++winchLevel; break;
-            }
-            return true;
-        }
+        public float HungerInterval(ProgressionTuning tuning) => Math.Max(1f, tuning.hungerInterval*(1+TeamFactor(SkillLine.Satiety)));
+
+        public int StockLossLimit(ProgressionTuning tuning) => Math.Min(Math.Max(0,tuning.maximumStockLossCount),
+            (int)Math.Floor(tank.Count * Math.Max(0f,Math.Min(1f,tuning.maximumStockLossFraction)) * (1-TeamFactor(SkillLine.CargoDefense))));
 
         public bool LoadCargo(CatchItem item, ProgressionTuning tuning)
         {
@@ -113,14 +77,23 @@ namespace Raid
 
         public bool BeginHoist(ProgressionTuning tuning)
         {
-            if (hoistPhase != HoistPhase.Loading || cargo.Count == 0) return false;
+            if (hoistPhase != HoistPhase.Loading || cargo.Count == 0 || (long)tank.Count + cargo.Count > ReservoirCapacity(tuning)) return false;
             hoistPhase = HoistPhase.Raising;
-            hoistRemaining = Duration(tuning.raisingSeconds, tuning);
+            hoistRemaining = HoistDuration(HoistPhase.Raising,tuning);
             return true;
         }
 
-        private float Duration(float seconds, ProgressionTuning tuning) =>
-            Math.Max(.01f, seconds / Math.Max(1f, 1f + winchLevel * tuning.winchSpeedPerLevel));
+        public float HoistDuration(HoistPhase phase,ProgressionTuning tuning)
+        {
+            float interval=phase switch
+            {
+                HoistPhase.Raising=>tuning.raisingSeconds,
+                HoistPhase.Unloading=>tuning.unloadingSeconds,
+                HoistPhase.Returning=>tuning.returningSeconds*(1-TeamFactor(SkillLine.Industrial)),
+                _=>0
+            };
+            return Math.Max(.01f, interval/(1+TeamFactor(SkillLine.Winch)));
+        }
 
         public void TickHoist(float dt, ProgressionTuning tuning)
         {
@@ -131,14 +104,14 @@ namespace Raid
                 if (hoistPhase == HoistPhase.Raising)
                 {
                     hoistPhase = HoistPhase.Unloading;
-                    hoistRemaining = Duration(tuning.unloadingSeconds, tuning);
+                    hoistRemaining = HoistDuration(HoistPhase.Unloading,tuning);
                 }
                 else if (hoistPhase == HoistPhase.Unloading)
                 {
                     foreach (CatchItem item in cargo) Deliver(item);
                     cargo.Clear();
                     hoistPhase = HoistPhase.Returning;
-                    hoistRemaining = Duration(tuning.returningSeconds, tuning);
+                    hoistRemaining = HoistDuration(HoistPhase.Returning,tuning);
                 }
                 else { hoistPhase = HoistPhase.Loading; hoistRemaining = 0f; }
             }
@@ -146,9 +119,11 @@ namespace Raid
         }
 
         /// <summary>Direct delivery for a server-authorized delivery point; cargo uses the timed hoist.</summary>
-        public bool Deposit(CatchItem item)
+        public bool Deposit(CatchItem item, ProgressionTuning tuning=null)
         {
-            if (item == null || !item.IsValid || deliveredIds.Contains(item.id) || cargo.Exists(f => f.id == item.id)) return false;
+            int reserved=hoistPhase==HoistPhase.Loading ? 0 : cargo.Count;
+            if (item == null || !item.IsValid || deliveredIds.Contains(item.id) || cargo.Exists(f => f.id == item.id) ||
+                (long)tank.Count+reserved>=ReservoirCapacity(tuning)) return false;
             Deliver(item);
             return true;
         }
@@ -187,15 +162,23 @@ namespace Raid
                 deficit = Math.Max(0f, 1f - (float)offeringPoints / required),
                 outcome = offeringPoints == 0 ? FeedingOutcome.None : offeringPoints < required ? FeedingOutcome.Underfed :
                     offeringPoints == required ? FeedingOutcome.Enough : FeedingOutcome.Overfed };
-            offeringPoints = Math.Min(checked(Math.Max(0,tuning.maximumFoodCarry)*FoodScale), Math.Max(0,offeringPoints-required));
-            hungerRemaining = Math.Max(1f, tuning.hungerInterval);
+            bool ready=rationCyclesUntilReady==0;
+            if(!ready)rationCyclesUntilReady--;
+            if(ready && (report.outcome is FeedingOutcome.None or FeedingOutcome.Underfed) && HasTeamLine(SkillLine.PreparedRation))
+            {
+                report.mitigation=TeamFactor(SkillLine.PreparedRation);
+                rationCyclesUntilReady=2;
+            }
+            long retained=(long)Math.Max(0,offeringPoints-required)*TeamValue(SkillLine.Carryover)/100;
+            offeringPoints=(int)Math.Min((long)Math.Max(0,tuning.maximumFoodCarry)*FoodScale,retained);
+            hungerRemaining=HungerInterval(tuning);
             return report;
         }
 
         public int ApplyStockLoss(ProgressionTuning tuning, float severity = 1f)
         {
             if (float.IsNaN(severity) || float.IsInfinity(severity)) throw new ArgumentOutOfRangeException(nameof(severity));
-            float fraction = Math.Max(0f, Math.Min(1f, tuning.maximumStockLossFraction)) * Math.Max(0f, Math.Min(1f, severity));
+            float fraction = Math.Max(0f, Math.Min(1f, tuning.maximumStockLossFraction)) * Math.Max(0f, Math.Min(1f, severity)) * (1-TeamFactor(SkillLine.CargoDefense));
             int count = Math.Min(Math.Max(0, tuning.maximumStockLossCount), (int)Math.Floor(tank.Count * fraction));
             if (count > 0) tank.RemoveRange(tank.Count - count, count);
             return count;
@@ -205,8 +188,8 @@ namespace Raid
         {
             if (schemaVersion != CurrentSchema) throw new InvalidOperationException("Unsupported team save schema: " + schemaVersion);
             if (biomass < 0 || chitin < 0 || scrap < 0 || electronics < 0 || lifetimeCatch < 0 || offeringPoints < 0 ||
-                reelLevel < 0 || finsLevel < 0 || tankLevel < 0 || hullLevel < 0 || winchLevel < 0 || highestDepth < 1 ||
-                (highestDepth >= 2 && hullLevel < 1) || !Enum.IsDefined(typeof(HoistPhase), hoistPhase) ||
+                expeditionDepth < 1 || expeditionDepth > highestDepth || rationCyclesUntilReady < 0 || rationCyclesUntilReady > 2 ||
+                !Enum.IsDefined(typeof(HoistPhase), hoistPhase) ||
                 float.IsNaN(hoistRemaining) || float.IsInfinity(hoistRemaining) || hoistRemaining < 0 ||
                 float.IsNaN(hungerRemaining) || float.IsInfinity(hungerRemaining) || hungerRemaining < 0 ||
                 tank == null || cargo == null || deliveredIds == null)

@@ -15,7 +15,7 @@ namespace Raid.UI.Editor
             if(EditorApplication.isPlaying || UnityEngine.SceneManagement.SceneManager.GetActiveScene().path!=UiAuthoring.ScenePath)
                 throw new System.InvalidOperationException("Bindings require the stopped InterfaceVerticalSlice scene");
             Bind("FishRoute_Process",ShipConsoleKind.Process);Bind("FishRoute_Feed",ShipConsoleKind.Feed);
-            Bind("UpgradeConsole",ShipConsoleKind.Upgrades);Bind("DepthConsole",ShipConsoleKind.Depths);
+            Bind("UpgradeConsole",ShipConsoleKind.Workshop);Bind("DepthConsole",ShipConsoleKind.Depths);
             AddReservoirMonitor();Bind("ReservoirConsole",ShipConsoleKind.Reservoir);
             var factory=Object.FindAnyObjectByType<Raid.Factory.FactoryVisuals>();
             if(factory!=null && factory.GetComponent<Raid.Factory.FishRoutePresentation>()==null)factory.gameObject.AddComponent<Raid.Factory.FishRoutePresentation>();
@@ -44,7 +44,7 @@ namespace Raid.UI.Editor
             if(station.screenAnchor!=null && station.screenAnchor.GetComponent<Collider>()==null)
             {
                 var screenHit=station.screenAnchor.gameObject.AddComponent<BoxCollider>();
-                bool computer=kind==ShipConsoleKind.Upgrades||kind==ShipConsoleKind.Depths||kind==ShipConsoleKind.Reservoir;
+                bool computer=kind==ShipConsoleKind.Workshop||kind==ShipConsoleKind.Depths||kind==ShipConsoleKind.Reservoir;
                 screenHit.size=computer?new Vector3(station.screenScale*1250,station.screenScale*860,.025f):new Vector3(1.02f,.64f,.025f);
             }
             if(go.GetComponentInChildren<Collider>()==null)

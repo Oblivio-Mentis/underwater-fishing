@@ -14,6 +14,8 @@ namespace Raid.Nereid
         static readonly int Seabed=Shader.PropertyToID("_NereidWorkLightSeabed");
         readonly Vector4[] positions=new Vector4[3], directions=new Vector4[3], radiance=new Vector4[3];
         readonly Light[] beams=new Light[5];
+        readonly float[] baseRanges=new float[5];
+        float lightReach=1;
         readonly MeshRenderer[] waterBeams=new MeshRenderer[3];
         readonly List<Object> owned=new();
         readonly bool[] nearby=new bool[5];
@@ -55,6 +57,7 @@ namespace Raid.Nereid
                 new Color(.54f,.82f,1.0f),blueLens,1950,19,52,80);
             for(int side=-1;side<=1;side+=2)
                 foreach(float z in new[]{-20f,2.8f})Marker(side,z);
+            for(int i=0;i<beams.Length;i++)baseRanges[i]=beams[i].range;
             initialized=true;
         }
 
@@ -273,6 +276,17 @@ namespace Raid.Nereid
         {
             if(!initialized || cradle==null)return;
             var world=RaidWorld.Instance;
+            float requestedReach=1+(world?.TeamSkillFactor(SkillLine.Searchlights)??0)+(world?.TeamSkillFactor(SkillLine.DeepVessel)??0);
+            if(Mathf.Abs(requestedReach-lightReach)>.001f)
+            {
+                for(int i=0;i<beams.Length;i++)
+                {
+                    beams[i].range=baseRanges[i]*requestedReach;
+                    if(i<waterBeams.Length && waterBeams[i]!=null)
+                        waterBeams[i].transform.localScale*=requestedReach/lightReach;
+                }
+                lightReach=requestedReach;
+            }
             var target=landing+transform.up*.65f;
             if(world!=null && world.NetworkObject!=null && world.container!=null && (world.IsClientInitialized || world.IsServerInitialized))
                 target=world.container.position+transform.up*.65f;

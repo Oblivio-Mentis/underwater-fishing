@@ -22,9 +22,8 @@ namespace Raid.Nereid
                 bool interactive=ui!=null&&ui.Page==UI.UiPage.Terminal&&ui.Context.SelectedConsole==station;
                 text.gameObject.SetActive(!interactive);if(interactive)continue;
                 string status;
-                if(station.kind==ShipConsoleKind.Upgrades)
-                    status="ОБОРУДОВАНИЕ ЭКИПАЖА\n\nБИОМАССА  "+team.biomass+"   ХИТИН  "+team.chitin+"\nМЕТАЛЛ  "+team.scrap+"   ЭЛЕКТРОНИКА  "+team.electronics+"\n\nКАТУШКА "+team.reelLevel+"  /  КОРПУС "+team.hullLevel+"\nЛАСТЫ "+team.finsLevel+"  /  БАЛЛОН "+team.tankLevel+"\nЛЕБЁДКА "+team.winchLevel+"\n\nЛКМ · ВЫБОР НА ЭКРАНЕ";
-                else if(station.kind==ShipConsoleKind.Depths)
+                if(station.kind==ShipConsoleKind.Workshop){text.gameObject.SetActive(false);continue;}
+                if(station.kind==ShipConsoleKind.Depths)
                     status="НАВИГАЦИЯ NEREID\n\nГЛУБИНА "+w.CurrentDepth+"\n\nПЕРВАЯ ГЛУБИНА · ДОСТУПНА\nВТОРАЯ ГЛУБИНА · "+(team.CanVisitDepth(2)?"ДОСТУПНА":"НУЖЕН КОРПУС")+"\n\n"+(w.TravelRemaining>0?"ПЕРЕХОД · "+Mathf.CeilToInt(w.TravelRemaining)+" С":"ЛКМ · ВЫБОР КУРСА");
                 else
                 {
