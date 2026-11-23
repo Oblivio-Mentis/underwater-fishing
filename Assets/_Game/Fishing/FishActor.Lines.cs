@@ -290,7 +290,11 @@ namespace Raid
             if (side.sqrMagnitude < .01f) side = transform.right;
             side.Normalize();
 
-            if (leader != null)
+            // During a surge the fish bolts away along the line and the taut line drags the
+            // angler after it. If we kept reeling the body toward the hand at the same time,
+            // the two would cross and the pull would read as the diver being pushed away.
+            bool bolting = state.Surging && !tired;
+            if (leader != null && !bolting)
             {
                 float assistance=leader.Paired?1+tuning.assistBonus+(world?.SkillFactor(leader.Tool.Motor,SkillLine.SyncPull)??0):1;
                 float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier,.1f,2.2f)
@@ -336,7 +340,7 @@ namespace Raid
                 else fight.Deflect();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
                 // Not being reeled: the fish breathes. A weakened fish recovers fastest, so slacking off costs the diver.
-                if (!tired) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
+                if (!tired && !state.Surging) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
             }
         }
 
