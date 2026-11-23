@@ -46,6 +46,51 @@
       }
     },
     {
+      "name": "outer-lock-inset",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 11.0,
+        "y": 2.4,
+        "z": -16.1
+      },
+      "look": {
+        "x": 5.4,
+        "y": 1.5,
+        "z": -12.8
+      }
+    },
+    {
+      "name": "aft-drive-service",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": 9.6,
+        "y": 3.2,
+        "z": -35.8
+      },
+      "look": {
+        "x": 3.5,
+        "y": 2.1,
+        "z": -28.7
+      }
+    },
+    {
+      "name": "side-pressure-band",
+      "depth": 1,
+      "shipLocal": true,
+      "feet": {
+        "x": -10,
+        "y": 1.8,
+        "z": -2.4
+      },
+      "look": {
+        "x": -3.2,
+        "y": 1.1,
+        "z": -12.0
+      }
+    },
+    {
       "name": "exterior-bow",
       "depth": 1,
       "feet": {
