@@ -10,18 +10,19 @@ namespace Raid
         public enum HuntStage : byte { Watching, Display, Pursuit, Recovery, Investigate, Circle, Overshoot }
         public struct ReefSnapshot
         {
-            public bool Active,Deep,ClamClosed;
-            public Vector3 Eel,EelHeading,Sweep;
+            public bool Active,Deep,ClamClosed,HasClam,HasKraken,HasEel;
+            public Vector3 Eel,EelHeading,Sweep,Clam,Kraken;
             public byte EelPhase,KrakenPhase;
         }
         static readonly Vector3 EelHome = new(41,-9,-29);
         static readonly Vector3[] EelPatrol = {new(45,-8.5f,-36),new(48,-8.8f,-43),new(43,-8,-45),new(38,-8.3f,-34),EelHome};
         readonly RaycastHit[] huntHits = new RaycastHit[16];
-        public static readonly Vector3 ClamBed=new(29,-15.9f,-33),Rift=new(48,-14,-50);
+        public static Vector3 ClamBed => Instance && Instance.Reef.HasClam ? Instance.Reef.Clam : Instance && Instance.tuning ? Instance.tuning.clamAnchor : new Vector3(29,-15.9f,-33);
+        public static Vector3 Rift => Instance && Instance.Reef.HasKraken ? Instance.Reef.Kraken : Instance && Instance.tuning ? Instance.tuning.krakenAnchor : new Vector3(48,-14,-50);
         readonly SyncVar<ReefSnapshot> reefState=new();
         public ReefSnapshot Reef => reefState.Value;
         const float ThinkPeriod=.12f;
-        float nextThink,eelCooldown,eelDelay,krakenCharge,krakenClock;
+        float reefArrivalAt, nextThink,eelCooldown,eelDelay,krakenCharge,krakenClock;
         Vector3 eelDecoy, eelSeen, eelPreviousTarget;
         float eelBlindTime, eelRouteAt;
         int eelWaypoint;
@@ -30,10 +31,10 @@ namespace Raid
         NereidFauna reefView;
         void ResetReef()
         {
-            reefState.Value=new ReefSnapshot{Eel=EelHome,EelHeading=Vector3.forward};
+            reefState.Value=default;
             clampedDiver=null;eelTarget=null;ResetAngler();
             nextThink=eelCooldown=eelDelay=clamCooldown=krakenClock=krakenCharge=0;
-            eelBlindTime=eelRouteAt=0;
+            reefArrivalAt=0; eelBlindTime=eelRouteAt=0;
             eelWaypoint=0;
         }
 
@@ -49,13 +50,21 @@ namespace Raid
             if(nextThink<ThinkPeriod)return;
             float dt=nextThink;nextThink=0;
             var reef=reefState.Value;
-            reef.Active=true;reef.Deep=depthTier>1;
+            reef.Active = true;
+            reef.Deep = depthTier > 1;
+            if (Time.time >= reefArrivalAt && (!reef.HasClam || reef.Deep && (!reef.HasEel || !reef.HasKraken)))
+            {
+                reefArrivalAt = Time.time + 1;
+                if (!reef.HasClam) reef.HasClam = TryBottomSite(tuning.clamAnchor, tuning.clamArrivalRadius, 1.15f, out reef.Clam);
+                if (reef.Deep && !reef.HasKraken) reef.HasKraken = TryBottomSite(tuning.krakenAnchor, tuning.krakenArrivalRadius, 1.8f, out reef.Kraken);
+                if (reef.Deep && !reef.HasEel) reef.HasEel = TryEelEntry(ref reef);
+            }
             bool winch=w.Team.hoistPhase==HoistPhase.Raising || w.Team.hoistPhase==HoistPhase.Returning;
             bool movingWinch=winch&&w.container!=null;
             clamCooldown-=dt;
             if(clampedDiver!=null)
             {
-                if(!CanHunt(clampedDiver)||!clampedDiver.IsTrapped||Vector3.Distance(clampedDiver.transform.position,ClamBed)>3.4f)
+                if(!CanHunt(clampedDiver)||!clampedDiver.IsTrapped||Vector3.Distance(clampedDiver.transform.position,reef.Clam)>3.4f)
                 {clampedDiver=null;clamCooldown=5;}
                 else
                 {
@@ -64,30 +73,62 @@ namespace Raid
                     if(DiverMotor.ServerDivers.Count>1)clampedDiver.Trap();
                 }
             }
-            else if(clamCooldown<=0)
+            else if(reef.HasClam && clamCooldown<=0)
             {
-                var target=Nearest(ClamBed,1.7f);
+                var target=Nearest(reef.Clam,1.7f);
                 if(target!=null)
                 {target.Trap();clampedDiver=target;main.Message="Донный капкан захлопнулся. Напарник может разжать створки (F).";}
             }
             reef.ClamClosed=clampedDiver!=null;
-            if(reef.Deep)
-            {
-                TickEel(ref reef,dt,ref main);
-                TickKraken(ref reef,dt,movingWinch,ref main);
-            }
+            if (reef.HasEel) TickEel(ref reef,dt,ref main);
+            if (reef.HasKraken) TickKraken(ref reef,dt,movingWinch,ref main);
             reefState.Value=reef;
+        }
+
+        bool TryEelEntry(ref ReefSnapshot reef)
+        {
+            int start = anglerRandom.Next(EelPatrol.Length);
+            for (int i = 0; i < 20; i++)
+            {
+                int from = (start + i) % EelPatrol.Length;
+                int to = (from + 1) % EelPatrol.Length;
+                var point = Vector3.Lerp(EelPatrol[from], EelPatrol[to], Rand(.05f, .95f)) +
+                            MarineSpawn.Scatter(anglerRandom, tuning.eelArrivalRadius) + Vector3.up * Rand(-1.1f,1.1f);
+                if (!MarineSpawn.InOpenWater(depthTier, point, .65f) ||
+                    !ReefHabitats.CanArrive(point, 9, 14) || !MarineSpawn.ClearLeg(point, EelPatrol[to], .45f, 2.7f)) continue;
+                reef.Eel = point;
+                reef.EelHeading = (EelPatrol[to] - point).normalized;
+                eelWaypoint = to;
+                return true;
+            }
+            return false;
+        }
+
+        bool TryBottomSite(Vector3 anchor, float spread, float radius, out Vector3 site)
+        {
+            site = default;
+            for (int i = 0; i < 20; i++)
+            {
+                var candidate = anchor + MarineSpawn.Scatter(anglerRandom, spread);
+                if (!MarineSpawn.Floor(depthTier, candidate, out var floor) || floor.normal.y < .88f) continue;
+                var centre = floor.point + Vector3.up * (radius + .25f);
+                if (!ReefHabitats.CanArrive(centre, 7, 12) || FishActor.InCage(centre) ||
+                    Physics.CheckSphere(centre, radius, obstacleMask, QueryTriggerInteraction.Ignore)) continue;
+                site = floor.point;
+                return true;
+            }
+            return false;
         }
 
         public float NearbyDanger(Vector3 eye)
         {
             var r=reefState.Value;
             var main=state.Value;
-            float nearest=main.WaveActive?Vector3.Distance(eye,main.WavePosition):float.PositiveInfinity;
+            float nearest=main.WaveActive && !main.WaveAwaitingEntry?Vector3.Distance(eye,main.WavePosition):float.PositiveInfinity;
             if(r.Active)
             {
                 if(main.PredatorHealth>0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,main.PredatorPosition));
-                if(r.Deep)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel));
+                if(r.HasEel)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Eel));
                 if(r.KrakenPhase!=0)nearest=Mathf.Min(nearest,Vector3.Distance(eye,r.Sweep));
             }
             return 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2,13,nearest));
@@ -198,7 +239,7 @@ namespace Raid
             {
                 krakenCharge=winch?krakenCharge+dt:Mathf.Max(0,krakenCharge-dt*.45f);
                 if(krakenCharge<2.7f)return;
-                var target=NearestVisible(Rift+Vector3.up*2,22);
+                var target=NearestVisible(reef.Kraken+Vector3.up*2,22);
                 if(target==null)return;
                 // Lock the strike area when the shadow appears. Swimming away or behind cover remains effective.
                 reef.Sweep=target.transform.position;
@@ -209,8 +250,8 @@ namespace Raid
             if(reef.KrakenPhase==1)
             {
                 foreach(var diver in DiverMotor.ServerDivers)
-                    if(CanPursue(diver) && Vector3.Distance(diver.transform.position,reef.Sweep)<3.7f && ClearTo(Rift+Vector3.up*2,diver))
-                    {diver.DamageFromCreature(26);diver.ApplyExternalMotion((diver.transform.position-Rift).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
+                    if(CanPursue(diver) && Vector3.Distance(diver.transform.position,reef.Sweep)<3.7f && ClearTo(reef.Kraken+Vector3.up*2,diver))
+                    {diver.DamageFromCreature(26);diver.ApplyExternalMotion((diver.transform.position-reef.Kraken).normalized*1.5f);main.Message="Кракен ударил в открытом проходе.";}
                 reef.KrakenPhase=2;krakenClock=.85f;
             }
             else if(reef.KrakenPhase==2){reef.KrakenPhase=3;krakenClock=6;}
@@ -221,7 +262,7 @@ namespace Raid
         {
             var reef=reefState.Value;
             if(!reef.Active)return false;
-            if(reef.Deep&&Hits(origin,direction,reef.Eel)){DistractEel(ref reef,EelHome,6);reefState.Value=reef;return true;}
+            if(reef.HasEel&&Hits(origin,direction,reef.Eel)){DistractEel(ref reef,EelHome,6);reefState.Value=reef;return true;}
             return false;
         }
 

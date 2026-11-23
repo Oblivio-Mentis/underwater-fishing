@@ -7,6 +7,13 @@ namespace Raid
     {
         public Vector3 predatorSpawn = new Vector3(12f, -5f, 22f);
         public Vector3 waveSpawn = new Vector3(0f, 1.5f, 30f);
+        [Header("Marine arrivals")]
+        [Min(0)] public float raiderArrivalRadius = 5;
+        [Min(0)] public float eelArrivalRadius = 3;
+        public Vector3 clamAnchor = new(29, -15.9f, -33);
+        [Min(0)] public float clamArrivalRadius = 5;
+        public Vector3 krakenAnchor = new(48, -14, -50);
+        [Min(0)] public float krakenArrivalRadius = 4;
         public Vector3 airlockWaypoint = new Vector3(0f, 1.5f, 9f);
         public Vector3 reservoirPoint = new Vector3(0f, .6f, -3f);
         public Vector3 reservoirApproachOffset = new Vector3(0f, 1f, 2.3f);

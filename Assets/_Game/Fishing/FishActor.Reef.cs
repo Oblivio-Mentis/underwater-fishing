@@ -16,7 +16,7 @@ namespace Raid
         FishHabitat.Zone habitat;
         FishSpeciesProfile legacyProfile;
         System.Random rng;
-        int station, nextHabitat;
+        int station;
         float bank, dartUntil, dartRollAt;
         bool leaving;
         // Steering state.
@@ -31,7 +31,7 @@ namespace Raid
         public bool InHabitat => _snapshot.Value.Active;
         public bool Startled => _snapshot.Value.Startled;
         FishSpeciesProfile Profile => speciesProfile!=null ? speciesProfile : legacyProfile!=null ? legacyProfile : legacyProfile=FishSpeciesProfile.Legacy(SpeciesId);
-        System.Random Rng => rng ??= new System.Random(ObjectId*7919+depthTier);
+        System.Random Rng => rng ??= MarineSpawn.NewStream(ObjectId * 7919 + depthTier);
         float Rand(float min,float max) => min+(float)Rng.NextDouble()*(max-min);
 
         public void EnterHabitat(bool available)
@@ -81,29 +81,33 @@ namespace Raid
             var spec=Profile;
             int count=GatherZones(out var zones);
             float visibility = depthTier > 1 ? 14 : 22;
-            // Preferred role first, then any other zone; rotate the start so migrations tour the reef.
+            if (count == 0) { arrivalAt = Time.time + 2; return; }
+            int firstZone = Rng.Next(count);
+            // Sample a new route and entry on every arrival, preserving species preferences and local budgets.
             for (int pass = 0; pass < 2; pass++)
             for (int i = 0; i < count; i++)
             {
-                int index=(nextHabitat + i) % count;
+                int index=(firstZone + i) % count;
                 var zone = zones[index];
-                if ((zone.role == spec.preferredHabitat) != (pass == 0) || zone.anchors.Length == 0) continue;
+                if ((zone.role == spec.preferredHabitat) != (pass == 0) || zone.anchors == null || zone.anchors.Length == 0) continue;
                 int localCount = 0;
                 foreach (var other in ServerSchool)
                     if (other != this && other.IsWildInHabitat && other.habitat == zone) localCount++;
                 if (localCount >= 2) continue;
 
                 int stride = zone.anchors.Length;
-                for (int j = 0; j < stride; j++)
+                int firstEntry = Rng.Next(stride);
+                for (int attempt = 0; attempt < Mathf.Max(8, stride * 3); attempt++)
                 {
-                    int entry = (j + nextHabitat + (RequiresPartner ? 2 : 0)) % stride;
-                    rng = new System.Random(ObjectId * 7919 + index * 131 + depthTier);
-                    Vector3 point = LanePoint(zone, zone.anchors[entry], .5f);
+                    int entry = (firstEntry + attempt) % stride;
                     int next = (entry + 1) % stride;
+                    Vector3 lane = Vector3.Lerp(zone.anchors[entry], zone.anchors[next], Rand(0, 1));
+                    lane += MarineSpawn.Scatter(Rng, zone.radius);
+                    Vector3 point = LanePoint(zone, lane, Rand(.08f, .92f));
                     Vector3 firstLeg = LanePoint(zone, zone.anchors[next], .5f) - point;
                     if (firstLeg.sqrMagnitude < .01f) firstLeg = Vector3.forward;
-                    if (!ReefHabitats.CanArrive(point, 12, visibility) || InCage(point) ||
-                        Physics.CheckSphere(point, BodyRadius + .17f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) ||
+                    if (!ReefHabitats.CanArrive(point, 12, visibility) ||
+                        !MarineSpawn.InOpenWater(depthTier, point, BodyRadius + .17f) ||
                         !SwimClear(point, point + firstLeg.normalized * Mathf.Min(2.8f, firstLeg.magnitude)))
                         continue;
                     SetDepthActive(true);
@@ -130,7 +134,7 @@ namespace Raid
         bool IsWildInHabitat => _depthActive && Mode != FishMode.Captured && Mode != FishMode.Transported;
 
         // The recovery cage is a sealed-off volume too; the basket is looked up rarely, not per sweep.
-        static bool InCage(Vector3 point)
+        internal static bool InCage(Vector3 point)
         {
             if (Time.time > cageLookedUpAt + 2f)
             {
@@ -186,7 +190,6 @@ namespace Raid
             leaving = HasRoamingReplacement() && NearestSwimmer(transform.position,19) == null &&
                 ReefHabitats.CanArrive(transform.position,19,depthTier > 1 ? 23 : 28);
             if (!leaving || fleeRemaining > 0 || Vector3.Distance(transform.position, homePoint) > 1.8f) return false;
-            nextHabitat++;
             ScheduleAt(Time.time + 9 + power * 1.4f);
             return true;
         }

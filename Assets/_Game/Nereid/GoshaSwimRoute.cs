@@ -31,8 +31,8 @@ namespace Raid.Nereid
             if(threats==null)return 0;
             float danger=threats.NearbyDanger(p);
             var r=threats.Reef;
-            if(r.Active)danger=Mathf.Max(danger,1-Mathf.InverseLerp(1.6f,4.7f,Vector3.Distance(p,ThreatDirector.ClamBed)));
-            if(r.Active && r.Deep)danger=Mathf.Max(danger,1-Mathf.InverseLerp(2.7f,6f,Vector3.Distance(p,ThreatDirector.Rift)));
+            if(r.HasClam)danger=Mathf.Max(danger,1-Mathf.InverseLerp(1.6f,4.7f,Vector3.Distance(p,ThreatDirector.ClamBed)));
+            if(r.HasKraken)danger=Mathf.Max(danger,1-Mathf.InverseLerp(2.7f,6f,Vector3.Distance(p,ThreatDirector.Rift)));
             return danger;
         }
 

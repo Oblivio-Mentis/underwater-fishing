@@ -16,7 +16,7 @@ namespace Raid
             public Vector3 PredatorPosition, WavePosition,AnglerHeading;
             public HuntStage AnglerStage;
             public float PredatorHealth, WaveHealth;
-            public bool WaveActive;
+            public bool WaveActive, WaveAwaitingEntry;
             public Vector3 WaveHeading;
             public int WaveHits;
             // One confirmed bite = one increment. Victim is the bitten diver's owner id; direction is from attacker to victim.
@@ -40,7 +40,7 @@ namespace Raid
         public Vector3 WavePosition => state.Value.WavePosition;
         public float WaveHealth => state.Value.WaveHealth;
         public int WaveHits => state.Value.WaveHits;
-        private float predatorCooldown, respawn, waveRemaining, stockCooldown, waveDeficit, patrolTime;
+        private float waveArrivalAt, predatorCooldown, respawn, waveRemaining, stockCooldown, waveDeficit, patrolTime;
         public bool WaveActive => state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
         public HuntStage AnglerStage=>state.Value.AnglerStage;
@@ -83,7 +83,7 @@ namespace Raid
             primitiveHitbox.enabled = true;
             ResetReef();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
-            state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = tuning.predatorHealth, AnglerHeading = Vector3.forward };
+            state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = Nereid.NereidVessel.Active ? 0 : tuning.predatorHealth, AnglerHeading = Vector3.forward };
         }
 
         public override void OnStopClient() { if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
@@ -95,7 +95,7 @@ namespace Raid
             ResetReef();
             ThreatSnapshot next = state.Value;
             next.PredatorPosition = tuning.predatorSpawn;
-            next.PredatorHealth = tuning.predatorHealth * Strength;
+            next.PredatorHealth = Nereid.NereidVessel.Active ? 0 : tuning.predatorHealth * Strength;
             next.AnglerStage=HuntStage.Watching;next.AnglerHeading=Vector3.forward;
             respawn = 0f; predatorCooldown = 0f;
             state.Value = next;
@@ -108,7 +108,10 @@ namespace Raid
             if (!IsServerInitialized || WaveActive || !Finite(deficit) || deficit <= 0f) return;
             ThreatSnapshot next = state.Value;
             waveDeficit = Mathf.Clamp01(deficit);
-            next.WaveActive = true; next.WavePosition = tuning.waveSpawn;
+            next.WaveActive = true;
+            next.WaveAwaitingEntry = Nereid.NereidVessel.Active != null;
+            next.WavePosition = tuning.waveSpawn;
+            waveArrivalAt = 0;
             next.WaveHeading = Vector3.forward;
             var vessel = Nereid.NereidVessel.Active;
             var navigation = Nereid.NereidDeckNavigation.Active;
@@ -130,7 +133,12 @@ namespace Raid
                 if(reefState.Value.Active)TickAngler(ref next,dt);
             }
             else TickPredator(ref next, dt);
-            if (next.WaveActive)
+            if (next.WaveActive && next.WaveAwaitingEntry && Time.time >= waveArrivalAt)
+            {
+                waveArrivalAt = Time.time + .75f;
+                next.WaveAwaitingEntry = !TryWaveEntry(ref next);
+            }
+            if (next.WaveActive && !next.WaveAwaitingEntry)
             {
                 waveRemaining -= dt;
                 var approach = Nereid.NereidDeckNavigation.Active?.raiderApproach;
@@ -170,11 +178,30 @@ namespace Raid
             PlaceRaider(next, false);
         }
 
+        bool TryWaveEntry(ref ThreatSnapshot snapshot)
+        {
+            var approach = Nereid.NereidDeckNavigation.Active?.raiderApproach;
+            var gate = approach != null && approach.Length > 0 && approach[0] ? approach[0].position :
+                       factoryWaveRoute != null && factoryWaveRoute.Length > 0 ? factoryWaveRoute[0] : tuning.airlockWaypoint;
+            for (int i = 0; i < 24; i++)
+            {
+                var point = tuning.waveSpawn + MarineSpawn.Scatter(anglerRandom, tuning.raiderArrivalRadius) + Vector3.up * Rand(-1.25f, 1.25f);
+                if (!MarineSpawn.InOpenWater(depthTier, point, tuning.raiderBodyRadius + .1f) ||
+                    !ReefHabitats.CanArrive(point, 4.5f, 0) ||
+                    !MarineSpawn.ClearLeg(point, gate, tuning.raiderBodyRadius, float.PositiveInfinity)) continue;
+                snapshot.WavePosition = point;
+                snapshot.WaveHeading = (gate - point).normalized;
+                return true;
+            }
+            return false;
+        }
+
         void PlaceRaider(ThreatSnapshot snapshot, bool interpolate)
         {
             bool appeared = !waveView.gameObject.activeSelf;
-            waveView.gameObject.SetActive(snapshot.WaveActive);
-            if (!snapshot.WaveActive) return;
+            bool visible = snapshot.WaveActive && !snapshot.WaveAwaitingEntry;
+            waveView.gameObject.SetActive(visible);
+            if (!visible) return;
             float blend = interpolate && !appeared ? 1 - Mathf.Exp(-Time.deltaTime / tuning.snapshotInterval) : 1;
             waveView.position = Vector3.Lerp(waveView.position, snapshot.WavePosition, blend);
             if (snapshot.WaveHeading.sqrMagnitude > .01f)
@@ -217,7 +244,7 @@ namespace Raid
                 !Finite(direction.x) || !Finite(direction.y) || !Finite(direction.z) || !Finite(power) || power <= 0f || direction.sqrMagnitude < .01f) return false;
             ThreatSnapshot next = state.Value;
             direction.Normalize();
-            bool waveHit = next.WaveActive && firstHit.collider != null && firstHit.distance <= tuning.strikeRange &&
+            bool waveHit = next.WaveActive && !next.WaveAwaitingEntry && firstHit.collider != null && firstHit.distance <= tuning.strikeRange &&
                 firstHit.collider.transform.IsChildOf(waveView);
             bool predatorHit = next.PredatorHealth > 0f && Hits(origin, direction, next.PredatorPosition);
             if (!waveHit && !predatorHit) return StrikeReef(origin,direction);

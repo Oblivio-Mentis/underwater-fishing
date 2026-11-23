@@ -16,7 +16,7 @@ namespace Raid
         float circleRadius, circleHeight, arcRemaining, stalkRemaining, overshootTravelled;
         float noiseUntil, noiseCooldownUntil;
         int circleDirection = 1, territoryIndex, anglerHits, anglerBites, anglerPasses;
-        bool anglerBit;
+        bool anglerBit, firstAnglerArrival;
 
         PredatorProfile P => anglerProfile;
         float AnglerScale => depthTier > 1 ? P.deepSpeedMultiplier : 1;
@@ -34,7 +34,8 @@ namespace Raid
 
         void ResetAngler()
         {
-            anglerRandom = new System.Random(anglerProfile == null ? 0 : anglerProfile.seed);
+            anglerRandom = MarineSpawn.NewStream(anglerProfile == null ? 0 : anglerProfile.seed);
+            firstAnglerArrival = true;
             anglerTarget = null;
             anglerClock = anglerSenseAt = anglerNoticed = anglerBlind = anglerGoalAt = 0;
             noiseUntil = noiseCooldownUntil = 0;
@@ -365,17 +366,24 @@ namespace Raid
 
         void TryReturnAngler(ref ThreatSnapshot main)
         {
-            for (int i = 0; i < TerritoryCount; i++)
+            int firstTerritory = anglerRandom.Next(TerritoryCount);
+            for (int attempt = 0; attempt < TerritoryCount * 8; attempt++)
             {
-                Vector3 point = TerritoryCentre(i);
-                if (!ReefHabitats.CanArrive(point, P.respawnMinDistance, P.respawnClearView) ||
-                    Physics.CheckSphere(point, P.bodyRadius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) continue;
+                int i = (firstTerritory + attempt) % TerritoryCount;
+                var centre = TerritoryCentre(i);
+                var point = centre + MarineSpawn.Scatter(anglerRandom, P.territoryRadius) +
+                            Vector3.up * Rand(-P.territoryHeight, P.territoryHeight);
+                if (!MarineSpawn.InOpenWater(depthTier, point, P.bodyRadius + .15f) ||
+                    !ReefHabitats.CanArrive(point, P.respawnMinDistance, P.respawnClearView) ||
+                    !MarineSpawn.ClearLeg(point, centre, P.bodyRadius, 2.5f)) continue;
                 main.PredatorPosition = point;
                 main.PredatorHealth = tuning.predatorHealth * Strength;
-                main.AnglerHeading = Vector3.forward;
+                main.AnglerHeading = (centre - point).sqrMagnitude > .001f ? (centre - point).normalized : Vector3.forward;
                 territoryIndex = i;
                 anglerGoalAt = 0;
-                AnglerRecover(ref main, P.lostInterestCooldown);
+                if (firstAnglerArrival) main.AnglerStage = HuntStage.Watching;
+                else AnglerRecover(ref main, P.lostInterestCooldown);
+                firstAnglerArrival = false;
                 return;
             }
             respawn = P.respawnRetrySeconds;

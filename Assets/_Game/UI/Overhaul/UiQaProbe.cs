@@ -60,7 +60,11 @@ namespace Raid.UI
             public int anchorOwner=-1, anchorShot, anchorFrames;
             public float anchorTravel, anchorTipError, anchorKnotError;
             public Control[] controls;
+            public MarineReadout[] marine;
+            public ThreatDirector.ReefSnapshot reef;
+            public Vector3 anglerPosition;
         }
+        [Serializable] public sealed class MarineReadout { public string species; public long specimen; public Vector3 position; }
         [Serializable] public sealed class DropReadout { public string instance, kind, species; public Vector3 position; }
         [Serializable] public sealed class Control { public string name,text;public bool interactable; public float x,y,w,h; }
         string directory,lastId="",error="";float nextPoll,keyboardReleaseAt,mouseReleaseAt;bool releaseKeyboard,releaseMouse;
@@ -430,6 +434,14 @@ namespace Raid.UI
                 anglerStage=ThreatDirector.Instance==null?"":ThreatDirector.Instance.AnglerStage.ToString(),biteSequence=ThreatDirector.Instance==null?0:ThreatDirector.Instance.BiteSequence,biteVictim=ThreatDirector.Instance==null?-1:ThreatDirector.Instance.BiteVictim,
                 anglerDistance=ThreatDirector.Instance==null||player==null?-1:Vector3.Distance(player.transform.position,ThreatDirector.Instance.AnglerPosition),
                 rescueProgress=context.Rescue==null?0:context.Rescue.DisplayProgress,stockLoss=world==null?0:world.StockLossCount,wave=context.Threats!=null&&context.Threats.WaveActive};
+            if (context.Connected && context.Threats)
+            {
+                snapshot.reef = context.Threats.Reef;
+                snapshot.anglerPosition = context.Threats.AnglerPosition;
+                snapshot.marine = UnityEngine.Object.FindObjectsByType<FishActor>()
+                    .Where(f => f.InHabitat && f.Mode == FishMode.Roam)
+                    .Select(f => new MarineReadout { species = f.SpeciesId, specimen = f.CargoId, position = f.transform.position }).ToArray();
+            }
             if(context.Harpoon!=null)
             {
                 var tool=context.Harpoon;snapshot.tetherActive=tool.TetherActive;snapshot.isPulled=tool.IsPulled;

@@ -9,7 +9,7 @@ namespace Raid.Nereid
         static readonly Color Armour=new(.19f,.25f,.229f),Soft=new(.152f,.079f,.119f),Pale=new(.66f,.66f,.46f),Dark=new(.061f,.104f,.137f);
         readonly List<Object> owned=new();
         Material skin,luminous,mud;
-        Transform clamShell,eel,kraken,warning,lure,shadow;
+        Transform clamRoot,eel,kraken,warning,lure,shadow;
         Transform anglerJaw,anglerTail,anglerFinLeft,anglerFinRight,krakenMantle,eelPhotophores;
         Material huntingLights;
         Light lureLight;
@@ -107,7 +107,7 @@ namespace Raid.Nereid
                 }
                 petals[i]=Part(hinge,"Petal",petal,skin);
             }
-            clamShell=petals[0];
+            clamRoot=bud;
         }
 
         void MakeEel()
@@ -273,6 +273,10 @@ namespace Raid.Nereid
         public void Present(ThreatDirector.ReefSnapshot state)
         {
             float t=Time.time,blend=first?1:1-Mathf.Exp(-Time.deltaTime*9);
+            clamRoot.gameObject.SetActive(state.HasClam);
+            clamRoot.position = state.Clam;
+            kraken.position = state.Kraken;
+            if (!eel.gameObject.activeSelf || (eel.position-state.Eel).sqrMagnitude>144f) blend=1;
             var angler=ThreatDirector.Instance.AnglerStage;
             // Open bud: petals lie back near the sand and breathe. Closed: they fold up over the centre.
             if(petals!=null)
@@ -283,8 +287,8 @@ namespace Raid.Nereid
                     petals[i].localRotation=Quaternion.Slerp(petals[i].localRotation,
                         Quaternion.Euler(state.ClamClosed?closedAngle:openAngle,0,0),1-Mathf.Exp(-Time.deltaTime*(state.ClamClosed?14:5)));
                 }
-            eel.gameObject.SetActive(state.Deep);kraken.gameObject.SetActive(state.Deep);
-            if(state.Deep)
+            eel.gameObject.SetActive(state.HasEel);kraken.gameObject.SetActive(state.HasKraken);
+            if(state.HasEel)
             {
                 eel.position=Vector3.Lerp(eel.position,state.Eel,blend);
                 if(state.EelHeading.sqrMagnitude>.1f)eel.rotation=Quaternion.Slerp(eel.rotation,Quaternion.LookRotation(state.EelHeading),blend);
@@ -295,6 +299,9 @@ namespace Raid.Nereid
                 }
                 eelBody.Deform();
                 eelPhotophores.localScale = Vector3.one * (state.EelPhase == 1 ? 1 + .12f * Mathf.Sin(t*14) : 1);
+            }
+            if (state.HasKraken)
+            {
                 float breath = Mathf.Sin(t * .9f) * .035f;
                 float emerge = state.KrakenPhase == 1 ? .72f : state.KrakenPhase == 2 ? 1f : 0;
                 krakenMantle.localPosition = Vector3.Lerp(krakenMantle.localPosition,Vector3.up * (emerge * 1.2f + breath),blend);
@@ -331,6 +338,7 @@ namespace Raid.Nereid
                     else if(state.KrakenPhase!=2){silt.Stop();shadow.gameObject.SetActive(false);}
                 }
             }
+            if (!state.HasKraken && shadow.gameObject.activeSelf) { silt.Stop(); shadow.gameObject.SetActive(false); }
             if(lure!=null)
             {
                 // The moving points on the lure spread into a pale fan before the fish commits to a strike.
