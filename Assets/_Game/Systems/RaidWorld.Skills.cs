@@ -35,7 +35,8 @@ namespace Raid
             SkillTreeDefinition.Value(team?.Player(ProgressKey(diver))?.skills,line);
 
         public float SkillFactor(DiverMotor diver, SkillLine line) => SkillValue(diver,line)*.01f;
-        public float TeamSkillFactor(SkillLine line) => (IsServerInitialized ? team : view)?.TeamFactor(line) ?? 0;
+        public float TeamSkillFactor(SkillLine line) =>
+            NetworkObject==null ? 0 : (IsServerInitialized ? team : view)?.TeamFactor(line) ?? 0;
         public int LocalRank(SkillLine line) => SkillTreeDefinition.Rank(LocalProgress?.skills,line);
 
         internal void RecordCatch(long id,IEnumerable<string> keys)

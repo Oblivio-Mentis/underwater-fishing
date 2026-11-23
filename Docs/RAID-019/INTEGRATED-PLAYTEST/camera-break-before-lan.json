@@ -1,0 +1,14 @@
+{
+    "phase": "Camera position after the active line breaks",
+    "status": "failed",
+    "error": "System.InvalidOperationException: Camera did not stay at the diver's head across the break: line tension 1,00; eye offset while hooked 37,379 m; after detach 38,287 m; body drift 0,000 m; camera swept 135°.\r\n  at Raid.FishingTrial+<VerifyViewAfterLineBreak>d__45.MoveNext () [0x0039a] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:574 \r\n  at Raid.FishingTrial+<Verify>d__36.MoveNext () [0x00060] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:73 ",
+    "host": 0,
+    "client": 1,
+    "checks": [
+        "Distinct connected owners 0 and 1",
+        "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Camera sweep during server surge: camera 115°; toward fish 1,446 m; away 0,000 m; sideways 0,000 m; fish escape 0,920 m.",
+        "line tension 1,00; eye offset while hooked 37,379 m; after detach 38,287 m; body drift 0,000 m; camera swept 135°."
+    ]
+}

@@ -27,9 +27,9 @@ namespace Raid.Nereid
         public float LastBurpHungerRemaining {get;private set;}
         public float LastBurpSeverity {get;private set;}=1;
         public bool LastBurpWasOverfed => LastBurpFood>LastBurpRequired&&LastBurpRequired>0;
-        public float AppliedCameraPeakMetres => cameraImpulse==null?0:cameraImpulse.AppliedPeakMetres;
-        public float AppliedCameraPeakDegrees => cameraImpulse==null?0:cameraImpulse.AppliedPeakDegrees;
-        public bool CameraImpulseAppliedThisFrame => cameraImpulse!=null&&cameraImpulse.AppliedThisFrame;
+        public float AppliedCameraPeakMetres => CameraImpulse?.AppliedPeakMetres ?? 0;
+        public float AppliedCameraPeakDegrees => CameraImpulse?.AppliedPeakDegrees ?? 0;
+        public bool CameraImpulseAppliedThisFrame => CameraImpulse?.AppliedThisFrame == true;
         public int BurstParticleCount => (mist==null?0:mist.particleCount)+(drops==null?0:drops.particleCount)+(bubbles==null?0:bubbles.particleCount);
 
         Transform mouth,throat;
@@ -45,8 +45,7 @@ namespace Raid.Nereid
         MaterialPropertyBlock foamBlock;
         Light pressureLight;
         NereidCreatureMotion creature;
-        NereidFeedingCameraImpulse cameraImpulse;
-        bool ownsCameraImpulse;
+        NereidFeedingCameraImpulse CameraImpulse => UI.UiRoot.Instance?.Context.Player?.CameraImpulse;
         Material particleMaterial,mistMaterial,dropMaterial,bubbleMaterial;
         Texture2D mistTexture,dropTexture,bubbleTexture;
         RaidWorld observedWorld;
@@ -75,7 +74,6 @@ namespace Raid.Nereid
                 maxLowerTravel=Mathf.Max(.035f,(floor-.06f)/Mathf.Max(.001f,Mathf.Abs(mouth.lossyScale.y)));
             }
             creature=Object.FindAnyObjectByType<NereidCreatureMotion>();
-            cameraImpulse=GetComponent<NereidFeedingCameraImpulse>();if(cameraImpulse==null){cameraImpulse=gameObject.AddComponent<NereidFeedingCameraImpulse>();ownsCameraImpulse=true;}
             foreach(Transform child in mouth)
             {
                 bool fang=child.name.Contains("fang"),tongue=child.name=="Curved muscular tongue",palate=child.name.StartsWith("Palate muscular fold");
@@ -138,7 +136,7 @@ namespace Raid.Nereid
                 {
                     pendingSequence=route.sequence;lastScheduled=route.sequence;burpAt=Time.time+burpDelay;
                     if(creature!=null)creature.PrepareBurp(burpDelay);
-                    if(cameraImpulse!=null)cameraImpulse.Anticipate(mouth.position,burpDelay);
+                    CameraImpulse?.Anticipate(mouth.position,burpDelay);
                 }
                 completed=route.completed;wasActive=route.active;wasFeeding=route.feeding;
             }
@@ -156,7 +154,7 @@ namespace Raid.Nereid
             foodRequired=(int)System.Math.Max(1,System.Math.Min(int.MaxValue,required*TeamProgress.FoodScale));
         }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        public void BeginBackgroundCameraQa(float seconds){if(cameraImpulse!=null)cameraImpulse.BeginBackgroundQa(seconds);}
+        public void BeginBackgroundCameraQa(float seconds){CameraImpulse?.BeginBackgroundQa(seconds);}
 #endif
         void Swallow(int count)
         {
@@ -171,7 +169,7 @@ namespace Raid.Nereid
         {
             swallowAt=Time.time;
             if(creature!=null)creature.ConfirmedSwallow();
-            if(cameraImpulse!=null)cameraImpulse.Swallow(mouth.position);
+            CameraImpulse?.Swallow(mouth.position);
             if(bubbles!=null)
             {
                 Vector3 point=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));
@@ -191,7 +189,7 @@ namespace Raid.Nereid
             LastBurpSeverity=1+1.35f*Mathf.Sqrt(surplus);float visualGain=Mathf.Lerp(1,1.55f,(LastBurpSeverity-1)/1.35f);
             burpAt=-1;LastBurpSequence=pendingSequence;pendingSequence=int.MinValue;BurpCount++;LastBurpTime=Time.time;jetUntil=Time.time+.42f;PeakParticleCount=0;burstDuration=1.7f+(LastBurpSeverity-1)*.35f;
             if(creature!=null)creature.ConfirmedBurp(LastBurpSeverity);
-            if(cameraImpulse!=null)cameraImpulse.Release(mouth.position,LastBurpSeverity);
+            CameraImpulse?.Release(mouth.position,LastBurpSeverity);
             PlaceEmitter(mist);PlaceEmitter(drops);PlaceEmitter(bubbles);
             foreach(var ps in new[]{mist,drops,bubbles})if(ps!=null)
             {var main=ps.main;float low=ps==mist?.58f:ps==drops?.13f:.12f,high=ps==mist?1.25f:ps==drops?.24f:.32f;main.startSize=new ParticleSystem.MinMaxCurve(low*visualGain,high*visualGain);}
@@ -341,7 +339,7 @@ namespace Raid.Nereid
             if(mist!=null){SetRate(mist,0);mist.Clear();}if(drops!=null){SetRate(drops,0);drops.Clear();}if(bubbles!=null){SetRate(bubbles,0);bubbles.Clear();}
             foreach(var ring in foam)if(ring!=null)ring.enabled=false;if(pressureLight!=null)pressureLight.intensity=0;
             if(creature!=null)creature.ClearFeedingReaction();
-            if(cameraImpulse!=null)cameraImpulse.Cancel();
+            CameraImpulse?.Cancel();
         }
         void RestoreMouth()
         {
@@ -358,7 +356,6 @@ namespace Raid.Nereid
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
             if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);
-            if(ownsCameraImpulse&&cameraImpulse!=null)Destroy(cameraImpulse);
         }
     }
 }

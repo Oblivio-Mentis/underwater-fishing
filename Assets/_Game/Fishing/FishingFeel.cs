@@ -19,13 +19,7 @@ namespace Raid
         {
             owner = diver;
             tool = diver == null ? null : diver.GetComponent<HarpoonTool>();
-            camera = diver == null ? null : diver.GetComponentInChildren<Nereid.NereidFeedingCameraImpulse>();
-            if (camera == null && diver != null)
-            {
-                var view = diver.GetComponentInChildren<Camera>();
-                if (view != null) camera = view.GetComponent<Nereid.NereidFeedingCameraImpulse>()
-                    ?? view.gameObject.AddComponent<Nereid.NereidFeedingCameraImpulse>();
-            }
+            camera = diver == null ? null : diver.CameraImpulse;
             ResetCounters();
         }
 

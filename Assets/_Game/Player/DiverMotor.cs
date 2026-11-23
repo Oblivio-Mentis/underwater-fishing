@@ -48,6 +48,7 @@ namespace Raid
         public float Oxygen => _state.Value.Oxygen;
         public float AirCapacity => _state.Value.AirCapacity > 0 ? _state.Value.AirCapacity : Mathf.Max(1f,tuning.oxygenCapacity*OxygenMultiplier);
         public float LocalLookMultiplier {get;set;} = 1f;
+        internal Nereid.NereidFeedingCameraImpulse CameraImpulse {get;private set;}
         public void LookAtConsole(Vector3 point)
         {
             if(!IsOwner || _camera==null)return;
@@ -137,7 +138,8 @@ namespace Raid
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = RenderSettings.fogColor;
             if(Nereid.NereidVessel.Active!=null)view.AddComponent<HypoxiaLens>().Bind(this);
-            view.gameObject.AddComponent<FishingFeel>().Bind(this);
+            CameraImpulse=view.AddComponent<Nereid.NereidFeedingCameraImpulse>();
+            view.AddComponent<FishingFeel>().Bind(this);
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = false;
             BuildInput();
             bool lockCursor=!UI.UiInputGate.Active || (Application.isFocused&&!UI.UiInputGate.Blocked);
@@ -157,6 +159,7 @@ namespace Raid
             _actions = null;
             Destroy(_camera.gameObject);
             _camera = null;
+            CameraImpulse = null;
             foreach (var bodyRenderer in _body) bodyRenderer.enabled = true;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;

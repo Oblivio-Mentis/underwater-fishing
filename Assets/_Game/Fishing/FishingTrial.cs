@@ -31,6 +31,7 @@ namespace Raid
         private readonly HashSet<string> peerBehaviours = new();
         private List<FishBehaviour> currentFight;
         private ThreatDirector pausedThreats;
+        private float peakEyeOffset;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void StartFromCommandLine()
@@ -169,8 +170,13 @@ namespace Raid
                 yield return RefillOnDeck();
                 var fish = Fish("Bristlefish");
                 yield return Wait(() => fish.InHabitat && fish.Mode == FishMode.Roam, 65, "Heavy school did not arrive.");
+                var settings=UiRoot.Instance.Settings;
+                settings.fishingCamera=settings.cameraShake=settings.hitImpulse=1;
+                foreach(var impulse in FindObjectsByType<Nereid.NereidFeedingCameraImpulse>())
+                    impulse.BeginBackgroundQa(30);
                 yield return Hook(fish);
                 yield return VerifySoloSurge(fish);
+                yield return VerifyViewAfterLineBreak(fish);
                 yield break;
             }
 
@@ -506,6 +512,7 @@ namespace Raid
                 var direction = Quaternion.AngleAxis(115f * (step+1)/steps, Vector3.up) * initialAim;
                 host.Motor.LookAtConsole(camera.transform.position + direction * 10f);
                 yield return waitPhysics;
+                peakEyeOffset=Mathf.Max(peakEyeOffset,Vector3.Distance(camera.transform.position,host.FishingAnchor));
                 Vector3 movement = host.transform.position - diverBefore;
                 float advance = Vector3.Dot(movement, towardFish);
                 forward += Mathf.Max(0, advance);
@@ -526,6 +533,44 @@ namespace Raid
             host.QaHoldOwned(false, 0);
             host.Motor.LookAtConsole(camera.transform.position + initialAim * 10f);
             yield return Pause(.2f);
+        }
+
+        private IEnumerator VerifyViewAfterLineBreak(FishActor fish)
+        {
+            Phase("Camera position after the active line breaks");
+            var camera=host.Motor.GetComponentInChildren<Camera>();
+            var frame=new WaitForEndOfFrame();
+            Require(host.QaHoldOwned(false,20),"Could not reel until the line breaks.");
+            float deadline=Time.unscaledTime+18, peakTension=0;
+            while(host.HookedFish==fish)
+            {
+                Require(Time.unscaledTime<deadline,"Held reel did not break or lose the line.");
+                peakTension=Mathf.Max(peakTension,host.LineTension);
+                peakEyeOffset=Mathf.Max(peakEyeOffset,Vector3.Distance(camera.transform.position,host.FishingAnchor));
+                yield return frame;
+            }
+            Require(host.HookedFish==null && fish.HookCount==0,"The fish must detach before the camera sweep.");
+            host.QaHoldOwned(false,0);
+            Vector3 anchor=host.FishingAnchor;
+            Vector3 startDirection=camera.transform.forward;
+            float maxYaw=0, maxBodyDrift=0, maxDetachedEyeOffset=0;
+            float start=Time.unscaledTime;
+            while(Time.unscaledTime-start<1.25f)
+            {
+                float progress=(Time.unscaledTime-start)/1.25f;
+                var direction=Quaternion.AngleAxis(135f*Mathf.Sin(progress*Mathf.PI),Vector3.up)*startDirection;
+                host.Motor.LookAtConsole(camera.transform.position+direction*10f);
+                yield return frame;
+                maxYaw=Mathf.Max(maxYaw,Vector3.Angle(Vector3.ProjectOnPlane(startDirection,Vector3.up),
+                    Vector3.ProjectOnPlane(camera.transform.forward,Vector3.up)));
+                maxBodyDrift=Mathf.Max(maxBodyDrift,Vector3.Distance(anchor,host.FishingAnchor));
+                maxDetachedEyeOffset=Mathf.Max(maxDetachedEyeOffset,Vector3.Distance(camera.transform.position,host.FishingAnchor));
+            }
+            string measured=$"line tension {peakTension:F2}; eye offset while hooked {peakEyeOffset:F3} m; "+
+                $"after detach {maxDetachedEyeOffset:F3} m; body drift {maxBodyDrift:F3} m; camera swept {maxYaw:F0}°.";
+            Check(measured);
+            Require(maxYaw>110f && maxBodyDrift<.04f && peakEyeOffset<.09f && maxDetachedEyeOffset<.06f,
+                "Camera did not stay at the diver's head across the break: "+measured);
         }
 
         private IEnumerator HookPeer(FishActor fish)

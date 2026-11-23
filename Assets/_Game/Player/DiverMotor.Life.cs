@@ -198,15 +198,12 @@ namespace Raid
             {
                 Spectating=null;
                 if(deathShade!=null){deathShade.enabled=false;deathShade.color=Color.clear;}
-                _camera.transform.localPosition=Vector3.up*.6f;
                 viewingDeath=false;
             }
             bool knocked=RaidWorld.Instance?.GoshaKnocked(this)??false;
-            if(knocked || goshaFall>0)
-            {
-                goshaFall=Mathf.MoveTowards(goshaFall,knocked?1:0,Time.deltaTime*5.5f);
-                _camera.transform.localPosition=Vector3.up*(.6f-.66f*goshaFall);
-            }
+            goshaFall=Mathf.MoveTowards(goshaFall,knocked?1:0,Time.deltaTime*5.5f);
+            // Start every rendered frame at the eye before adding any presentation impulse.
+            _camera.transform.localPosition=Vector3.up*(.6f-.66f*goshaFall);
             _camera.transform.rotation=Quaternion.Euler(_pitch,_yaw,goshaFall*11);
         }
     }
