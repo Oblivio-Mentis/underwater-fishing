@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c894d9b7c43a403bb49490c1f8250682, type: 3}
+  m_Name: Bristlefish
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishSpeciesProfile
+  habitat: {fileID: 11400000, guid: 25e40febe2a440ae86354050a37bef93, type: 2}
+  preferredHabitat: 2
+  arrivalDelay: 13.5
+  dwellSeconds: 44
+  patrolRadius: 1.6
+  returnDistance: 9
+  floorClearanceMin: 0.3
+  floorClearanceMax: 1.4
+  cruiseSpeed: 1.1
+  hoverSpeed: 0.2
+  forageSpeed: 0.55
+  fleeSpeed: 4.6
+  acceleration: 1.5
+  turnRate: 85
+  turnRadius: 1.8
+  bankStrength: 11
+  bodyRadiusMultiplier: 1.15
+  senseDistance: 3.0
+  closeDistance: 1.8
+  perceptionDelay: 0.5
+  fleeDuration: 2.6
+  shotFleeDuration: 3.2
+  hidingPreference: 0.9
+  recoverSeconds: 3.2
+  hoverProbability: 0.3
+  hoverDurationMin: 1.5
+  hoverDurationMax: 3.5
+  forageProbability: 0.45
+  forageDurationMin: 2.5
+  forageDurationMax: 5.5
+  stuckSeconds: 1.4

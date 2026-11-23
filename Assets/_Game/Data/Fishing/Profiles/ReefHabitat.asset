@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9cd47b01ac041b28860832e9f0f6919, type: 3}
+  m_Name: ReefHabitat
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.FishHabitat
+  zones:
+  - name: Survey Wreck
+    depthTier: 1
+    role: 2
+    anchors:
+    - {x: 36, y: -6.5, z: -12}
+    - {x: 31, y: -7, z: -19}
+    - {x: 25, y: -8, z: -19}
+    - {x: 27, y: -6, z: -14}
+    radius: 1.9
+    ceiling: -4
+    fallbackLane: 0.3
+  - name: Kelp Gate
+    depthTier: 1
+    role: 0
+    anchors:
+    - {x: 42, y: -5, z: -35}
+    - {x: 37, y: -5, z: -33}
+    - {x: 36, y: -6, z: -38}
+    - {x: 40, y: -6.5, z: -43}
+    - {x: 43, y: -9.2, z: -46}
+    radius: 2.2
+    ceiling: -3.5
+    fallbackLane: 0.3
+  - name: Wreck Basin
+    depthTier: 1
+    role: 2
+    anchors:
+    - {x: 53, y: -9, z: -60}
+    - {x: 48, y: -12, z: -67}
+    - {x: 46, y: -12.5, z: -72}
+    - {x: 43, y: -12, z: -65}
+    - {x: 45, y: -10.5, z: -56}
+    radius: 2.4
+    ceiling: -6
+    fallbackLane: 0.3
+  - name: Far Ridge
+    depthTier: 1
+    role: 1
+    anchors:
+    - {x: 58, y: -10, z: -79}
+    - {x: 54, y: -13, z: -84}
+    - {x: 50, y: -14, z: -80}
+    - {x: 50, y: -10, z: -74}
+    - {x: 55, y: -9, z: -72}
+    radius: 3.2
+    ceiling: -6
+    fallbackLane: 0.3
+  - name: Port Survey
+    depthTier: 1
+    role: 1
+    anchors:
+    - {x: -21, y: -8, z: -24}
+    - {x: -25, y: -8, z: -31}
+    - {x: -28, y: -7.5, z: -37}
+    - {x: -23, y: -9, z: -41}
+    - {x: -19, y: -8, z: -31}
+    radius: 3.0
+    ceiling: -5
+    fallbackLane: 0.3
+  - name: Bow Garden
+    depthTier: 1
+    role: 0
+    anchors:
+    - {x: -4, y: -8, z: 29}
+    - {x: -10, y: -9, z: 28}
+    - {x: -13, y: -9.3, z: 30}
+    - {x: -10, y: -10, z: 37}
+    - {x: -5, y: -8, z: 38}
+    radius: 2.2
+    ceiling: -5.5
+    fallbackLane: 0.3
+  - name: Moorings
+    depthTier: 1
+    role: 1
+    anchors:
+    - {x: 24, y: -7, z: 3}
+    - {x: 26, y: -8, z: 8}
+    - {x: 28, y: -9, z: 14}
+    - {x: 23, y: -9, z: 19}
+    - {x: 22, y: -7, z: 11}
+    radius: 2.8
+    ceiling: -4.5
+    fallbackLane: 0.3
+  - name: Rift Lip
+    depthTier: 2
+    role: 0
+    anchors:
+    - {x: 49, y: -7, z: -30}
+    - {x: 44, y: -7, z: -36}
+    - {x: 40, y: -8, z: -38}
+    - {x: 37, y: -7, z: -35}
+    radius: 2.0
+    ceiling: -4.5
+    fallbackLane: 0.3
+  - name: Upper Needles
+    depthTier: 2
+    role: 1
+    anchors:
+    - {x: 50, y: -7.5, z: -43}
+    - {x: 44, y: -7.9, z: -44.7}
+    - {x: 41, y: -8.5, z: -48}
+    - {x: 43.5, y: -7, z: -53}
+    radius: 3.0
+    ceiling: -5
+    fallbackLane: 0.3
+  - name: Outer Seam
+    depthTier: 2
+    role: 2
+    anchors:
+    - {x: 57, y: -12, z: -64}
+    - {x: 55, y: -15, z: -67}
+    - {x: 51, y: -21, z: -75}
+    - {x: 48, y: -22, z: -79}
+    - {x: 47, y: -20, z: -70}
+    - {x: 50, y: -15, z: -62}
+    radius: 2.4
+    ceiling: -9
+    fallbackLane: 0.3
+  - name: Lantern Fault
+    depthTier: 2
+    role: 2
+    anchors:
+    - {x: 44, y: -24, z: -82}
+    - {x: 47, y: -29, z: -88}
+    - {x: 48, y: -31, z: -94}
+    - {x: 45, y: -29, z: -91}
+    - {x: 43, y: -26, z: -86}
+    radius: 2.2
+    ceiling: -20
+    fallbackLane: 0.3
+  - name: Mineral Basin
+    depthTier: 2
+    role: 1
+    anchors:
+    - {x: 14, y: -14, z: 23}
+    - {x: 16, y: -17, z: 27}
+    - {x: 22, y: -17, z: 29}
+    - {x: 19, y: -15, z: 35}
+    - {x: 14, y: -16, z: 32}
+    radius: 3.0
+    ceiling: -11
+    fallbackLane: 0.3
+  - name: Port Cut
+    depthTier: 2
+    role: 0
+    anchors:
+    - {x: -19, y: -12, z: -28}
+    - {x: -24, y: -17, z: -32}
+    - {x: -29, y: -21, z: -35}
+    - {x: -30, y: -22, z: -40}
+    - {x: -24, y: -18, z: -44}
+    radius: 2.2
+    ceiling: -9
+    fallbackLane: 0.3
