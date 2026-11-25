@@ -420,7 +420,11 @@ namespace Raid
             }
             // Hands: anyone in the water with room. Materials can also go into the dry hatch later.
             var diver = NearestReceiver(pet.Position);
-            if (diver != null && DeliverAt(dt, diver.transform.position, 1.4f, DeliverMode.Hands, diver)) return;
+            if (diver != null)
+            {
+                if (DeliverAt(dt, diver.transform.position + Vector3.up * .3f, 1.6f, DeliverMode.Hands, diver)) return;
+                if (ApproachBlocked) { skipReceiverUntil[diver.OwnerId] = Time.time + 8f; approachStall = 0; }
+            }
             if (DeliveryRank >= 5 && onlyLoot && receiver != null && receiver.Ready && team != null && receiver.DryReady)
             {
                 if (DeliverAt(dt, receiver.DryPosition, 1.6f, DeliverMode.Receptor)) return;
@@ -483,9 +487,17 @@ namespace Raid
             }
         }
 
+        Vector3 approachGoal; float approachBest, approachStall;
+
+        // True once the pet is within reach of the goal. A goal that cannot be reached (a diver standing
+        // in a rock seam, a cage mouth behind grating) is given up after a few seconds without progress.
         bool Approach(Vector3 goal, float arrive, float dt)
         {
-            if ((goal - pet.Position).sqrMagnitude <= arrive * arrive && swimRoute.Clear(pet.Position, goal)) return true;
+            float distance = Vector3.Distance(goal, pet.Position);
+            if (distance <= arrive && (distance <= arrive * .6f || swimRoute.Clear(pet.Position, goal))) { approachStall = 0; return true; }
+            if ((goal - approachGoal).sqrMagnitude > 1f) { approachGoal = goal; approachBest = distance; approachStall = 0; }
+            if (distance < approachBest - .05f) { approachBest = distance; approachStall = 0; }
+            else approachStall += dt;
             var from = pet.Position;
             var desired = hunt.Travel(dt, from, goal, HuntStats.MaxSpeed, arrive);
             var next = swimRoute.Step(from, desired, Vector3.Distance(from, desired), true, caution);
@@ -493,6 +505,8 @@ namespace Raid
             Face(next - from); pet.Position = next;
             return false;
         }
+
+        bool ApproachBlocked => approachStall > 4f;
 
         bool CageLoadingOpen() => team != null && team.hoistPhase == HoistPhase.Loading;
 
@@ -517,12 +531,15 @@ namespace Raid
             return true;
         }
 
+        readonly Dictionary<int, float> skipReceiverUntil = new();
+
         DiverMotor NearestReceiver(Vector3 from)
         {
             DiverMotor best = null; float bestDistance = float.MaxValue;
             foreach (var diver in DiverMotor.ServerDivers)
             {
                 if (diver == null || !Alive(diver) || diver.IsInside) continue;
+                if (skipReceiverUntil.TryGetValue(diver.OwnerId, out float until) && until > Time.time) continue;
                 if (!diver.TryGetComponent<HarpoonTool>(out var tool) || tool.HandsFull) continue;
                 float distance = (diver.transform.position - from).sqrMagnitude;
                 if (distance < bestDistance) { bestDistance = distance; best = diver; }

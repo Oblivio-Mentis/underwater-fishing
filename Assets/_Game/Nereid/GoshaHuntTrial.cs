@@ -119,15 +119,20 @@ namespace Raid
                 float started = Time.time;
                 lastFish = target.transform.position;
                 bool sawChase = false, stunned = false;
-                while (Time.time - started < 60f)
+                bool shot = false;
+                while (Time.time - started < 90f)
                 {
                     if (world.Gosha.Mode == GoshaMode.Fishing || world.Gosha.Mode == GoshaMode.BringingFish) sawChase = true;
-                    if (world.HuntTarget == target)
+                    var hunted = world.HuntTarget;
+                    if (hunted != null)
                     {
+                        // Follow whichever fish the server actually picked; the choice is Gosha's, not the fixture's.
+                        if (hunted != target) { target = hunted; report.species = target.SpeciesId; report.fishStart = target.transform.position; lastFish = target.transform.position; lastFishMoveAt = Time.time; }
                         report.fishRoamingWhileChased |= target.Mode == FishMode.Roam && target.IsFreeSwimming;
                         report.fishStartledWhileChased |= target.Startled;
                         if (Time.time - lastFishMoveAt > .8f) stunned = true;
-                        if (Screen.width > 0) ScreenCapture.CaptureScreenshot(Path.Combine(OutputFolder, "chase.png"));
+                        if (!shot && Screen.width > 0 && Vector3.Distance(world.Gosha.Position, target.transform.position) < 4f)
+                        { shot = true; diver.Teleport(target.transform.position + new Vector3(2.2f, 1.1f, 2.2f)); diver.LookAtConsole(target.transform.position); ScreenCapture.CaptureScreenshot(Path.Combine(OutputFolder, "chase.png")); }
                     }
                     if (world.CarriedCount > 0) break;
                     yield return null;
@@ -139,18 +144,23 @@ namespace Raid
                 report.petModeAfter = (int)world.Gosha.Mode;
                 report.petDistance = Vector3.Distance(world.Gosha.Position, target.transform.position);
                 Check("the fish swims while it is the hunt target", sawChase && report.fishRoamingWhileChased);
+                report.cargoId = target != null ? target.CargoId : 0;
                 Check("the fish is startled by the hunter", report.fishStartledWhileChased);
                 Check("no freeze: the fish keeps changing position", !stunned && report.fishMovedWhileChased > .25f);
                 Check("capture only after a real chase", report.captured && report.chaseSeconds > .35f);
                 Check("the pet left the hull through the lock", world.Gosha.Mode == GoshaMode.Fishing);
                 if (!report.captured) { Finish(); yield break; }
-                report.cargoId = target.CargoId;
+                // Stand in the water near the pet with free hands so the hand-over has a real receiver.
+                // The pet's own position is open water; stand just above it with free hands.
+                Vector3 Receiver() => world.Gosha.Position + Vector3.up * .9f + (world.Gosha.Heading.sqrMagnitude > .01f ? world.Gosha.Heading.normalized : Vector3.forward) * 1.1f;
+                diver.Teleport(Receiver());
                 float caught = Time.time;
                 while (Time.time - caught < 60f)
                 {
                     var tool = diver.GetComponent<HarpoonTool>();
                     report.pocketsWithId = Enumerable.Range(2, tool.PocketCapacity).Count(i => tool.CatchIdInSlot(i) == report.cargoId);
                     if (report.pocketsWithId > 0 || world.Gosha.Mode == GoshaMode.GoingHome || world.Gosha.Mode == GoshaMode.Resting) break;
+                    if (Vector3.Distance(diver.transform.position, world.Gosha.Position) > 6f) diver.Teleport(Receiver());
                     yield return null;
                 }
                 report.sameId = report.pocketsWithId == 1;

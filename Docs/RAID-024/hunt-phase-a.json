@@ -1,0 +1,41 @@
+{
+    "status": "passed",
+    "phase": "done",
+    "error": "",
+    "species": "Needlefish",
+    "cargoId": 5349195541168662067,
+    "fishMovedWhileChased": 19.491291046142579,
+    "fishVisibilityMoved": 0.0,
+    "chaseSeconds": 25.939464569091798,
+    "deadline": 0.0,
+    "petModeBefore": 3,
+    "petModeAfter": 13,
+    "fishRoamingWhileChased": true,
+    "fishStartledWhileChased": true,
+    "captured": true,
+    "deliveredToPockets": true,
+    "sameId": true,
+    "petLeftDeck": false,
+    "carriedAfterCatch": 1,
+    "pocketsWithId": 1,
+    "shots": 0,
+    "petDistance": 1.282461166381836,
+    "checks": [
+        "the fish swims while it is the hunt target",
+        "the fish is startled by the hunter",
+        "no freeze: the fish keeps changing position",
+        "capture only after a real chase",
+        "the pet left the hull through the lock",
+        "the same cargo id lands in the diver's pocket once"
+    ],
+    "fishStart": {
+        "x": 33.50766372680664,
+        "y": -8.420205116271973,
+        "z": -30.885173797607423
+    },
+    "diverAt": {
+        "x": 34.90766525268555,
+        "y": -7.520205020904541,
+        "z": -29.68517303466797
+    }
+}
