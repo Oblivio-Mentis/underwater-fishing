@@ -504,7 +504,7 @@ namespace Raid
 
         private void OnDestroy() => RestoreThreats();
 
-        private FishActor Fish(string species) => FindObjectsByType<FishActor>().Single(f => f.depthTier == 1 && f.SpeciesId == species);
+        private FishActor Fish(string species) => FindObjectsByType<FishActor>().OrderBy(f=>f.ObjectId).First(f => f.depthTier == 1 && f.SpeciesId == species);
 
         private IEnumerator Hook(FishActor fish,bool closeShot=false)
         {
