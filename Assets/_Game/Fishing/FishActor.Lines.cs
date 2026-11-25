@@ -289,6 +289,7 @@ namespace Raid
                 float tug = soloTow ? Mathf.Min(tuning.maxTugSpeed, tuning.soloHeavyTugSpeed * power)
                     : bolting ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
                 if(line.Tool.IsAssisted)tug*=tuning.gripTugMultiplier;
+                if(line.Tool.IsPulled)tug*=Mathf.Clamp(line.Tool.friendTetherTuning.towedFishingDragMultiplier,.1f,1f);
                 float acceleration = soloTow ? tuning.soloHeavyTugAcceleration : tuning.tugAcceleration;
                 line.TugSpeed = taut ? Mathf.MoveTowards(line.TugSpeed, tug, acceleration * dt) : 0;
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)

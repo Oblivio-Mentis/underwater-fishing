@@ -189,7 +189,7 @@ namespace Raid
                 foreach(var impulse in FindObjectsByType<Nereid.NereidFeedingCameraImpulse>())
                     impulse.BeginBackgroundQa(30);
                 yield return Hook(fish);
-                yield return VerifySoloSurge(fish);
+                yield return VerifySoloTow(fish);
                 yield return VerifyViewAfterLineBreak(fish);
                 yield break;
             }
@@ -273,7 +273,7 @@ namespace Raid
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.3f,3,"Disabling fishing camera did not restore the configured FOV.");
             ui.Settings.fishingCamera=pref;
             Check("Confirmed hook widened the owned camera; zero intensity restored base FOV.");
-            yield return VerifySoloSurge(heavy);
+            yield return VerifySoloTow(heavy);
 
             Phase("Two independent impacts");
             // The host can still swim while the other client reads the impacts and changes tools.
@@ -287,8 +287,8 @@ namespace Raid
             Send("fish_reel",1.5f);
             float startEnergy=heavy.Stamina;
             yield return Pause(.85f);
-            Require(heavy.HookCount==2 && !heavy.Coordinated && heavy.Stamina>=startEnergy-.05f,
-                "Opposed reels advanced the catch.");
+            Require(heavy.HookCount==2 && !heavy.Coordinated && heavy.SoloTow && heavy.Stamina>=startEnergy-.05f,
+                "Opposed reels advanced the catch or escaped the uncoordinated tow state.");
             host.QaHoldOwned(false,0);
             Send("fish_reel",0);
             yield return Pause(.35f);
@@ -301,8 +301,8 @@ namespace Raid
                 4,"Switching the partner's tool failed to remove only their line.");
             // Reset the fixture's shooting lane before the second shot. Waiting at the previous
             // inspection point can put the stationary first shooter beyond the 20 m line range.
-            StageCooperativePull(heavy);
             Send("slot",0);yield return Wait(()=>helper.ActiveSlot==0,4,"Partner could not re-equip harpoon.");
+            yield return VerifyGripAndFriendTether(heavy);
             yield return HookPeer(heavy);
             Require(host.HookedFish == heavy && heavy.HookCount == 2,
                 "Both lines must still be attached before staging the cooperative pull.");
@@ -547,21 +547,20 @@ namespace Raid
             throw new InvalidOperationException("No visible firing position around " + fish.SpeciesId + " in " + fish.HabitatName);
         }
 
-        private IEnumerator VerifySoloSurge(FishActor fish)
+        private IEnumerator VerifySoloTow(FishActor fish)
         {
-            Phase("Surge direction while turning the camera");
+            Phase("Continuous solo tow without reel input");
             var camera = host.Motor.GetComponentInChildren<Camera>();
             Vector3 initialAim = camera.transform.forward;
             float initialStamina = fish.Stamina;
             int initialCatches = host.CatchCount;
-            yield return Wait(() => fish.SurgeWarning && host.HookedFish == fish, 7, "No advance warning of solo surge.");
-            // Start pulling at the cue. Winding throughout a random pre-surge interval can
-            // legitimately break this single line before the camera measurement finishes.
-            Require(host.QaHoldOwned(false, 9), "Host could not hold reel at the surge warning.");
-            yield return Shot("catch-solo-warning.png");
-            yield return Wait(() => fish.Surging && host.HookedFish == fish, 3, "No solo surge.");
+            int initialTugs = fish.TugSequence;
+            host.QaHoldOwned(false, 0);
+            var feel = host.GetComponent<FishingFeel>();
+            Require(feel != null && feel.AudioCueCount >= 2, "Confirmed shot and attachment did not produce distinct audio cues.");
+            yield return Wait(() => fish.SoloTow && host.HookedFish == fish, 4, "Heavy fish did not enter continuous solo tow.");
 
-            const int steps = 24;
+            const int steps = 36;
             float forward = 0, backwards = 0, transverse = 0, escape = 0;
             var waitPhysics = new WaitForFixedUpdate();
             for (int step = 0; step < steps; step++)
@@ -570,7 +569,6 @@ namespace Raid
                 Vector3 fishBefore = fish.transform.position;
                 Vector3 towardFish = (fishBefore - host.FishingAnchor).normalized;
                 var side = Vector3.Cross(towardFish, Vector3.up).normalized;
-                // Only change the owned view. Movement is whatever the live server line applies.
                 var direction = Quaternion.AngleAxis(115f * (step+1)/steps, Vector3.up) * initialAim;
                 host.Motor.LookAtConsole(camera.transform.position + direction * 10f);
                 yield return waitPhysics;
@@ -581,21 +579,65 @@ namespace Raid
                 backwards += Mathf.Max(0, -advance);
                 transverse += Mathf.Abs(Vector3.Dot(movement, side));
                 escape += Vector3.Dot(fish.transform.position - fishBefore, towardFish);
+                Require(fish.SoloTow && !fish.Surging, "Solo tow incorrectly alternated with the ordinary surge state.");
             }
             yield return null;
             float yaw = Vector3.Angle(Vector3.ProjectOnPlane(initialAim, Vector3.up),
                 Vector3.ProjectOnPlane(camera.transform.forward, Vector3.up));
             string measured = $"camera {yaw:F0}°; toward fish {forward:F3} m; away {backwards:F3} m; sideways {transverse:F3} m; fish escape {escape:F3} m.";
             Require(yaw > 90f && forward > .18f && backwards < .035f && transverse < .065f && escape > .12f,
-                "Fish and diver did not follow the expected pull axes: " + measured);
+                "Continuous tow did not follow the expected pull axes: " + measured);
             Require(host.HookedFish==fish && fish.HookCount==1 && host.CatchCount==initialCatches &&
-                fish.Stamina>=initialStamina-.05f, $"Solo surge ended with attachment={host.HookedFish==fish}, hooks={fish.HookCount}, "+
-                $"catches={initialCatches}->{host.CatchCount}, stamina={initialStamina:F2}->{fish.Stamina:F2}, tension={host.LineTension:F2}.");
-            Check("Camera sweep during server surge: " + measured);
+                fish.Stamina>=initialStamina-.05f && fish.TugSequence==initialTugs && host.LineTension<1,
+                $"Solo tow changed catch/stamina/surge state: hooks={fish.HookCount}, catches={initialCatches}->{host.CatchCount}, "+
+                $"stamina={initialStamina:F2}->{fish.Stamina:F2}, tugs={initialTugs}->{fish.TugSequence}, tension={host.LineTension:F2}.");
+            Check("Continuous solo tow without LMB: " + measured);
             yield return Shot("catch-solo-pulled.png");
-            host.QaHoldOwned(false, 0);
             host.Motor.LookAtConsole(camera.transform.position + initialAim * 10f);
             yield return Pause(.2f);
+        }
+
+        private IEnumerator VerifyGripAndFriendTether(FishActor fish)
+        {
+            Phase("Grip stabilization and friend tether rescue");
+            StageCooperativePull(fish);
+            host.QaHoldOwned(false, 0);
+            yield return Pause(.15f);
+            Vector3 before = host.transform.position;
+            for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
+            float unassisted = Vector3.Distance(before, host.transform.position);
+
+            Require(helper.QaHoldOwned(true, 2), "Helper could not hold the active fisherman.");
+            yield return Wait(() => helper.AssistTarget == host && host.IsAssisted, 3, "E grip did not attach to the active fisherman.");
+            before = host.transform.position;
+            for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
+            float assisted = Vector3.Distance(before, host.transform.position);
+            helper.QaHoldOwned(true, 0);
+            yield return Wait(() => helper.AssistTarget == null && !host.IsAssisted, 3, "E grip did not detach.");
+            Require(unassisted > .03f && assisted < unassisted * .85f,
+                $"E grip did not reduce towing: unassisted={unassisted:F3}, assisted={assisted:F3}.");
+            Require(fish.HookCount == 1 && host.HookedFish == fish && fish.SoloTow,
+                "E grip incorrectly replaced the second harpoon or advanced the heavy catch.");
+            Check($"E grip reduced towing from {unassisted:F3} m to {assisted:F3} m without replacing the second hook.");
+
+            helper.Motor.LookAtConsole(host.FishingAnchor);
+            yield return Wait(() => Vector3.Dot(helper.Motor.AimDirection,
+                (host.FishingAnchor - helper.FishingAnchor).normalized) > .999f, 3, "Helper could not aim at the towed fisherman.");
+            Require(helper.QaFireOwned(), "Friend tether shot was rejected.");
+            yield return Wait(() => helper.OwnsFriendTether && host.IsPulled && host.HookedFish == fish, 3,
+                "Friend tether did not attach without breaking the fishing line.");
+            Require(!host.IsAssisted, "Grip and friend tether remained stacked.");
+            float separation = Vector3.Distance(host.transform.position, helper.transform.position);
+            helper.QaHoldOwned(false, 1.2f);
+            yield return Pause(.65f);
+            float rescuedSeparation = Vector3.Distance(host.transform.position, helper.transform.position);
+            Require(rescuedSeparation < separation && fish.HookCount == 1 && host.HookedFish == fish,
+                $"Friend tether did not counter towing: {separation:F3} -> {rescuedSeparation:F3} m.");
+            Require(host.QaReleaseOwned(), "The towed fisherman could not opt out with R.");
+            yield return Wait(() => !host.IsPulled && !helper.OwnsFriendTether && host.HookedFish == fish, 3,
+                "Opt-out released the fishing line or left a stale friend tether.");
+            helper.QaHoldOwned(false, 0);
+            Check($"Friend tether reduced separation from {separation:F3} to {rescuedSeparation:F3} m; R released only the rescue line.");
         }
 
         private IEnumerator VerifyViewAfterLineBreak(FishActor fish)
@@ -725,6 +767,7 @@ namespace Raid
             long capturedId = fish.CargoId;
             currentFight = new List<FishBehaviour>();
             float nextPeerSample = 0;
+            bool cooperationConfirmed = false;
             while (fish.RequiresPartner ? fish.Mode != FishMode.Captured :
                 host.CatchIdInSlot(2) != capturedId && host.CatchIdInSlot(3) != capturedId && host.CatchIdInSlot(4) != capturedId)
             {
@@ -754,6 +797,14 @@ namespace Raid
                     Send("fish_reel",pulling ? 2 : 0,follow ? "follow" : null,target);
                     nextRemoteReel = Time.unscaledTime + .35f;
                 }
+                if (remoteReeling && fish.Coordinated && !cooperationConfirmed)
+                {
+                    cooperationConfirmed = true;
+                    Require(!fish.SoloTow && fish.HookCount >= 2, "Coordinated pull retained the solo tow state.");
+                    var feel = host.GetComponent<FishingFeel>();
+                    Require(feel != null && feel.ReelAudioPlaying, "The working reel has no audible loop while the coordinated pull is active.");
+                    Check("Coordinated pull changed the server state and started the reel audio loop.");
+                }
                 if (remoteReeling && fish.Coordinated && Vector3.Distance(host.transform.position,fish.transform.position)<6
                     && !File.Exists(Path.Combine(Path.GetDirectoryName(reportPath),"catch-two-harpoons.png")))
                 {
@@ -778,7 +829,7 @@ namespace Raid
 
         private void RequireFightVariety()
         {
-            // Fast solo catches may finish before a surge. VerifySoloSurge checks the warning and surge explicitly with the heavy fish.
+            // Fast solo catches may finish before a surge. VerifySoloTow checks the warning and surge explicitly with the heavy fish.
             Require(fightSequences.Count >= 3, "Fewer than three recorded fights.");
             var all = new HashSet<string>();
             foreach (var sequence in fightSequences) foreach (var phase in sequence.Split('>')) all.Add(phase);

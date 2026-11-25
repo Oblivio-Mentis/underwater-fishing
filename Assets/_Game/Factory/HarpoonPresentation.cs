@@ -158,7 +158,7 @@ namespace Raid
                 {
                     wantOffset+=new Vector3(0,.006f,.012f);                                      // leaning in, expecting it
                 }
-                wantTremble=load*load*.0028f+pull*.0022f;
+                wantTremble=(load*load*.0028f+pull*.0022f)*hooked.tuning.fightTrembleMultiplier;
             }
             if(hooked!=null && hooked.HookSequence!=seenHookKick)
             {
