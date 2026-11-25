@@ -6,7 +6,7 @@ namespace Raid.Nereid
     // The original Clicker's ring-built carapace, pale claws and eight walking legs.
     // Geometry is client-side, with articulated limbs on the same body in sea and on deck.
     [DefaultExecutionOrder(310)]
-    internal sealed class GoshaView : MonoBehaviour
+    internal sealed partial class GoshaView : MonoBehaviour
     {
         readonly List<Mesh> meshes=new();
         readonly Transform[] legs=new Transform[8], feelers=new Transform[2];
@@ -225,7 +225,8 @@ namespace Raid.Nereid
                 if(axis.sqrMagnitude>.000001f)ball.Rotate(axis.normalized,Mathf.Min(delta.magnitude/.145f*Mathf.Rad2Deg,60),Space.World);
             }
             lastBall=ball.position;presented=true;
+            PresentWork(s,swim,dt);
         }
-        void OnDestroy(){if(handBall!=null)Destroy(handBall.gameObject);if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
+        void OnDestroy(){DisposeWork();if(handBall!=null)Destroy(handBall.gameObject);if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
     }
 }
