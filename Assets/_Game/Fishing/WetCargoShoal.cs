@@ -15,7 +15,11 @@ namespace Raid
             internal bool InCage, Arriving, Routing;
             internal int DeliveryRank;
             internal Vector3 ExitStart;
+            // Entered through the pet hatch: the model travels its short glass line first.
+            internal float HatchStartedAt = -1;
         }
+        uint seenHatchDeliveries;
+        long pendingHatchId;
 
         sealed class SalvageModel
         {
@@ -72,6 +76,13 @@ namespace Raid
             }
             var state=world.View;
             if(state==null)return;
+            var pet=world.Gosha;
+            if(pet.HatchDeliveries!=seenHatchDeliveries)
+            {
+                seenHatchDeliveries=pet.HatchDeliveries;
+                pendingHatchId=pet.HatchCargoId;
+                Nereid.GoshaReceiver.Active?.PresentTransfer();
+            }
             if(state!=manifest)Reconcile(state);
             bool unloading=state.hoistPhase==HoistPhase.Unloading && vessel!=null;
             // The host can already start the return while its replicated manifest still lists
@@ -88,6 +99,7 @@ namespace Raid
                     if(unloading)FollowDelivery(fish,deliveryProgress);
                     else SwimInCage(fish);
                 }
+                else if(fish.HatchStartedAt>=0 && FollowHatch(fish)) {}
                 else if(!FollowRoute(entry.Key,fish,route)) SwimInTank(fish);
             }
         }
@@ -118,10 +130,18 @@ namespace Raid
                     foreach(var item in state.tank)
                     {
                         if(item.IsSalvage)continue;
+                        bool fresh=!swimmers.ContainsKey(item.id);
                         var fish=Slot(item);
                         bool arrivedFromCage=fish.InCage;
                         fish.InCage=false;
                         if(arrivedFromCage){fish.Arriving=true;fish.ExitStart=fish.Model.position;}
+                        else if(fresh && item.id==pendingHatchId && Nereid.GoshaReceiver.Active!=null)
+                        {
+                            fish.HatchStartedAt=Time.time;fish.Arriving=true;
+                            fish.ExitStart=Nereid.GoshaReceiver.Active.MouthPosition;
+                            fish.Model.position=fish.ExitStart;
+                            pendingHatchId=0;
+                        }
                         if(fish.Model.parent!=reservoir)fish.Model.SetParent(reservoir,true);
                         confirmed.Add(item.id);
                     }
@@ -259,6 +279,31 @@ namespace Raid
             Vector3 point=t<.27f?entry:t<.79f?outlet:Vector3.Lerp(exit,target,CargoBasket.Ease(Mathf.InverseLerp(.79f,1,t)));
             if(t>.27f && t<.79f)point+=new Vector3(Mathf.Sin(t*8+fish.Phase),0,Mathf.Cos(t*6+fish.Phase))*.13f;
             Move(fish.Model,point,25);
+        }
+
+        // The pet hatch: mouth, a beat inside the collar, the glass line, then the tank.
+        bool FollowHatch(Swimmer fish)
+        {
+            var receiver=Nereid.GoshaReceiver.Active;
+            var pipe=receiver!=null?receiver.Pipe:null;
+            float age=Time.time-fish.HatchStartedAt;
+            const float collar=.55f, travel=1.9f, settle=.8f;
+            if(receiver==null || age>collar+travel+settle){fish.HatchStartedAt=-1;fish.Arriving=true;return false;}
+            if(fish.Model.parent!=null)fish.Model.SetParent(null,true);
+            bool routed=pipe!=null && pipe.IsConnected;
+            Vector3 entry=routed?pipe.WorldPoint(0):receiver.PipeStart!=null?receiver.PipeStart.position:receiver.MouthPosition;
+            Vector3 exit=routed?pipe.WorldPoint(1):receiver.PipeEnd!=null?receiver.PipeEnd.position:receiver.MouthPosition;
+            Vector3 point;
+            if(age<collar) point=Vector3.Lerp(receiver.MouthPosition,entry,CargoBasket.Ease(age/collar));
+            else if(age<collar+travel)
+            {
+                float t=(age-collar)/travel;
+                point=routed?pipe.WorldPoint(t):Vector3.Lerp(entry,exit,t);
+            }
+            else point=Vector3.Lerp(exit,TankPoint(fish,Time.time),CargoBasket.Ease((age-collar-travel)/settle));
+            Move(fish.Model,point,25);
+            fish.Model.localScale=Vector3.one*(fish.Size/Mathf.Max(.01f,reservoir!=null?reservoir.lossyScale.x:1));
+            return true;
         }
 
         bool FollowRoute(long id,Swimmer fish, FishRouteState route)

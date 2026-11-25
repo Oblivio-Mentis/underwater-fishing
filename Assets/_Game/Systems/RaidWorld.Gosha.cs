@@ -26,6 +26,9 @@ namespace Raid
         public byte Load;
         public byte Work;
         public uint Lunge;
+        // Steps once per catch that entered the pet hatch; the id lets the aquarium start it in the pipe.
+        public uint HatchDeliveries;
+        public long HatchCargoId;
     }
 
     public sealed partial class RaidWorld

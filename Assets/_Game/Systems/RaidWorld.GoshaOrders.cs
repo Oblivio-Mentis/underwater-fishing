@@ -453,21 +453,27 @@ namespace Raid
                     }
                     break;
                 case DeliverMode.Cage:
+                    bool any = false;
                     for (int i = carried.Count - 1; i >= 0; i--)
                     {
                         var c = carried[i];
                         bool stored = c.Fish != null ? c.Fish.LoadGoshaCatchInto(team, progression, Owners(receiverKey: orderProfile))
                             : c.Loot != null && c.Loot.LoadFromGosha(team, progression);
-                        if (stored) carried.RemoveAt(i);
+                        if (stored) { carried.RemoveAt(i); any = true; }
                     }
+                    if (any) { Publish(); Save(); }
                     break;
                 case DeliverMode.Receptor:
                     for (int i = carried.Count - 1; i >= 0; i--)
                     {
                         var c = carried[i];
+                        long id = c.Id;
                         bool stored = c.Fish != null ? c.Fish.DepositGoshaCatch(team)
                             : c.Loot != null && c.Loot.DepositFromGosha(team, progression);
-                        if (stored) carried.RemoveAt(i);
+                        if (!stored) continue;
+                        carried.RemoveAt(i);
+                        if (c.IsFish) { pet.HatchDeliveries++; pet.HatchCargoId = id; }
+                        Publish(); Save();
                     }
                     break;
             }
