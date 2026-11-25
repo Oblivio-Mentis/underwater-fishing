@@ -377,7 +377,8 @@ namespace Raid
             if (Time.time < senseAt || Time.time < hookAvailableAt || fleeRemaining > .25f) return;
             senseAt = Time.time + .18f;
             var world=RaidWorld.Instance;
-            bool hasHunter=world!=null && world.HunterAt(position,spec.senseDistance,out var hunterAt,out var hunterVelocity);
+            Vector3 hunterAt=default,hunterVelocity=default;
+            bool hasHunter=world!=null && world.HunterAt(position,spec.senseDistance,out hunterAt,out hunterVelocity);
             var swimmer = NearestSwimmer(position, spec.senseDistance);
             float hunterDistance=hasHunter?(hunterAt-position).sqrMagnitude:float.MaxValue;
             float swimmerDistance=swimmer==null?float.MaxValue:(swimmer.transform.position-position).sqrMagnitude;
