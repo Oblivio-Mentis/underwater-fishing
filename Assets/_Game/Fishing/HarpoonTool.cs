@@ -582,7 +582,7 @@ namespace Raid
         bool TryHookFriend(HarpoonTool target)
         {
             if (target == null || target == this || !CanTetherParticipant(this) || !CanTetherParticipant(target)) return false;
-            if (HasBallLine || target.HasBallLine || TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull || HasFishingLine(target)) return false;
+            if (HasBallLine || target.HasBallLine || TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull) return false;
             if (target.gameObject.scene != gameObject.scene || Time.unscaledTime < target._friendRefuseUntil) return false;
             if (Vector3.Distance(transform.position, target.transform.position) > TetherMaxRange || !FriendLineVisible(target)) return false;
             _friendTarget.Value = target.NetworkObject;

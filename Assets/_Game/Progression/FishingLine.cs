@@ -39,5 +39,8 @@ namespace Raid
 
         public bool AtHand(float distance, float reach, float minimumSeconds) =>
             Wound > 0 && WindingTime >= minimumSeconds && PaidOut <= reach && distance <= reach;
+
+        public static bool RequiresSoloTow(bool requiresPartner, bool coordinated) => requiresPartner && !coordinated;
+        public static bool CanLandHeavy(bool coordinated, int hookCount) => coordinated && hookCount >= 2;
     }
 }

@@ -25,6 +25,13 @@ namespace Raid
         public float escapeSpeed = 0.8f;
         public float tugSpeed = 3.5f;
         [Min(.1f)] public float tugAcceleration = 12f, maxTugSpeed = 4.5f;
+        [Header("Heavy fish solo tow")]
+        [Min(.1f)] public float soloHeavyTugSpeed = 2.4f;
+        [Min(.1f)] public float soloHeavyTugAcceleration = 3.5f;
+        [Min(.1f)] public float soloHeavyEscapeSpeedMultiplier = 1f;
+        [Range(.05f, 1f)] public float soloHeavyTensionMultiplier = .35f;
+        [Range(0f, 1f)] public float soloHeavyFeedback = .82f;
+        [Range(.1f, 1f)] public float gripTugMultiplier = .55f;
         [Min(.05f)] public float warningSeconds = .55f, minimumWindingSeconds = .4f;
         [Min(.02f)] public float slackAllowance = .18f;
         [Range(-1, 1)] public float pullDirectionDot = .35f;

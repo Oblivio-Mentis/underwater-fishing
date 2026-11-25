@@ -69,6 +69,7 @@ namespace Raid.UI
 
         internal static string ActionHint(HarpoonTool tool, FishActor fish)
         {
+            if (fish.SoloTow) return tool.IsAssisted ? "Хват ослабляет унос · нужен второй гарпун" : "Вас уносит · нужен второй гарпун";
             if (tool.LineTension >= LineTensionArc.Danger) return "Ослабить леску";
             if (fish.Surging || fish.Behaviour == FishBehaviour.LastEscape) return "Отпустить на рывке";
             if (fish.SurgeWarning || fish.Behaviour == FishBehaviour.SurgeWindup) return "Приготовиться отпустить";

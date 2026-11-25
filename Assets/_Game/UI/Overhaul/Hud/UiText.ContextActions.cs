@@ -43,10 +43,10 @@ namespace Raid.UI
             var hooked=owner?owner.HookedFish:null;
             if(hooked && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired)
             {
-                if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Удерживайте напарника"),note:"Отпустите, чтобы разжать захват");
+                if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Стабилизировать напарника"),note:"Хват не заменяет второй гарпун");
                 bool release=hooked.Surging || hooked.Behaviour==FishBehaviour.LastEscape || tool.LineTension>=LineTensionArc.Danger;
                 var input=release?Key.LiftLeft:hooked.RequiresPartner && hooked.HookCount<2?Key.None:Key.Left;
-                string remaining=tool.StabilizerCooldown>0?"Стабилизатор · "+tool.StabilizerCooldown+" с":null;
+                string remaining=tool.IsAssisted?"Хват ослабляет унос":tool.StabilizerCooldown>0?"Стабилизатор · "+tool.StabilizerCooldown+" с":null;
                 return new HudHint(Mark.Spear,new(input,ReelReadout.ActionHint(tool,hooked)),new(Key.R,"Освободить трос"),note:remaining)
                     {caution=release||hooked.SurgeWarning};
             }
