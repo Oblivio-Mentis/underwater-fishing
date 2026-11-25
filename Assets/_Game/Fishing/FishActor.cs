@@ -310,7 +310,14 @@ namespace Raid
                     break;
                 case FishMode.Hooked:
                     if (lines.Count == 0) DesiredState = FishMode.Escaped;
-                    else if (_elapsed >= tuning.hookSettleSeconds) DesiredState = FishMode.Struggling;
+                    else
+                    {
+                        // Show the line and its gauge the moment the harpoon lands, not after the shock.
+                        SampleLines(dt);
+                        state.HookCount = lines.Count;
+                        foreach (var line in lines) line.Tool.UpdateFishingLine(line.Spool.PaidOut, line.Tension);
+                        if (_elapsed >= tuning.hookSettleSeconds) DesiredState = FishMode.Struggling;
+                    }
                     break;
                 case FishMode.Struggling:
                 case FishMode.Tired:

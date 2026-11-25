@@ -67,7 +67,7 @@ namespace Raid
             // An owned click carries its look input in the same packet as its cargo ID.
             // Range, origin, grating and cage position come from the host's scene.
             float length=direction.sqrMagnitude;
-            if(!player || !(length>.995f && length<1.005f) || Mathf.Abs(direction.y)>.9964f)return false;
+            if(!player || !(length>.995f && length<1.005f))return false;
             return Opening(world,player,player.transform.position+Vector3.up*.6f,direction.normalized);
         }
 

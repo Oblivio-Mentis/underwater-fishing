@@ -79,6 +79,10 @@ namespace Raid.UI
             return fish.Coordinated ? "Тянуть вместе" : "Подтягивать рыбу";
         }
 
+        // A partner fish is held by two lines: both anglers read the same worst load on the catch.
+        static float LoadOf(HarpoonTool tool, FishActor fish) =>
+            fish != null && fish.RequiresPartner ? Mathf.Max(tool.LineTension, fish.Tension) : tool.LineTension;
+
         public void Refresh(UiContext ctx)
         {
             HarpoonTool tool = ctx.Harpoon;
@@ -95,7 +99,7 @@ namespace Raid.UI
             targetStamina = Mathf.Clamp01(fish.Stamina / Mathf.Max(.01f, fish.tuning.initialStamina * fish.power));
             if (entering)
             {
-                shownLoad = Mathf.Clamp01(tool.LineTension);
+                shownLoad = Mathf.Clamp01(LoadOf(tool, fish));
                 shownStamina = targetStamina;
                 arc.ShowLoad(shownLoad);
                 UiKit.Fraction(stamina, shownStamina);
@@ -117,7 +121,7 @@ namespace Raid.UI
                 SetVisible(false);
                 return;
             }
-            float targetLoad = Mathf.Clamp01(lineOwner.LineTension);
+            float targetLoad = Mathf.Clamp01(LoadOf(lineOwner, lastFish));
             float blend = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 24f);
             // Show danger on the first confirmed snapshot, even during a fast surge.
             shownLoad = targetLoad >= LineTensionArc.Danger && shownLoad < LineTensionArc.Danger

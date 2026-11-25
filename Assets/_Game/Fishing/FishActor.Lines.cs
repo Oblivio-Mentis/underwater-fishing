@@ -169,6 +169,9 @@ namespace Raid
         {
             if (!line.Tool.Reeling || line.BlockedTime > 0 || line.Tension >= 1 ||
                 line.Spool.WindingTime < tuning.minimumWindingSeconds) return false;
+            // A partner fish held by two harpoons is a crew landing even when the anglers stand
+            // on opposite sides and pull along different directions.
+            if (RequiresPartner && lines.Count >= 2) return true;
             return line.Paired && (tired || Vector3.Dot(line.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot);
         }
 
@@ -221,7 +224,10 @@ namespace Raid
                 anyBlocked |= line.BlockedTime > 0;
                 anyPaired |= line.Paired;
             }
-            bool soloTow = FishingLine.RequiresSoloTow(RequiresPartner, anyPaired);
+            // Two harpoons in a partner fish already make it a crew catch: the fish must not run
+            // away just because the two anglers do not hold the reel on exactly the same tick.
+            bool teamHook = RequiresPartner && lines.Count >= 2;
+            bool soloTow = FishingLine.RequiresSoloTow(RequiresPartner, anyPaired || teamHook);
             state.SoloTow = soloTow;
             if (tired && RequiresPartner && FishingLine.CanLandHeavy(anyPaired, lines.Count) && GripTiredFish()) return;
             fightInput.Dt = dt;
@@ -261,9 +267,9 @@ namespace Raid
             var world=RaidWorld.Instance;
             foreach (var line in lines)
             {
-                bool working = !soloTow && line.Working && (!RequiresPartner || line.Paired);
+                bool working = !soloTow && line.Working && (!RequiresPartner || teamHook || line.Paired);
                 var motor=line.Tool.Motor;
-                float teamTiming=line.Paired?(world?.SkillFactor(motor,SkillLine.SyncPull)??0):0;
+                float teamTiming=line.Paired||teamHook?(world?.SkillFactor(motor,SkillLine.SyncPull)??0):0;
                 float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,2.2f);
                 float lineStrength=1+Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Cable)??0,0,.85f);
                 float tip=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Tip)??0,0,.40f);
@@ -271,7 +277,7 @@ namespace Raid
                 if (working)
                 {
                     line.Spool.Wind(line.Distance, tuning.slackAllowance, tuning.reelSpeed * reel, dt);
-                    state.Coordinated |= line.Paired;
+                    state.Coordinated |= line.Paired || teamHook;
                     if (leader == null) leader = line;
                 }
                 else if (!line.Working || !line.Tool.Reeling) line.Spool.Slip(line.Distance);
@@ -317,7 +323,7 @@ namespace Raid
             // During a surge the fish bolts away and the taut line drags the angler after it.
             if (leader != null && !bolting)
             {
-                float assistance=leader.Paired?1+tuning.assistBonus+(world?.SkillFactor(leader.Tool.Motor,SkillLine.SyncPull)??0):1;
+                float assistance=leader.Paired||teamHook?1+tuning.assistBonus+(world?.SkillFactor(leader.Tool.Motor,SkillLine.SyncPull)??0):1;
                 float speed = tuning.reelSpeed * Mathf.Clamp(leader.Tool.ReelMultiplier,.1f,2.2f)
                     * (weakened ? 1.35f : 1) * assistance;
                 // Move only the excess separation. A diver swimming towards a slack line cannot pull the fish.

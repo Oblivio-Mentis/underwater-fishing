@@ -140,6 +140,7 @@ namespace Raid
             TickAirlock();
             TickGosha();
             TickRouteClock();
+            AbsorbCageDrops();
             var beforeHoist=team.Treasury;
             var salvageYield=team.TickHoist(Time.fixedDeltaTime,progression);
             if(!salvageYield.IsEmpty)
@@ -314,6 +315,22 @@ namespace Raid
                     station.GetComponent<Nereid.NereidDispatchButton>()?.Press(null);
         }
         [TargetRpc] private void Respond(NetworkConnection target,int requestId,bool success,string reason) { CommandResponded?.Invoke(requestId,success,reason); }
+        // A catch lying inside the recovery cage is part of the cage manifest: the count, the hoist
+        // and the tank must agree with every fish the crew sees in the basket.
+        private void AbsorbCageDrops()
+        {
+            if(team==null || team.hoistPhase!=HoistPhase.Loading) return;
+            for(int i=dropped.Count-1;i>=0;i--)
+            {
+                var item=dropped[i];
+                if(item.kind!=DroppedKind.Catch || item.Fish==null) continue;
+                if(!CargoDispatch.ContainsDrop(this,item.position)) continue;
+                if(!team.LoadCargo(AttributeCatch(item.Fish.ToCargo(item.id)),progression)) continue;
+                dropped.RemoveAt(i);
+                Publish();
+                Save();
+            }
+        }
         internal bool LoadSelectedCargo(HarpoonTool tool,DroppedKind kind,long id)
         {
             if(!IsServerInitialized || transitionRemaining>0 || team.hoistPhase!=HoistPhase.Loading)return false;

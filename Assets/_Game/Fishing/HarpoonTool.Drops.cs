@@ -60,6 +60,14 @@ namespace Raid
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
             var at = expectedKind==DroppedKind.Salvage ? default : world.PlaceItem(Motor);
+            // A catch or salvage released over the open cage belongs to the manifest, not to the seabed.
+            var releasePoint = expectedKind==DroppedKind.Salvage ? world.PlaceItem(Motor) : at;
+            if(Nereid.NereidVessel.Active!=null && expectedKind is DroppedKind.Catch or DroppedKind.Salvage &&
+                CargoDispatch.ContainsDrop(world,releasePoint) && world.LoadSelectedCargo(this,expectedKind,expectedId))
+            {
+                Motor.ConfirmInteraction();
+                return;
+            }
             bool placed = false;
             switch (expectedKind)
             {
