@@ -41,7 +41,7 @@ namespace Raid
         internal bool TryHook(HarpoonTool tool, HarpoonContact contact)
         {
             if (!IsServerInitialized || !_depthActive || _runtime == null || tool == null || tool.Motor.IsHelpless
-                || goshaReserved || tool.Owner == null || !tool.Owner.IsActive || tool.HookedFish != null || _carrier != null
+                || goshaCarried || tool.Owner == null || !tool.Owner.IsActive || tool.HookedFish != null || _carrier != null
                 || contact.target != NetworkObject || !contact.Resolve(out _, out var point, out _, out _)) return false;
             bool first = lines.Count == 0;
             if (first && (Mode != FishMode.Roam || DesiredState != FishMode.Roam || Time.time < hookAvailableAt)) return false;

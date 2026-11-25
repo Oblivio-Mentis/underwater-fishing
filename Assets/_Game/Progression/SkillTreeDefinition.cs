@@ -125,6 +125,8 @@ namespace Raid
         public static int Value(IReadOnlyList<SkillId> owned, SkillLine line) =>
             Get(Id(line, Rank(owned, line)))?.Magnitude ?? 0;
 
+        public static bool IsAbility(SkillLine line) => (uint)line < LineCount && Data.Lines[(int)line].unit == SkillUnit.Ability;
+
         public static string FormatValue(SkillLine line, int value)
         {
             if ((uint)line >= LineCount || value <= 0) return "—";
@@ -135,6 +137,7 @@ namespace Raid
                 SkillUnit.Seconds => $"{value} с",
                 SkillUnit.ExtraSlots => $"+{value}",
                 SkillUnit.RangeMetres => $"{value} м",
+                SkillUnit.Ability => "ранг " + Roman(value),
                 _ => $"+{value}%"
             };
         }

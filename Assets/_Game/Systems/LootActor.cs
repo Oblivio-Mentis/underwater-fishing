@@ -21,6 +21,11 @@ namespace Raid
         private readonly SyncVar<bool> visible=new();
         private readonly SyncVar<long> cargoId=new();
         private readonly SyncVar<NetworkObject> carrier=new();
+        private readonly SyncVar<bool> goshaCarried=new();
+        public bool CarriedByGosha => goshaCarried.Value;
+        /// <summary>Lying on the seabed: nobody and no pet holds it.</summary>
+        public bool IsFreeOnSeabed => IsVisible && carrier.Value==null && !goshaCarried.Value;
+        public int CarryWeight => tier==1 ? 1 : 2;
         private MeshFilter model;
         private Renderer body;
         private Collider shape;
@@ -66,11 +71,78 @@ namespace Raid
             cargoId.Value=NewId();
             Collector=null;
             carrier.Value=null;
+            goshaCarried.Value=false;
             visible.Value=available;
             shape.enabled=available;
         }
 
-        internal bool CanPickUp(HarpoonTool tool) => IsVisible && carrier.Value==null && tool!=null
+        /// <summary>Server: the pet grabbed this item off the seabed. One holder at a time.</summary>
+        internal bool TakeByGosha()
+        {
+            if(!IsServerInitialized || !IsFreeOnSeabed)return false;
+            goshaCarried.Value=true;
+            shape.enabled=false;
+            return true;
+        }
+
+        internal void CarryByGosha(Vector3 at,Quaternion rotation)
+        {
+            if(!IsServerInitialized || !goshaCarried.Value)return;
+            transform.SetPositionAndRotation(at,rotation);
+            position.Value=at;
+        }
+
+        /// <summary>The pet leaves the item where it is; it stays a real pickup.</summary>
+        internal bool PutDownByGosha(Vector3 at)
+        {
+            if(!IsServerInitialized || !goshaCarried.Value)return false;
+            float clearance=-MeshBounds.min.y*transform.lossyScale.y;
+            if(Physics.Raycast(at+Vector3.up*.5f,Vector3.down,out var hit,6f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                at=hit.point+Vector3.up*clearance;
+            transform.position=position.Value=at;
+            transform.rotation=Quaternion.Euler(0,transform.eulerAngles.y,0);
+            goshaCarried.Value=false;
+            shape.enabled=IsVisible;
+            return true;
+        }
+
+        /// <summary>Hands the carried item to a diver with free hands, as a normal pickup would.</summary>
+        internal bool HandOverFromGosha(DiverMotor diver)
+        {
+            if(!IsServerInitialized || !goshaCarried.Value || diver==null || !diver.TryGetComponent<HarpoonTool>(out var tool) ||
+               !tool.CanEquipSalvage || diver.IsHelpless || diver.IsTrapped)return false;
+            tool.EquipSalvageHands();
+            goshaCarried.Value=false;
+            position.Value=transform.position;
+            carrier.Value=diver.NetworkObject;
+            shape.enabled=false;
+            return true;
+        }
+
+        /// <summary>The dry hatch of the pet's receiver: the same manifest gate the hoist uses.</summary>
+        internal bool DepositFromGosha(TeamProgress team,ProgressionTuning tuning)
+        {
+            if(!IsVisible || !IsServerInitialized || !goshaCarried.Value)return false;
+            if(!team.Deposit(CatchItem.Salvage(CargoId,tier,scrap,electronics),tuning))return false;
+            visible.Value=false;
+            goshaCarried.Value=false;
+            shape.enabled=false;
+            return true;
+        }
+
+        /// <summary>Loads the carried item into the open cage through the team manifest.</summary>
+        internal bool LoadFromGosha(TeamProgress team,ProgressionTuning tuning)
+        {
+            if(!IsVisible || !IsServerInitialized || !goshaCarried.Value)return false;
+            var cargo=CatchItem.Salvage(CargoId,tier,scrap,electronics);
+            if(!team.LoadCargo(cargo,tuning))return false;
+            visible.Value=false;
+            goshaCarried.Value=false;
+            shape.enabled=false;
+            return true;
+        }
+
+        internal bool CanPickUp(HarpoonTool tool) => IsFreeOnSeabed && tool!=null
             && tool.CanEquipSalvage && Vector3.Distance(tool.transform.position,transform.position)<=3f;
 
         public bool Pickup(DiverMotor diver)
@@ -158,7 +230,7 @@ namespace Raid
             if(!IsClientInitialized)return;
             var diver=carrier.Value==null ? null : carrier.Value.GetComponent<DiverMotor>();
             body.enabled=IsVisible && (diver==null || HarpoonPresentation.ActiveModel?.HasCameraOn(diver)!=true);
-            shape.enabled=IsVisible && carrier.Value==null;
+            shape.enabled=IsVisible && carrier.Value==null && !goshaCarried.Value;
             if(diver!=null)
             {
                 transform.SetPositionAndRotation(diver.transform.TransformPoint(ObserverCenter),diver.transform.rotation);

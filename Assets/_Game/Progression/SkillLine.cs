@@ -10,6 +10,6 @@ namespace Raid
         Cage = 24, Winch, Reservoir, CargoDefense, Pockets, Industrial,
         Separator = 30, Biomass, Chitin, Scrap, Electronics, WasteFree,
         Nutrition = 36, SmallRation, LargeRation, Satiety, Carryover, PreparedRation,
-        GoshaSpeed = 42, Recall, Fetch, SafeSwim, Delivery, Faithful
+        GoshaAutonomy = 42, GoshaSpeed, GoshaClaws, GoshaScent, GoshaDelivery, GoshaHarvest
     }
 }

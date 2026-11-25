@@ -5,7 +5,9 @@ namespace Raid
 {
     enum SkillUnit
     {
-        BonusPercent, ReductionPercent, Metres, Seconds, ExtraSlots, RangeMetres
+        BonusPercent, ReductionPercent, Metres, Seconds, ExtraSlots, RangeMetres,
+        // A discrete ability: the rank itself is the value, the note names what it unlocks.
+        Ability
     }
 
     [Serializable]

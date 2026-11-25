@@ -29,6 +29,8 @@ namespace Raid
         static float cageLookedUpAt=-10;
 
         public string HabitatName => habitat?.name ?? "";
+        public Vector3 SwimVelocity => velocity;
+        public float FleeSpeed => Profile.fleeSpeed;
         public bool InHabitat => _snapshot.Value.Active;
         public int HabitatPopulationLimit => Profile.habitat ? Mathf.Max(1,Profile.habitat.populationPerDepth) : 20;
         public bool Startled => _snapshot.Value.Startled;
@@ -367,23 +369,40 @@ namespace Raid
             return -transform.forward;
         }
 
+        // Divers and the hunting pet are the same kind of threat: the species' own senses decide.
+        // Nothing here freezes the fish; it only raises the same alarm a diver would.
         void Sense(Vector3 position,float dt)
         {
             var spec=Profile;
             if (Time.time < senseAt || Time.time < hookAvailableAt || fleeRemaining > .25f) return;
             senseAt = Time.time + .18f;
+            var world=RaidWorld.Instance;
+            bool hasHunter=world!=null && world.HunterAt(position,spec.senseDistance,out var hunterAt,out var hunterVelocity);
             var swimmer = NearestSwimmer(position, spec.senseDistance);
-            if (swimmer == null) { alertTime = Mathf.Max(0, alertTime - .18f * 2); if (swim == FishBehaviour.Alert && alertTime <= 0) swim = FishBehaviour.Cruise; return; }
-            Vector3 fromSwimmer = position - swimmer.transform.position;
-            bool approachingFast = swimmer.IsSprinting && swimmer.TryGetComponent<CharacterController>(out var controller) &&
-                Vector3.Dot(controller.velocity, fromSwimmer.normalized) > 1.2f;
-            bool close = fromSwimmer.sqrMagnitude < spec.closeDistance * spec.closeDistance || approachingFast;
-            if (SolidAhead(position, swimmer.transform.position)) return;
+            float hunterDistance=hasHunter?(hunterAt-position).sqrMagnitude:float.MaxValue;
+            float swimmerDistance=swimmer==null?float.MaxValue:(swimmer.transform.position-position).sqrMagnitude;
+            if (swimmer == null && !hasHunter) { alertTime = Mathf.Max(0, alertTime - .18f * 2); if (swim == FishBehaviour.Alert && alertTime <= 0) swim = FishBehaviour.Cruise; return; }
+            Vector3 threat; bool close;
+            if(hunterDistance<swimmerDistance)
+            {
+                threat=hunterAt;
+                bool fast=Vector3.Dot(hunterVelocity,(position-hunterAt).normalized)>1.2f;
+                close=(position-hunterAt).sqrMagnitude<spec.closeDistance*spec.closeDistance||fast;
+            }
+            else
+            {
+                threat=swimmer.transform.position;
+                Vector3 fromSwimmer = position - threat;
+                bool approachingFast = swimmer.IsSprinting && swimmer.TryGetComponent<CharacterController>(out var controller) &&
+                    Vector3.Dot(controller.velocity, fromSwimmer.normalized) > 1.2f;
+                close = fromSwimmer.sqrMagnitude < spec.closeDistance * spec.closeDistance || approachingFast;
+            }
+            if (SolidAhead(position, threat)) return;
             alertTime += .18f;
             if (swim == FishBehaviour.Cruise || swim == FishBehaviour.Hover || swim == FishBehaviour.Forage)
             { swim = FishBehaviour.Alert; pauseUntil = 0; }
-            alarmPoint = swimmer.transform.position;
-            if (close && alertTime >= spec.perceptionDelay) Frighten(swimmer.transform.position, spec.fleeDuration);
+            alarmPoint = threat;
+            if (close && alertTime >= spec.perceptionDelay) Frighten(threat, spec.fleeDuration);
         }
 
         void SwimReef(float dt,ref FishSnapshot state)

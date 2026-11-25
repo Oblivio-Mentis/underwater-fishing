@@ -91,8 +91,9 @@ namespace Raid.Nereid
             if(keyboard==null || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Modal || Time.unscaledTime<UI.UiInputGate.ResumeAt || (!Application.isFocused&&!Application.isBatchMode) ||
                 ui.Context.Player==null || ui.Context.Player.IsHelpless || ui.Context.Player.IsTrapped)return;
             if(keyboard.gKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Come);
-            else if(keyboard.hKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.CatchFish);
+            else if(keyboard.hKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Work);
             else if(keyboard.jKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Follow);
+            else if(keyboard.kKey.wasPressedThisFrame)world.RequestGoshaOrder(GoshaOrder.Materials);
         }
 
         void Show(GoshaSnapshot s)

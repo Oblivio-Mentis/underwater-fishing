@@ -23,6 +23,9 @@ namespace Raid
         public uint BallLaunch;
         public Vector3 BallLaunchOrigin;
         public bool Active;
+        public byte Load;
+        public byte Work;
+        public uint Lunge;
     }
 
     public sealed partial class RaidWorld
@@ -39,6 +42,7 @@ namespace Raid
         float idleAtSea;
         float ballWindStarted;
         public GoshaSnapshot Gosha=>gosha.Value;
+        public GoshaHuntTuning goshaHunt;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public uint QaMouthReturns {get;private set;}
         internal bool QaGoshaVisible=>goshaView!=null && goshaView.PetVisible;
@@ -120,6 +124,9 @@ namespace Raid
             else if(!TickOrder(dt))TickPetDeck(dt);
             if(pet.Ball==GoshaBallMode.Carried)
                 pet.BallPosition=pet.Position+pet.Heading*(GoshaView.JawSocket.z*tuning.petScale)+Vector3.up*(GoshaView.JawSocket.y*tuning.petScale-GoshaView.DeckOffset);
+            pet.Load=(byte)Mathf.Min(255,carried.Count);
+            pet.Work=(byte)work;
+            pet.Lunge=hunt.LungeSequence;
             gosha.Value=pet;
         }
 

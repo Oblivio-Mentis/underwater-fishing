@@ -118,15 +118,18 @@ namespace Raid.UI
             if(world.Gosha.Mode is GoshaMode.Coming or GoshaMode.Fishing or GoshaMode.BringingFish)
                 return new(Mark.Glove,note:orders);
             var hint=new HudHint(Mark.Glove){idle=true};
-            void Add(SkillLine line,Key key,string action)
+            var team=world.View;
+            void Add(bool unlocked,Key key,string action)
             {
-                if(world.LocalRank(line)<=0)return;
+                if(!unlocked)return;
                 var row=new HudBinding(key,action);
                 if(hint.first.label==null)hint.first=row;
                 else if(hint.second.label==null)hint.second=row;
                 else hint.third=row;
             }
-            Add(SkillLine.Recall,Key.G,"Позвать Гошу");Add(SkillLine.Fetch,Key.H,"Принести рыбу");Add(SkillLine.Faithful,Key.J,"Сопровождать");
+            Add(true,Key.G,"Позвать Гошу");
+            Add(team!=null && team.TeamRank(SkillLine.GoshaAutonomy)>0,Key.H,(team?.TeamRank(SkillLine.GoshaAutonomy)??0)>=5?"Гоша, на промысел":"Гоша, принеси рыбку");
+            Add(true,Key.J,"Сопровождать");
             return hint;
         }
         static HudHint Load(UiContext c,int size,bool salvage,DroppedKind selected)

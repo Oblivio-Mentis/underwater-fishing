@@ -1036,148 +1036,169 @@ MonoBehaviour:
       line: 38
       rank: 4
   - line: 42
-    key: gosha.speed
-    title: "Скорость Гоши"
-    effect: "Скорость Гоши при команде игрока"
-    team: 0
-    unit: 0
+    key: gosha.autonomy
+    title: "Самостоятельность"
+    effect: "Чему Гоша научился на промысле"
+    team: 1
+    unit: 6
     ranks:
+    - magnitude: 1
+      note: "Первый улов · по H Гоша догоняет одну мелкую рыбу и отдаёт её в руки водолазу. Умеет плыть рядом."
+    - magnitude: 2
+      note: "Чужую не трогай · не берёт рыбу, на которую смотрит или которую зацепил водолаз; зацепленную цель бросает сам."
+    - magnitude: 3
+      note: "Любопытный охотник · в сопровождении сам замечает доступную рыбку рядом и приносит её без отдельной команды."
+    - magnitude: 4
+      note: "Настойчивый следопыт · после провала меняет цель до четырёх раз, дольше держит погоню, не уходит из зоны экспедиции."
     - magnitude: 5
-      note: ""
+      note: "Рабочая смена · непрерывная добыча по H: поиск, погоня, доставка, снова поиск. Пауза при полном грузе или занятом адресате."
+    - magnitude: 6
+      note: "Дальние рейсы · ищет добычу в более далёких безопасных районах глубины и возвращается сам."
+    - magnitude: 7
+      note: "Перехват · ведёт погоню по прогнозу хода рыбы с проверкой пути; манёвренные виды догоняет чаще."
+    - magnitude: 8
+      note: "Две профессии · по H переключается между рыбой и материалами, когда одной добычи нет. Нужен «Нюх на находки»."
     - magnitude: 9
-      note: ""
-    - magnitude: 13
-      note: ""
-    - magnitude: 17
-      note: ""
-    - magnitude: 21
-      note: ""
-    - magnitude: 25
-      note: ""
-    - magnitude: 29
-      note: ""
-    - magnitude: 33
-      note: ""
-    - magnitude: 37
-      note: ""
-    - magnitude: 41
-      note: ""
+      note: "Подводный промысел · оценивает косяки и находки по отдаче, риску и дороге; выбирает продуктивные маршруты."
+    - magnitude: 10
+      note: "Маленький капитан · автономная очередь: поиск, добыча, доставка, возврат; сам переоценивает приоритеты при полной клети и аквариуме."
+    firstCost: {biomass: 6, chitin: 1, scrap: 0, electronics: 0}
+    growthPercent: 30
+    stageGrowthPercent: 8
+    extraPerStage: {biomass: 1, chitin: 1, scrap: 0, electronics: 0}
+    milestones:
+    - atRank: 8
+      line: 45
+      rank: 1
+  - line: 43
+    key: gosha.speed
+    title: "Быстрые лапки"
+    effect: "Скорость, разгон и рывок Гоши"
+    team: 1
+    unit: 6
+    ranks:
+    - magnitude: 1
+      note: "Быстрее плывёт на охоте и с добычей."
+    - magnitude: 2
+      note: "Резче разгоняется и круче поворачивает в погоне."
+    - magnitude: 3
+      note: "Рывок · короткий бросок на последних метрах до рыбы с пузырьковым следом."
+    - magnitude: 4
+      note: "Рывок восстанавливается быстрее; поворот с грузом почти не теряет скорость."
+    - magnitude: 5
+      note: "Подводная торпеда · мощный перехват с длинным шлейфом; быстрые мелкие виды становятся добычей."
     firstCost: {biomass: 7, chitin: 1, scrap: 0, electronics: 0}
-    growthPercent: 36
+    growthPercent: 40
     stageGrowthPercent: 9
     extraPerStage: {biomass: 0, chitin: 1, scrap: 1, electronics: 0}
-    milestones: []
-  - line: 43
-    key: gosha.recall
-    title: "Знакомый сигнал"
-    effect: "Перезарядка команд Гоши"
-    team: 0
-    unit: 1
-    ranks:
-    - magnitude: 5
-      note: "Открывает команду «Ко мне» · G."
-    - magnitude: 10
-      note: ""
-    - magnitude: 15
-      note: ""
-    - magnitude: 20
-      note: ""
-    - magnitude: 25
-      note: ""
-    firstCost: {biomass: 7, chitin: 1, scrap: 0, electronics: 0}
-    growthPercent: 42
-    stageGrowthPercent: 9
-    extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
-    milestones: []
+    milestones:
+    - atRank: 3
+      line: 42
+      rank: 2
   - line: 44
-    key: gosha.fetch
-    title: "Принеси рыбку"
-    effect: "Радиус поиска мелкой рыбы для Гоши"
-    team: 0
-    unit: 0
+    key: gosha.claws
+    title: "Ловкие клешни"
+    effect: "Сколько Гоша уносит за рейс"
+    team: 1
+    unit: 6
     ranks:
-    - magnitude: 8
-      note: "Открывает команду «Принеси рыбку» · H."
-    - magnitude: 16
-      note: ""
-    - magnitude: 24
-      note: ""
-    - magnitude: 32
-      note: ""
-    - magnitude: 40
-      note: ""
+    - magnitude: 1
+      note: "Надёжно держит одну рыбу или мелкую находку; не роняет на повороте."
+    - magnitude: 2
+      note: "Несёт до двух мелких рыб или равный по весу груз за рейс."
+    - magnitude: 3
+      note: "Сумка на спине · до трёх мелких экземпляров."
+    - magnitude: 4
+      note: "До четырёх экземпляров и тяжёлые находки с заметным замедлением."
+    - magnitude: 5
+      note: "Крабий трал · раскрывает мини-сеть и за один проход ловит до трёх реальных рыб одного косяка."
     firstCost: {biomass: 8, chitin: 2, scrap: 0, electronics: 0}
     growthPercent: 42
     stageGrowthPercent: 9
     extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
     milestones:
-    - atRank: 4
+    - atRank: 5
       line: 42
-      rank: 4
+      rank: 5
   - line: 45
-    key: gosha.safe-swim
-    title: "Осторожный пловец"
-    effect: "Избегание опасности на маршруте Гоши"
-    team: 0
-    unit: 0
+    key: gosha.scent
+    title: "Нюх на находки"
+    effect: "Материалы, которые Гоша находит на дне"
+    team: 1
+    unit: 6
     ranks:
-    - magnitude: 8
-      note: ""
-    - magnitude: 16
-      note: ""
-    - magnitude: 24
-      note: ""
-    - magnitude: 32
-      note: ""
-    - magnitude: 40
-      note: ""
+    - magnitude: 1
+      note: "Замечает и поднимает со дна катушки и мелкий металлолом."
+    - magnitude: 2
+      note: "Находит ящики приборов и электронику, когда они есть на этой глубине."
+    - magnitude: 3
+      note: "Собирает органические остатки и хитин у реальных источников на дне."
+    - magnitude: 4
+      note: "Отмечает команде находки, которые не может поднять; позволяет выбрать приоритет материала по K."
+    - magnitude: 5
+      note: "Нюх на сокровища · находит отдельные редкие тайники и обломки и откапывает их."
     firstCost: {biomass: 8, chitin: 2, scrap: 1, electronics: 0}
     growthPercent: 42
     stageGrowthPercent: 9
     extraPerStage: {biomass: 0, chitin: 1, scrap: 0, electronics: 0}
-    milestones: []
+    milestones:
+    - atRank: 2
+      line: 42
+      rank: 3
   - line: 46
     key: gosha.delivery
-    title: "Ловкий добытчик"
-    effect: "Скорость доставки и запас времени при полных карманах"
-    team: 0
-    unit: 0
+    title: "Доставка"
+    effect: "Куда Гоша приносит добычу"
+    team: 1
+    unit: 6
     ranks:
-    - magnitude: 6
-      note: ""
-    - magnitude: 12
-      note: ""
-    - magnitude: 18
-      note: ""
-    - magnitude: 24
-      note: ""
-    - magnitude: 30
-      note: ""
+    - magnitude: 1
+      note: "Надёжно отдаёт добычу в руки ближайшего водолаза; ждёт дольше при занятых руках."
+    - magnitude: 2
+      note: "Выбирает другого дайвера со свободными руками; не возвращается к занятому."
+    - magnitude: 3
+      note: "Знает дорогу домой · сам выгружает добычу в открытую грузовую клеть."
+    - magnitude: 4
+      note: "Грузовая очередь · ждёт возвращения клети, не теряет груз, продолжает работу при освобождении места."
+    - magnitude: 5
+      note: "Личный шлюз Гоши · мелкая рыба идёт через трубу прямо в аквариум, материалы — в сухой лоток."
     firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
     growthPercent: 43
     stageGrowthPercent: 9
     extraPerStage: {biomass: 0, chitin: 0, scrap: 1, electronics: 0}
-    milestones: []
+    milestones:
+    - atRank: 3
+      line: 42
+      rank: 4
+    - atRank: 5
+      line: 42
+      rank: 6
   - line: 47
-    key: gosha.faithful
-    title: "Верный помощник"
-    effect: "Открывает сопровождение · J. Гоша следует за вами 24 с"
-    team: 0
-    unit: 0
+    key: gosha.harvest
+    title: "Гошин промысел"
+    effect: "Гоша сам чередует рыбу и материалы, ведёт Большой крабий промысел по косякам и ходит весь цикл добыча → приёмник → добыча. Экипаж свободен для крупной охоты."
+    team: 1
+    unit: 6
     ranks:
-    - magnitude: 20
-      note: ""
-    firstCost: {biomass: 54, chitin: 24, scrap: 21, electronics: 7}
+    - magnitude: 1
+      note: "Автономный промысловый цикл с тралом, приёмником и сменой профессий."
+    firstCost: {biomass: 60, chitin: 26, scrap: 24, electronics: 8}
     growthPercent: 40
     stageGrowthPercent: 9
     extraPerStage: {biomass: 0, chitin: 0, scrap: 0, electronics: 0}
     milestones:
     - atRank: 1
       line: 42
-      rank: 8
+      rank: 10
     - atRank: 1
       line: 43
-      rank: 4
+      rank: 5
     - atRank: 1
       line: 44
-      rank: 4
+      rank: 5
+    - atRank: 1
+      line: 45
+      rank: 5
+    - atRank: 1
+      line: 46
+      rank: 5

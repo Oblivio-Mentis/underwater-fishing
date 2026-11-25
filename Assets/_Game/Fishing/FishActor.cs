@@ -179,7 +179,7 @@ namespace Raid
         public void SetDepthActive(bool active)
         {
             if (!IsServerInitialized) return;
-            goshaReserved=false;goshaRespawn=0;
+            goshaCarried=false;goshaRespawn=0;
             ClearFishing();
             arrivalPending=false;
             fleeRemaining=0;
@@ -254,8 +254,8 @@ namespace Raid
         private void FixedUpdate()
         {
             if (!IsServerInitialized || _runtime == null) return;
-            if(goshaReserved)return;
-            if(goshaRespawn>0 && Time.time>=goshaRespawn){SetDepthActive(true);return;}
+            if(goshaCarried)return;
+            if(goshaRespawn>0){TickGoshaRespawn();return;}
             if(arrivalPending)TryArrive();
             if(!_depthActive)return;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

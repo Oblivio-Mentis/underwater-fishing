@@ -375,17 +375,17 @@ namespace Raid.UI
             if(node.Capstone)return SectorArt(node.Branch);
             var mark=node.Line switch
             {
-                SkillLine.Reel or SkillLine.Tip or SkillLine.Fetch=>DiveInstruments.Mark.Spear,
+                SkillLine.Reel or SkillLine.Tip or SkillLine.GoshaAutonomy=>DiveInstruments.Mark.Spear,
                 SkillLine.Cable or SkillLine.Winch or SkillLine.Separator or SkillLine.Chitin=>DiveInstruments.Mark.Bristle,
-                SkillLine.Damper or SkillLine.Armor or SkillLine.TugStability or SkillLine.CargoDefense or SkillLine.SafeSwim=>
+                SkillLine.Damper or SkillLine.Armor or SkillLine.TugStability or SkillLine.CargoDefense=>
                     DiveInstruments.Mark.Shield,
-                SkillLine.SyncPull or SkillLine.CargoCarry or SkillLine.Pockets or SkillLine.Delivery=>DiveInstruments.Mark.Glove,
+                SkillLine.SyncPull or SkillLine.CargoCarry or SkillLine.Pockets or SkillLine.GoshaClaws or SkillLine.GoshaDelivery=>DiveInstruments.Mark.Glove,
                 SkillLine.Oxygen or SkillLine.EmergencyAir or SkillLine.Medical or SkillLine.Satiety=>DiveInstruments.Mark.Bottle,
                 SkillLine.Seal=>DiveInstruments.Mark.Helmet,
                 SkillLine.Pressure or SkillLine.SwimmingTurn or SkillLine.Scanner=>DiveInstruments.Mark.Compass,
                 SkillLine.Fins or SkillLine.SwimStart or SkillLine.GoshaSpeed=>DiveInstruments.Mark.Needle,
                 SkillLine.Hull=>DiveInstruments.Mark.Submarine,
-                SkillLine.Searchlights or SkillLine.Electronics or SkillLine.Recall=>DiveInstruments.Mark.Lantern,
+                SkillLine.Searchlights or SkillLine.Electronics or SkillLine.GoshaScent=>DiveInstruments.Mark.Lantern,
                 SkillLine.Airlock or SkillLine.Cage or SkillLine.Reservoir or SkillLine.Scrap or SkillLine.Carryover=>
                     DiveInstruments.Mark.Tile,
                 SkillLine.Nutrition=>DiveInstruments.Mark.Jaw,
