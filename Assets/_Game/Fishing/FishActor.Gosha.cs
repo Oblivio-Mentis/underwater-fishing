@@ -16,6 +16,9 @@ namespace Raid
             !RequiresPartner && Mode==FishMode.Roam && DesiredState==FishMode.Roam && lines.Count==0 &&
             HookCount==0 && !arrivalPending && Time.time>=hookAvailableAt;
 
+        /// <summary>Same species and habitat as the first catch: a school mate the trawl may sweep.</summary>
+        internal bool IsAvailForTrawl(FishActor first) => IsAvailableForGosha && first != null && SpeciesId == first.SpeciesId && habitat == first.habitat;
+
         /// <summary>True while this fish still runs its normal server AI and can still be shot.</summary>
         public bool IsFreeSwimming => _depthActive && Mode==FishMode.Roam && DesiredState==FishMode.Roam && !goshaCarried;
 

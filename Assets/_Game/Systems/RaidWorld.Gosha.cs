@@ -29,7 +29,12 @@ namespace Raid
         // Steps once per catch that entered the pet hatch; the id lets the aquarium start it in the pipe.
         public uint HatchDeliveries;
         public long HatchCargoId;
+        // Expedition tally for the ship status: resets with the expedition.
+        public ushort FishDelivered, MaterialsDelivered, ChasesWon, ChasesLost;
+        public byte Task;
     }
+
+    public enum GoshaTask : byte { Idle, Searching, Chasing, Grabbing, Carrying, Delivering, Waiting, Returning }
 
     public sealed partial class RaidWorld
     {
@@ -130,6 +135,7 @@ namespace Raid
             pet.Load=(byte)Mathf.Min(255,carried.Count);
             pet.Work=(byte)work;
             pet.Lunge=hunt.LungeSequence;
+            pet.Task=(byte)CurrentTask();
             gosha.Value=pet;
         }
 

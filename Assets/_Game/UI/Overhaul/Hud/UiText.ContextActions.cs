@@ -116,8 +116,8 @@ namespace Raid.UI
         static Mark Icon(DroppedKind kind)=>kind switch {DroppedKind.Harpoon=>Mark.Spear,DroppedKind.Ball=>Mark.Ball,DroppedKind.Catch=>Mark.Lantern,_=>Mark.Crate};
         static HudHint Training(RaidWorld world,string orders)
         {
-            if(world.Gosha.Mode is GoshaMode.Coming or GoshaMode.Fishing or GoshaMode.BringingFish)
-                return new(Mark.Glove,note:orders);
+            if(world.Gosha.Mode is GoshaMode.Coming or GoshaMode.Fishing or GoshaMode.BringingFish or GoshaMode.GoingHome)
+                return new(Mark.Glove,new(Key.H,"Закончить работу"),note:orders);
             var hint=new HudHint(Mark.Glove){idle=true};
             var team=world.View;
             void Add(bool unlocked,Key key,string action)

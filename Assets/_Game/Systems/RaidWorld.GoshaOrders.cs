@@ -49,20 +49,48 @@ namespace Raid
         static bool Training(GoshaMode mode) => mode is GoshaMode.Coming or GoshaMode.Fishing or GoshaMode.BringingFish or GoshaMode.GoingHome;
         bool PetAvailableForBall => pet.Mode != GoshaMode.Cradled && !Training(pet.Mode);
 
+        GoshaTask CurrentTask()
+        {
+            if (!Training(pet.Mode)) return GoshaTask.Idle;
+            if (pet.Mode == GoshaMode.GoingHome) return GoshaTask.Returning;
+            if (huntFish != null) return hunt.Lunging ? GoshaTask.Grabbing : GoshaTask.Chasing;
+            if (huntLoot != null) return grabWait > 0 ? GoshaTask.Grabbing : GoshaTask.Chasing;
+            if (carried.Count > 0) return deliverWait > 2f ? GoshaTask.Waiting : GoshaTask.Delivering;
+            if (work != GoshaWork.None) return GoshaTask.Searching;
+            return GoshaTask.Idle;
+        }
+
+        // The status line any client can show: what the shared helper is doing and what the shift produced.
+        public static string GoshaStatus(GoshaSnapshot s)
+        {
+            string task = (GoshaTask)s.Task switch
+            {
+                GoshaTask.Searching => (GoshaWork)s.Work == GoshaWork.Materials ? "ищет материалы" : "ищет рыбу",
+                GoshaTask.Chasing => (GoshaWork)s.Work == GoshaWork.Materials && s.Load == 0 ? "плывёт к находке" : "гонится",
+                GoshaTask.Grabbing => "хватает",
+                GoshaTask.Carrying => "несёт",
+                GoshaTask.Delivering => "доставляет",
+                GoshaTask.Waiting => "ждёт место для добычи",
+                GoshaTask.Returning => "возвращается",
+                _ => "отдыхает"
+            };
+            string load = s.Load > 0 ? " · груз " + s.Load : "";
+            return "Гоша " + task + load + " · рыб " + s.FishDelivered + " · материалов " + s.MaterialsDelivered + " · погонь " + s.ChasesWon + "/" + (s.ChasesWon + s.ChasesLost);
+        }
+
         public string GoshaTrainingHint(DiverMotor diver)
         {
             if (diver == null || !Gosha.Active || View?.goshaTamed != true || !diver.IsOwner) return "";
-            if (Training(pet.Mode))
-                return work switch
-                {
-                    GoshaWork.Fish => "Гоша на промысле · H — закончить",
-                    GoshaWork.Materials => "Гоша ищет материалы · H — закончить",
-                    GoshaWork.Balanced => "Гоша работает · H — закончить",
-                    _ => followingOrder ? "Гоша сопровождает вас" : "Гоша занят"
-                };
+            var s = Gosha;
+            if (Training(s.Mode))
+            {
+                if ((GoshaWork)s.Work != GoshaWork.None) return GoshaStatus(s) + " · H — закончить";
+                return s.OrderOwner == diver.OwnerId && s.Mode == GoshaMode.Coming && followingOrder ? "Гоша сопровождает вас · J — отпустить" : "Гоша занят поручением";
+            }
             string hint = "G — ко мне";
-            if ((View?.TeamRank(SkillLine.GoshaAutonomy) ?? 0) > 0) hint += "  ·  H — работа";
-            if ((View?.TeamRank(SkillLine.GoshaScent) ?? 0) > 0) hint += "  ·  K — материалы";
+            int autonomy = View?.TeamRank(SkillLine.GoshaAutonomy) ?? 0;
+            if (autonomy > 0) hint += autonomy >= 5 ? "  ·  H — на промысел" : "  ·  H — принеси рыбку";
+            if ((View?.TeamRank(SkillLine.GoshaScent) ?? 0) > 0) hint += "  ·  K — за материалами";
             hint += "  ·  J — сопровождение";
             return hint;
         }
@@ -101,7 +129,8 @@ namespace Raid
             if (Autonomy == 0) { OrderReply(sender, "Гоша ещё не умеет работать · откройте «Первый улов»"); return; }
             if (pet.Ball == GoshaBallMode.Carried || (pet.Ball == GoshaBallMode.Flying && pet.Thrower >= 0))
             { OrderReply(sender, "Гоша занят мячом"); return; }
-            var mode = order == GoshaOrder.Materials ? GoshaWork.Materials : Autonomy >= 8 ? GoshaWork.Balanced : GoshaWork.Fish;
+            bool harvest = team.TeamRank(SkillLine.GoshaHarvest) > 0;
+            var mode = order == GoshaOrder.Materials ? GoshaWork.Materials : (Autonomy >= 8 && ScentRank > 0) || harvest ? GoshaWork.Balanced : GoshaWork.Fish;
             if (mode == GoshaWork.Materials && ScentRank == 0) { OrderReply(sender, "Гоша ещё не ищет материалы · «Нюх на находки»"); return; }
             if (work == mode && Training(pet.Mode)) { StopWork(); OrderReply(sender, "Гоша закончил работу"); gosha.Value = pet; return; }
             float remaining = work == GoshaWork.None ? OrderRemaining() : 0;
@@ -345,16 +374,41 @@ namespace Raid
             Face(next - from); pet.Position = next;
             if (grab && fish.CaptureForGosha())
             {
+                pet.ChasesWon++;
                 carried.Add(new GoshaCatch { Fish = fish, Id = huntFishId });
                 hunt.MarkCaught();
                 huntFish = null; huntFishId = 0; deliverWait = 0;
+                if (ClawsRank >= 5 && Time.time >= trawlReadyAt) TrawlPass(fish);
                 return;
             }
             if (hunt.Phase == GoshaHuntPhase.Failed) LoseFish(true);
         }
 
+        float trawlReadyAt;
+
+        // Crab trawl: right after a grab the open net sweeps the same school. Only fish that are physically
+        // inside the net's reach and still free are taken, each by its own id; the pass has a cooldown.
+        void TrawlPass(FishActor first)
+        {
+            float reach = 1.35f;
+            int taken = 0;
+            Vector3 net = pet.Position - (pet.Heading.sqrMagnitude > .01f ? pet.Heading.normalized : Vector3.forward) * .9f;
+            foreach (var other in FishActor.ServerSchool)
+            {
+                if (taken >= HuntTuning.trawlCatches - 1 || CarriedWeight >= HuntStats.Capacity) break;
+                if (other == null || other == first || !other.IsAvailForTrawl(first)) continue;
+                if ((other.transform.position - net).sqrMagnitude > reach * reach) continue;
+                if (!swimRoute.Clear(net, other.transform.position)) continue;
+                if (!other.CaptureForGosha()) continue;
+                carried.Add(new GoshaCatch { Fish = other, Id = other.CargoId });
+                taken++;
+            }
+            if (taken > 0) { pet.ChasesWon += (ushort)taken; trawlReadyAt = Time.time + HuntTuning.trawlCooldown; }
+        }
+
         void LoseFish(bool escaped)
         {
+            if (escaped) pet.ChasesLost++;
             if (escaped && huntFishId > 0) escapedUntil[huntFishId] = Time.time + HuntTuning.escapedCooldown;
             huntFish = null; huntFishId = 0;
             hunt.Reset();
@@ -449,7 +503,7 @@ namespace Raid
                     {
                         var c = carried[i];
                         bool taken = c.Fish != null ? c.Fish.CollectForGosha(tool, receiverKey) : c.Loot != null && c.Loot.HandOverFromGosha(diver);
-                        if (taken) carried.RemoveAt(i);
+                        if (taken) { carried.RemoveAt(i); Tally(c); }
                     }
                     break;
                 case DeliverMode.Cage:
@@ -459,7 +513,7 @@ namespace Raid
                         var c = carried[i];
                         bool stored = c.Fish != null ? c.Fish.LoadGoshaCatchInto(team, progression, Owners(receiverKey: orderProfile))
                             : c.Loot != null && c.Loot.LoadFromGosha(team, progression);
-                        if (stored) { carried.RemoveAt(i); any = true; }
+                        if (stored) { carried.RemoveAt(i); any = true; Tally(c); }
                     }
                     if (any) { Publish(); Save(); }
                     break;
@@ -471,7 +525,7 @@ namespace Raid
                         bool stored = c.Fish != null ? c.Fish.DepositGoshaCatch(team)
                             : c.Loot != null && c.Loot.DepositFromGosha(team, progression);
                         if (!stored) continue;
-                        carried.RemoveAt(i);
+                        carried.RemoveAt(i); Tally(c);
                         if (c.IsFish) { pet.HatchDeliveries++; pet.HatchCargoId = id; }
                         Publish(); Save();
                     }
@@ -480,6 +534,8 @@ namespace Raid
             if (carried.Count == 0) DeliveryComplete();
             return true;
         }
+
+        void Tally(GoshaCatch c) { if (c.IsFish) pet.FishDelivered++; else pet.MaterialsDelivered++; }
 
         string[] Owners(string receiverKey) => string.IsNullOrEmpty(receiverKey) ? null : new[] { receiverKey };
 
