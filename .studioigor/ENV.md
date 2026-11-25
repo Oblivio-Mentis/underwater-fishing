@@ -6,8 +6,8 @@ Unity MCP already installed and live; used for editor/scene/build/test/console o
 Git local only. Mandatory packages pinned in Packages manifest+lock.
 ## Commands
 RUN: powershell -File Tools/Run-Prototype.ps1
-TEST: Unity MCP run_tests(mode=EditMode, assembly_names=[Raid.Progression.Tests])
-BUILD: Unity MCP manage_build(action=build, target=windows64, scenes=[Assets/_Game/Scenes/FirstPlayable.unity])
+TEST: Unity MCP run_tests(mode=EditMode, assembly_names=[Raid.Progression.Tests]); Play Mode Gosha: touch .studioigor/gosha-trial.on, enter play, read .studioigor/raid024/hunt.json
+BUILD: Unity.exe -batchmode -nographics -quit -projectPath . -executeMethod Raid.Editor.Raid014Validation.Build -raid-exe Builds/<Name>/UnderwaterFishing.exe -raid-flavor release -logFile .studioigor/raid024/build.log (scene InterfaceVerticalSlice)
 CAPTURE: Unity MCP manage_camera(action=screenshot, output_folder=.studioigor/captures/playable)
 EDITOR: open existing RAID project in Unity Hub
 ## Verification note
