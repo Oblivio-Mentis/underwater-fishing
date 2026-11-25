@@ -667,7 +667,7 @@ namespace Raid
             scanAt = 0; swimRoute.Reset(); SetMode(GoshaMode.Fishing);
             Publish();
         }
-        internal void StopWorkForTrial() => FinishWork("trial");
+        internal void StopWorkForTrial() { FinishWork("trial"); ResetGosha(); lastOrderAt = float.NegativeInfinity; }
 #endif
 
         enum PetZone { Deck, Lock, Sea }

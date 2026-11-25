@@ -110,7 +110,8 @@ namespace Raid
 
         PocketItem Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
         void SetPocket(int slot,PocketItem item) => pockets[slot-2]=item;
-        public FishActor FishInSlot(int slot) => Pocket(slot).species?.GetComponent<FishActor>();
+        // A pocketed fish can already be torn down when the scene unloads: a destroyed object reads as empty.
+        public FishActor FishInSlot(int slot) { var species = Pocket(slot).species; return species != null ? species.GetComponent<FishActor>() : null; }
         public long CatchIdInSlot(int slot) => Pocket(slot).id;
         public bool HasBallInSlot(int slot) => Pocket(slot).ball;
         bool PocketOccupied(int slot) => HasBallInSlot(slot) || CatchIdInSlot(slot)>0;

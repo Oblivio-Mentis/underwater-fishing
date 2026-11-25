@@ -25,7 +25,7 @@ namespace Raid
             public float fishMovedWhileChased, fishVisibilityMoved, chaseSeconds, deadline;
             public int petModeBefore, petModeAfter;
             public bool fishRoamingWhileChased, fishStartledWhileChased, captured, deliveredToPockets, sameId, petLeftDeck;
-            public int carriedAfterCatch, pocketsWithId, shots;
+            public int carriedAfterCatch, pocketsWithId, shots, materialsDelivered, fishDelivered;
             public float petDistance;
             public string[] checks = Array.Empty<string>();
             public Vector3 fishStart, diverAt;
@@ -166,8 +166,43 @@ namespace Raid
                 report.sameId = report.pocketsWithId == 1;
                 report.deliveredToPockets = report.pocketsWithId == 1;
                 Check("the same cargo id lands in the diver's pocket once", report.sameId);
+                yield return Logistics();
                 Finish();
             }
+        }
+
+        // Phase B/C: a real winch drum off the seabed, loaded by the pet into the open cage; a second
+        // fish straight into the aquarium through the pet hatch. Every id is counted once.
+        IEnumerator Logistics()
+        {
+            world.StopWorkForTrial();
+            yield return new WaitForSeconds(.5f);
+            // Materials: Scent I, Delivery III (cage), capacity 2.
+            world.StageWorkForTrial(GoshaWork.Materials, 3, 5, 2, 2, 3);
+            diver.Teleport(NereidVessel.Active.transform.TransformPoint(new Vector3(9f, -4f, -16f)));
+            var loot = FindObjectsByType<LootActor>().FirstOrDefault(l => l.IsFreeOnSeabed && l.tier == 1);
+            Check("a real tier-1 salvage item lies on the seabed", loot != null);
+            long lootId = loot.CargoId;
+            int cageBefore = world.Team.cargo.Count;
+            yield return Wait("the pet picked the drum up off the seabed", () => loot.CarriedByGosha, 120);
+            Check("the drum keeps its id while carried", loot.CargoId == lootId && loot.IsVisible);
+            yield return Wait("the drum entered the open cage manifest", () => world.Team.cargo.Any(x => x.id == lootId && x.IsSalvage), 120);
+            Check("one manifest entry and the seabed item is gone", world.Team.cargo.Count(x => x.id == lootId) == 1 && !loot.IsVisible && world.Team.cargo.Count == cageBefore + 1);
+            report.materialsDelivered = world.Gosha.MaterialsDelivered;
+            world.StopWorkForTrial();
+            yield return new WaitForSeconds(.5f);
+            // Hatch: Delivery V, fish go straight to the tank.
+            int tankBefore = world.Team.tank.Count;
+            uint hatchBefore = world.Gosha.HatchDeliveries;
+            world.StageWorkForTrial(GoshaWork.Fish, 4, 6, 3, 0, 5);
+            diver.Teleport(NereidVessel.Active.transform.TransformPoint(new Vector3(9f, -4f, -16f)));
+            yield return Wait("a fish passed the pet hatch into the real aquarium", () => world.Gosha.HatchDeliveries > hatchBefore, 150);
+            long hatched = world.Gosha.HatchCargoId;
+            Check("the hatched fish is in the tank exactly once and not in the cage", world.Team.tank.Count(x => x.id == hatched) == 1 && !world.Team.cargo.Any(x => x.id == hatched) && world.Team.tank.Count == tankBefore + 1);
+            Check("the tank holds no salvage", world.Team.tank.All(x => !x.IsSalvage));
+            report.fishDelivered = world.Gosha.FishDelivered;
+            report.status = "running";
+            world.StopWorkForTrial();
         }
 
         void Check(string message, bool ok)
