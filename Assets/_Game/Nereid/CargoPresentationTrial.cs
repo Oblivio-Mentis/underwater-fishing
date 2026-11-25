@@ -92,8 +92,10 @@ namespace Raid
                 await Until(()=>host.GetComponentInChildren<Camera>().GetComponentsInChildren<CatchFishModel>()
                     .Any(model=>model.CargoId==pocketCatch),"Hands display this catch ID");
                 await SecondaryPress();
-                await Until(()=>tool.CatchIdInSlot(2)==0 && world.Team.cargo.Any(item=>item.id==pocketCatch),"Owned RMB transfers the same pocket catch");
-                Check(world.DroppedCount==0,"Valid RMB in the cage creates no duplicate world drop.");
+                Check(tool.CatchIdInSlot(2)==pocketCatch && !world.Team.cargo.Any(item=>item.id==pocketCatch),"RMB aims without loading the selected catch");
+                await PrimaryPress();
+                await Until(()=>tool.CatchIdInSlot(2)==0 && world.Team.cargo.Any(item=>item.id==pocketCatch),"Owned LMB transfers the same pocket catch");
+                Check(world.DroppedCount==0,"Valid LMB in the cage creates no duplicate world drop.");
                 Check(world.Team.LoadCargo(stock[1],world.progression),"Staged "+stock[1].species+" #"+stock[1].id);
                 host.Teleport(start);
                 host.LookAtConsole(center+Vector3.up*.35f);
@@ -208,6 +210,13 @@ namespace Raid
                 ShootFrame($"{stage}-{i:D2}.png");
                 await Awaitable.WaitForSecondsAsync(interval);
             }
+        }
+
+        static async Awaitable PrimaryPress()
+        {
+            var tool=UiRoot.Instance.Context.Harpoon;
+            if(tool==null || !tool.QaPrimaryOwned())throw new Exception("Owned LMB was not consumed by the cargo context");
+            await Awaitable.WaitForSecondsAsync(.24f);
         }
 
         static async Awaitable SecondaryPress()

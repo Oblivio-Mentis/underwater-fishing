@@ -167,11 +167,9 @@ namespace Raid
 
         bool ReadyForLanding(HookLine line, HookLine leader, bool tired)
         {
-            // For heavy fish, winding time only accrues while two lines genuinely
-            // pull together. A line may go slack when the exhausted fish reaches a hand.
             if (!line.Tool.Reeling || line.BlockedTime > 0 || line.Tension >= 1 ||
                 line.Spool.WindingTime < tuning.minimumWindingSeconds) return false;
-            return tired || (line.Working && Vector3.Dot(line.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot);
+            return line.Paired && (tired || Vector3.Dot(line.PullDirection, leader.PullDirection) >= tuning.pullDirectionDot);
         }
 
         bool GripTiredFish()
@@ -208,12 +206,11 @@ namespace Raid
             SampleLines(dt);
             state.HookCount = lines.Count;
             state.Coordinated = false;
+            state.SoloTow = false;
             if (lines.Count == 0) { DesiredState = FishMode.Escaped; return; }
-            if (tired && RequiresPartner && lines.Count >= 2 && GripTiredFish()) return;
             if (fight == null) fight = new FishFightBrain(tuning.FightProfile(SpeciesId), fightSeed);
             var profile = fight.Profile;
 
-            // Decide the sub-phase first; every rule below reads the brain, never the clock.
             float maxStamina = Mathf.Max(1, tuning.initialStamina * power);
             float nearest = float.MaxValue;
             bool anyReeling = false, anyBlocked = false, anyPaired = false;
@@ -224,6 +221,9 @@ namespace Raid
                 anyBlocked |= line.BlockedTime > 0;
                 anyPaired |= line.Paired;
             }
+            bool soloTow = FishingLine.RequiresSoloTow(RequiresPartner, anyPaired);
+            state.SoloTow = soloTow;
+            if (tired && RequiresPartner && FishingLine.CanLandHeavy(anyPaired, lines.Count) && GripTiredFish()) return;
             fightInput.Dt = dt;
             fightInput.Stamina01 = Mathf.Clamp01(state.Stamina / maxStamina);
             fightInput.Distance01 = Mathf.Clamp01(nearest / Mathf.Max(1, tuning.maxRange));
@@ -233,32 +233,41 @@ namespace Raid
             fightInput.Reeling = anyReeling;
             fightInput.NearHand = nearest <= tuning.captureRange * profile.lastEscapeRange;
             fightInput.Exhausted = tired || state.Stamina <= 0;
-            fight.Tick(in fightInput);
-            state.Behaviour = fight.CurrentPhase;
-            state.SurgeWarning = !tired && fight.SurgeWarning;
-            state.Surging = !tired && fight.Surging;
-            state.TugStrength = tired ? 0 : fight.TugStrength;
-            if (fight.SurgeStarted && !tired)
+            if (!soloTow)
             {
-                state.TugSequence++;
-                // A thrashing fish is heard by the reef angler; the director rate-limits how often it reacts.
-                ThreatDirector.ReportStruggle(transform.position);
+                fight.Tick(in fightInput);
+                state.Behaviour = fight.CurrentPhase;
+                state.SurgeWarning = !tired && fight.SurgeWarning;
+                state.Surging = !tired && fight.Surging;
+                state.TugStrength = tired ? 0 : fight.TugStrength;
+                if (fight.SurgeStarted && !tired)
+                {
+                    state.TugSequence++;
+                    ThreatDirector.ReportStruggle(transform.position);
+                }
             }
-            bool weakened = fight.Weakened;
-            bool bolting = state.Surging && !tired;
+            else
+            {
+                state.Behaviour = FishBehaviour.Flee;
+                state.SurgeWarning = false;
+                state.Surging = false;
+                state.TugStrength = tuning.soloHeavyFeedback;
+            }
+            bool weakened = !soloTow && fight.Weakened;
+            bool bolting = !soloTow && state.Surging && !tired;
 
             HookLine leader = null;
             state.Tension = 0;
             var world=RaidWorld.Instance;
             foreach (var line in lines)
             {
-                bool working = line.Working && (!RequiresPartner || line.Paired);
+                bool working = !soloTow && line.Working && (!RequiresPartner || line.Paired);
                 var motor=line.Tool.Motor;
                 float teamTiming=line.Paired?(world?.SkillFactor(motor,SkillLine.SyncPull)??0):0;
                 float reel=Mathf.Clamp(line.Tool.ReelMultiplier*(1+teamTiming),.1f,2.2f);
                 float lineStrength=1+Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Cable)??0,0,.85f);
                 float tip=Mathf.Clamp(world?.SkillFactor(motor,SkillLine.Tip)??0,0,.40f);
-                float resistance = state.Surging ? Mathf.Lerp(1, tuning.burstTensionMultiplier, state.TugStrength) : weakened ? profile.weakenedTension : 1;
+                float resistance = soloTow ? 1f : state.Surging ? Mathf.Lerp(1, tuning.burstTensionMultiplier, state.TugStrength) : weakened ? profile.weakenedTension : 1;
                 if (working)
                 {
                     line.Spool.Wind(line.Distance, tuning.slackAllowance, tuning.reelSpeed * reel, dt);
@@ -266,20 +275,23 @@ namespace Raid
                     if (leader == null) leader = line;
                 }
                 else if (!line.Working || !line.Tool.Reeling) line.Spool.Slip(line.Distance);
-                bool strained = line.Working || (state.SurgeWarning && line.Spool.Loaded(line.Distance, tuning.slackAllowance));
+                bool taut = line.BlockedTime == 0 && line.Tension < 1 && line.Spool.Loaded(line.Distance, tuning.slackAllowance);
+                bool strained = soloTow ? taut : line.Working || (state.SurgeWarning && line.Spool.Loaded(line.Distance, tuning.slackAllowance));
+                float tensionScale = soloTow ? tuning.soloHeavyTensionMultiplier : 1f;
                 if (strained)
-                    line.Tension += tuning.tensionRise * resistance * power * dt * (1+.20f*line.TurnLoad*(1-tip)) /
+                    line.Tension += tuning.tensionRise * resistance * power * dt * tensionScale * (1+.20f*line.TurnLoad*(1-tip)) /
                         (lineStrength*(line.Paired ? 1 + tuning.assistBonus : 1));
                 else line.Tension -= tuning.tensionRelease * dt;
-                if(state.Surging && line.Tension>=1 && line.Tool.TryStabilizeDeepLine())line.Tension=.65f;
+                if(!soloTow && state.Surging && line.Tension>=1 && line.Tool.TryStabilizeDeepLine())line.Tension=.65f;
                 line.Tension = Mathf.Clamp01(line.Tension);
                 state.Tension = Mathf.Max(state.Tension, line.Tension);
                 line.Tool.UpdateFishingLine(line.Spool.PaidOut, line.Tension);
-                // Two hooks share the body's pull: weaker per diver, never zero (the brain scales TugStrength).
-                bool taut = line.BlockedTime == 0 && line.Tension < 1 &&
-                    line.Spool.Loaded(line.Distance, tuning.slackAllowance);
-                float tug = bolting ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
-                line.TugSpeed = taut ? Mathf.MoveTowards(line.TugSpeed, tug, tuning.tugAcceleration * dt) : 0;
+                float tug = soloTow ? Mathf.Min(tuning.maxTugSpeed, tuning.soloHeavyTugSpeed * power)
+                    : bolting ? Mathf.Min(tuning.maxTugSpeed, tuning.tugSpeed * power * state.TugStrength) : 0;
+                if(line.Tool.IsAssisted)tug*=tuning.gripTugMultiplier;
+                if(line.Tool.IsPulled)tug*=Mathf.Clamp(line.Tool.friendTetherTuning.towedFishingDragMultiplier,.1f,1f);
+                float acceleration = soloTow ? tuning.soloHeavyTugAcceleration : tuning.tugAcceleration;
+                line.TugSpeed = taut ? Mathf.MoveTowards(line.TugSpeed, tug, acceleration * dt) : 0;
                 if (line.TugSpeed > 0 && line.Distance > tuning.captureRange)
                 {
                     var towardFish = -line.PullDirection;
@@ -332,11 +344,11 @@ namespace Raid
             }
             else
             {
-                float escape = tuning.escapeSpeed * power * (tired ? .10f
+                float escape = tuning.escapeSpeed * power * (soloTow ? tuning.soloHeavyEscapeSpeedMultiplier : tired ? .10f
                     : state.Surging ? Mathf.Lerp(1, profile.surgeSpeedMultiplier, state.TugStrength)
                     : weakened ? profile.weakenedSpeedMultiplier : 1);
                 Vector3 desired = away;
-                if (Nereid.NereidVessel.Active != null && !tired && !bolting)
+                if (!soloTow && Nereid.NereidVessel.Active != null && !tired && !bolting)
                     desired = (away + side * fight.Lateral * profile.lateralStrength).normalized;
                 Vector3 dir = ClearHeading(transform.position, desired, 1);
                 if (dir != desired && Vector3.Dot(dir, side * Mathf.Sign(fight.Lateral)) < 0) DeflectOnce();
@@ -349,10 +361,11 @@ namespace Raid
                     !SolidAhead(transform.position, transform.position + move)) transform.position += move;
                 else DeflectOnce();
                 FaceSwim(fightHeading, dt, tired ? 1.75f : profile.turnRate);
-                // A run burns the fish out: letting it go is the way to tire it. Between runs it breathes,
-                // fastest while weakened, so slacking off for long costs the diver.
-                if (!tired && state.Surging) state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * profile.surgeFatigue * state.TugStrength * dt);
-                else if (!tired) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
+                if (!soloTow)
+                {
+                    if (!tired && state.Surging) state.Stamina = Mathf.Max(0, state.Stamina - tuning.exhaustionRate * profile.surgeFatigue * state.TugStrength * dt);
+                    else if (!tired) state.Stamina = Mathf.Min(maxStamina, state.Stamina + tuning.staminaRecovery * dt * (weakened ? profile.weakenedRecovery : 1));
+                }
             }
         }
 

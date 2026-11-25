@@ -345,6 +345,11 @@ namespace Raid.UI
                 UiInputGate.PointerReserved=true;
                 return false;
             }
+            if(clicked && allowed && Page==UiPage.None && Context.Harpoon!=null && Context.Harpoon.ConsumeCargoPrimaryInput())
+            {
+                UiInputGate.PointerReserved=true;
+                return true;
+            }
             if(Page==UiPage.None && CargoDispatch.Aimed(player,cam)!=null)
             {
                 AimedCargoDispatch=true;

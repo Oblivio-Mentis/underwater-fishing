@@ -61,5 +61,20 @@ namespace Raid.Tests
             line.Slip(2);
             Assert.That(line.AtHand(.18f, .7f, .35f), Is.False);
         }
+
+        [Test] public void HeavyTowContinuesUntilACoordinatedPairExists()
+        {
+            Assert.That(FishingLine.RequiresSoloTow(true,false),Is.True);
+            Assert.That(FishingLine.RequiresSoloTow(true,true),Is.False);
+            Assert.That(FishingLine.RequiresSoloTow(false,false),Is.False);
+        }
+
+        [Test] public void HeavyLandingRequiresCoordinationAndTwoHooks()
+        {
+            Assert.That(FishingLine.CanLandHeavy(false,2),Is.False);
+            Assert.That(FishingLine.CanLandHeavy(true,1),Is.False);
+            Assert.That(FishingLine.CanLandHeavy(true,2),Is.True);
+            Assert.That(FishingLine.CanLandHeavy(true,5),Is.True);
+        }
     }
 }

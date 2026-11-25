@@ -43,10 +43,10 @@ namespace Raid.UI
             var hooked=owner?owner.HookedFish:null;
             if(hooked && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired)
             {
-                if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Удерживайте напарника"),note:"Отпустите, чтобы разжать захват");
+                if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Стабилизировать напарника"),note:"Хват не заменяет второй гарпун");
                 bool release=hooked.Surging || hooked.Behaviour==FishBehaviour.LastEscape || tool.LineTension>=LineTensionArc.Danger;
                 var input=release?Key.LiftLeft:hooked.RequiresPartner && hooked.HookCount<2?Key.None:Key.Left;
-                string remaining=tool.StabilizerCooldown>0?"Стабилизатор · "+tool.StabilizerCooldown+" с":null;
+                string remaining=tool.IsAssisted?"Хват ослабляет унос":tool.StabilizerCooldown>0?"Стабилизатор · "+tool.StabilizerCooldown+" с":null;
                 return new HudHint(Mark.Spear,new(input,ReelReadout.ActionHint(tool,hooked)),new(Key.R,"Освободить трос"),note:remaining)
                     {caution=release||hooked.SurgeWarning};
             }
@@ -54,8 +54,9 @@ namespace Raid.UI
             var kind=tool.SelectedItem(out _);
             if(c.View!=null && c.Tuning && CargoDispatch.CanLoad(world,player))
             {
-                if(kind==DroppedKind.Salvage)return Load(c,1,true,kind);
-                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind);
+                if(kind==DroppedKind.Salvage)return Load(c,1,true,kind,tool.CarriedSalvage.DisplayName);
+                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind,ReelReadout.Species(fish.SpeciesId));
+                if(kind!=DroppedKind.None)return new HudHint(Mark.Crate,note:"Этот предмет нельзя поместить в клеть"){caution=true};
             }
             if(ui && ui.AimedPad!=null)
             {
@@ -132,13 +133,14 @@ namespace Raid.UI
             Add(true,Key.J,"Сопровождать");
             return hint;
         }
-        static HudHint Load(UiContext c,int size,bool salvage,DroppedKind selected)
+        static HudHint Load(UiContext c,int size,bool salvage,DroppedKind selected,string itemName)
         {
             var v=c.View;int capacity=v.Capacity(c.Tuning);
-            var drop=selected==DroppedKind.Catch?new HudBinding(Key.Q,"Выбросить рыбу"):default;
+            string dropText=selected==DroppedKind.Harpoon?"Выбросить гарпун":salvage?"Выбросить груз":"Выбросить рыбу";
+            var drop=new HudBinding(Key.Q,dropText);
             if(v.hoistPhase!=HoistPhase.Loading || v.CargoUsed+size>capacity)
                 return new HudHint(Mark.Crate,drop,note:v.hoistPhase!=HoistPhase.Loading?"Клеть в пути":"В клети не хватает места"){caution=true};
-            return new(Mark.Crate,new(salvage?Key.Q:Key.Right,salvage?"Положить груз в клеть":"Положить рыбу в клеть"),drop,note:UiText.HudCargoCount(v.CargoUsed,capacity));
+            return new(Mark.Crate,new(Key.Left,"Положить в клеть"),drop,note:itemName+" · "+UiText.HudCargoCount(v.CargoUsed,capacity));
         }
         internal static HudHint MonitorActions(ShipConsole station)
         {

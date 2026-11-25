@@ -49,6 +49,8 @@ namespace Raid.UI
             public string fishBehaviour, anglerStage;
             public int fishHookSequence, fishTugSequence, biteSequence, biteVictim;
             public float fishTugStrength, anglerDistance;
+            public bool soloTow,coordinated,reelAudio;
+            public int fishingAudioCues;
             public bool tetherActive,isPulled;
             public int tetherOwner=-1,tetherTarget=-1;
             public float tetherRefusal;
@@ -250,7 +252,7 @@ namespace Raid.UI
             if(r.action=="load_fish")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;
-                if(tool==null || !tool.RequestLoadFish())throw new InvalidOperationException("Owner could not place a fish through the loading opening.");
+                if(tool==null || !tool.QaPrimaryOwned())throw new InvalidOperationException("Owner could not place cargo through the loading opening with LMB.");
                 return;
             }
             if(r.action=="drop_selected" || r.action=="pickup_drop")
@@ -431,6 +433,7 @@ namespace Raid.UI
                 aimBlend=Nereid.NereidAim.Blend,aiming=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.IsAiming,aimQaActive=Nereid.NereidAim.Active!=null&&Nereid.NereidAim.Active.BackgroundQaActive,applicationFocused=Application.isFocused,
                 team=context.View==null?"":JsonUtility.ToJson(context.View),hookedFish=fish==null?"":fish.SpeciesId,hookMode=fish==null?"":fish.Mode.ToString(),tension=fish==null?0:fish.Tension,stamina=fish==null?0:fish.Stamina,
                 fishBehaviour=fish==null?"":fish.Behaviour.ToString(),fishHookSequence=fish==null?0:fish.HookSequence,fishTugSequence=fish==null?0:fish.TugSequence,fishTugStrength=fish==null?0:fish.TugStrength,
+                soloTow=fish!=null&&fish.SoloTow,coordinated=fish!=null&&fish.Coordinated,
                 anglerStage=ThreatDirector.Instance==null?"":ThreatDirector.Instance.AnglerStage.ToString(),biteSequence=ThreatDirector.Instance==null?0:ThreatDirector.Instance.BiteSequence,biteVictim=ThreatDirector.Instance==null?-1:ThreatDirector.Instance.BiteVictim,
                 anglerDistance=ThreatDirector.Instance==null||player==null?-1:Vector3.Distance(player.transform.position,ThreatDirector.Instance.AnglerPosition),
                 rescueProgress=context.Rescue==null?0:context.Rescue.DisplayProgress,stockLoss=world==null?0:world.StockLossCount,wave=context.Threats!=null&&context.Threats.WaveActive};
@@ -457,6 +460,9 @@ namespace Raid.UI
                 snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
                 snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }
+            var feel=player==null?null:player.GetComponentInChildren<FishingFeel>();
+            snapshot.fishingAudioCues=feel==null?0:feel.AudioCueCount;
+            snapshot.reelAudio=feel!=null&&feel.ReelAudioPlaying;
             if(world!=null)
             {
                 foreach(var station in ShipConsole.Stations)

@@ -63,12 +63,12 @@ namespace Raid
             host.Motor.Teleport(center+new Vector3(2.14f,-.18f,-.4f));
             host.Motor.LookAtConsole(center);
             yield return Wait(()=>CargoDispatch.CanLoad(world,host.Motor),4,"No access to the cage for salvage.");
-            Require(host.RequestDropSelected(),"The selected salvage could not be deposited with Q.");
+            Require(host.QaPrimaryOwned(),"The selected salvage could not be deposited with LMB.");
             yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count(x=>x.id==original && x.IsSalvage)==1,5,
                 "The physical cage failed to record salvage distinctly from fish.");
             loadedSalvageId=original;
             loadedSalvageYield=new MaterialCost(0,0,loot.scrap,loot.electronics);
-            Check("Q placed the original salvage inside the physical cage as technical cargo.");
+            Check("LMB placed the original salvage inside the physical cage as technical cargo.");
             yield return RefillOnDeck();
         }
 

@@ -5,7 +5,7 @@ namespace Raid
     // Owned-view feedback for server-confirmed fishing events. Reads replicated sequence
     // counters only; never fires, moves, damages or decides a catch.
     [DisallowMultipleComponent, DefaultExecutionOrder(930)]
-    public sealed class FishingFeel : MonoBehaviour
+    public sealed partial class FishingFeel : MonoBehaviour
     {
         DiverMotor owner;
         HarpoonTool tool;
@@ -16,6 +16,7 @@ namespace Raid
         int carriedCount;
         Camera eye;
         float nextLookup;
+        bool wasSoloTow, wasCoordinated;
 
         public void Bind(DiverMotor diver)
         {
@@ -24,6 +25,7 @@ namespace Raid
             camera = diver == null ? null : diver.CameraImpulse;
             eye = diver ? diver.GetComponentInChildren<Camera>() : null;
             carriedCount = tool ? tool.CatchCount : 0;
+            if (tool != null) tool.ShotVisual += PlayShotAudio;
             ResetCounters();
         }
 
@@ -33,6 +35,8 @@ namespace Raid
             hookSequence = fish == null ? 0 : fish.HookSequence;
             tugSequence = fish == null ? 0 : fish.TugSequence;
             biteSequence = threats == null ? 0 : threats.BiteSequence;
+            wasSoloTow = fish != null && fish.SoloTow;
+            wasCoordinated = fish != null && fish.Coordinated;
         }
 
         static float Setting(System.Func<UI.UiSettings, float> pick)
@@ -59,10 +63,13 @@ namespace Raid
                 fish = current;
                 hookSequence = fish == null ? 0 : fish.HookSequence;
                 tugSequence = fish == null ? 0 : fish.TugSequence;
+                wasSoloTow = fish != null && fish.SoloTow;
+                wasCoordinated = fish != null && fish.Coordinated;
             }
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
 
             bool fighting = fish != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
+            UpdateFishingAudio(fighting, controlling);
             if (fighting && controlling && camera != null)
             {
                 float strain = Mathf.Clamp01(tool.LineTension * .9f + fish.TugStrength * .8f + (fish.SurgeWarning ? .25f : 0));
@@ -77,6 +84,26 @@ namespace Raid
                 ui.PullEdge(dir.sqrMagnitude > .0001f ? dir.normalized : Vector2.zero, pull * (0.35f + 0.65f * Mathf.Clamp01(dir.magnitude * 2f)));
             }
             else ui.PullEdge(Vector2.zero, 0);
+
+            bool solo = fighting && fish.SoloTow;
+            if (solo && !wasSoloTow && controlling)
+            {
+                PlayFishingCue(soloClip, fish.tuning.cueVolume);
+                ui.PushFishingPunch(fish.tuning.soloHeavyCameraImpulse * Setting(s => s.fishingCamera));
+                Vector3 toFish = fish.transform.position - owner.transform.position;
+                if (camera != null) camera.Hit(fish.tuning.soloHeavyCameraHit, 1.6f, Mathf.Sign(Vector3.Dot(owner.transform.right, toFish)));
+            }
+            wasSoloTow = solo;
+            bool coordinated = fighting && fish.Coordinated;
+            if (coordinated && !wasCoordinated && controlling)
+            {
+                PlayFishingCue(coordinatedClip, fish.tuning.cueVolume);
+                ui.HitMark(UI.UiTheme.Green, .9f);
+            }
+            else if (!coordinated && wasCoordinated && fighting && fish.RequiresPartner && controlling)
+                ui.Toast("Согласованная тяга потеряна");
+            wasCoordinated = coordinated;
+
             // Landing: the catch reaches the hand. One white mark, one punch.
             int count = tool ? tool.CatchCount : 0;
             if (count > carriedCount && controlling)
@@ -93,6 +120,7 @@ namespace Raid
                     float hit = Setting(s => s.hitImpulse);
                     ui.PushFishingPunch(6.5f * hit);
                     ui.HitMark(UI.UiTheme.Cyan, 1f);
+                    PlayFishingCue(hookClip, fish.tuning.cueVolume);
                     if (camera != null) camera.Hit(.010f * Mathf.Clamp(fish.power,.5f,3f), 1.1f, 0f);
                 }
             }

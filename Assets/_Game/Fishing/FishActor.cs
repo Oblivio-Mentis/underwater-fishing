@@ -25,7 +25,7 @@ namespace Raid
             public FishMode Mode;
             public FishBehaviour Behaviour;
             public float Tension, Stamina, TugStrength;
-            public bool Active, Stowed, Reserved, Startled, Coordinated, SurgeWarning, Surging;
+            public bool Active, Stowed, Reserved, Startled, Coordinated, SurgeWarning, Surging, SoloTow;
             public int HookCount, HookSequence, TugSequence;
             public int Holder;
             public long CaptureId;
@@ -74,6 +74,7 @@ namespace Raid
         public HarpoonTool Hooker => _carrier != null ? _carrier : lines.Count > 0 ? lines.At(0).Tool : null;
         public int HookCount => _snapshot.Value.HookCount;
         public bool Coordinated => _snapshot.Value.Coordinated;
+        public bool SoloTow => _snapshot.Value.SoloTow;
         public bool SurgeWarning => _snapshot.Value.SurgeWarning;
         public bool Surging => _snapshot.Value.Surging;
         public FishBehaviour Behaviour => _snapshot.Value.Behaviour;
@@ -215,7 +216,7 @@ namespace Raid
             state.Holder = -1;
             state.Mode = FishMode.Roam;
             state.HookCount = 0;
-            state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.None;
+            state.SoloTow = false; state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.None;
             state.Tension = state.Stamina = 0f;
             state.Behaviour = FishBehaviour.None;
             _snapshot.Value = state;
@@ -248,7 +249,7 @@ namespace Raid
                 lines.Clear();
                 landingTool = null;
                 state.HookCount = 0;
-                state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Carried;
+                state.SoloTow = false; state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Carried;
             }
             else { state.Stowed = false; state.Holder = -1; }
             if (mode != FishMode.Roam && mode != FishMode.Escaped) {state.Startled=false;fleeRemaining=0;}
@@ -261,7 +262,7 @@ namespace Raid
             {
                 ClearFishing();
                 state.HookCount = 0;
-                state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Flee;
+                state.SoloTow = false; state.Coordinated = state.SurgeWarning = state.Surging = false; state.TugStrength = 0; state.Behaviour = FishBehaviour.Flee;
             }
             if (mode == FishMode.Transported || mode == FishMode.Captured) foreach (var fishCollider in _colliders) fishCollider.enabled = false;
             if (mode == FishMode.Roam) foreach (var fishCollider in _colliders) fishCollider.enabled = _depthActive;

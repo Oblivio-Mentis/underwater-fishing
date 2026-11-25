@@ -32,6 +32,20 @@ MonoBehaviour:
   tugSpeed: 3.5
   tugAcceleration: 12
   maxTugSpeed: 5.5
+  soloHeavyTugSpeed: 2.4
+  soloHeavyTugAcceleration: 3.5
+  soloHeavyEscapeSpeedMultiplier: 1
+  soloHeavyTensionMultiplier: 0.35
+  soloHeavyFeedback: 0.82
+  gripTugMultiplier: 0.55
+  soloHeavyCameraImpulse: 2.5
+  soloHeavyCameraHit: 0.012
+  fightTrembleMultiplier: 1
+  shotVolume: 0.3
+  reelVolume: 0.16
+  cueVolume: 0.26
+  preBreakWarningThreshold: 0.82
+  preBreakWarningInterval: 1.4
   warningSeconds: 0.55
   minimumWindingSeconds: 0.4
   slackAllowance: 0.18
