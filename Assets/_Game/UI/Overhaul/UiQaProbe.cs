@@ -460,7 +460,7 @@ namespace Raid.UI
                 snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
                 snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }
-            var feel=player==null?null:player.GetComponent<FishingFeel>();
+            var feel=player==null?null:player.GetComponentInChildren<FishingFeel>();
             snapshot.fishingAudioCues=feel==null?0:feel.AudioCueCount;
             snapshot.reelAudio=feel!=null&&feel.ReelAudioPlaying;
             if(world!=null)
