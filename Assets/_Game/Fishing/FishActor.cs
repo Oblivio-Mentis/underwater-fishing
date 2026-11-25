@@ -49,6 +49,22 @@ namespace Raid
         // smoothed, so a 20 Hz snapshot stream reads as continuous swimming.
         private Vector3 netVelocity, followVelocity;
         private float netReceivedAt;
+        // Host-side render interpolation: the simulation steps at the fixed rate, the model glides between steps.
+        private Vector3 fixedPrevPosition, fixedPosition;
+        private Quaternion fixedPrevRotation = Quaternion.identity, fixedRotation = Quaternion.identity;
+        private int fixedFrames;
+
+        /// <summary>Where the body should be drawn this frame. Only the host needs it; clients smooth the transform itself.</summary>
+        public bool PresentedPose(out Vector3 position, out Quaternion rotation)
+        {
+            position = transform.position; rotation = transform.rotation;
+            if (!IsServerInitialized || fixedFrames < 2 || Mode == FishMode.Captured || Mode == FishMode.Transported || goshaCarried) return false;
+            float alpha = Mathf.Clamp01((Time.time - Time.fixedTime) / Mathf.Max(Time.fixedDeltaTime, .0001f));
+            if ((fixedPosition - fixedPrevPosition).sqrMagnitude > 4f) return false;
+            position = Vector3.LerpUnclamped(fixedPrevPosition, fixedPosition, alpha);
+            rotation = Quaternion.Slerp(fixedPrevRotation, fixedRotation, alpha);
+            return true;
+        }
 
         public event Action<UniversalFsmLayerStateChange> LayerStateChanged;
         public FishMode Mode => _snapshot.Value.Mode;
@@ -186,6 +202,7 @@ namespace Raid
             ResetSteering();
             hookAvailableAt=avoidUntil=0;
             _depthActive = active;
+            fixedFrames = 0;
             transform.position = _origin;
             DesiredState = FishMode.Roam;
             _runtime?.Reset();
@@ -269,6 +286,11 @@ namespace Raid
             if (TryMigrate()) return;
             _runtime.Tick(Time.fixedDeltaTime);
             _runtime.FixedTick(Time.fixedDeltaTime);
+            fixedPrevPosition = fixedFrames == 0 ? transform.position : fixedPosition;
+            fixedPrevRotation = fixedFrames == 0 ? transform.rotation : fixedRotation;
+            fixedPosition = transform.position;
+            fixedRotation = transform.rotation;
+            if (fixedFrames < 2) fixedFrames++;
         }
 
         public void SimulateState(FishMode mode, float dt)

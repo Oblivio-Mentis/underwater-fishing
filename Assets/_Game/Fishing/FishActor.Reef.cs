@@ -126,6 +126,7 @@ namespace Raid
                         !SwimClear(point, point + firstLeg.normalized * Mathf.Min(2.8f, firstLeg.magnitude)))
                         continue;
                     SetDepthActive(true);
+                    fixedFrames = 0;
                     habitat = zone;
                     station = next;
                     homePoint = LanePoint(zone, zone.Anchor, .5f);

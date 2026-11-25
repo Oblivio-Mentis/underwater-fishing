@@ -212,7 +212,7 @@ namespace Raid
 
         void TickWork(float dt)
         {
-            if (!team.goshaTamed || team == null) { FinishWork("Гоша вернулся на палубу"); return; }
+            if (team == null || !team.goshaTamed) { FinishWork("Гоша вернулся на палубу"); return; }
             if (Time.time > orderEnds) { FinishWork("Рабочая смена окончена"); return; }
             if (SwimZone(pet.Position) != PetZone.Sea)
             {
@@ -220,7 +220,10 @@ namespace Raid
                 TravelTo(LockPoint(12.2f), dt);
                 return;
             }
-            if (carried.Count == 0 && !AnyDiverAtSea()) { FinishWork("Экипаж на борту · Гоша возвращается"); return; }
+            // With nobody in the water the pet can still work into the open cage or its own hatch.
+            bool canHandOver = AnyDiverAtSea() || (DeliveryRank >= 3 && CageLoadingOpen()) ||
+                (DeliveryRank >= 5 && GoshaReceiver.Active != null && GoshaReceiver.Active.Ready);
+            if (carried.Count == 0 && !canHandOver) { FinishWork("Экипаж на борту · Гоша возвращается"); return; }
             PlaceCarried();
             if (huntFish != null) { HuntFishTick(dt); return; }
             if (huntLoot != null) { HuntLootTick(dt); return; }

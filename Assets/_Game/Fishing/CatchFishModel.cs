@@ -18,7 +18,8 @@ namespace Raid
         private Shape shape;
         private Mesh spineMesh;
         private Vector3[] spineWork;
-        private float wavePhase, waveAmplitude, bendCurve, yawRate, tailSlope;
+        private float wavePhase, waveAmplitude, bendCurve, yawRate, tailSlope, strokeClock;
+        private bool clockStarted;
         private Vector3 lastHeading, lastAnchorForBend;
         private bool hasHeading;
         private const float HeadZ = .52f, TailZ = -.47f;
@@ -133,7 +134,11 @@ namespace Raid
             bool burst = escapeAt >= 0 || actor != null && (actor.Mode == FishMode.Struggling || actor.Mode == FishMode.Escaped || actor.Startled);
             // Actual travel speed drives tail frequency and amplitude; a hover barely moves, a surge whips.
             float dt=Mathf.Max(Time.deltaTime,.0001f);
-            Vector3 anchor=transform.parent==null?transform.position:transform.parent.position;
+            // On the host the body glides between fixed steps; everywhere else the parent is already smooth.
+            Vector3 presentedPosition = transform.position; Quaternion presentedRotation = transform.rotation;
+            bool presented = actor != null && actor.PresentedPose(out presentedPosition, out presentedRotation);
+            if (presented) transform.position = presentedPosition;
+            Vector3 anchor=presented?presentedPosition:transform.parent==null?transform.position:transform.parent.position;
             float travel=Vector3.Distance(anchor,lastPosition)/dt;
             lastPosition=anchor;
             if(actor!=null)
@@ -158,7 +163,7 @@ namespace Raid
                 {
                     float signed = Vector3.SignedAngle(lastHeading, travelDir, Vector3.up);
                     float rate = Mathf.Clamp(signed / Mathf.Max(dt, .008f), -360, 360);
-                    yawRate = Mathf.Lerp(yawRate, rate, 1 - Mathf.Exp(-dt * 6));
+                    yawRate = Mathf.Lerp(yawRate, rate, 1 - Mathf.Exp(-dt * 4));
                 }
                 lastHeading = Vector3.Slerp(hasHeading ? lastHeading : travelDir, travelDir, 1 - Mathf.Exp(-dt * 12));
                 hasHeading = true;
@@ -168,9 +173,16 @@ namespace Raid
             float clock=Time.time, offset=phase;
             if(actor!=null && (actor.IsServerInitialized || actor.IsClientInitialized))
             {
-                // All peers articulate the collider and the fin holding the bolt at the same network phase.
+                // All peers articulate the collider and the fin holding the bolt at the same network phase,
+                // but the shared clock is only a slow drift reference: the stroke itself advances by frame time,
+                // so a tick correction never snaps the tail.
                 var timer=actor.TimeManager;
-                clock=(float)(timer.TicksToTime(timer.Tick)+timer.GetTickElapsedAsDouble());
+                float shared=(float)(timer.TicksToTime(timer.Tick)+timer.GetTickElapsedAsDouble());
+                if(!clockStarted){strokeClock=shared;clockStarted=true;}
+                strokeClock+=Time.deltaTime;
+                float drift=shared-strokeClock;
+                strokeClock+=Mathf.Abs(drift)>.6f?drift:drift*(1-Mathf.Exp(-dt*1.2f));
+                clock=strokeClock;
                 offset=actor.ObjectId*2.39996f;
             }
             // The head leads each stroke; the hinged caudal fin follows out of phase.
@@ -197,7 +209,9 @@ namespace Raid
                 // The body itself stays still: the spine wave and the tail carry the stroke.
                 // Only a slow roll remains, so the silhouette never vibrates against the spine.
                 float bank=ray?4f:1.6f;
-                transform.localRotation=Quaternion.Euler(-flinch*.12f,flinch*.25f,Mathf.Sin(cruise*.5f-.6f)*bank+flinch*.3f);
+                var roll=Quaternion.Euler(-flinch*.12f,flinch*.25f,Mathf.Sin(cruise*.5f-.6f)*bank+flinch*.3f);
+                if(presented)transform.rotation=presentedRotation*roll;
+                else transform.localRotation=roll;
             }
         }
 
