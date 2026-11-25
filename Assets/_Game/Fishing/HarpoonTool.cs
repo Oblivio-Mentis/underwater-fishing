@@ -52,6 +52,7 @@ namespace Raid
         private InputAction _wheel;
         private float _friendObstructed, _friendLastPull, _friendRefuseUntil, _friendExpiresAt;
         private bool _ownsFriendTuning;
+        private bool _primaryConsumedUntilRelease;
 
         public struct LineReadout { public float length, tension; }
         readonly SyncVar<LineReadout> _lineReadout = new();
@@ -254,6 +255,9 @@ namespace Raid
                 RequestDropSelected();
             bool gameplay = Application.isFocused && !UI.UiInputGate.Blocked;
             bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved;
+            if(!_fire.IsPressed())_primaryConsumedUntilRelease=false;
+            bool primaryPressed=controlling && _fire.WasPressedThisFrame();
+            bool cargoConsumed=primaryPressed && ConsumeCargoPrimaryInput();
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
             bool maySelect=gameplay && (!UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
             if (maySelect && !Motor.IsHelpless)
@@ -263,13 +267,13 @@ namespace Raid
                 float wheel = _wheel.ReadValue<float>();
                 if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? SlotCount-1 : 1)) % SlotCount);
             }
-            if (controlling && ActiveSlot == 0 && AssistTarget == null && _fire.WasPressedThisFrame() && _fish == null && !HasBallLine && !TetherActive) FireServer();
+            if (primaryPressed && !cargoConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !TetherActive) FireServer();
             if (Application.isFocused && _release.WasPressedThisFrame() && (controlling || IsPulled)) ReleaseServer();
             if (Time.unscaledTime < _nextHeartbeat) return;
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
             bool gripInput = _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist || AssistTarget != null)
                 || ActiveSlot == 1 && _fire.IsPressed();
-            bool reel = controlling && ActiveSlot == 0 && _fire.IsPressed();
+            bool reel = controlling && !_primaryConsumedUntilRelease && ActiveSlot == 0 && _fire.IsPressed();
             bool assist = controlling && gripInput;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (!UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved)
@@ -286,6 +290,7 @@ namespace Raid
         {
             if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
             if (!OwnsHarpoon || HandsFull || tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
+            if(FishLoadTarget(out _,out _) && CargoDispatch.ServerSeesOpening(RaidWorld.Instance,Motor,Motor.AimDirection))return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
             Vector3 eye = transform.position + Vector3.up * 0.6f;
             // Sample the same pose for PhysX and the network contact even between fixed ticks.
@@ -376,6 +381,12 @@ namespace Raid
         private static bool QaMenuBlocked => UI.UiInputGate.Active &&
             (UI.UiInputGate.Modal || Time.unscaledTime < UI.UiInputGate.ResumeAt ||
              (!Application.isBatchMode && !Application.isFocused));
+
+        internal bool QaPrimaryOwned()
+        {
+            if(!IsClientInitialized || !IsOwner || QaMenuBlocked)return false;
+            return ConsumeCargoPrimaryInput() || QaFireOwned();
+        }
 
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
         internal bool QaFireOwned()

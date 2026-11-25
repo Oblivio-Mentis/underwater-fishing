@@ -54,8 +54,9 @@ namespace Raid.UI
             var kind=tool.SelectedItem(out _);
             if(c.View!=null && c.Tuning && CargoDispatch.CanLoad(world,player))
             {
-                if(kind==DroppedKind.Salvage)return Load(c,1,true,kind);
-                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind);
+                if(kind==DroppedKind.Salvage)return Load(c,1,true,kind,tool.CarriedSalvage.DisplayName);
+                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind,ReelReadout.Species(fish.SpeciesId));
+                if(kind!=DroppedKind.None)return new HudHint(Mark.Crate,note:"Этот предмет нельзя поместить в клеть"){caution=true};
             }
             if(ui && ui.AimedPad!=null)
             {
@@ -129,13 +130,14 @@ namespace Raid.UI
             Add(SkillLine.Recall,Key.G,"Позвать Гошу");Add(SkillLine.Fetch,Key.H,"Принести рыбу");Add(SkillLine.Faithful,Key.J,"Сопровождать");
             return hint;
         }
-        static HudHint Load(UiContext c,int size,bool salvage,DroppedKind selected)
+        static HudHint Load(UiContext c,int size,bool salvage,DroppedKind selected,string itemName)
         {
             var v=c.View;int capacity=v.Capacity(c.Tuning);
-            var drop=selected==DroppedKind.Catch?new HudBinding(Key.Q,"Выбросить рыбу"):default;
+            string dropText=selected==DroppedKind.Harpoon?"Выбросить гарпун":salvage?"Выбросить груз":"Выбросить рыбу";
+            var drop=new HudBinding(Key.Q,dropText);
             if(v.hoistPhase!=HoistPhase.Loading || v.CargoUsed+size>capacity)
                 return new HudHint(Mark.Crate,drop,note:v.hoistPhase!=HoistPhase.Loading?"Клеть в пути":"В клети не хватает места"){caution=true};
-            return new(Mark.Crate,new(salvage?Key.Q:Key.Right,salvage?"Положить груз в клеть":"Положить рыбу в клеть"),drop,note:UiText.HudCargoCount(v.CargoUsed,capacity));
+            return new(Mark.Crate,new(Key.Left,"Положить в клеть"),drop,note:itemName+" · "+UiText.HudCargoCount(v.CargoUsed,capacity));
         }
         internal static HudHint MonitorActions(ShipConsole station)
         {

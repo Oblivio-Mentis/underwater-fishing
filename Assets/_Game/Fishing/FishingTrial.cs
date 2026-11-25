@@ -373,18 +373,18 @@ namespace Raid
                 loadDiagnostics+=$" {control.Frame.InverseTransformPoint(eye)} insideShip={host.Motor.IsInside} {obstruction};";
             }
             Require(CargoDispatch.CanLoad(world,host.Motor),"Cannot use the loading opening."+loadDiagnostics);
-            Require(host.RequestLoadFish(),"Owned RMB refused the heavy catch.");
-            yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"RMB did not deposit the heavy catch.");
+            Require(host.QaPrimaryOwned(),"Owned LMB refused the heavy catch.");
+            yield return Wait(()=>!host.HandsFull && world.Team.cargo.Count==before+1,4,"LMB did not deposit the heavy catch.");
             for(int slot=2;slot<5;slot++)
             {
                 Require(host.SelectSlot(slot),"Cannot select the full pocket.");
                 yield return Wait(()=>host.ActiveSlot==slot,3,"Pocket selection not confirmed.");
-                Require(host.RequestLoadFish(),"Owned RMB refused a pocket catch.");
+                Require(host.QaPrimaryOwned(),"Owned LMB refused a pocket catch.");
                 int expected=before+slot;
-                yield return Wait(()=>world.Team.cargo.Count==expected,5,"RMB did not deposit exactly one fish.");
+                yield return Wait(()=>world.Team.cargo.Count==expected,5,"LMB did not deposit exactly one fish.");
             }
             Require(host.CatchCount==0 && caughtIds.All(id=>world.Team.cargo.Count(item=>item.id==id)==1),
-                "RMB lost or duplicated a catch ID.");
+                "LMB lost or duplicated a catch ID.");
             yield return Wait(() => cage != null && cage.Count == beforeSwimmers + 4 && ReadClient()?.cageSwimmers == cage.Count,
                 10, "Host/client cage swimmers did not reflect four new entries.");
             yield return Shot("catch-cage.png");
@@ -429,7 +429,7 @@ namespace Raid
                 "Heavy catch lost one of its two confirmed participants.");
             Require(caughtIds.Take(3).All(id=>world.Team.tank.Find(item=>item.id==id)?.caughtBy?.Length==1),
                 "A pocket catch lost its single owner.");
-            Check("The exact RMB deposits retained all personal ownership across the real hoist.");
+            Check("The exact LMB deposits retained all personal ownership across the real hoist.");
             yield return ChooseReservoirRoutes(caughtIds);
             ui.ClosePanel();
             yield return Wait(()=>Mathf.Abs(camera.fieldOfView-ui.Settings.fov)<.25f,3,"FOV did not restore after closing the aquarium monitor.");

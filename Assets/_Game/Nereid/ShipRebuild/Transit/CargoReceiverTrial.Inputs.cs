@@ -26,7 +26,6 @@ namespace Raid.Nereid
         async void StageInput(RaidWorld world,DiverMotor owner)
         {
             var tool=owner.GetComponent<HarpoonTool>();
-            UiQaProbe mouse=null;
             try
             {
                 var berth=world.CargoLoadingPosition;
@@ -57,28 +56,26 @@ namespace Raid.Nereid
                     await WaitInput(()=>{owner.LookAtConsole(berth);return CargoDispatch.CanLoad(world,owner);},"Guest camera sees the open loading gate");
                 }
 
-                mouse=FindAnyObjectByType<UiQaProbe>();
-                if(!mouse)mouse=gameObject.AddComponent<UiQaProbe>();
-                mouse.BeginAimTest(5);mouse.QueueAimButton(true,.50f);
+                int shots=tool.ShotSequence;
+                if(!tool.QaPrimaryOwned())throw new Exception("LMB did not consume the cargo context");
                 long expected=host?First:Second;
-                await WaitInput(()=>world.View.cargo.Any(x=>x.id==expected && !x.IsSalvage),"RMB transferred original fish "+expected);
+                await WaitInput(()=>world.View.cargo.Any(x=>x.id==expected && !x.IsSalvage),"LMB transferred original fish "+expected);
+                if(tool.ShotSequence!=shots)throw new Exception("The loading click also fired the harpoon.");
                 if(NereidAim.Active.IsAiming || NereidAim.Blend>.01f)throw new Exception("The loading click also activated harpoon aim.");
                 if(tool.RequestLoadFish())throw new Exception("A repeated press loaded the same fish.");
-                mouse.EndAimTest();
                 if(host)
                 {
                     owner.Teleport(berth+Vector3.right*6);
                     var guest=DiverMotor.ServerDivers.First(d=>!d.IsOwner);
                     guest.Teleport(berth+new Vector3(2.14f,-.18f,-.4f));
                     File.WriteAllText(Path.Combine(directory,"guest-turn"),"yes");
-                    timeline.Add("Q at the open cage made a world drop. RMB with the harpoon selected deposited the intended pocket fish. No zoom or duplicate.");
+                    timeline.Add("Q at the open cage made a world drop. LMB with the harpoon selected deposited the intended pocket fish without a shot, zoom or duplicate.");
                 }
-                else timeline.Add("Remote owned RMB loaded the two-handed catch into the shared manifest exactly once.");
+                else timeline.Add("Remote owned LMB loaded the two-handed catch into the shared manifest exactly once.");
                 File.WriteAllText(Path.Combine(folder,"input-pass"),"yes");
                 inputDone=true;
             }
             catch(Exception e){timeline.Add(e.ToString());Finish("ERROR");}
-            finally{if(mouse)mouse.EndAimTest();}
         }
     }
 }

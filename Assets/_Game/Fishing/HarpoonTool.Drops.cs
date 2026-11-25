@@ -59,12 +59,6 @@ namespace Raid
         {
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
-            if(Nereid.NereidVessel.Active!=null && expectedKind==DroppedKind.Salvage &&
-                CargoDispatch.ServerSeesOpening(world,Motor,Motor.AimDirection))
-            {
-                if(world.LoadSelectedCargo(this,expectedKind,id))Motor.ConfirmInteraction();
-                return;
-            }
             var at = expectedKind==DroppedKind.Salvage ? default : world.PlaceItem(Motor);
             bool placed = false;
             switch (expectedKind)
@@ -175,6 +169,38 @@ namespace Raid
             return fish && cargoId>0;
         }
 
+        static int cargoInputFrame=-1;
+        static HarpoonTool cargoInputTool;
+        static bool cargoInputConsumed;
+
+        internal bool ConsumeCargoPrimaryInput()
+        {
+            if(cargoInputFrame==Time.frameCount && cargoInputTool==this)return cargoInputConsumed;
+            cargoInputFrame=Time.frameCount;cargoInputTool=this;cargoInputConsumed=false;
+            if(!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked)return false;
+            if(!CargoDispatch.TryLoadAim(RaidWorld.Instance,Motor,out var direction))return false;
+            cargoInputConsumed=true;
+            _primaryConsumedUntilRelease=true;
+            DispatchCargoLoad(direction);
+            return true;
+        }
+
+        void DispatchCargoLoad(Vector3 direction)
+        {
+            var salvage=CarriedSalvage;
+            if(salvage!=null){LoadSelectedServer(DroppedKind.Salvage,salvage.CargoId,direction);return;}
+            if(FishLoadTarget(out _,out long id)){LoadSelectedServer(DroppedKind.Catch,id,direction);return;}
+            UI.UiRoot.Instance?.Toast("Этот предмет нельзя поместить в клеть");
+        }
+
+        public bool RequestLoadSelected()
+        {
+            if(!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked ||
+               !CargoDispatch.TryLoadAim(RaidWorld.Instance,Motor,out var direction))return false;
+            DispatchCargoLoad(direction);
+            return true;
+        }
+
         public bool RequestLoadFish()
         {
             var world=RaidWorld.Instance;
@@ -182,16 +208,28 @@ namespace Raid
                !FishLoadTarget(out var fish,out var id) || !CargoDispatch.TryLoadAim(world,Motor,out var direction))return false;
             var state=world.View;
             if(state==null || state.hoistPhase!=HoistPhase.Loading || (long)state.CargoUsed+fish.cargoSize>state.Capacity(world.progression))return false;
-            LoadFishServer(id,direction);
+            LoadSelectedServer(DroppedKind.Catch,id,direction);
             return true;
         }
 
         [ServerRpc(RequireOwnership=true)]
-        void LoadFishServer(long fishId,Vector3 direction)
+        void LoadSelectedServer(DroppedKind kind,long id,Vector3 direction)
         {
             var world=RaidWorld.Instance;
-            if(CargoDispatch.ServerSeesOpening(world,Motor,direction) && world.LoadSelectedCargo(this,DroppedKind.Catch,fishId))Motor.ConfirmInteraction();
+            if(world==null || !MayHandleItems || kind!=DroppedKind.Catch && kind!=DroppedKind.Salvage)
+            {CargoLoadRejected(Owner,"Предмет недоступен");return;}
+            bool owned=kind==DroppedKind.Catch
+                ?FishLoadTarget(out _,out long ownedId) && ownedId==id
+                :CarriedSalvage!=null && CarriedSalvage.CargoId==id;
+            if(!owned){CargoLoadRejected(Owner,"Предмет уже перемещён или не принадлежит вам");return;}
+            if(!CargoDispatch.ServerSeesOpening(world,Motor,direction))
+            {CargoLoadRejected(Owner,"Проём клети недоступен");return;}
+            if(world.LoadSelectedCargo(this,kind,id))Motor.ConfirmInteraction();
+            else CargoLoadRejected(Owner,"Клеть не принимает предмет: фаза, вместимость или дубликат");
         }
+
+        [FishNet.Object.TargetRpc]
+        void CargoLoadRejected(FishNet.Connection.NetworkConnection target,string reason) => UI.UiRoot.Instance?.Toast(reason);
 
         internal bool PlaceSelectedCatch(TeamProgress team,ProgressionTuning tuning,long id)
         {

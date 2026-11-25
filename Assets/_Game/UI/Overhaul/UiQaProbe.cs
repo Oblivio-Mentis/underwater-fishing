@@ -250,7 +250,7 @@ namespace Raid.UI
             if(r.action=="load_fish")
             {
                 var tool=UiRoot.Instance.Context.Harpoon;
-                if(tool==null || !tool.RequestLoadFish())throw new InvalidOperationException("Owner could not place a fish through the loading opening.");
+                if(tool==null || !tool.QaPrimaryOwned())throw new InvalidOperationException("Owner could not place cargo through the loading opening with LMB.");
                 return;
             }
             if(r.action=="drop_selected" || r.action=="pickup_drop")

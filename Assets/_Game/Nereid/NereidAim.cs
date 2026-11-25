@@ -61,14 +61,6 @@ namespace Raid.Nereid
             }
 #endif
             bool permitted=available && input;
-            // One secondary press has one owner. Keep it consumed until release, even if
-            // the deposited fish leaves the last pocket or the reticle moves off the opening.
-            if(input && !UiInputGate.PointerReserved && held && Mouse.current.rightButton.wasPressedThisFrame && ui.Context.Harpoon is HarpoonTool tool &&
-               tool.FishLoadTarget(out _,out _) && CargoDispatch.CanLoad(ui.Context.World,player))
-            {
-                releaseRequired=true;
-                tool.RequestLoadFish();
-            }
             if(!permitted)
             {
                 Clear();releaseRequired|=held;
