@@ -136,6 +136,7 @@ namespace Raid
                 if(!CheatFieldFocused(field))throw new InvalidOperationException("Lost keyboard focus on "+key);
                 field.ProcessEvent(new Event{type=EventType.KeyDown,keyCode=keyCode,character=character,
                     modifiers=control?EventModifiers.Control:EventModifiers.None});
+                field.ForceLabelUpdate();
                 await AwaitCheatUi(expected,"TMP handles "+keyCode+" (current amount '"+field.text+"')",2);
                 report.focusedTmpEdits++;
             }
