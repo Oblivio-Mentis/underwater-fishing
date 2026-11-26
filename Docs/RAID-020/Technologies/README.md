@@ -1,6 +1,6 @@
 # RAID-020 · Технологии и изобретения
 
-Девятый сектор находится на штатном мониторе прокачки NEREID. Общие чертежи, их модули и состояние установок принадлежат экипажу. Ветка содержит 13 изобретений и 105 покупаемых узлов, включая сами чертежи. Источники характеристик — [каталог](../../../Assets/_Game/Progression/Resources/Technology/catalog.json), [стадии и зависимости](../../../Assets/_Game/Progression/Resources/Technology/stages.json), [настройки промысла](../../../Assets/_Game/Systems/Resources/IndustrialFishery/active.json) и [калибровка оборудования](../../../Assets/_Game/Systems/Resources/TechIndustry/calibration.json).
+Девятый сектор находится на штатном мониторе прокачки NEREID. Общие чертежи, их модули и состояние установок принадлежат экипажу. У каждого чертежа и ранга улучшения свой узел. Источники характеристик — [каталог](../../../Assets/_Game/Progression/Resources/Technology/catalog.json), [стадии и зависимости](../../../Assets/_Game/Progression/Resources/Technology/stages.json), [настройки промысла](../../../Assets/_Game/Systems/Resources/IndustrialFishery/active.json) и [калибровка оборудования](../../../Assets/_Game/Systems/Resources/TechIndustry/calibration.json).
 
 ## Первый рейс
 
