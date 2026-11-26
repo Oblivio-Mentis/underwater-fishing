@@ -150,7 +150,13 @@ namespace Raid
             TickRouteClock();
             AbsorbCageDrops();
             var beforeHoist=team.Treasury;
+            var previousHoist=team.hoistPhase;
             var salvageYield=team.TickHoist(Time.fixedDeltaTime,progression);
+            if(previousHoist!=HoistPhase.Loading && team.hoistPhase==HoistPhase.Loading && team.cargo.Count>0)
+            {
+                message.Value="Казна заполнена. Груз остался в контейнере.";
+                Publish();Save();
+            }
             if(!salvageYield.IsEmpty)
             {
                 SendProcessingReceipt(salvageYield,beforeHoist,team.Treasury,fromSalvage:true);
@@ -278,6 +284,8 @@ namespace Raid
             {Respond(sender,requestId,false,"changed");return;}
             if(action==WorldAction.Hoist && !team.FitsReservoir(progression))
             {Respond(sender,requestId,false,"reservoir_full");return;}
+            if(action==WorldAction.Hoist && !team.CanCreditCargo())
+            {Respond(sender,requestId,false,"resource_full");return;}
             bool success=false;
             switch(action)
             {
@@ -311,6 +319,9 @@ namespace Raid
                 if(switchKind.HasValue) ShowDispatchPress(switchKind.Value,sender.ClientId);
                 Publish(); Save();
             }
+            else if(!factory && action is (WorldAction.Process or WorldAction.Feed) &&
+                team.tank.Exists(item=>item.id==id && CanRoute(item,action==WorldAction.Feed?CatchDestination.Feed:CatchDestination.Process)))
+            {Respond(sender,requestId,false,"resource_full");return;}
             else message.Value="Action unavailable: distance, team inside, resources, capacity or phase";
             Respond(sender,requestId,success,success?"ok":"unavailable");
         }

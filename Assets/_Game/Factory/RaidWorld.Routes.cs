@@ -103,6 +103,12 @@ namespace Raid
                 try
                 {
                     bool delivered=state.feeding?team.Feed(id,progression):ProcessDeliveredFish(id);
+                    if(!delivered && team.tank.Exists(item=>item.id==id && CanRoute(item,state.feeding?CatchDestination.Feed:CatchDestination.Process)))
+                    {
+                        StopFullResourceRoute(ref state);
+                        changed=true;
+                        break;
+                    }
                     if(!delivered) ReleaseFishDispatch(id);
                     else if(state.feeding) catchOwners.Remove(id);
                     state.completed++;
@@ -110,16 +116,22 @@ namespace Raid
                 }
                 catch(System.OverflowException)
                 {
-                    state.active=false;state.failed=true;
-                    foreach(long queued in routeIds)ReleaseFishDispatch(queued);
-                    routeIds.Clear();changed=true;
-                    message.Value="Подача остановлена: достигнут предел ресурса. Оставшаяся рыба сохранена";
+                    StopFullResourceRoute(ref state);
+                    changed=true;
                     break;
                 }
             }
             if(state.active && state.completed>=routeIds.Count){state.active=false;routeIds.Clear();message.Value=state.feeding?"Корм доставлен чудовищу":"Переработка завершена";changed=true;}
             if(changed){Publish();Save();}
             if(changed || Time.unscaledTime>=nextRoutePublish){nextRoutePublish=Time.unscaledTime+.1f;fishRoute.Value=state;}
+        }
+
+        void StopFullResourceRoute(ref FishRouteState state)
+        {
+            state.active=false;state.failed=true;
+            foreach(long queued in routeIds)ReleaseFishDispatch(queued);
+            routeIds.Clear();
+            message.Value="Подача остановлена. Запас ресурса заполнен, оставшаяся рыба сохранена.";
         }
 
         void ReleaseFishDispatch(long id)

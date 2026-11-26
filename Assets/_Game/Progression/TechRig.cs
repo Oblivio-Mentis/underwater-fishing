@@ -46,14 +46,21 @@ namespace Raid
         [NonSerialized] HashSet<long> occupiedFutureIds;
         public long NewTechCatchId()
         {
+            if(!TryNewTechCatchId(out long id))throw new InvalidOperationException("No remaining industrial catch IDs.");
+            return id;
+        }
+        bool TryNewTechCatchId(out long id)
+        {
+            id=0;
             long next=techCatchSequence;
             do
             {
-                if(next>=TechIdPrefix-1)throw new InvalidOperationException("No remaining industrial catch IDs.");
+                if(next>=TechIdPrefix-1)return false;
                 next++;
             }while(occupiedFutureIds!=null && occupiedFutureIds.Contains(TechIdPrefix+next));
             techCatchSequence=next;
-            return TechIdPrefix+next;
+            id=TechIdPrefix+next;
+            return true;
         }
         public TechRig AddRig(string kind,Vector3 position,int owner)
         {
