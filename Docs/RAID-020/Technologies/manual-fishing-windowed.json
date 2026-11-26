@@ -1,0 +1,34 @@
+{
+    "mode":  "Windows graphics, two hidden player windows, D3D11, same DLL as paired batch run",
+    "assemblySHA256":  "E291649EF1392160C11AF171A54075B2ADCCA28863353508E1DCDD651267E83B",
+    "trial":  {
+                  "phase":  "Connect host and independent client",
+                  "status":  "failed",
+                  "error":  "System.InvalidOperationException: Remote did not enter gameplay as the second owner.\r\n  at Raid.FishingTrial+\u003cWait\u003ed__60.MoveNext () [0x00067] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:910 \r\n  at Raid.FishingTrial+\u003cVerify\u003ed__38.MoveNext () [0x00060] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:83 ",
+                  "host":  0,
+                  "client":  1,
+                  "checks":  [
+
+                             ]
+              },
+    "peerSnapshots":  [
+                          {
+                              "seat":  "host",
+                              "owner":  0,
+                              "connected":  true,
+                              "players":  2,
+                              "page":  "None",
+                              "inputBlocked":  false,
+                              "request":  ""
+                          },
+                          {
+                              "seat":  "peer",
+                              "owner":  1,
+                              "connected":  true,
+                              "players":  2,
+                              "page":  "None",
+                              "inputBlocked":  true,
+                              "request":  "b6fae4f01cde4f4bbb12d6eb82a941e9"
+                          }
+                      ]
+}
