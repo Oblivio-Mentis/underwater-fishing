@@ -147,6 +147,8 @@ namespace Raid.UI
             if(!station)return default;
             return station.kind switch
             {
+                ShipConsoleKind.SkillTree when UiRoot.Instance && UiRoot.Instance.TechnologyOpen
+                    =>new HudHint(Mark.Wrench,new(Key.Left,"Выбрать на экране"),new(Key.Wheel,"Прокрутить список")){idle=true},
                 ShipConsoleKind.SkillTree=>new HudHint(Mark.Wrench,new(Key.Left,"Выбрать навык"),new(Key.Right,"Купить доступный навык"),new(Key.Wheel,"Масштаб дерева")){idle=true},
                 ShipConsoleKind.Reservoir=>new HudHint(Mark.Lantern,new(Key.Left,"Выбрать назначение"),new(Key.Wheel,"Прокрутить список")){idle=true},
                 _=>new HudHint(Mark.Bathymetry,new(Key.Left,"Выбрать на экране")){idle=true}
