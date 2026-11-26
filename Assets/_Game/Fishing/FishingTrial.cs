@@ -285,15 +285,14 @@ namespace Raid
             helper.Motor.Teleport(heavy.transform.position-axis*5f-Vector3.up*.6f);
             host.QaHoldOwned(false,1.5f);
             Send("fish_reel",1.5f);
-            float startEnergy=heavy.Stamina;
             yield return Pause(.85f);
-            Require(heavy.HookCount==2 && !heavy.Coordinated && heavy.SoloTow && heavy.Stamina>=startEnergy-.05f,
-                "Opposed reels advanced the catch or escaped the uncoordinated tow state.");
+            Require(heavy.HookCount==2 && host.HookedFish==heavy && helper.HookedFish==heavy && !heavy.SoloTow,
+                $"Two opposed divers must retain separate harpoons on one crew catch; hooks {heavy.HookCount}, solo tow {heavy.SoloTow}.");
             host.QaHoldOwned(false,0);
             Send("fish_reel",0);
             yield return Pause(.35f);
             yield return VerifyBothBolts();
-            Check("Both rendered and attached independent server-confirmed projectiles; opposing directions did not exhaust the fish.");
+            Check("Both rendered independent server-confirmed projectiles; two attached harpoons kept the heavy fish in crew tow even from opposite directions.");
 
             // Release the helper's line by switching tools, then reacquire it through another real shot.
             Send("slot",1);
