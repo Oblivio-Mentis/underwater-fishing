@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using Raid.UI;
 using TMPro;
 using UnityEngine;
@@ -21,7 +20,6 @@ namespace Raid
         {
             public string status="running",phase,error,resource,fish;
             public int granted,stocked,inputSystemEdits,nativeGuiEdits;
-            public bool clipboardPaste;
             public float focusedTravel;
             public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
             public float embeddedDepth,observedClearOffset,restoredClearOffset,reverseTravel;
@@ -158,43 +156,6 @@ namespace Raid
             EditCheatField(report,field,Key.A,KeyCode.A,'\0',
                 ()=>Math.Abs(field.selectionAnchorPosition-field.selectionFocusPosition)==field.text.Length,true);
 
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-        [DllImport("user32.dll")] static extern int CountClipboardFormats();
-        [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();
-        [DllImport("user32.dll")] static extern bool OpenClipboard(IntPtr window);
-        [DllImport("user32.dll")] static extern bool EmptyClipboard();
-        [DllImport("user32.dll")] static extern bool CloseClipboard();
-#endif
-
-        static async Awaitable EnterSecondCheatAmount(CheatUiReport report,TMP_InputField field)
-        {
-            await SelectCheatAmount(report,field);
-#if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
-            if(CountClipboardFormats()==0)
-            {
-                GUIUtility.systemCopyBuffer="23";
-                uint version=GetClipboardSequenceNumber();
-                try
-                {
-                    await EditCheatField(report,field,Key.V,KeyCode.V,'\0',()=>field.text=="23",true);
-                    report.clipboardPaste=true;
-                }
-                finally
-                {
-                    if(OpenClipboard(IntPtr.Zero))
-                    {
-                        try{if(GetClipboardSequenceNumber()==version)EmptyClipboard();}
-                        finally{CloseClipboard();}
-                    }
-                }
-                return;
-            }
-#endif
-            // An occupied desktop clipboard belongs to the user. Exercise selection replacement with keys.
-            await EditCheatField(report,field,Key.Digit2,KeyCode.Alpha2,'2',()=>field.text=="2");
-            await EditCheatField(report,field,Key.Digit3,KeyCode.Alpha3,'3',()=>field.text=="23");
-        }
-
         int[] CheatWallet() => new[]{team.biomass,team.chitin,team.scrap,team.electronics};
 
         async Awaitable RunCheatUiTrial(CheatUiReport report,string folder)
@@ -265,7 +226,9 @@ namespace Raid
             report.Check(diffs[1]==17 && diffs.Count(x=>x==0)==3,"A real mouse grant increased only the selected chitin by 17.");
             await ClickCheatControl("CheatResourceNext");
             await ClickCheatControl("CheatAmountField");
-            await EnterSecondCheatAmount(report,field);
+            await SelectCheatAmount(report,field);
+            await EditCheatField(report,field,Key.Digit2,KeyCode.Alpha2,'2',()=>field.text=="2");
+            await EditCheatField(report,field,Key.Digit3,KeyCode.Alpha3,'3',()=>field.text=="23");
             report.Check(field.text=="23" && tool.ActiveSlot==1,"Selection replacement entered 23 without selecting another equipment slot.");
             await ClickCheatControl("CheatGrant");
             await AwaitCheatUi(()=>team.scrap==23,"23 scrap credited");
