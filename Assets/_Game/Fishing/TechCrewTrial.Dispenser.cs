@@ -134,7 +134,7 @@ namespace Raid
                     world.View.rigs.Exists(r=>r.kind=="charge" && r.operatorId==local.OwnerId));
                 var charge=world.View.rigs.Single(r=>r.kind=="charge");
                 yield return new WaitForSecondsRealtime(.35f);
-                local.CmdTechStore(charge.serial,-1);
+                local.CmdTechStore(charge.serial);
                 yield return Wait("charge returned to its original private slot",()=>Gear.InventionInSlot(ChargePocket).count==1 &&
                     world.View.rigs.Count==0);
                 Assert(world.View.Treasury.Equals(before) && world.View.teamRevision==revision,
