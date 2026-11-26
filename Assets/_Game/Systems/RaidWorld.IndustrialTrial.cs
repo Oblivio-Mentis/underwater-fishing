@@ -14,7 +14,9 @@ namespace Raid
         {
             public string status="running",error;
             public List<string> checks=new();
-            public int installations,samples,fishActors;
+            public int installations,samples,fishActors,fullRigCount,fullSamples,publishedJsonBytes,hostPlayers;
+            public double fullMeanTickMs,fullP95TickMs,meanPublishMs,p95PublishMs,meanTickAndPublishMs,p95TickAndPublishMs;
+            public bool allocationCounterAvailable;
             public double meanTickMs,p95TickMs,worstTickMs,allocatedBytesPerTick;
             internal void Require(bool value,string description)
             {
@@ -171,6 +173,14 @@ namespace Raid
             await AwaitIndustry(()=>ShipConsole.CanUseKind(host,ShipConsoleKind.SkillTree),"Host looking at the real ship console");
             RequestRobotConsole(robot.serial);
             await AwaitIndustry(()=>robot.flight=="piloted" && robot.operatorId==host.OwnerId,"Bound authenticated pilot via the real robot console RPC");
+            var weights=Install("basket",practice+Vector3.up);
+            var crate=CatchItem.Salvage(team.NewTechCatchId(),2,1,2);
+            var coil=CatchItem.Salvage(team.NewTechCatchId(),1,1,0);
+            weights.contents.Add(crate);weights.contents.Add(coil);
+            report.Require(TransferManifest(weights,robot) && weights.contents.Single().id==crate.id && robot.contents.Single().id==coil.id,
+                "Robot capacity rejected a 75 kg crate but accepted a 30 kg coil on a 40 kg chassis.");
+            weights.contents.Add(CatchItem.Salvage(team.NewTechCatchId(),1,1,0));
+            report.Require(!TransferManifest(weights,robot),"A second 30 kg item exceeded the remaining robot payload.");
             before=robot.position;
             RobotControls(robot.serial,Vector3.forward,0);
             await AwaitIndustry(()=>(robot.position-before).sqrMagnitude>.0001f,"Server accepted movement from the pilot",3);
@@ -180,10 +190,19 @@ namespace Raid
             RobotControls(robot.serial,Vector3.zero,2);
             await AwaitIndustry(()=>robot.flight=="return" && robot.operatorId<0,"Robot accepted the purchased return command");
 
+            RequestRobotConsole(robot.serial);
+            await AwaitIndustry(()=>robot.flight=="piloted","Re-acquired the robot before an induced signal break");
+            robot.position=CargoLoadingPosition+Vector3.up*(IndustryRange(robot)+1);
+            TickIndustrialRig(robot,.02f);
+            report.Require(robot.flight=="return" && robot.operatorId<0 && robot.contents.Single().id==coil.id,
+                "Lost signal transferred control to the return program and preserved its cargo.");
+
             BenchmarkIndustry(report,practice);
+            BenchmarkWholeFleet(report,practice);
             TeamSave.Save(savePath,team);
             var finalState=TeamSave.Load(savePath,progression);
             report.Require(finalState.rigs.Single(r=>r.serial==farm.serial).brood.Count==2 && finalState.deliveredIds.Count(id=>id==offspring)==1 &&
+                Mathf.Approximately(finalState.rigs.Single(r=>r.serial==compressor.serial).air,compressor.air) &&
                 finalState.rigs.Single(r=>r.serial==magnet.serial).contents.Single().id==salvaged,"Final isolated campaign recovered oxygen, nursery stock, salvage IDs and delivery ledger.");
         }
 
@@ -208,6 +227,10 @@ namespace Raid
                     for(int i=first;i<team.rigs.Count;i++)TickIndustrialRig(team.rigs[i],.02f);
                 }
                 Sample();
+                long counter=GC.GetAllocatedBytesForCurrentThread();
+                var allocationProbe=new byte[4096];
+                report.allocationCounterAvailable=GC.GetAllocatedBytesForCurrentThread()-counter>=allocationProbe.Length;
+                GC.KeepAlive(allocationProbe);
                 long allocated=GC.GetAllocatedBytesForCurrentThread();
                 var watch=new Stopwatch();
                 for(int i=0;i<iterations;i++)
@@ -215,12 +238,63 @@ namespace Raid
                     watch.Restart();Sample();watch.Stop();
                     measurements[i]=watch.Elapsed.TotalMilliseconds;
                 }
-                report.allocatedBytesPerTick=(GC.GetAllocatedBytesForCurrentThread()-allocated)/(double)iterations;
+                report.allocatedBytesPerTick=report.allocationCounterAvailable?(GC.GetAllocatedBytesForCurrentThread()-allocated)/(double)iterations:-1;
                 Array.Sort(measurements);
                 report.installations=entities;report.samples=iterations;report.fishActors=FishActor.ServerSchool.Count;
                 report.meanTickMs=measurements.Average();report.p95TickMs=measurements[(iterations*95/100)-1];report.worstTickMs=measurements[iterations-1];
             }
             finally {team.rigs.RemoveRange(first,team.rigs.Count-first);}
+        }
+
+        void BenchmarkWholeFleet(IndustrialReport report,Vector3 origin)
+        {
+            const int iterations=60;
+            var previous=team;
+            var ticks=new double[iterations];
+            var publication=new double[iterations];
+            var combined=new double[iterations];
+            var watch=new Stopwatch();
+            try
+            {
+                // Snapshot only the maximum licensable fleet. A previous expedition's arbitrary
+                // historical delivery ledger is deliberately excluded from this scale measurement.
+                team=new TeamProgress(progression);
+                foreach(var def in TechCatalog.Items)
+                    foreach(var node in def.upgrades)
+                        team.techPurchases.Add(new TechPurchase{item=def.id,upgrade=node.id,rank=node.values.Length});
+                void Add(string kind,int i)
+                {
+                    var rig=team.AddRig(kind,origin+new Vector3(i%8,0,i/8),-1);
+                    rig.mode=kind is "lure" or "bubbles" or "magnet"?"running":"placed";
+                    if(kind=="robot")rig.flight="collect";
+                    if(kind=="trap")rig.mode="working";
+                    if(kind is "farm" or "trap" or "net" or "vacuum" or "basket" or "mail")
+                    {
+                        for(int j=0;j<3;j++)
+                            rig.contents.Add(new CatchItem(team.NewTechCatchId(),2,0,1,1,1,species:"Needlefish"));
+                    }
+                    if(kind=="farm")
+                        for(int j=0;j<2;j++)rig.brood.Add(new CatchItem(team.NewTechCatchId(),2,0,1,1,1,species:"Needlefish"));
+                }
+                foreach(var def in TechCatalog.Items)
+                    for(int i=0;i<TechRig.TotalLimit(team,def);i++)Add(def.id,team.rigs.Count);
+                for(int i=0;i<tuning.maxSampleBaskets;i++)Add("basket",team.rigs.Count);
+                report.fullRigCount=team.rigs.Count;report.fullSamples=iterations;report.hostPlayers=DiverMotor.ServerDivers.Count;
+                TickTech(.02f);Publish();
+                for(int i=0;i<iterations;i++)
+                {
+                    watch.Restart();TickTech(.02f);watch.Stop();ticks[i]=watch.Elapsed.TotalMilliseconds;
+                    watch.Restart();Publish();watch.Stop();publication[i]=watch.Elapsed.TotalMilliseconds;
+                    combined[i]=ticks[i]+publication[i];
+                }
+                report.publishedJsonBytes=System.Text.Encoding.UTF8.GetByteCount(snapshot.Value);
+                Array.Sort(ticks);Array.Sort(publication);Array.Sort(combined);
+                int p95=iterations*95/100-1;
+                report.fullMeanTickMs=ticks.Average();report.fullP95TickMs=ticks[p95];
+                report.meanPublishMs=publication.Average();report.p95PublishMs=publication[p95];
+                report.meanTickAndPublishMs=combined.Average();report.p95TickAndPublishMs=combined[p95];
+            }
+            finally {team=previous;Publish();}
         }
     }
 }

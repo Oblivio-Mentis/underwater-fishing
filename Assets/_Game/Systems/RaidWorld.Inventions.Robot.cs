@@ -15,6 +15,19 @@ namespace Raid
             return false;
         }
 
+        float RobotFreeKilograms(TechRig robot)
+        {
+            var payload=IndustryRig(robot.targetSerial);
+            return Mathf.Max(0,IndustryCapacity(robot)-CargoWeight(robot)-(payload!=null?RigWeight(payload):0));
+        }
+
+        void LoseRobotSignal(TechRig rig)
+        {
+            rig.operatorId=-1;rig.care=0;
+            if(IndustryUnlocked(rig,"remote")){rig.flight="return";rig.destination=CargoLoadingPosition+Vector3.up;}
+            else{rig.flight="";rig.targetSerial=0;rig.destination=rig.position;}
+        }
+
         [ServerRpc(RequireOwnership=false)]
         void RobotConsoleRequest(int serial, NetworkConnection sender=null)
         {
@@ -22,9 +35,9 @@ namespace Raid
             var rig=IndustryRig(serial);
             var diver=sender.FirstObject.GetComponent<DiverMotor>();
             if(rig==null || rig.kind!="robot" || !IndustryPresent(rig) || rig.depth!=CurrentDepth ||
-                !ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree) || (rig.operatorId>=0 && rig.operatorId!=sender.ClientId))return;
+                (rig.position-CargoLoadingPosition).sqrMagnitude>Mathf.Pow(IndustryRange(rig),2) || !ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree) || (rig.operatorId>=0 && rig.operatorId!=sender.ClientId))return;
             foreach(var other in team.rigs)
-                if(other.kind=="robot" && other.operatorId==diver.OwnerId) {other.operatorId=-1;other.flight="";}
+                if(other.kind=="robot" && other.operatorId==diver.OwnerId) LoseRobotSignal(other);
             rig.operatorId=diver.OwnerId;rig.flight="piloted";rig.destination=rig.position;rig.care=0;
             Publish();
         }
@@ -70,7 +83,7 @@ namespace Raid
             if(other!=null)
             {
                 if(other.contents.Count>0 && other.kind!="cage" && TransferManifest(other,robot))return true;
-                if(RigWeight(other)>1+team.TechRank("robot","capacity")*3)return false;
+                if(RigWeight(other)>RobotFreeKilograms(robot))return false;
                 robot.targetSerial=other.serial;return true;
             }
             return false;
@@ -79,13 +92,14 @@ namespace Raid
         bool RobotPickup(TechRig rig)
         {
             int free=IndustryFree(rig);
+            float freeKg=RobotFreeKilograms(rig);
             foreach(var loot in LootActor.VisibleStock)
-                if(loot && loot.tier==rig.depth && loot.IsFreeOnSeabed && CloseToPayload(loot.transform.position,rig.position) &&
+                if(loot && loot.tier==rig.depth && loot.IsFreeOnSeabed && SalvageKilograms(loot.electronics)<=freeKg && CloseToPayload(loot.transform.position,rig.position) &&
                     IndustryCanPull(loot.transform.position,rig.position,.08f) && loot.IntoEquipment(rig.contents,free))return true;
             for(int i=0;i<dropped.Count;i++)
             {
                 var item=dropped[i];
-                if(item.kind!=DroppedKind.Catch || !item.Fish || item.Fish.cargoSize>free || !CloseToPayload(item.position,rig.position) ||
+                if(item.kind!=DroppedKind.Catch || !item.Fish || item.Fish.cargoSize>free || item.Fish.cargoSize*IndustrialSettings.fishSlotKg>freeKg || !CloseToPayload(item.position,rig.position) ||
                     !IndustryCanPull(item.position,rig.position,.08f)) continue;
                 rig.contents.Add(AttributeCatch(item.Fish.ToCargo(item.id)));dropped.RemoveAt(i);return true;
             }
@@ -102,8 +116,8 @@ namespace Raid
             rig.timer=Mathf.Max(0,rig.timer-dt);
             if(rig.flight=="piloted")
             {
-                if(!RobotPilotAtStation(IndustryDiver(rig.operatorId)))
-                {rig.operatorId=-1;rig.flight="";rig.targetSerial=0;return;}
+                if(!RobotPilotAtStation(IndustryDiver(rig.operatorId)) || (rig.position-CargoLoadingPosition).sqrMagnitude>Mathf.Pow(IndustryRange(rig),2))
+                {LoseRobotSignal(rig);return;}
                 if(rig.care<=0)return;
                 rig.care-=dt;
             }
@@ -127,7 +141,7 @@ namespace Raid
                     rig.timer=1f;
                     var source=ClosestIndustryRig(rig,rig.position,IndustryRange(rig),r=>
                         (r.position-CargoLoadingPosition).magnitude<=IndustryRange(rig) &&
-                        (CanExport(r,IndustryUnlocked(rig,"delivery")) || r.kind=="cage" && r.mode=="captured" && !RigAlreadyTowed(r) && RigWeight(r)<=1+team.TechRank("robot","capacity")*3 && IndustryUnlocked(r,"delivery")));
+                        (CanExport(r,IndustryUnlocked(rig,"delivery")) || r.kind=="cage" && r.mode=="captured" && !RigAlreadyTowed(r) && RigWeight(r)<=RobotFreeKilograms(rig) && IndustryUnlocked(r,"delivery")));
                     if(source!=null)
                     {
                         rig.destination=source.position+Vector3.up*.7f;
@@ -143,7 +157,7 @@ namespace Raid
                         float best=IndustryRange(rig)*IndustryRange(rig);
                         foreach(var stock in LootActor.VisibleStock)
                         {
-                            if(!stock || !stock.IsFreeOnSeabed || stock.tier!=rig.depth || (stock.transform.position-CargoLoadingPosition).magnitude>IndustryRange(rig))continue;
+                            if(!stock || !stock.IsFreeOnSeabed || stock.tier!=rig.depth || SalvageKilograms(stock.electronics)>RobotFreeKilograms(rig) || (stock.transform.position-CargoLoadingPosition).magnitude>IndustryRange(rig))continue;
                             float d=(stock.transform.position-rig.position).sqrMagnitude;
                             if(d>=best)continue;best=d;nearest=stock;
                         }
@@ -161,7 +175,7 @@ namespace Raid
             var payload=IndustryRig(rig.targetSerial);
             if(payload!=null)
             {
-                if(!IndustryPresent(payload) || payload.baitId>=0 || payload.operatorId>=0 || payload.depth!=rig.depth || (payload.position-rig.position).magnitude>4f)
+                if(CargoWeight(rig)+RigWeight(payload)>IndustryCapacity(rig) || !IndustryPresent(payload) || payload.baitId>=0 || payload.operatorId>=0 || payload.depth!=rig.depth || (payload.position-rig.position).magnitude>4f)
                     rig.targetSerial=0;
                 else
                 {
