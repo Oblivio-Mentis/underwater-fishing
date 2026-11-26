@@ -20,6 +20,7 @@ namespace Raid
 
         void LateUpdate()
         {
+            ConfirmRackAimFromGuest();
             if(observedParcelOwner<0 || !world || !world.NetworkObject || !world.IsClientInitialized ||
                 !world.TryGetRackParcel(observedParcelOwner,out int serial,out var pos,out bool resting))return;
             if(Host && Time.unscaledTime>=nextTraceAt)
@@ -66,8 +67,9 @@ namespace Raid
 
         IEnumerator CollectMissedParcel()
         {
+            yield return AimAtRackProduct("charge");
             Mark("stage-charge-miss");
-            local.CmdRackTake("charge");
+            Assert(UI.QaClickReticle(),"A left click on the charge cell requested the other visible product.");
             yield return Wait("replicated charge case landed without a receiver",()=>world.TryGetRackParcel(local.OwnerId,out _,out _,out bool resting) && resting);
             Assert(Gear.InventionInSlot(ChargePocket).count==0,"missed charge remains physical and has not entered the owner's slot");
             Mark("charge-on-deck");
@@ -107,6 +109,7 @@ namespace Raid
             if(report.seat==1)
             {
                 yield return FaceStation(rack,approach,"returned player faces cabinet for an interrupted catch");
+                yield return AimAtRackProduct("charge");
                 local.CmdRackTake("charge");
                 yield return Wait("owner sees the returning character's charge leave the tray",()=>
                     world.RackParcelInFlight("charge") && world.TryGetRackParcel(sender,out _,out _,out bool still) && !still);

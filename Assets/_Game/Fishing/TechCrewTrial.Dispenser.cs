@@ -51,6 +51,40 @@ namespace Raid
             yield return new WaitForSecondsRealtime(.5f);
         }
 
+        int sentRackAim,confirmedRackAim;
+        float nextRackAimProbe;
+
+        IEnumerator AimAtRackProduct(string kind)
+        {
+            local.LookAtConsole(world.RackProductPosition(kind));
+            yield return Wait("local reticle on "+kind,()=>world.TryRackProduct(local,true,out var product) && product.id==kind);
+            if(Host)
+            {
+                yield return Wait("host authoritative ray on "+kind,()=>world.TryRackProduct(local,false,out var product) && product.id==kind);
+            }
+            else
+            {
+                // The guest's rendered camera can turn before its new aim reaches the server.
+                string request="rack-aim-"+(++sentRackAim);
+                Mark(request,local.OwnerId+" "+kind);
+                yield return Wait("server confirmed this guest's exact target "+kind,()=>Has(request+"-seen"));
+            }
+        }
+
+        void ConfirmRackAimFromGuest()
+        {
+            if(!Host || !world || !world.NetworkObject || !world.IsServerInitialized || Time.unscaledTime<nextRackAimProbe)return;
+            nextRackAimProbe=Time.unscaledTime+.08f;
+            string request="rack-aim-"+(confirmedRackAim+1);
+            if(!Has(request))return;
+            var parts=File.ReadAllText(FileFor(request)).Split(' ');
+            int owner=int.Parse(parts[0]);
+            var peer=DiverMotor.ServerDivers.Find(d=>d && d.OwnerId==owner);
+            if(!peer || !world.TryRackProduct(peer,false,out var product) || product.id!=parts[1])return;
+            Mark(request+"-seen");
+            confirmedRackAim++;
+        }
+
         IEnumerator VerifyDispenser()
         {
             yield return Wait("physical dispenser attached to the ship",()=>world.InventionRackTransform);
@@ -79,7 +113,9 @@ namespace Raid
                 // Each owner requests and catches a product locally from the same physical machine.
                 local.Teleport(rackAt);
                 yield return FaceStation(rack,rackAt,"host at the rack for its own independent catch");
-                local.CmdRackTake("trap");
+                yield return AimAtRackProduct("trap");
+                Assert(UI.QaClickReticle(),"Host left-clicked the physical trap cell through its normal reticle.");
+
                 yield return Wait("host's trap reached its own ordinary hotbar",()=>
                     Gear.InventionInSlot(2).kind=="trap" && Gear.InventionInSlot(2).count==1 && world.RackParcelCount==0);
                 Assert(OtherOwnerPocketsIntact(),"The host received its own trap in its first ordinary pocket.");
@@ -109,14 +145,16 @@ namespace Raid
             {
                 yield return Wait("first physical rack approach",()=>Has("first-rack"));
                 yield return FaceStation(rack,rackAt,"operator in front of physical dispenser");
-                Assert(world.InventionRackTargeted(local),"the independent client's own reticle recognizes the cabinet for the E interaction");
+                yield return AimAtRackProduct("trap");
+                yield return RejectRackRequest("charge","server refused a different researched product while aimed at the trap");
                 yield return Wait("guest's real ball and fish arrived in the two surrounding pockets",()=>
                     Gear.HasBallInSlot(ChargePocket) && Gear.CatchIdInSlot(FishPocket)>0 && Gear.FishInSlot(FishPocket));
                 long fishId=Gear.CatchIdInSlot(FishPocket);
                 int initial=world.View.TechStackLimit("cage");
                 for(int count=1;count<=initial;count++)
                 {
-                    local.CmdRackTake("cage");
+                    yield return AimAtRackProduct("cage");
+                    Assert(UI.QaClickReticle(),"Guest left-clicked the physical cage cell through its own normal reticle.");
                     int expected=count;
                     yield return Wait("an actual cage is travelling before any private item is awarded",()=>
                         world.RackParcelInFlight("cage") && world.TryGetRackParcel(local.OwnerId,out _,out _,out bool resting) && !resting);
@@ -126,7 +164,8 @@ namespace Raid
                 }
                 if(SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)UiQaProbe.CapturePeerCamera(FileFor("dispenser.png"));
                 int inventoryRevision=world.LocalProgress.revision;
-                yield return RejectRackRequest("cage","dispenser rejected a full stack");
+                yield return AimAtRackProduct("cage");
+                yield return RejectRackRequest("cage","dispenser rejected a full stack with the correct cell targeted");
                 Assert(Gear.InventionInSlot(CagePocket).count==initial && Gear.HasBallInSlot(ChargePocket) &&
                     Gear.CatchIdInSlot(FishPocket)==fishId && world.LocalProgress.revision==inventoryRevision,
                     "Full ordinary pockets refused another cage without losing the ball, the real fish or the filled stack.");
@@ -157,6 +196,7 @@ namespace Raid
                     "only the researched stack rank was charged");
                 yield return Wait("physical dispenser after research",()=>Has("upgraded-rack"));
                 yield return FaceStation(rack,rackAt,"operator returned to physical dispenser");
+                yield return AimAtRackProduct("cage");
                 local.CmdRackTake("cage");
                 yield return Wait("same cage pocket now exceeds its old maximum",()=>Gear.InventionInSlot(CagePocket).count==initial+1);
                 yield return new WaitForSecondsRealtime(.35f);

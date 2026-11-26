@@ -14,7 +14,6 @@ namespace Raid
 {
     public sealed partial class RaidWorld
     {
-        static bool rackUiFixture;
         [Serializable] sealed class RackReport
         {
             public string status="running",phase,error;
@@ -44,7 +43,6 @@ namespace Raid
                 if(s<0 || s+1>=args.Length || !args.Contains("-raid-host") || p<0 || p+1>=args.Length || !Guid.TryParse(args[p+1],out _) ||
                     !string.Equals(Path.GetFullPath(args[s+1]),save,StringComparison.OrdinalIgnoreCase) || File.Exists(save))
                     throw new InvalidOperationException("Rack UI trial needs a new rack-ui-campaign.json in its own folder, -raid-host and a fixture -raid-profile GUID.");
-                rackUiFixture=true;
                 await WaitRackUi(()=>Instance && Instance.LocalProgress!=null && Instance.localDiver && Instance.NetworkObject &&
                     Instance.IsServerInitialized && Instance.InventionRackTransform && UiRoot.Instance && UiRoot.Instance.Context.Connected &&
                     UiRoot.Instance.Page==UiPage.None && !UiInputGate.Modal && Time.unscaledTime>=UiInputGate.ResumeAt,"private inventory and physical rack",95);
@@ -52,7 +50,6 @@ namespace Raid
                 report.status="passed";
             }
             catch(Exception error){report.status="failed";report.error=error.ToString();}
-            rackUiFixture=false;
             File.WriteAllText(path,JsonUtility.ToJson(report,true));
             UnityEngine.Debug.Log("[RackUI] "+report.status+" "+report.phase+" "+report.error);
             if(!Application.isEditor)Application.Quit(report.status=="passed"?0:1);
@@ -66,7 +63,7 @@ namespace Raid
                 if(Time.realtimeSinceStartup>=until)
                 {
                     var w=Instance;var owner=w?w.localDiver:null;
-                    string status=w && owner?$" | focus={Application.isFocused} page={UiRoot.Instance?.Page} modal={UiInputGate.Modal} inside={owner.IsInside} near={w.NearInventionRack(owner)} cameraRay={w.RackFocused(owner,true)} serverRay={w.RackFocused(owner)} panel={w.InventionPanelOpen}":"";
+                    string status=w && owner?$" | focus={Application.isFocused} page={UiRoot.Instance?.Page} modal={UiInputGate.Modal} inside={owner.IsInside} near={w.NearInventionRack(owner)} cameraRay={w.RackFocused(owner,true)} serverRay={w.RackFocused(owner)} cameraProduct={w.RackAimForTrial(owner,true)} serverProduct={w.RackAimForTrial(owner,false)}":"";
                     if(w && owner && w.TryGetRackParcel(owner.OwnerId,out int id,out var pos,out bool resting))
                         status+=$" parcel={id} resting={resting} delta={pos-owner.transform.position}";
                     throw new TimeoutException(step+status);
@@ -74,6 +71,12 @@ namespace Raid
                 await Awaitable.NextFrameAsync();
             }
         }
+
+        string RackAimForTrial(DiverMotor diver,bool camera) =>
+            TryRackProduct(diver,camera,out var item)?item.id:"(none)";
+
+        static bool RackNormalHud() => UiRoot.Instance.Page==UiPage.None && !UiInputGate.Modal &&
+            !GameObject.Find("Vending machine UI") && !GameObject.Find("Technology inventory");
 
         static async Awaitable RackKey(Key key)
         {
@@ -116,81 +119,128 @@ namespace Raid
             await WaitRackUi(()=>host.IsInside && UiRoot.Instance.Page==UiPage.None,"clear cabin overview of the vending machine");
             await Awaitable.WaitForSecondsAsync(.35f);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"00-vending-machine.png"));
-            host.Teleport(rack.position+rack.forward*1.77f+rack.right*.23f-Vector3.up*.65f);
-            host.LookAtConsole(rack.position);
-            await WaitRackUi(()=>InventionRackTargeted(host) && UiRoot.Instance.Page==UiPage.None,"owned camera aiming at the real rack");
-            report.phase="open rack from physical E";
-            await RackKey(Key.E);
-            report.Check(InventionPanelOpen && rackBlueprints.Count==4 && rackBlueprints.All(item=>view.TechRank(item.id,"unlock")>0),
-                "E at the physical vending machine opened product cards for its four researched items.");
-            await RackKey(Key.DownArrow);
-            report.Check(rackSelection==1,"Down arrow selected the next product card.");
-            await RackKey(Key.UpArrow);
-            report.Check(rackBlueprints[rackSelection].id==trap.id,"Selected the trap for physical dispensing.");
-            await CaptureRackUi(folder,"01-open-rack.png");
             var balance=team.Treasury;
-            var keyboard=Keyboard.current;
-            try
+            async Awaitable Aim(string kind)
             {
-                InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.Enter));
-                await WaitRackUi(()=>RackParcelInFlight(trap.id),"visible trap cargo ejected from the chute",7);
-                InputSystem.QueueStateEvent(keyboard,new KeyboardState());
-                await CaptureRackUi(folder,"03-ejected-trap.png",.11f);
-                if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"04-trap-in-flight.png",.10f);
-                if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"05-trap-in-flight.png",.09f);
-                await WaitRackUi(()=>gear.InventionInSlot(trapSlot).count==1,"first delivery skipped the ball");
+                host.LookAtConsole(RackProductPosition(kind));
+                await WaitRackUi(()=>RackAimForTrial(host,true)==kind && RackAimForTrial(host,false)==kind,
+                    "camera and authoritative crosshair both point at "+kind);
+                await Awaitable.WaitForSecondsAsync(.12f);
             }
-            finally{InputSystem.QueueStateEvent(keyboard,new KeyboardState());}
-            report.Check(gear.HasBallInSlot(ballSlot) && gear.InventionInSlot(trapSlot).kind=="trap",
-                "The caught trap entered the next ordinary pocket and the ball stayed in its own slot.");
-            // Leave an earlier pocket empty to distinguish stack-first selection from simply taking the first available slot.
-            gear.RemoveBall();
-            async Awaitable Order(Func<bool> arrived,string reason)
+            async Awaitable ReadProduct(string kind)
+            {
+                var title=TechCatalog.Find(kind).title;
+                await WaitRackUi(()=>rack.GetComponentsInChildren<TextMeshPro>().Any(label=>label.enabled && label.text==title) &&
+                    rack.GetComponentsInChildren<LineRenderer>().Any(line=>line.enabled && line.positionCount>=4),
+                    "world-space product title and cell outline belong to the aimed "+kind);
+            }
+            async Awaitable Denied(string kind,string reason)
             {
                 await Awaitable.WaitForSecondsAsync(.4f);
-                await RackKey(Key.Enter);
+                int revision=LocalProgress.revision;
+                bool? accepted=null;
+                void Receipt(bool ok,string message){accepted=ok;}
+                SkillResponded+=Receipt;
+                try
+                {
+                    host.CmdRackTake(kind);
+                    await WaitRackUi(()=>accepted.HasValue,reason+" server receipt");
+                }
+                finally{SkillResponded-=Receipt;}
+                report.Check(accepted==false && LocalProgress.revision==revision && RackParcelCount==0 && team.Treasury.Equals(balance),reason);
+            }
+            async Awaitable ClickProduct(string kind)
+            {
+                if(RackAimForTrial(host,true)!=kind || !RackNormalHud())
+                    throw new InvalidOperationException("HUD crosshair is not over "+kind);
+                var pointer=Mouse.current??InputSystem.AddDevice<Mouse>();
+                var pos=pointer.position.ReadValue();
+                try
+                {
+                    InputSystem.QueueStateEvent(pointer,new MouseState{position=pos,buttons=1});
+                    await Awaitable.WaitForSecondsAsync(.08f);
+                }
+                finally{InputSystem.QueueStateEvent(pointer,new MouseState{position=pos});}
+                if(!RackParcelInFlight(kind) && Application.isBatchMode)
+                {
+                    if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("Physical pointer did not accept "+kind);
+                    report.backgroundInputRoutes.Add("Rack click via the physical reticle handler: "+kind);
+                }
+                await WaitRackUi(()=>RackParcelInFlight(kind),"actual "+kind+" case left the vendor chute");
+            }
+            report.phase="distance, cabinet and product checks";
+            host.Teleport(rack.position+rack.forward*(tuning.interactionRange+1.2f)-Vector3.up*.65f);
+            host.LookAtConsole(RackProductPosition(trap.id));
+            await WaitRackUi(()=>!NearInventionRack(host) && !RackFocused(host,true) && !RackFocused(host,false),
+                "rack is outside the allowed range");
+            await Denied(trap.id,"A request outside interaction range produced no case or inventory change.");
+            host.Teleport(rack.position+rack.forward*1.77f+rack.right*.23f-Vector3.up*.65f);
+            host.LookAtConsole(rack.TransformPoint(new Vector3(.50f,.09f,.10f)));
+            await WaitRackUi(()=>RackFocused(host,true) && RackFocused(host,false) &&
+                !TryRackProduct(host,true,out _) && !TryRackProduct(host,false,out _),"reticle on the cabinet keypad beside the product window");
+            await Denied(trap.id,"Aiming at the cabinet body cannot issue an item.");
+            await Aim("charge");
+            await ReadProduct("charge");
+            report.Check(view.TechRank("charge","unlock")==0,"The crosshair recognized the locked charge in its own physical cell.");
+            UiRoot.Instance.QaClickReticle();
+            await Awaitable.WaitForSecondsAsync(.35f);
+            report.Check(RackParcelCount==0 && pockets.All(i=>gear.InventionInSlot(i).count==0),"Clicking a locked product left both the chute and inventory empty.");
+            await Denied("charge","The server rejected a locked product even when the reticle matched its cell.");
+            await Aim(trap.id);
+            await ReadProduct(trap.id);
+            const string other="magnet";
+            await Denied(other,"The server rejected a different researched item while the reticle pointed at the trap.");
+            await RackKey(Key.E);
+            await RackKey(Key.Enter);
+            report.Check(RackNormalHud() && RackParcelCount==0 && pockets.All(i=>gear.InventionInSlot(i).count==0),
+                "E and Enter at a product left the normal HUD active and did not place an order.");
+            await CaptureRackUi(folder,"01-product-aim.png");
+            report.phase="reticle purchases without a separate screen";
+            await ClickProduct(trap.id);
+            await CaptureRackUi(folder,"03-ejected-trap.png",.06f);
+            if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"04-trap-in-flight.png",.10f);
+            if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"05-trap-in-flight.png",.09f);
+            await WaitRackUi(()=>gear.InventionInSlot(trapSlot).count==1,"first delivery skipped the ball");
+            report.Check(gear.HasBallInSlot(ballSlot) && gear.InventionInSlot(trapSlot).kind=="trap" && RackNormalHud(),
+                "The left-clicked 3D trap left the chute and entered the next ordinary pocket; the ball remained in place.");
+            // Leave an earlier pocket empty to distinguish stack-first selection from simply taking the first available slot.
+            gear.RemoveBall();
+            async Awaitable Order(string kind,Func<bool> arrived,string reason)
+            {
+                await Awaitable.WaitForSecondsAsync(.4f);
+                await Aim(kind);
+                await ClickProduct(kind);
                 await WaitRackUi(arrived,reason);
             }
             for(int count=2;count<=limit;count++)
             {
                 int expected=count;
-                await Order(()=>gear.InventionInSlot(trapSlot).count==expected,"top up the existing trap stack to "+expected);
+                await Order(trap.id,()=>gear.InventionInSlot(trapSlot).count==expected,"top up the existing trap stack to "+expected);
                 report.Check(gear.InventionInSlot(ballSlot).count==0,"The earlier empty pocket stayed empty at trap count "+expected+".");
             }
             report.Check(gear.StoreBall() && gear.HasBallInSlot(ballSlot),"Replaced the ball into the free first ordinary pocket.");
-            await RackKey(Key.DownArrow);
-            string other=rackBlueprints[rackSelection].id;
-            report.Check(other!=trap.id,"Selected a different researched item at the physical rack.");
-            await Order(()=>gear.InventionInSlot(otherSlot).kind==other && gear.InventionInSlot(otherSlot).count==1,
-                "different product placed in last free pocket");
-            await RackKey(Key.UpArrow);
-            int serialBefore=team.lastRigSerial,revision=LocalProgress.revision;
-            bool? fullResponse=null;
-            void FullReply(bool ok,string reason){fullResponse=ok;}
-            SkillResponded+=FullReply;
-            try
-            {
-                await Awaitable.WaitForSecondsAsync(.4f);
-                host.CmdRackTake(trap.id);
-                await WaitRackUi(()=>fullResponse.HasValue,"server replies to full ordinary inventory");
-            }
-            finally{SkillResponded-=FullReply;}
-            report.Check(fullResponse==false && RackParcelCount==0 && gear.HasBallInSlot(ballSlot) &&
-                gear.InventionInSlot(trapSlot).count==limit && gear.InventionInSlot(otherSlot).kind==other &&
-                LocalProgress.revision==revision && team.lastRigSerial==serialBefore,
-                "Full inventory refused another trap without ejecting a case, replacing the ball or modifying a stack.");
+            await Aim(other);
+            await ReadProduct(other);
+            report.Check(Vector3.Distance(RackProductPosition(trap.id),RackProductPosition(other))>.10f,
+                "The second researched product is in a physically different display cell.");
+            await CaptureRackUi(folder,"06-second-product-aim.png");
+            await Order(other,()=>gear.InventionInSlot(otherSlot).kind==other && gear.InventionInSlot(otherSlot).count==1,
+                "left click on a different product placed it in the last free pocket");
+            await Aim(trap.id);
+            await Denied(trap.id,"A perfectly aimed order was refused with all ordinary pockets occupied.");
+            report.Check(gear.HasBallInSlot(ballSlot) && gear.InventionInSlot(trapSlot).count==limit &&
+                gear.InventionInSlot(otherSlot).kind==other,"Full pockets preserved the ball, the full trap stack and the other item.");
             gear.RemoveBall();
-            await Order(()=>gear.InventionInSlot(ballSlot).kind=="trap" && gear.InventionInSlot(ballSlot).count==1,
+            await Order(trap.id,()=>gear.InventionInSlot(ballSlot).kind=="trap" && gear.InventionInSlot(ballSlot).count==1,
                 "extra trap starts a second stack in the newly freed ordinary pocket");
             report.Check(balance.Equals(team.Treasury),"All physical rack deliveries were free.");
-            await RackKey(Key.E);
-            report.Check(!InventionPanelOpen,"E closed the rack.");
+            report.Check(RackNormalHud(),"The normal HUD remained visible throughout both purchases.");
 
             report.phase="ordinary hotbar underwater";
             host.Teleport(CargoLoadingPosition+new Vector3(10,2.5f,4));
             await WaitRackUi(()=>!NearInventionRack(host) && !host.IsInside && UiRoot.Instance.Page==UiPage.None,"diver outside");
             await RackKey(Key.Tab);
-            report.Check(!InventionPanelOpen && UiRoot.Instance.Page==UiPage.None && !UiInputGate.Modal &&
+            report.Check(RackNormalHud() &&
                 Time.unscaledTime>=UiInputGate.ResumeAt && (Application.isFocused?!UiInputGate.Blocked:Application.isBatchMode),
                 "Tab underwater opened no separate technology inventory.");
             await RackKey(Key.Digit4);
@@ -232,7 +282,7 @@ namespace Raid
                 "Repacking restored the selected stack while preserving the other two ordinary pockets.");
             UiRoot.Instance.ShowPage(UiPage.Pause);
             await RackKey(Key.Tab);
-            report.Check(!InventionPanelOpen && UiRoot.Instance.Page==UiPage.Pause,"Tab during pause left the dialog in control.");
+            report.Check(UiRoot.Instance.Page==UiPage.Pause,"Tab during pause left the dialog in control.");
             UiRoot.Instance.ClosePanel();
             var stored=TeamSave.Load(savePath,progression).Player(ProgressKey(host));
             report.Check(stored?.pocketStacks?.Length==7 && pockets.All(i=>stored.pocketStacks[i-2].count==gear.InventionInSlot(i).count &&
@@ -256,7 +306,7 @@ namespace Raid
             if(!Application.isBatchMode || (Application.isFocused && (!mouse || Cursor.lockState==CursorLockMode.Locked)) ||
                 !IsClientInitialized || !IsOwner || !UiRoot.Instance || UiRoot.Instance.Page!=UiPage.None ||
                 UiInputGate.Modal || Time.unscaledTime<UiInputGate.ResumeAt || UiInputGate.MonitorLook ||
-                mouse && UiInputGate.PointerReserved || RaidWorld.Instance.InventionPanelOpen || CheatPanel.PointerActive)
+                mouse && UiInputGate.PointerReserved || CheatPanel.PointerActive)
                 return false;
             // Blocked combines menu state and desktop focus. The menu conditions were checked above.
             // Restore it on the same call stack, before an Update or another input handler can run.
