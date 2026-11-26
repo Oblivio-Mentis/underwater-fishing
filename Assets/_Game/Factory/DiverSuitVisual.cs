@@ -5,7 +5,7 @@ namespace Raid
 {
     // Observer rig driven solely by the replicated player transform, equipment and accepted actions.
     [DisallowMultipleComponent,DefaultExecutionOrder(260)]
-    public sealed class DiverSuitVisual : MonoBehaviour
+    public sealed partial class DiverSuitVisual : MonoBehaviour
     {
         sealed class Limb { public Transform Upper,Lower,End; }
         readonly Limb[] arms=new Limb[2],legs=new Limb[2];
@@ -89,6 +89,7 @@ namespace Raid
             if(diver.InteractionSequence!=useSequence){reach=1;useSequence=diver.InteractionSequence;}
             if(!visible)
             {
+                EndBlastPose();
                 BallVisible=false;
                 draw=shownWind=0;
                 displaySlot=targetSlot=tool.ActiveSlot;
@@ -223,6 +224,7 @@ namespace Raid
 
         void ApplyAppearance(Action motion,float dt)
         {
+            if(ApplyBlastPose())motion=Action.Knockdown;
             avatar.head.rotation=head.rotation*avatar.headBind;
             for(int i=0;i<2;i++)
             {
@@ -284,6 +286,7 @@ namespace Raid
 
         void OnDestroy()
         {
+            EndBlastPose();
             if(body!=null)Destroy(body.gameObject);
             foreach(var mesh in weaponMeshes)if(mesh!=null)Destroy(mesh);
         }

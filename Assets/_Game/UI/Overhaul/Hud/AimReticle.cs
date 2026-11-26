@@ -58,9 +58,9 @@ namespace Raid.UI
                 kick = 3.5f;
             }
             kick = Mathf.MoveTowards(kick, 0f, Time.unscaledDeltaTime * 19f);
-            bool point = UiInputGate.PointerReserved || tool == null || !tool.HarpoonInHands;
+            bool point = UiInputGate.MonitorLook || UiInputGate.PointerReserved || tool == null || !tool.HarpoonInHands;
             float nextGap = Mathf.Lerp(4.2f, 2.5f, Nereid.NereidAim.Blend) + kick;
-            Color32 nextInk = ContextColor;
+            Color32 nextInk = UiInputGate.MonitorLook ? UiTheme.Amber : ContextColor;
             if (!point && eye && tool.tuning != null &&
                 Physics.Raycast(eye.transform.position, eye.transform.forward, out var hit, tool.tuning.maxRange,
                     tool.tuning.hitMask, QueryTriggerInteraction.Ignore))

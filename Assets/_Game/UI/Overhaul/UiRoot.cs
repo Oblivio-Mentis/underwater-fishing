@@ -28,7 +28,6 @@ namespace Raid.UI
         bool computerSurface;
         Camera viewCamera;
         Nereid.AirlockPad aimedPad;
-        RectTransform boardPointer;
         ReticleBoardInput boardInput;
         float ballPressAt=-1, ballReleasedAt=-10f, releaseWind;
         public bool WindingBall => ballPressAt>=0;
@@ -127,10 +126,6 @@ namespace Raid.UI
             menu=new MenuView(transform,this);terminal=new TerminalView(transform,this);cargo=new CargoView(transform,this);skills=new SkillTreeView(transform,this);
             modalGroups=new[]{menu.Root.gameObject.AddComponent<CanvasGroup>(),terminal.Root.gameObject.AddComponent<CanvasGroup>(),cargo.Root.gameObject.AddComponent<CanvasGroup>(),skills.Root.gameObject.AddComponent<CanvasGroup>()};
             MakeConfirmation();
-            var dot=UiKit.Panel(transform,"Physical monitor sight",UiTheme.Amber);
-            boardPointer=dot.rectTransform;UiKit.Place(boardPointer,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(9,9));
-            boardPointer.gameObject.AddComponent<Outline>().effectColor=Color.black;
-            boardPointer.gameObject.SetActive(false);
             toastPanel=UiKit.Panel(transform,"System notification",UiTheme.Panel);UiKit.Place(toastPanel.rectTransform,new Vector2(.5f,1),new Vector2(.5f,1),new Vector2(0,-4),new Vector2(1080,38));
             toastText=UiKit.Label(toastPanel.transform,"Message","",20);UiKit.Fill(toastText.rectTransform,4);toastText.alignment=TextAlignmentOptions.Center;
             toastText.enableAutoSizing=true;toastText.fontSizeMin=16;toastText.fontSizeMax=20;toastText.textWrappingMode=TextWrappingModes.NoWrap;toastText.overflowMode=TextOverflowModes.Ellipsis;
@@ -170,7 +165,6 @@ namespace Raid.UI
             if(value!=UiPage.None)CancelBallGesture();
             bool wasMonitor=computerSurface;
             Page=value;
-            if(boardPointer!=null)boardPointer.gameObject.SetActive(false);
             if(value!=UiPage.Terminal && value!=UiPage.SkillTree)Context.SelectedConsole=null;
             if(value!=UiPage.SkillTree && value!=UiPage.None)ClearSkillStation();
             boardInput.Clear();
@@ -192,6 +186,7 @@ namespace Raid.UI
         {
             var station=Context.SelectedConsole;
             computerSurface=(page==UiPage.Terminal || page==UiPage.SkillTree) && station!=null && station.screenAnchor!=null;
+            canvas.sortingOrder=computerSurface?80:100;
             if(computerSurface)
             {
                 canvas.renderMode=RenderMode.WorldSpace;canvas.worldCamera=Context.Player.GetComponentInChildren<Camera>();
@@ -265,6 +260,7 @@ namespace Raid.UI
                 else if(Page==UiPage.None)ShowPage(UiPage.Pause);
                 else ClosePanel();
             }
+            Context.Player?.ApplyLookInputForFrame();
             var mouse=Application.isFocused?Mouse.current:null;
             bool skillPurchase=Page==UiPage.SkillTree && mouse!=null && mouse.rightButton.wasPressedThisFrame;
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
@@ -375,7 +371,6 @@ namespace Raid.UI
             UiInputGate.PointerReserved=false;
             aimedPad=null;
             AimedCargoDispatch=false;
-            if(boardPointer.gameObject.activeSelf && !computerSurface)boardPointer.gameObject.SetActive(false);
             var player=Context.Player;
             if(activeSkillStation!=null && (player==null || player!=skillStationPlayer || player.IsHelpless ||
                 !player.IsInside || !activeSkillStation.InRange(player)))ClearSkillStation();
@@ -466,12 +461,6 @@ namespace Raid.UI
         bool UpdateMonitorReticle(DiverMotor player,Camera cam,ShipConsole station,bool clicked,bool released,float scroll,bool allowed,bool skillPurchase)
         {
             var screenCenter=cam.pixelRect.center;
-            if(RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect,screenCenter,cam,out var point))
-            {
-                boardPointer.anchoredPosition=point;
-                boardPointer.SetAsLastSibling();
-                boardPointer.gameObject.SetActive(true);
-            }
             if(clicked && allowed)player.TouchTerminal(station.kind);
             return boardInput.Update(screenCenter,clicked&&allowed,released,allowed?scroll:0,skillPurchase&&allowed);
         }
@@ -557,9 +546,27 @@ namespace Raid.UI
         }
         public void Send(WorldAction action,long id=0)
         {
-            if(!Context.Connected||Context.World==null){Toast(UiText.NotConnected,true);return;}if(CommandPending)return;
+            if(BeginCommand(action,id))Context.World.RequestCommand(action,id,pendingRequestId);
+        }
+        public void AssignFish(CatchDestination source,CatchDestination destination,long[] ids)
+        {
+            if(ids==null || ids.Length==0 || Context.SelectedConsole?.kind!=ShipConsoleKind.Reservoir)return;
+            var screen=Context.SelectedConsole.screenAnchor;
+            var camera=Context.Player?.GetComponentInChildren<Camera>();
+            if(!camera || !screen)return;
+            var sight=camera.ViewportPointToRay(new Vector3(.5f,.5f,0));
+            if(!new Plane(screen.forward,screen.position).Raycast(sight,out float distance))return;
+            var action=destination==CatchDestination.Process?WorldAction.Process:
+                destination==CatchDestination.Feed?WorldAction.Feed:WorldAction.HoldFish;
+            if(BeginCommand(action,ids[0]))Context.World.AssignFishRoutes(source,destination,ids,sight.GetPoint(distance),pendingRequestId);
+        }
+        bool BeginCommand(WorldAction action,long id)
+        {
+            if(!Context.Connected||Context.World==null){Toast(UiText.NotConnected,true);return false;}
+            if(CommandPending)return false;
             pendingAction=action;pendingId=id;beforeFingerprint=Fingerprint();pendingSince=Time.unscaledTime;replyReceived=false;CommandPending=true;
-            pendingRequestId=++requestSequence;Context.World.RequestCommand(action,id,pendingRequestId);
+            pendingRequestId=++requestSequence;
+            return true;
         }
         string Fingerprint()
         {

@@ -73,9 +73,12 @@ namespace Raid.UI
             Icon(vitals,"Air Bottle",Mark.Bottle,0,-2,35,35,Ivory);
             oxygenBar=Meter(vitals,"Oxygen Gauge",39,-15,149,15,Blue,5);
             oxygen=Caption(vitals,"Oxygen Value",194,-2,74,40,17,TextAlignmentOptions.Left);
-            Icon(vitals,"Pressure Suit",Mark.Shield,0,-41,35,35,Ivory);
-            pressureBar=Meter(vitals,"Pressure Gauge",39,-54,149,15,Green,5);
-            pressure=Caption(vitals,"Pressure Value",194,-41,74,40,17,TextAlignmentOptions.Left);
+            if(DiverMotor.PressureEnabled)
+            {
+                Icon(vitals,"Pressure Suit",Mark.Shield,0,-41,35,35,Ivory);
+                pressureBar=Meter(vitals,"Pressure Gauge",39,-54,149,15,Green,5);
+                pressure=Caption(vitals,"Pressure Value",194,-41,74,40,17,TextAlignmentOptions.Left);
+            }
 
             var cross=At(vitals,"Health cross",Vector2.up,Vector2.up,9,-78,21,20);
             Box(cross,"Horizontal",0,-7,21,6,Ivory);Box(cross,"Vertical",7,0,6,21,Ivory);
@@ -150,10 +153,12 @@ namespace Raid.UI
             }
             UiKit.Fraction(oxygenBar,air);oxygenBar.color=air<.14f?UiTheme.Red:air<.25f?Gold:Blue;
             UiKit.Set(oxygen,Mathf.RoundToInt(air*100)+"%");
-            float strain=Mathf.Clamp01(diver.PressureStress/100);
-            // The shield expresses remaining suit pressure tolerance.
-            UiKit.Fraction(pressureBar,1-strain);pressureBar.color=strain>.8f?UiTheme.Red:strain>.55f?Gold:Green;
-            UiKit.Set(pressure,Mathf.RoundToInt((1-strain)*100)+"%");
+            if(pressureBar)
+            {
+                float strain=Mathf.Clamp01(diver.PressureStress/100);
+                UiKit.Fraction(pressureBar,1-strain);pressureBar.color=strain>.8f?UiTheme.Red:strain>.55f?Gold:Green;
+                UiKit.Set(pressure,Mathf.RoundToInt((1-strain)*100)+"%");
+            }
             UiKit.Fraction(healthBar,diver.Health/100f);
             healthBar.color=diver.IsHypoxic?UiTheme.Red:diver.Health<45?Gold:Green;
             UiKit.Set(healthText,Mathf.CeilToInt(diver.Health)+"%");

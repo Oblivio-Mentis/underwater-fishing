@@ -119,7 +119,8 @@ namespace Raid
                 if(intensity<=0 || !ClearGearPath(rig.position,target))continue;
                 var away=Vector3.ProjectOnPlane(offset,Vector3.up);
                 if(away.sqrMagnitude<.01f)away=diver.transform.forward;
-                diver.BeginBlastImpulse((away.normalized+Vector3.up*.24f)*Fishery.chargeForce*Mathf.Sqrt(intensity));
+                float impulse=Fishery.chargeForce*Mathf.Sqrt(intensity)*Mathf.Lerp(1f,2.65f,intensity*intensity*intensity);
+                diver.BeginBlastImpulse((away.normalized+Vector3.up*Mathf.Lerp(.17f,.26f,intensity))*impulse);
                 diver.TakeRigImpact(Fishery.chargeDamage*Mathf.Pow(intensity,1.35f));
             }
             pulseBodies.Clear();
@@ -186,8 +187,30 @@ namespace Raid
     {
         Vector3 blastVelocity;
 
-        internal void BeginBlastImpulse(Vector3 velocity) =>
-            blastVelocity=Vector3.ClampMagnitude(blastVelocity+velocity,ActiveFisheryTuning.Get.chargeForce);
+        public struct BlastPoseState
+        {
+            public uint Sequence;
+            public Vector3 Velocity;
+            public double StartedAt;
+        }
+
+        internal const float BlastPoseDuration=1.1f;
+        readonly FishNet.Object.Synchronizing.SyncVar<BlastPoseState> blastPose=new();
+        internal BlastPoseState ObservedBlast => blastPose.Value;
+        internal double BlastClock => TimeManager==null?Time.timeAsDouble:
+            TimeManager.TicksToTime(TimeManager.Tick)+TimeManager.GetTickElapsedAsDouble();
+
+        internal void BeginBlastImpulse(Vector3 velocity)
+        {
+            blastVelocity=Vector3.ClampMagnitude(blastVelocity+velocity,ActiveFisheryTuning.Get.chargeForce*2.8f);
+            if(velocity.sqrMagnitude<6.25f)return;
+            blastPose.Value=new BlastPoseState
+            {
+                Sequence=blastPose.Value.Sequence+1,
+                Velocity=blastVelocity,
+                StartedAt=BlastClock
+            };
+        }
 
         void TickBlastImpulse(float dt)
         {
@@ -195,7 +218,7 @@ namespace Raid
             var contact=MoveSwimmer(blastVelocity*dt);
             if((contact&CollisionFlags.Above)!=0 && blastVelocity.y>0)blastVelocity.y=0;
             if((contact&CollisionFlags.Below)!=0 && blastVelocity.y<0)blastVelocity.y=0;
-            blastVelocity*=Mathf.Exp(-3.8f*dt);
+            blastVelocity*=Mathf.Exp(-Mathf.Lerp(3.8f,3.45f,Mathf.InverseLerp(10,27,blastVelocity.magnitude))*dt);
         }
 
         internal void TakeRigImpact(float amount)

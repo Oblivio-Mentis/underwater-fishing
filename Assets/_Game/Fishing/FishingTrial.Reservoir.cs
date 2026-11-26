@@ -36,6 +36,7 @@ namespace Raid
             yield return Shot("reservoir-select.png");
             Require(world.Team.tank.Count(x=>catches.Contains(x.id))==4 && !world.FishRoute.active,
                 "A fish was routed without choosing a destination.");
+            yield return ClickReservoirControl("ToggleStockView");
             var food=world.Team.tank.Find(item=>item.id==catches[0]);
             int foodValue=world.Team.FoodValue(food,world.progression);
             yield return ClickReservoirControl("Process_"+big.id);

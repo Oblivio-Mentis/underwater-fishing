@@ -6,6 +6,9 @@ namespace Raid
     {
         Vector3 suctionInlet;
         float suctionAt=-10, suctionSpeed;
+        Vector3 suctionOrigin, suctionTarget, suctionBend;
+        float suctionProgress, suctionDuration;
+        bool onSuctionPath, straightSuction;
         Vector3 normalFishScale=Vector3.one;
 
         internal void PullIntoVacuum(Vector3 inlet,float speed)
@@ -20,25 +23,47 @@ namespace Raid
         bool FollowSuction(float dt,ref FishSnapshot state)
         {
             state.VacuumDraw=0;
-            if(Time.fixedTime-suctionAt>.08f || !CanHarvestRig(true))return false;
-            var delta=suctionInlet-transform.position;
-            float distance=delta.magnitude;
-            float pull=suctionSpeed*Mathf.Lerp(1.12f,.43f,Mathf.InverseLerp(.5f,8f,distance));
-            Vector3 spiral=Vector3.Cross(Vector3.up,delta).normalized;
-            Vector3 current=(delta.normalized+spiral*Mathf.Lerp(.75f,.18f,Mathf.InverseLerp(.4f,4f,distance))).normalized;
-            var point=transform.position+current*Mathf.Min(distance,pull*dt);
-            if(!SwimClear(transform.position,point))
+            if(Time.fixedTime-suctionAt>.08f || !CanHarvestRig(true))
             {
-                point=Vector3.MoveTowards(transform.position,suctionInlet,pull*dt);
-                if(!SwimClear(transform.position,point))return false;
+                onSuctionPath=false;
+                return false;
+            }
+            Vector3 current=transform.position;
+            if(!onSuctionPath || (suctionTarget-suctionInlet).sqrMagnitude>.01f)
+            {
+                suctionOrigin=current;
+                suctionTarget=suctionInlet;
+                Vector3 inward=suctionTarget-current;
+                float distance=inward.magnitude;
+                Vector3 tangent=Vector3.Cross(Vector3.up,inward).normalized;
+                suctionBend=tangent*Mathf.Min(2.4f,distance*.55f)+Vector3.up*Mathf.Min(.76f,distance*.25f);
+                suctionDuration=Mathf.Clamp(distance/Mathf.Max(1,suctionSpeed*.69f),.28f,2.5f);
+                suctionProgress=0;
+                straightSuction=false;
+                onSuctionPath=true;
+            }
+            float previous=suctionProgress;
+            suctionProgress=Mathf.Min(1,suctionProgress+dt/suctionDuration);
+            float arc=SuctionEase(suctionProgress);
+            float bow=3*arc*(1-arc);
+            Vector3 point=Vector3.Lerp(suctionOrigin,suctionTarget,arc)+suctionBend*bow;
+            if(straightSuction || !SwimClear(current,point))
+            {
+                straightSuction=true;
+                float stride=(arc-SuctionEase(previous))*Vector3.Distance(suctionOrigin,suctionTarget);
+                point=suctionProgress>=1?suctionTarget:Vector3.MoveTowards(current,suctionTarget,stride);
+                if(!SwimClear(current,point)){onSuctionPath=false;return false;}
             }
             transform.position=point;
-            if(current.sqrMagnitude>.01f)
-                transform.rotation=Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(current),1-Mathf.Exp(-dt*12));
-            state.VacuumDraw=1-Mathf.InverseLerp(.24f,.92f,distance);
+            Vector3 facing=point-current;
+            if(facing.sqrMagnitude>.00001f)
+                transform.rotation=Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(facing),1-Mathf.Exp(-dt*15));
+            state.VacuumDraw=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.58f,1,arc));
             state.Behaviour=FishBehaviour.Flee;
             return true;
         }
+
+        static float SuctionEase(float t) => t*(.16f+t*(.22f+.62f*t));
 
         internal bool CanHarvestRig(bool allowHeavy)
         {

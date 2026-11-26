@@ -72,7 +72,8 @@ namespace Raid
             qaSwimUntil = Time.unscaledTime + seconds;
         }
 #endif
-        public float PressureStress => _state.Value.Stress;
+        public static bool PressureEnabled => false;
+        public float PressureStress => PressureEnabled?_state.Value.Stress:0;
         public bool IsInside => _state.Value.Inside;
         public bool IsWalking => !CheatNoclip && UsesIndoorWalking(_state.Value.Position);
         // Ground contacts are authoritative on the server; remote replicas do not run a CharacterController.
@@ -210,13 +211,7 @@ namespace Raid
                 if(controlling && CanRespawn && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)RequestRespawn();
                 return;
             }
-            bool usingMonitor = UI.UiInputGate.MonitorLook && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
-            if (!pointer && (controlling || usingMonitor))
-            {
-                Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
-                _yaw = Mathf.Repeat(_yaw + look.x, 360f);
-                _pitch = Mathf.Clamp(_pitch - look.y, -85f, 85f);
-            }
+            ApplyLookInputForFrame();
             if(controlling && _hydro.WasPressedThisFrame())StartHydroDash();
             if(controlling && _scan.WasPressedThisFrame())ScanWater();
             bool walking=!CheatNoclip && UsesIndoorWalking(transform.position);
@@ -239,6 +234,20 @@ namespace Raid
 #endif
             SubmitInput(new Vector3(move.x, vertical, move.y), _yaw, _pitch, sprint);
             _localJumpQueued=false;
+        }
+
+        int lastLookFrame=-1;
+
+        internal void ApplyLookInputForFrame()
+        {
+            if(lastLookFrame==Time.frameCount || !IsClientInitialized || !IsOwner || IsDead || _look==null ||
+               !Application.isFocused || Cursor.lockState!=CursorLockMode.Locked || UI.CheatPanel.PointerActive ||
+               UI.UiInputGate.Blocked && !UI.UiInputGate.MonitorLook)return;
+            lastLookFrame=Time.frameCount;
+            Vector2 look=_look.ReadValue<Vector2>()*tuning.lookSensitivity*LocalLookMultiplier;
+            _yaw=Mathf.Repeat(_yaw+look.x,360f);
+            _pitch=Mathf.Clamp(_pitch-look.y,-85f,85f);
+            if(_camera)_camera.transform.SetPositionAndRotation(transform.position+Vector3.up*.6f,Quaternion.Euler(_pitch,_yaw,0));
         }
 
         [ServerRpc]
@@ -291,7 +300,7 @@ namespace Raid
                 Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
                 float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*equipmentPace*SpeedMultiplier*speedScale*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
-                if(state.Stress>=tuning.stressDanger)speed*=.5f;
+                if(PressureEnabled && state.Stress>=tuning.stressDanger)speed*=.5f;
                 var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
                 if((collision&CollisionFlags.Above)!=0&&_indoorVerticalVelocity>0)_indoorVerticalVelocity=0;
                 if((collision&CollisionFlags.Below)!=0&&_indoorVerticalVelocity<0)_indoorVerticalVelocity=-2;
@@ -308,7 +317,7 @@ namespace Raid
                 bool inHatch=Nereid.NereidAirlock.Active?.Contains(transform.position)==true;
                 if(inHatch)dashUntil=0;
                 else if(Time.time<dashUntil)speed*=1+Mathf.Clamp(Personal(SkillLine.HydroDash),0,.35f);
-                if(state.Stress>=tuning.stressDanger) speed*=.5f;
+                if(PressureEnabled && state.Stress>=tuning.stressDanger) speed*=.5f;
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
                 var swimTuning=RaidWorld.Instance?.progression;
@@ -353,12 +362,16 @@ namespace Raid
             state.AirCapacity=Mathf.Max(1f,tuning.oxygenCapacity*OxygenMultiplier);
             state.Oxygen = Mathf.Clamp(state.Oxygen + (state.Inside ? tuning.oxygenRecovery * recovery * Time.fixedDeltaTime : -drainSeconds),
                 0f, state.AirCapacity);
-            float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
-            float verticalExcess = walking?0:Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
-            float stressChange = state.Inside ? -1f : (depthExcess + verticalExcess)*(1-Mathf.Clamp(Personal(SkillLine.ExpeditionSuit),0,.55f));
-            state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
-            if(!state.Inside && state.Stress>=tuning.stressDanger)
-                state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*drainSeconds*(1-Mathf.Clamp(Personal(SkillLine.Seal),0,.75f)));
+            if(PressureEnabled)
+            {
+                float depthExcess = state.Inside ? 0f : Mathf.Max(0f, DepthOffset - state.Position.y - tuning.safeDepth - SafeDepthBonus);
+                float verticalExcess = walking?0:Mathf.Max(0f, Mathf.Abs(state.Position.y - _previousPosition.y) / Time.fixedDeltaTime - verticalLimit - 0.01f);
+                float stressChange = state.Inside ? -1f : (depthExcess + verticalExcess)*(1-Mathf.Clamp(Personal(SkillLine.ExpeditionSuit),0,.55f));
+                state.Stress = Mathf.Clamp(state.Stress + stressChange * Time.fixedDeltaTime, 0f, 100f);
+                if(!state.Inside && state.Stress>=tuning.stressDanger)
+                    state.Oxygen=Mathf.Max(0,state.Oxygen-tuning.stressOxygenDrain*drainSeconds*(1-Mathf.Clamp(Personal(SkillLine.Seal),0,.75f)));
+            }
+            else state.Stress=0;
             _previousPosition = state.Position;
             var vesselHere=Nereid.NereidVessel.Active;
             if(vesselHere!=null)

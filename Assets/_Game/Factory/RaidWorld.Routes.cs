@@ -142,6 +142,38 @@ namespace Raid
             fish.dispatchCommitted=false;
         }
 
+        [FishNet.Object.ServerRpc(RequireOwnership=false)]
+        internal void AssignFishRoutes(CatchDestination source,CatchDestination destination,long[] ids,Vector3 contact,int requestId,
+            FishNet.Connection.NetworkConnection sender=null)
+        {
+            if(sender?.FirstObject==null || team==null)return;
+            if(transitionRemaining>0){Respond(sender,requestId,false,"travel");return;}
+            var diver=sender.FirstObject.GetComponent<DiverMotor>();
+            if(!diver || diver.IsHelpless){Respond(sender,requestId,false,"helpless");return;}
+            if(!diver.IsInside || !ShipConsole.CanPressAt(diver,ShipConsoleKind.Reservoir,contact))
+            {Respond(sender,requestId,false,"range");return;}
+            if(commandTimes.TryGetValue(sender.ClientId,out float last) && Time.unscaledTime-last<.15f)
+            {Respond(sender,requestId,false,"cooldown");return;}
+            commandTimes[sender.ClientId]=Time.unscaledTime;
+            if(source==destination || (byte)source>(byte)CatchDestination.Feed || (byte)destination>(byte)CatchDestination.Feed ||
+                ids==null || ids.Length==0 || ids.Length>team.tank.Count)
+            {Respond(sender,requestId,false,"changed");return;}
+            var selected=new System.Collections.Generic.HashSet<long>(ids);
+            var batch=team.tank.FindAll(item=>selected.Contains(item.id) && item.destination==source &&
+                !item.dispatchCommitted && !IsRouting(item.id) && CanRoute(item,destination));
+            if(batch.Count!=ids.Length){Respond(sender,requestId,false,"changed");return;}
+            foreach(var item in batch)item.destination=destination;
+            if(!SaveTransaction())
+            {
+                foreach(var item in batch)item.destination=source;
+                Respond(sender,requestId,false,"unavailable");
+                return;
+            }
+            diver.ConfirmInteraction();
+            Publish();
+            Respond(sender,requestId,true,"ok");
+        }
+
         bool ChooseFishRoute(long id,CatchDestination destination)
         {
             var item=team.tank.Find(fish=>fish.id==id);
@@ -150,7 +182,7 @@ namespace Raid
             return true;
         }
 
-        static bool CanRoute(CatchItem item,CatchDestination destination) => destination switch
+        internal static bool CanRoute(CatchItem item,CatchDestination destination) => destination switch
         {
             CatchDestination.Feed=>!item.IsSalvage && item.offering>0,
             CatchDestination.Process=>!item.IsSalvage && (item.biomass>0 || item.chitin>0 || item.scrap>0 || item.electronics>0),

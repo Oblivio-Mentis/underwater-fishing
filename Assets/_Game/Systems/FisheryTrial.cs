@@ -159,6 +159,7 @@ namespace Raid
             report.phase="local charge, drop and pickup";Write();
             var charge=Stage("charge",ground);
             host.Teleport(ground+Vector3.back*2.1f);
+            if(peer)peer.Teleport(ground+Vector3.forward*.95f);
             var id=FishAt(ground+Vector3.right*.6f);
             float hp=host.Health;
             Check(!Use(charge,host,"alternate") && !Use(charge,host),"a placed charge rejects old remote activation");
@@ -187,6 +188,8 @@ namespace Raid
             Check(visible && aimed.id==id,"owner sight targets the dropped catch (wanted "+id+", sight "+aimed.id+", available "+tool.CanPickUp(drop)+")");
             // The two QA player windows run in the background. Submit the same owner RPC as E without an OS focus dependency.
             tool.FisheryTrialPickup(id);
+            if(peer)yield return Wait("observer simulates the remote diver blast ragdoll",
+                ()=>peer.GetComponent<DiverSuitVisual>() is DiverSuitVisual visual && visual.HasBlastPose,1.2f);
             yield return Wait("dropped fish in owner's inventory",()=>Enumerable.Range(2,tool.PocketCapacity).Any(slot=>tool.CatchIdInSlot(slot)==id),10);
             Check(!Enumerable.Range(0,world.DroppedCount).Any(i=>world.DroppedAt(i).id==id),"pickup retires exactly the same world drop");
             report.chargeCatch=id;

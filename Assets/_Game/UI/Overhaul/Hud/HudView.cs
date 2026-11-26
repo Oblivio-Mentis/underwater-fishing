@@ -84,9 +84,8 @@ namespace Raid.UI
                 idleUntil=Time.unscaledTime+6;
             }
             var hint=monitor?UiText.MonitorActions(monitor):UiText.ContextAction(context);
-            bool gameplayView=!UiInputGate.Modal && !UiInputGate.MonitorLook;
             prompts.Show(hint,!UiInputGate.Modal&&(!hint.idle||Time.unscaledTime<idleUntil),cargoPanel.gameObject.activeSelf);
-            reticle.gameObject.SetActive(!player.IsDead && gameplayView);
+            reticle.gameObject.SetActive(!player.IsDead && !UiInputGate.Modal);
             reticle.ContextColor=hint.caution?UiTheme.Amber:context.AimedConsole!=null||context.AimedFish!=null?UiTheme.Cyan:UiTheme.Text;
             instruments.Refresh(context,oxygenFraction,!cargoPanel.gameObject.activeSelf&&!reel.Visible);
             warnings.Refresh(context,oxygenFraction);

@@ -24,8 +24,8 @@ namespace Raid
             for(int j=0;j<=sides;j++)
             {
                 float u=j/(float)sides,v=i/(float)levels, a=u*2*Mathf.PI;
-                float radius=vortex?.17f+Mathf.Pow(v,1.6f)*1.34f:Mathf.Sin(v*Mathf.PI);
-                float y=vortex?v*2.05f:Mathf.Cos(v*Mathf.PI);
+                float radius=vortex?.23f+Mathf.Pow(v,1.8f)*2.02f:Mathf.Sin(v*Mathf.PI);
+                float y=vortex?v*2.65f:Mathf.Cos(v*Mathf.PI);
                 int row=i*(sides+1)+j;
                 points[row]=new Vector3(Mathf.Cos(a)*radius,y,Mathf.Sin(a)*radius);
                 uv[row]=new Vector2(u,v);
@@ -85,6 +85,14 @@ namespace Raid
         internal static void SetIntake(MeshRenderer surface,MaterialPropertyBlock block,float strength) =>
             Set(surface,block,2,new Color(.17f,.84f,1.25f,1),strength);
 
+        const float BlastPropagationTime=.64f, BlastOriginRadius=.35f;
+
+        internal static float BlastArrival(float distance,float radius)
+        {
+            float remaining=1-Mathf.InverseLerp(BlastOriginRadius,radius,distance);
+            return BlastPropagationTime*(1-Mathf.Pow(remaining,1f/1.55f));
+        }
+
         internal static void Blast(Vector3 at,float distance)
         {
             var go=new GameObject("Динамит · фронт давления");
@@ -107,8 +115,8 @@ namespace Raid
         void Update()
         {
             age+=Time.deltaTime;
-            float phase=Mathf.Clamp01(age/.64f);
-            float radius=Mathf.Lerp(.35f,range,1-Mathf.Pow(1-phase,1.55f));
+            float phase=Mathf.Clamp01(age/BlastPropagationTime);
+            float radius=Mathf.Lerp(BlastOriginRadius,range,1-Mathf.Pow(1-phase,1.55f));
             if(surface)surface.transform.localScale=Vector3.one*radius;
             if(ground)ground.transform.localScale=Vector3.one*(radius*1.13f);
             float coreAge=Mathf.Clamp01(age/.31f);

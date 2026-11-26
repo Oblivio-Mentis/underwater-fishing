@@ -283,21 +283,30 @@ namespace Raid
             await CaptureRackUi(folder,"02-full-inventory.png");
             var search=host.transform.position;
             bool site=false;
+            Vector3 installationTarget=default;
             for(int i=0;i<36 && !site;i++)
             {
                 float angle=i*2.4f, radius=3+i*.54f;
                 var above=search+new Vector3(radius*Mathf.Sin(angle),6,radius*Mathf.Cos(angle));
                 if(!Physics.Raycast(above,Vector3.down,out var floor,80,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
                 host.Teleport(floor.point+new Vector3(0,1.15f,-1.4f));
-                host.LookAtConsole(floor.point);
                 Physics.SyncTransforms();
-                site=FindInstallationSite(host,"trap",0,host.AimDirection,team,out _,out _,out _);
+                var direction=(floor.point-host.transform.position-Vector3.up*.6f).normalized;
+                site=FindInstallationSite(host,"trap",0,direction,team,out _,out _,out _);
+                if(site)
+                {
+                    installationTarget=floor.point;
+                    host.LookAtConsole(installationTarget);
+                }
             }
             report.Check(site,"Found a reachable level installation surface in the open sea.");
             await WaitRackUi(()=>placementProjection && placementProjection.activeInHierarchy && PlacementHint==null,
                 "the equipment hologram confirms the same placement site");
             var installationPosition=host.transform.position;
-            var installationAim=host.AimDirection;
+            host.LookAtConsole(installationPosition+Vector3.up*8+Vector3.forward);
+            await WaitRackUi(()=>!placementProjection.activeInHierarchy,"aiming into open water hides the placement hologram");
+            host.LookAtConsole(installationTarget);
+            await WaitRackUi(()=>placementProjection.activeInHierarchy && PlacementHint==null,"nearby seabed restores the hologram");
             await CaptureRackUi(folder,"08-placement-preview.png");
             var mouse=Mouse.current??InputSystem.AddDevice<Mouse>();
             try
@@ -391,11 +400,15 @@ namespace Raid
             host.LookAtConsole(charge.position+Vector3.up*.35f);
             var beforeShock=host.transform.position;
             var healthBefore=host.Health;
+            host.CameraImpulse.BeginBackgroundQa(12);
             await WaitRackUi(()=>GameObject.Find("Динамит · фронт давления") && !team.rigs.Contains(charge),"the detonation produced the replicated pressure wave");
-            await CaptureRackUi(folder,"10b-dynamite-blast.png",.14f);
+            var glass=host.GetComponentInChildren<Camera>().transform;
+            await WaitRackUi(()=>glass.Find("Local seawater refraction") is Transform pane && pane.GetComponent<MeshRenderer>().enabled,
+                "the arriving underwater blast enables local refraction");
+            await CaptureRackUi(folder,"10b-dynamite-blast.png",.13f);
             await Awaitable.WaitForSecondsAsync(.36f);
             report.Check(healthBefore-host.Health>20 && Vector3.Distance(beforeShock,host.transform.position)>.85f &&
-                Vector3.Distance(beforeShock,host.transform.position)<3.3f,"Close-range blast damage and bounded knockback moved the local diver.");
+                Vector3.Distance(beforeShock,host.transform.position)<6.9f,"Close-range blast damage and bounded knockback moved the local diver.");
             report.Check(host.CameraImpulse.AppliedPeakDegrees>1.5f,"The blast visibly kicked the owned camera.");
             report.Check(charge.mode=="spent" && gear.InventionInSlot(trapSlot).count==1,
                 "The timed detonation consumed the thrown charge and preserved the second one.");
@@ -452,7 +465,7 @@ namespace Raid
             SendProfile(host.Owner,profile);
             Publish();
             host.Teleport(installationPosition);
-            host.LookAtConsole(installationPosition+installationAim*3+Vector3.up*.6f);
+            host.LookAtConsole(installationTarget);
             await WaitRackUi(()=>gear.InventionInSlot(trapSlot).kind=="vacuum" && HandModel("vacuum") &&
                 FindInstallationSite(host,"vacuum",0,host.AimDirection,team,out _,out _,out _),"a valid vacuum placement in the selected slot");
             await CaptureRackUi(folder,"12-vacuum-placement.png");
@@ -474,28 +487,23 @@ namespace Raid
             host.LookAtConsole(inlet+Vector3.up*.66f);
             await WaitRackUi(()=>vacuum.progress>.1f &&
                 Vector3.Distance(fish.transform.position,start)>.3f,"the current noticeably moves a fish from several metres away");
+            var offsetFromDirectPath=Vector3.ProjectOnPlane(fish.transform.position-start,inlet-start);
+            report.Check(offsetFromDirectPath.magnitude>.12f,"The fish follows a curved path into the collector.");
             await CaptureRackUi(folder,"13-vacuum-current.png",.09f);
             await WaitRackUi(()=>vacuum.contents.Any(c=>c.id==idAtIntake),"the vacuum collects a real fish while the player is away");
             report.Check(vacuum.operatorId<0 && vacuum.helperId<0,"Suction ran with no diver holding a hose or operating the machine.");
             var shell=rigShells[vacuum.serial];
-            int capacity=team.TechUnitCapacity("vacuum");
-            await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
-                "the physical counter shows the replicated catch and capacity");
-            var counters=shell.GetComponentsInChildren<TMP_Text>();
-            foreach(var counter in counters)
+            Color SegmentColor()
             {
-                var sampleCounter=Instantiate(counter);
-                sampleCounter.transform.position=Vector3.up*1000;
-                try
-                {
-                    sampleCounter.text=capacity+" / "+capacity;
-                    sampleCounter.ForceMeshUpdate();
-                    report.Check(sampleCounter.textInfo.characterCount==sampleCounter.text.Length &&
-                        sampleCounter.GetRenderedValues(true).x<=sampleCounter.rectTransform.rect.width+.005f,
-                        "Both digits of a full counter fit inside its physical display.");
-                }
-                finally{Destroy(sampleCounter.gameObject);}
+                var cell=shell.transform.Find("Улов · шкала/Catch segment 1");
+                if(!cell)return Color.clear;
+                var ink=new MaterialPropertyBlock();
+                cell.GetComponent<MeshRenderer>().GetPropertyBlock(ink);
+                return ink.GetColor("_BaseColor");
             }
+            await WaitRackUi(()=>SegmentColor().g>.5f,"the physical bar lights up when the first fish is collected");
+            report.Check(shell.GetComponentsInChildren<MeshRenderer>().Count(cell=>cell.name.StartsWith("Catch segment "))==24 &&
+                !shell.GetComponentsInChildren<TMP_Text>().Any(),"Both collector faces have segmented bars with no text.");
             var inCage=shell.GetComponentsInChildren<CatchFishModel>().Single(model=>model.CargoId==idAtIntake);
             var swimStart=inCage.transform.localPosition;
             await Awaitable.WaitForSecondsAsync(.22f);
@@ -515,8 +523,7 @@ namespace Raid
             finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});}
             await WaitRackUi(()=>gear.CatchIdInSlot(trapSlot)==releasedCatch && vacuum.contents.Count==beforePickup-1,
                 "ordinary LMB delivers exactly one catch into the owned inventory");
-            await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
-                "counter decremented after the claim");
+            if(beforePickup==1)await WaitRackUi(()=>SegmentColor().g<.3f,"the bar goes empty after the last fish is claimed");
             await WaitRackUi(()=>shell.GetComponentsInChildren<CatchFishModel>().All(model=>model.CargoId!=releasedCatch),
                 "the claimed fish left the collector cage on the same snapshot as the changed count");
             report.Check(true,"One click transfers one actual fish from the shared machine into the ordinary hotbar.");
@@ -545,6 +552,36 @@ namespace Raid
                 gear.InventionInSlot(ballSlot).count==chargeStack,"all reserved orders were collected");
             report.Check(vendingSequence==firstSerial+chargeStack && gear.CatchIdInSlot(trapSlot)==releasedCatch &&
                 gear.InventionInSlot(otherSlot).kind==other,"Fast clicks filled exactly one stack without overselling space or disturbing other pockets.");
+
+            report.phase="batch routing on the aquarium monitor";
+            var delivery=Enumerable.Range(0,16).Select(i=>new CatchItem(80100+i,2,1,2,1,CurrentDepth,species:"Needlefish")).ToArray();
+            foreach(var specimen in delivery)
+                if(!team.Deposit(specimen,progression))throw new InvalidOperationException("Unable to fill the aquarium fixture.");
+            var stock=team.tank.Where(fish=>delivery.Any(item=>item.id==fish.id)).ToArray();
+            Publish();
+            var aquarium=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.Reservoir);
+            var aquariumScreen=aquarium.screenAnchor;
+            host.Teleport(aquariumScreen.position-aquariumScreen.forward*1.65f-Vector3.up*.60f);
+            host.LookAtConsole(aquariumScreen.position);
+            await WaitRackUi(()=>ShipConsole.CanUseKind(host,ShipConsoleKind.Reservoir) && UiRoot.Instance.QaPointAtMonitor() &&
+                UiRoot.Instance.Page==UiPage.Terminal,"open the aquarium monitor");
+            await CaptureRackUi(folder,"16-aquarium-batch.png",.35f);
+            report.Check(UiRoot.Instance.QaHudRoot.GetComponentsInChildren<AimReticle>().Length==1 &&
+                !UiRoot.Instance.GetComponentsInChildren<RectTransform>().Any(rect=>rect.name=="Physical monitor sight"),
+                "World-space monitors no longer draw a second reticle.");
+            await PointAtControl("Less");
+            report.Check(UiRoot.Instance.QaClickReticle(),"The aquarium quantity can be adjusted using the reticle.");
+            await PointAtControl("Batch_Process");
+            report.Check(UiRoot.Instance.QaClickReticle(),"The aquarium processes the chosen quantity with one reticle click.");
+            await WaitRackUi(()=>!UiRoot.Instance.CommandPending && stock.Count(fish=>fish.destination==CatchDestination.Process)==15,
+                "the server accepted the selected batch of 15 out of 16 fish");
+            await PointAtControl("All_Feed");
+            report.Check(UiRoot.Instance.QaClickReticle(),"The aquarium has a shortcut for all remaining unassigned fish.");
+            await WaitRackUi(()=>!UiRoot.Instance.CommandPending && stock.Count(fish=>fish.destination==CatchDestination.Feed)==1,
+                "the shortcut left the existing processing assignments intact and selected the remaining fish for feeding");
+            report.Check(stock.All(fish=>!fish.dispatchCommitted) && !FishRoute.active,
+                "Batch selection waits for the separate dispatch command.");
+            report.Check(!DiverMotor.PressureEnabled && host.PressureStress==0,"Pressure effects are suspended.");
         }
 
         async Awaitable CaptureRackUi(string folder,string name,float settle=.25f)

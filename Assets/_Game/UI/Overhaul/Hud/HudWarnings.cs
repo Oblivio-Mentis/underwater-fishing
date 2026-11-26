@@ -106,10 +106,10 @@ namespace Raid.UI
             if(p.AirReserveRemaining>0)return Signal.Reserve;
             if(airBand==2)return Signal.CriticalAir;
             if(!p.IsInside && AttackNearby(c))return Signal.Attack;
-            if(!p.IsInside && p.PressureStress>=p.tuning.stressDanger)return Signal.CriticalPressure;
+            if(DiverMotor.PressureEnabled && !p.IsInside && p.PressureStress>=p.tuning.stressDanger)return Signal.CriticalPressure;
             if(c.DefendingReservoir)return Signal.Wave;
             if(airBand==1)return Signal.Oxygen;
-            if(!p.IsInside && p.PressureStress>=p.tuning.stressWarning)return Signal.Pressure;
+            if(DiverMotor.PressureEnabled && !p.IsInside && p.PressureStress>=p.tuning.stressWarning)return Signal.Pressure;
             return Signal.None;
         }
         internal static bool AttackNearby(UiContext c)

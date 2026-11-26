@@ -12,7 +12,7 @@ namespace Raid
         {
             public readonly List<Vector3> verts=new();
             public readonly List<int>[] faces={new(),new(),new(),new(),new(),new()};
-            public void Tube(Vector3 a,Vector3 b,float ra,float rb,int material,int sides=12)
+            public void Tube(Vector3 a,Vector3 b,float ra,float rb,int material,int sides=12,bool caps=true)
             {
                 var axis=(b-a).normalized;
                 if(axis.sqrMagnitude<.1f)return;
@@ -29,7 +29,7 @@ namespace Raid
                 {
                     int n=(i+1)%sides, k=first+i, l=first+n;
                     t.Add(k);t.Add(l);t.Add(k+sides);t.Add(l);t.Add(l+sides);t.Add(k+sides);
-                    if(i>=1 && i<sides-1){t.Add(first);t.Add(l);t.Add(k);t.Add(first+sides);t.Add(k+sides);t.Add(l+sides);}
+                    if(caps && i>=1 && i<sides-1){t.Add(first);t.Add(l);t.Add(k);t.Add(first+sides);t.Add(k+sides);t.Add(l+sides);}
                 }
             }
             public void Rod(Vector3 a,Vector3 b,float r,int m)=>Tube(a,b,r,r,m,8);

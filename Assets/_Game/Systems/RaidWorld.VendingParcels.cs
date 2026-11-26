@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,7 +10,8 @@ namespace Raid
     {
         public int serial,owner;
         public string kind;
-        public Vector3 position;
+        public Vector3 position,velocity;
+        public double sampledAt;
         public bool resting;
     }
 
@@ -20,15 +22,27 @@ namespace Raid
             internal RackParcel parcel;
             internal bool missedCatch;
             internal float age,sendAt;
-            internal Vector3 velocity;
         }
+
+        sealed class RackParcelView
+        {
+            public Transform Model;
+            public double LaunchedAt;
+            public float CatchAt=-1;
+            public int Owner;
+            public Vector3 CatchFrom, CatchPoint;
+        }
+
+        static Vector3 ParcelGravity => Physics.gravity*.57f;
+        double ParcelClock => TimeManager.TicksToTime(TimeManager.Tick)+TimeManager.GetTickElapsedAsDouble();
+        const float ParcelCatchDuration=.19f;
 
         readonly SyncList<RackParcel> vendingParcels=new();
         readonly List<RackOrder> orders=new();
         readonly SyncDictionary<string,int> issuedInventions=new();
         readonly Dictionary<string,int> countedInventions=new();
         readonly RaycastHit[] parcelHits=new RaycastHit[12];
-        readonly Dictionary<int,Transform> parcelModels=new();
+        readonly Dictionary<int,RackParcelView> parcelModels=new();
         readonly List<int> obsoleteParcels=new();
         readonly TechSlot[] plannedRackPockets=new TechSlot[TechSlot.PocketCount];
         int vendingSequence;
@@ -124,12 +138,15 @@ namespace Raid
         {
             float lane=(vendingSequence%3-1)*.055f;
             var start=inventionRack.TransformPoint(new Vector3(-.12f+lane,-.55f,.34f));
-            var target=diver.transform.position+Vector3.up*.79f+diver.transform.right*(-.18f+lane);
+            var target=RackHand(diver)+diver.transform.right*lane;
             float flight=Mathf.Max(.45f,tuning.dispenserFlightSeconds);
             var order=new RackOrder
             {
-                parcel=new RackParcel{serial=++vendingSequence,owner=diver.OwnerId,kind=kind,position=start},
-                velocity=(target-start)/flight-Physics.gravity*(flight*.5f)
+                parcel=new RackParcel
+                {
+                    serial=++vendingSequence,owner=diver.OwnerId,kind=kind,position=start,sampledAt=ParcelClock,
+                    velocity=(target-start)/flight-ParcelGravity*(flight*.5f)
+                }
             };
             orders.Add(order);vendingParcels.Add(order.parcel);
             RefreshVendorStock();
@@ -142,12 +159,19 @@ namespace Raid
             bool ok=FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out int slot,out var reason) &&
                 team.TakeTechFromRack(profile,kind,slot-FirstCargoSlot,SaveTransaction,out reason);
             // The new pocket item replaces its reservation only after the save commits.
-            if(ok)RemoveOrder(index);
+            if(ok)
+            {
+                if(!order.parcel.resting)RackParcelCaught(order.parcel.serial,diver.OwnerId,RackHand(diver));
+                RemoveOrder(index);
+            }
             InventoryReceipt(diver,profile,ok,reason);return ok;
         }
+        static Vector3 RackHand(DiverMotor diver) => diver.transform.position+Vector3.up*.42f+
+            diver.transform.forward*.43f-diver.transform.right*.13f;
+
         bool ReachesReceiver(Vector3 start,Vector3 end,DiverMotor diver)
         {
-            Vector3 chest=diver.transform.position+Vector3.up*.65f;
+            Vector3 chest=RackHand(diver);
             Vector3 step=end-start;
             float t=Mathf.Clamp01(Vector3.Dot(chest-start,step)/Mathf.Max(.00001f,step.sqrMagnitude));
             Vector3 near=start+t*step;
@@ -172,8 +196,8 @@ namespace Raid
                 if(!diver || order.age>tuning.dispenserReturnSeconds){RemoveOrder(i);continue;}
                 if(order.parcel.resting)continue;
                 var from=order.parcel.position;
-                var step=order.velocity*dt+Physics.gravity*(dt*dt*.5f);
-                order.velocity+=Physics.gravity*dt;
+                var step=order.parcel.velocity*dt+ParcelGravity*(dt*dt*.5f);
+                order.parcel.velocity+=ParcelGravity*dt;
                 float length=step.magnitude;
                 Vector3 destination=from+step;
                 bool blocked=false;RaycastHit nearest=default;
@@ -191,8 +215,8 @@ namespace Raid
                 if(blocked)
                 {
                     destination=from+step.normalized*Mathf.Max(0,nearest.distance-.005f);
-                    if(nearest.normal.y>.55f){order.parcel.resting=true;order.velocity=Vector3.zero;}
-                    else order.velocity=Vector3.ProjectOnPlane(order.velocity,nearest.normal)*.45f;
+                    if(nearest.normal.y>.55f){order.parcel.resting=true;order.parcel.velocity=Vector3.zero;}
+                    else order.parcel.velocity=Vector3.ProjectOnPlane(order.parcel.velocity,nearest.normal)*.45f;
                 }
                 order.parcel.position=destination;
                 if(!order.missedCatch && order.age>=tuning.dispenserFlightSeconds*.78f && !order.parcel.resting && ReachesReceiver(from,destination,diver))
@@ -202,7 +226,11 @@ namespace Raid
                     order.missedCatch=true;
                 }
                 if(order.parcel.resting || order.age>=order.sendAt)
-                {order.sendAt=order.age+.08f;vendingParcels[i]=order.parcel;}
+                {
+                    order.sendAt=order.age+.08f;
+                    order.parcel.sampledAt=ParcelClock;
+                    vendingParcels[i]=order.parcel;
+                }
             }
         }
 
@@ -237,31 +265,75 @@ namespace Raid
             if(i>=0 && AimAtParcel(diver,orders[i].parcel.position,false))SettleOrder(i,diver);
         }
 
+        [ObserversRpc]
+        void RackParcelCaught(int serial,int owner,Vector3 point)
+        {
+            if(!parcelModels.TryGetValue(serial,out var parcel))return;
+            parcel.CatchAt=Time.unscaledTime;
+            parcel.CatchFrom=parcel.Model.position;
+            parcel.CatchPoint=point;
+            parcel.Owner=owner;
+        }
+
         void PresentRackParcels()
         {
             if(!IsClientInitialized)return;
-            obsoleteParcels.Clear();obsoleteParcels.AddRange(parcelModels.Keys);
+            obsoleteParcels.Clear();
+            obsoleteParcels.AddRange(parcelModels.Keys);
             foreach(var parcel in vendingParcels)
             {
                 obsoleteParcels.Remove(parcel.serial);
-                if(!parcelModels.TryGetValue(parcel.serial,out var model))
+                if(!parcelModels.TryGetValue(parcel.serial,out var graphic))
                 {
-                    var go=new GameObject("Выдача · "+parcel.kind+" №"+parcel.serial);go.transform.SetParent(transform,false);
-                    model=go.transform;parcelModels.Add(parcel.serial,model);
+                    var go=new GameObject("Выдача · "+parcel.kind+" №"+parcel.serial);
+                    go.transform.SetParent(transform,false);
+                    graphic=new RackParcelView{Model=go.transform,LaunchedAt=parcel.sampledAt};
+                    parcelModels.Add(parcel.serial,graphic);
                     TechRigShell.BuildSaleSample(go,parcel.kind,.32f);
-                    model.position=parcel.position;
+                    graphic.Model.position=parcel.position;
                     if(inventionRack)inventionRack.GetComponent<InventionVendorDisplay>()?.Dispense(parcel.kind);
                 }
-                model.position=Vector3.Lerp(model.position,parcel.position,1-Mathf.Exp(-Time.unscaledDeltaTime*36));
-                if(!parcel.resting)model.Rotate(13*Time.deltaTime,78*Time.deltaTime,32*Time.deltaTime,Space.Self);
+                if(graphic.CatchAt>=0)continue;
+                float lead=parcel.resting?0:Mathf.Clamp((float)(ParcelClock-parcel.sampledAt),0,.13f);
+                Vector3 display=parcel.position+parcel.velocity*lead+ParcelGravity*(lead*lead*.5f);
+                float t=1-Mathf.Exp(-Time.unscaledDeltaTime*(parcel.resting?22:31));
+                var model=graphic.Model;
+                model.position=Vector3.Lerp(model.position,display,t);
+                float elapsed=(float)(ParcelClock-graphic.LaunchedAt);
+                if(parcel.resting)
+                    model.rotation=Quaternion.Slerp(model.rotation,Quaternion.Euler(0,parcel.serial*37,0),t*.54f);
+                else
+                {
+                    var tilt=Quaternion.Euler(-26*Mathf.Cos(elapsed*5.2f),parcel.serial*37+elapsed*134,18*Mathf.Sin(elapsed*5.6f));
+                    model.rotation=Quaternion.Slerp(model.rotation,tilt,t);
+                }
             }
-            foreach(var id in obsoleteParcels){Destroy(parcelModels[id].gameObject);parcelModels.Remove(id);}
+            foreach(var id in obsoleteParcels)
+            {
+                var graphic=parcelModels[id];
+                if(graphic.CatchAt>=0)
+                {
+                    float phase=(Time.unscaledTime-graphic.CatchAt)/ParcelCatchDuration;
+                    if(phase<1)
+                    {
+                        Vector3 end=graphic.CatchPoint;
+                        if(localDiver && localDiver.OwnerId==graphic.Owner && Camera.main is Camera camera)
+                            end=camera.ViewportToWorldPoint(new Vector3(.43f,.28f,.54f));
+                        float progress=Mathf.SmoothStep(0,1,phase);
+                        graphic.Model.position=Vector3.Lerp(graphic.CatchFrom,end,progress)+Vector3.up*(.07f*Mathf.Sin(progress*Mathf.PI));
+                        graphic.Model.localScale=Vector3.one*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.46f,1,phase)));
+                        continue;
+                    }
+                }
+                Destroy(graphic.Model.gameObject);
+                parcelModels.Remove(id);
+            }
             if(!UI.UiInputGate.Blocked && !UI.CheatPanel.PointerActive && Keyboard.current?.eKey.wasPressedThisFrame==true &&
                 LookAtOwnParcel(localDiver,out int claim))localDiver.CmdCollectRackParcel(claim);
         }
         void ClearRackParcelViews()
         {
-            foreach(var item in parcelModels.Values)if(item)Destroy(item.gameObject);
+            foreach(var item in parcelModels.Values)if(item.Model)Destroy(item.Model.gameObject);
             parcelModels.Clear();
         }
     }

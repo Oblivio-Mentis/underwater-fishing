@@ -9,7 +9,7 @@ using UnityEngine.UI;
 namespace Raid.UI
 {
     /// <summary>Read-only presentation of the confirmed stock and existing world commands.</summary>
-    public sealed class TerminalView
+    public sealed partial class TerminalView
     {
         public RectTransform Root {get;private set;}
         readonly IUiController app;
@@ -147,7 +147,17 @@ namespace Raid.UI
                 TerminalParts.Text(empty,"Title",foodOnly?UiText.NoFoodStock:UiText.NoStock,40,28);
                 TerminalParts.Text(empty,"Description",foodOnly?UiText.NoFoodHint:UiText.NoStockHint,66,22,UiTheme.Muted);return;
             }
-            for(int i=0;i<items.Count;i++)AddItem(items[i]);
+            if(app.Context.SelectedConsole?.kind==ShipConsoleKind.Reservoir)
+            {
+                AddRoutingControls(items);
+                if(!individualFish)
+                {
+                    foreach(var group in items.GroupBy(item=>item.species).OrderBy(group=>UiText.ItemName(group.First())))
+                        AddSpeciesGroup(group.First(),foodOnly);
+                    return;
+                }
+            }
+            foreach(var item in items)AddItem(item);
         }
 
         void AddItem(CatchItem item)

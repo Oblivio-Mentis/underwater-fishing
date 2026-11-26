@@ -26,8 +26,13 @@ namespace Raid
         MaterialPropertyBlock projectionProperties;
 
         bool FindInstallationSite(DiverMotor diver,string kind,int movingSerial,Vector3 aim,TeamProgress state,
-            out Vector3 point,out float yaw,out string reason)
+            out Vector3 point,out float yaw,out string reason) =>
+            FindInstallationSite(diver,kind,movingSerial,aim,state,out point,out yaw,out reason,out _);
+
+        bool FindInstallationSite(DiverMotor diver,string kind,int movingSerial,Vector3 aim,TeamProgress state,
+            out Vector3 point,out float yaw,out string reason,out bool hasSurface)
         {
+            hasSurface=false;
             var eye=diver.transform.position+Vector3.up*.6f;
             var bounds=TechRigShell.EquipmentMesh(kind).bounds;
             var heading=Vector3.ProjectOnPlane(aim,Vector3.up);
@@ -38,19 +43,10 @@ namespace Raid
             point=eye+aim*reach;
             reason="Наведитесь на свободное дно";
             if(diver.IsInside){reason="Установка доступна за бортом";return false;}
-            if(!Physics.Raycast(eye,aim,out var floor,reach,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
-            {
-                point=eye+aim*(reach*.73f);
-                if(aim.y>.2f ||
-                   !Physics.Raycast(point+Vector3.up*.25f,Vector3.down,out floor,3.2f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
-                    return false;
-            }
-            if(floor.normal.y<.62f || floor.collider.GetComponentInParent<DiverMotor>() ||
-               floor.collider.GetComponentInParent<FishActor>())
-            {
-                point=floor.point-aim*(bounds.extents.magnitude+.12f);
-                return false;
-            }
+            if(!Physics.Raycast(eye,aim,out var floor,reach,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) ||
+               floor.normal.y<.62f || floor.collider.GetComponentInParent<DiverMotor>() ||
+               floor.collider.GetComponentInParent<FishActor>())return false;
+            hasSurface=true;
             float support=floor.point.y;
             for(int corner=0;corner<4;corner++)
             {
@@ -115,9 +111,9 @@ namespace Raid
             if(string.IsNullOrEmpty(kind) || kind=="charge" || held!=null && held.operatorId!=diver.OwnerId)
             {if(placementProjection)placementProjection.SetActive(false);return;}
             bool valid=FindInstallationSite(diver,kind,held?.serial??0,camera.transform.forward,view,
-                out var at,out float yaw,out var reason);
+                out var at,out float yaw,out var reason,out bool hasSurface);
             PlacementHint=reason;
-            if(diver.IsInside){if(placementProjection)placementProjection.SetActive(false);return;}
+            if(!hasSurface){if(placementProjection)placementProjection.SetActive(false);return;}
             if(!placementProjection)
             {
                 var shader=Resources.Load<Shader>("RaidPlacement");

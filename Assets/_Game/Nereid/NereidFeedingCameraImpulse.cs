@@ -1,3 +1,4 @@
+using UnityEngine.Rendering.Universal;
 using UnityEngine;
 
 namespace Raid.Nereid
@@ -20,16 +21,64 @@ namespace Raid.Nereid
         float hitAt=-10, hitMetres, hitDegrees, hitDirection;
         float blastAt=-10,blastStrength,blastSide;
 
+        Vector3 blastPoint;
+        float refractionStrength;
+        Camera eye;
+        MeshRenderer refraction;
+        Material refractionMaterial;
+
         public void Blast(Vector3 point,float radius)
         {
             var delta=transform.position-point;
             float distance=delta.magnitude;
-            float strength=Mathf.Pow(1-Mathf.Clamp01(distance/radius),1.15f)*shakeScale;
-            if(strength<=.01f || Time.unscaledTime-blastAt<.12f && strength<blastStrength)return;
-            blastAt=Time.unscaledTime+distance/39f;
-            blastStrength=strength;
+            float strength=Mathf.Pow(1-Mathf.Clamp01(distance/radius),1.15f);
+            if(strength<=.01f || Time.unscaledTime-blastAt<.12f && strength<refractionStrength)return;
+            blastAt=Time.unscaledTime+WaterPressureFx.BlastArrival(distance,radius);
+            blastPoint=point;
+            refractionStrength=strength;
+            blastStrength=strength*shakeScale;
             blastSide=Vector3.Dot(transform.right,delta.normalized);
         }
+        void DisplayRefraction(float age)
+        {
+            bool active=owner && !owner.IsInside && age>=0 && age<1 && !UI.UiInputGate.Modal;
+            if(!active){if(refraction)refraction.enabled=false;return;}
+            if(!refraction)
+            {
+                var shader=Resources.Load<Shader>("RaidBlastRefraction");
+                if(!shader)return;
+                eye=GetComponent<Camera>();
+                eye.GetUniversalAdditionalCameraData().requiresColorTexture=true;
+                var glass=GameObject.CreatePrimitive(PrimitiveType.Quad);
+                glass.name="Local seawater refraction";
+                glass.layer=2;
+                glass.transform.SetParent(transform,false);
+                var collider=glass.GetComponent<Collider>();
+                collider.enabled=false;
+                Destroy(collider);
+                refraction=glass.GetComponent<MeshRenderer>();
+                refraction.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                refraction.receiveShadows=false;
+                refractionMaterial=new Material(shader);
+                refraction.sharedMaterial=refractionMaterial;
+            }
+            float distance=eye.nearClipPlane+.04f;
+            float height=2*distance*Mathf.Tan(eye.fieldOfView*Mathf.Deg2Rad*.5f);
+            var pane=refraction.transform;
+            pane.localPosition=Vector3.forward*distance;
+            pane.localScale=new Vector3(height*eye.aspect*1.03f,height*1.03f,1);
+            var center=eye.WorldToViewportPoint(blastPoint);
+            if(center.z<.1f)center=new Vector3(.5f-Vector3.Dot(eye.transform.right,(blastPoint-transform.position).normalized)*.55f,.50f,0);
+            refractionMaterial.SetVector("_Wave",new Vector4(Mathf.Clamp(center.x,-.4f,1.4f),
+                Mathf.Clamp(center.y,-.2f,1.2f),age,refractionStrength));
+            refraction.enabled=true;
+        }
+
+        void OnDestroy()
+        {
+            if(refractionMaterial)Destroy(refractionMaterial);
+        }
+
         /// <summary>One short directional shake. Called only for a locally observed confirmed event.</summary>
         public void Hit(float metres,float degrees,float direction)
         {
@@ -73,7 +122,11 @@ namespace Raid.Nereid
             focused|=Time.unscaledTime<backgroundQaUntil;
 #endif
             if(!focused || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Modal ||
-                owner==null || owner!=ui.Context.Player || !ui.Context.Connected || owner.IsHelpless)return;
+                owner==null || owner!=ui.Context.Player || !ui.Context.Connected || owner.IsHelpless)
+            {
+                DisplayRefraction(-1);
+                return;
+            }
 
             float age=Time.time-releaseAt;
             float release=age>=0&&age<1.75f?Mathf.SmoothStep(0,1,age/.045f)*Mathf.Exp(-age*1.7f)*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(1.1f,1.75f,age))):0;
@@ -86,6 +139,7 @@ namespace Raid.Nereid
             float hitAge=Time.unscaledTime-hitAt;
             float hit=hitAge>=0 && hitAge<.42f ? Mathf.Exp(-hitAge*7.5f) : 0;
             float blastAge=Time.unscaledTime-blastAt;
+            DisplayRefraction(blastAge);
             float shock=blastAge>=0 && blastAge<1f
                 ?blastStrength*Mathf.SmoothStep(0,1,blastAge/.036f)*Mathf.Exp(-5.1f*blastAge):0;
             if(hitAge>=.42f){hitMetres=hitDegrees=0;}

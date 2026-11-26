@@ -89,7 +89,7 @@ namespace Raid
             var main=current.main;
             main.playOnAwake=false;
             main.loop=true;
-            main.startLifetime=1.05f;
+            main.startLifetime=1.25f;
             main.startSpeed=0;
             main.startSize=new ParticleSystem.MinMaxCurve(.022f,.055f);
             main.startColor=new Color(.58f,.91f,1f,.76f);
@@ -97,13 +97,18 @@ namespace Raid
             main.simulationSpace=ParticleSystemSimulationSpace.Local;
             var shape=current.shape;
             shape.shapeType=ParticleSystemShapeType.Hemisphere;
-            shape.radius=2.05f;
+            shape.radius=2.55f;
             shape.radiusThickness=0;
             var velocity=current.velocityOverLifetime;
             velocity.enabled=true;
             velocity.space=ParticleSystemSimulationSpace.Local;
-            velocity.radial=-shape.radius/main.startLifetime.constant;
-            velocity.orbitalZ=.65f;
+            var acceleration=AnimationCurve.Linear(0,.23f,1,1.73f);
+            velocity.radial=new ParticleSystem.MinMaxCurve(-shape.radius/main.startLifetime.constant,acceleration);
+            velocity.orbitalZ=new ParticleSystem.MinMaxCurve(1,AnimationCurve.EaseInOut(0,.29f,1,1.4f));
+            var size=current.sizeOverLifetime;
+            size.enabled=true;
+            size.size=new ParticleSystem.MinMaxCurve(1,new AnimationCurve(new Keyframe(0,.52f),
+                new Keyframe(.28f,1),new Keyframe(.82f,.63f),new Keyframe(1,0)));
             var emission=current.emission;
             emission.rateOverTime=65;
             if(!bubbles)bubbles=Resources.Load<Material>("NereidBubbles");

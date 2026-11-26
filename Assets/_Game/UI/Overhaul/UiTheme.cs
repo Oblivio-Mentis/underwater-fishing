@@ -29,6 +29,7 @@ namespace Raid.UI
         UiSettings Settings { get; }
         bool CommandPending { get; }
         void Send(WorldAction action, long id=0);
+        void AssignFish(CatchDestination source, CatchDestination destination, long[] ids);
         void Confirm(string title, string description, System.Action confirmed, MaterialCost? materials=null);
         void ShowPage(UiPage page);
         void ClosePanel();

@@ -48,11 +48,12 @@ Shader "RAID/Water Pressure"
                 else if(_Mode>1.5h)
                 {
                     float u=i.uv.x, h=i.uv.y;
-                    half fade=smoothstep(0,.11,h)*(1-smoothstep(.62,1,h));
-                    float spin=u*5-h*2.1+_Time.y*.92+sin(h*8+_Time.y*2)*.11;
-                    half thread=smoothstep(.63,.96,cos(spin*6.283185));
-                    half seam=smoothstep(.48,.9,cos((u*9+h*5.5+_Time.y*1.65)*6.283185));
-                    alpha=fade*(.025h+.29h*thread+.09h*seam)*(.38h+.62h*rim)*_Phase;
+                    half fade=smoothstep(0,.04,h)*(1-smoothstep(.54,1,h));
+                    float spin=-u*5+h*(2.45+1.85*h)+_Time.y*.92+sin(h*7+_Time.y*2)*.08;
+                    half ribbon=smoothstep(.44,.91,cos(spin*6.283185));
+                    half filament=smoothstep(.82,.993,cos(spin*6.283185));
+                    half seam=smoothstep(.64,.96,cos((-u*9+h*(4.2+2.1*h)+_Time.y*1.39)*6.283185));
+                    alpha=fade*(.023h+.18h*ribbon+.22h*filament+.08h*seam)*(.35h+.65h*rim)*_Phase;
                 }
                 else if(_Mode>.5h)
                 {
