@@ -1,10 +1,11 @@
 namespace Raid
 {
-    internal enum VendorAction { Idle, Locked, Full, Ready, Dispensing, CollectParcel }
+    internal enum VendorAction { Idle, Locked, Full, Ready, Dispensing, CollectParcel, TeamLimit }
 
     public sealed partial class RaidWorld
     {
         internal bool AimingAtVendingMachine { get; private set; }
+        internal const string VendorTeamLimitReason="Достигнут лимит команды";
 
         internal void ClearVendingAim()
         {
@@ -34,6 +35,7 @@ namespace Raid
             if(view.TechRank(product.id,"unlock")==0)return VendorAction.Locked;
             if(TryGetRackParcel(diver.OwnerId,out _,out _,out bool resting))
                 return resting?VendorAction.CollectParcel:VendorAction.Dispensing;
+            if(VendorIssuedCount(product.id)>=TechRig.TotalLimit(view,product))return VendorAction.TeamLimit;
             var pockets=diver.GetComponent<HarpoonTool>();
             return pockets && pockets.FindInventionPocket(product.id,view.TechStackLimit(product.id))>=0 ?
                 VendorAction.Ready:VendorAction.Full;

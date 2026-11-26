@@ -252,6 +252,7 @@ namespace Raid
                 VendorAction.Ready => "ЛКМ · Получить",
                 VendorAction.Locked => "Нужен чертёж",
                 VendorAction.Full => "Нет места",
+                VendorAction.TeamLimit => RaidWorld.VendorTeamLimitReason,
                 VendorAction.Dispensing => "Идёт выдача",
                 VendorAction.CollectParcel => "Заберите предмет с палубы",
                 _ => product==null?ReadyHint:"Ожидание"
@@ -261,7 +262,7 @@ namespace Raid
         }
         Color ActionColor() => action switch {
             VendorAction.Ready or VendorAction.Dispensing => Available,
-            VendorAction.Full => Full,
+            VendorAction.Full or VendorAction.TeamLimit => Full,
             VendorAction.Locked or VendorAction.CollectParcel => Locked,
             _ => Color.white
         };

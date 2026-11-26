@@ -25,11 +25,38 @@ namespace Raid
 
         readonly SyncList<RackParcel> vendingParcels=new();
         readonly List<RackOrder> orders=new();
+        readonly SyncDictionary<string,int> issuedInventions=new();
+        readonly Dictionary<string,int> countedInventions=new();
         readonly RaycastHit[] parcelHits=new RaycastHit[12];
         readonly Dictionary<int,Transform> parcelModels=new();
         readonly List<int> obsoleteParcels=new();
         int vendingSequence;
         public int RackParcelCount => vendingParcels.Count;
+        internal int VendorIssuedCount(string kind) => issuedInventions.TryGetValue(kind,out int count)?count:0;
+
+        void RefreshVendorStock()
+        {
+            if(team==null)return;
+            countedInventions.Clear();
+            void Count(string kind,int count)
+            {
+                if(string.IsNullOrEmpty(kind) || count<=0)return;
+                countedInventions.TryGetValue(kind,out int previous);
+                countedInventions[kind]=previous+count;
+            }
+            // Disconnected crew keep their saved pockets. Publish only a per-product total.
+            foreach(var player in team.players)
+                foreach(var stack in player.pocketStacks)Count(stack.kind,stack.count);
+            foreach(var rig in team.rigs)
+                if(rig.mode!="spent")Count(rig.kind,1);
+            foreach(var order in orders)Count(order.parcel.kind,1);
+            foreach(var product in TechCatalog.Items)
+            {
+                countedInventions.TryGetValue(product.id,out int total);
+                if(VendorIssuedCount(product.id)!=total)issuedInventions[product.id]=total;
+            }
+        }
+
         public bool RackParcelInFlight(string kind)
         {
             foreach(var parcel in vendingParcels)if(parcel.kind==kind && !parcel.resting)return true;
@@ -43,7 +70,12 @@ namespace Raid
         }
 
         void ClearRackOrders(){orders.Clear();vendingParcels.Clear();vendingSequence=0;}
-        void RemoveOrder(int i){orders.RemoveAt(i);vendingParcels.RemoveAt(i);}
+        void RemoveOrder(int i)
+        {
+            orders.RemoveAt(i);
+            vendingParcels.RemoveAt(i);
+            RefreshVendorStock();
+        }
         void CancelRackOrder(int owner)
         {
             for(int i=orders.Count-1;i>=0;i--)if(orders[i].parcel.owner==owner)RemoveOrder(i);
@@ -64,6 +96,7 @@ namespace Raid
                 velocity=(target-start)/flight-Physics.gravity*(flight*.5f)
             };
             orders.Add(order);vendingParcels.Add(order.parcel);
+            RefreshVendorStock();
         }
         bool SettleOrder(int index,DiverMotor diver)
         {
@@ -72,6 +105,7 @@ namespace Raid
             string kind=order.parcel.kind;
             bool ok=FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out int slot,out var reason) &&
                 team.TakeTechFromRack(profile,kind,slot-FirstCargoSlot,SaveTransaction,out reason);
+            // The new pocket item replaces its reservation only after the save commits.
             if(ok)RemoveOrder(index);
             InventoryReceipt(diver,profile,ok,reason);return ok;
         }
