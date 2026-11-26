@@ -19,6 +19,12 @@ namespace Raid
             return definition==null?0:Mathf.Max(1,Mathf.RoundToInt(TechValue(kind,"stack",definition.stackBase)));
         }
 
+        public int TechUnitCapacity(string kind)
+        {
+            var definition=TechCatalog.Find(kind);
+            return definition==null?0:Mathf.Max(1,Mathf.RoundToInt(definition.capacity*TechValue(kind,"capacity",1)));
+        }
+
         bool InventorySlot(PlayerProgress profile,int index,out string reason)
         {
             if(profile==null || Player(profile.key)!=profile){reason="Профиль не подключён";return false;}
@@ -94,6 +100,8 @@ namespace Raid
             if(row<0 || owner<0){reason="Оборудование недоступно";return false;}
             var rig=rigs[row];
             if(!CanPack(profile,preferredSlot,rig.kind,out reason))return false;
+            if(rig.kind=="oxygen" && rig.air>=0 && rig.air<TechUnitCapacity(rig.kind))
+            {reason="Перед упаковкой заправьте кислородную станцию у корабля";return false;}
             bool ownCarry=rig.mode=="carried" && rig.operatorId==owner;
             bool parked=rig.mode=="placed" && rig.operatorId<0;
             if(!(ownCarry || parked) || rig.helperId>=0 || rig.baitId>=0 || rig.towDiver>=0 || rig.towCargo!=0 ||
