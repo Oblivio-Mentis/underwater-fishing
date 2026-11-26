@@ -103,7 +103,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
+        public override void OnStopClient() { CloseInventionInventory();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -125,7 +125,9 @@ namespace Raid
                 if(localDiver!=null)ConnectProfile();
             }
             ApplyLocalTuning();
-            if(!UI.UiInputGate.Active && localDiver!=null && interact!=null && interact.WasPressedThisFrame())
+            EnsureInventionRack();
+            PresentInventionInventory();
+            if(!UI.UiInputGate.Active && !InventionPanelOpen && localDiver!=null && !InventionRackTargeted(localDiver) && interact!=null && interact.WasPressedThisFrame())
             {
                 if(TryAimDrop(localDiver, out var item)) localDiver.GetComponent<HarpoonTool>()?.RequestPickup(item.id);
                 else if(CanUseTerminal)
@@ -138,6 +140,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if(!IsServerInitialized || team==null) return;
+            EnsureInventionRack();
             TickAirlock();
             TickTech(Time.fixedDeltaTime);
             TickGosha();
@@ -393,6 +396,7 @@ namespace Raid
         private void OnGUI()
         {
             TechHUD();
+            InventionInventoryHUD();
             if(UI.UiInputGate.Active) return;
             if(!IsClientInitialized || view==null || localDiver==null) return;
             GUILayout.BeginArea(new Rect(Screen.width-420,16,400,Screen.height-160),GUI.skin.box);

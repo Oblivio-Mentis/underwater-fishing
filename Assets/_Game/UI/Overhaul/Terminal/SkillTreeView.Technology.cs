@@ -17,7 +17,8 @@ namespace Raid.UI
         readonly Button[] categoryKeys=new Button[4];
         TMP_Text itemTitle, itemPurpose, scopeCaption, effectCaption, tuningCaption, gateCaption, equipmentInfo;
         TMP_Text[] techCosts;
-        Button techPurchase, techIssue, previousRig, nextRig, robotCamera, trapDispatch;
+        TMP_Text rackHint;
+        Button techPurchase, previousRig, nextRig, robotCamera, trapDispatch;
         TechItem selectedItem;
         TechUpgrade selectedUpgrade;
         TeamProgress shownTechView;
@@ -69,7 +70,7 @@ namespace Raid.UI
             gateCaption=Paragraph(details,"Research status",12,232,425,72,19,Muted,15);
             techCosts=MaterialStrip(details,"Next rank price",9,312,436,57);
             techPurchase=Key(details,"TechPurchase","Купить",9,382,436,47,BuyTechnology);
-            techIssue=Key(details,"TechIssue","Получить на судне",9,439,436,48,IssueTechnology);
+            rackHint=Paragraph(details,"Equipment rack",12,439,426,51,20,Muted,16);
 
             Box(technologyPage,"Equipment footer",19,577,1142,76,Steel);
             equipmentInfo=Paragraph(technologyPage,"Equipment status",31,586,775,65,21,Ink,16);
@@ -170,7 +171,7 @@ namespace Raid.UI
             UiKit.Set(scopeCaption,"ЭКИПАЖ   /   "+KindLabel(node.kind));
             scopeCaption.color=KindColor(node.kind);
             UiKit.Set(effectCaption,node.title+"\n"+node.description);
-            string current=rank==0?(node.kind=="stat"?"Базовый":"Закрыто"):ValueLabel(node,rank);
+            string current=rank==0?(node.id=="stack"?item.stackBase+" шт. в слоте":node.kind=="stat"?"Базовый":"Закрыто"):ValueLabel(node,rank);
             UiKit.Set(tuningCaption,complete?current:current+"   →   "+ValueLabel(node,rank+1));
             UiKit.Set(gateCaption,"Стадия "+SkillTreeDefinition.Roman(stage)+" · "+TechCatalog.StageTitle(stage)+"\n"+
                 (blocked??(enough?"Материалы доступны":"Не хватает материалов")));
@@ -182,15 +183,9 @@ namespace Raid.UI
             int count=rigs?.Count??0;
             int limit=TechRig.TotalLimit(team,item);
             bool unlocked=team.TechRank(item.id,"unlock")>0;
-            bool recovery=count>=limit && rigs.Exists(r=>r.CanRecall);
-            var world=app.Context.World;
-            var issuePrice=item.id=="charge" && world!=null?
-                new MaterialCost(world.tuning.chargeBiomass,0,world.tuning.chargeScrap):default;
-            techIssue.interactable=control && unlocked && (count<limit || recovery) && techRequestUntil==0 && team.Treasury.Covers(issuePrice);
-            string issueText=!unlocked?"Получить после открытия":recovery?"Вернуть пустой экземпляр на судно":
-                $"Получить на судне   ·   {Math.Max(0,limit-count)} из {limit}";
-            if(unlocked && !issuePrice.IsEmpty)issueText+=$"   ·   {issuePrice.biomass} Б / {issuePrice.scrap} М";
-            UiKit.Caption(techIssue,issueText);
+            UiKit.Set(rackHint,unlocked
+                ? $"Бесплатно в раздатчике у монитора  ·  {team.TechStackLimit(item.id)} шт. в слоте  ·  в работе {count}/{limit}"
+                : "После открытия можно взять в раздатчике на корабле");
             rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
             var rig=count==0?null:rigs[rigIndex];
             string status=rig==null?"Экземпляров в экспедиции нет":
@@ -221,7 +216,7 @@ namespace Raid.UI
         {
             "unlock"=>TechGreen, "stat"=>Cyan, "automation"=>Amber, _=>new Color(.80f,.72f,.93f)
         };
-        static string ValueLabel(TechUpgrade node,int rank)=>node.kind=="stat"?
+        static string ValueLabel(TechUpgrade node,int rank)=>node.id=="stack"?node.values[rank-1].ToString("0")+" шт. в слоте":node.kind=="stat"?
             $"×{node.values[rank-1]:0.##}":node.values.Length==1?"Открыто":"Уровень "+rank;
 
         static string RigState(string mode)=>mode switch
@@ -237,13 +232,6 @@ namespace Raid.UI
             var team=app.Context.View;
             app.Context.Player.CmdTechBuy(selectedItem.id,selectedUpgrade.id,
                 team.TechRank(selectedItem.id,selectedUpgrade.id),team.teamRevision);
-            WaitTechnology();
-        }
-
-        void IssueTechnology()
-        {
-            if(!techIssue.interactable)return;
-            app.Context.Player.CmdTechIssue(selectedItem.id);
             WaitTechnology();
         }
 

@@ -24,7 +24,7 @@ namespace Raid
 
         public bool InventionRackTargeted(DiverMotor player) =>
             IsClientInitialized && player && player.IsOwner && !player.IsHelpless && !player.IsTrapped &&
-            NearInventionRack(player) && RackFocused(player);
+            RackFocused(player,true);
 
         bool InventoryContextAllowed()
         {
@@ -60,6 +60,7 @@ namespace Raid
             if(!InventionPanelOpen)return;
             SkillResponded-=InventoryResponse;
             inventoryPanel=InventoryPanel.Closed;
+            UiInputGate.ResumeAt=Mathf.Max(UiInputGate.ResumeAt,Time.unscaledTime+.15f);
             if(!UiInputGate.Modal && (!UiRoot.Instance || UiRoot.Instance.Page==UiPage.None) && Application.isFocused)
             {Cursor.lockState=inventoryPreviousLock;Cursor.visible=inventoryPreviousCursor;}
         }

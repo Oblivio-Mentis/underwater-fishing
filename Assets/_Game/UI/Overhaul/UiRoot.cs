@@ -226,7 +226,7 @@ namespace Raid.UI
             if(menu==null)return;
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
             if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
-            if(Application.isFocused && !overlayBefore && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if(Application.isFocused && !overlayBefore && Context.World?.InventionPanelOpen!=true && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
                 else if(Page==UiPage.SkillTree && skills.Back())boardInput.Clear();
@@ -236,7 +236,8 @@ namespace Raid.UI
             var mouse=Application.isFocused?Mouse.current:null;
             bool skillPurchase=Page==UiPage.SkillTree && mouse!=null && mouse.rightButton.wasPressedThisFrame;
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
-            bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true;
+            bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true &&
+                Context.World?.InventionPanelOpen!=true && Context.World?.InventionRackTargeted(Context.Player)!=true;
             bool consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
                 mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
             skills.Animate(Time.unscaledDeltaTime);

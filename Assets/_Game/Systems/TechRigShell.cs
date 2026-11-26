@@ -6,7 +6,7 @@ namespace Raid
 {
     // Fabricated equipment is drawn as three reusable meshes per model (housing, drive and lamp).
     // Profile rings keep rolled edges, flanges and hose fittings visible at swimming distance.
-    public sealed class TechRigShell : MonoBehaviour
+    public sealed partial class TechRigShell : MonoBehaviour
     {
         sealed class Press
         {

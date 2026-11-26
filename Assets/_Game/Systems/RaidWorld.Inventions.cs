@@ -8,7 +8,6 @@ namespace Raid
     {
         [ServerRpc] public void CmdTechBuy(string id,string upgrade,int expectedRank,int revision) =>
             RaidWorld.Instance?.BuyTechnology(this,id,upgrade,expectedRank,revision);
-        [ServerRpc] public void CmdTechIssue(string id) => RaidWorld.Instance?.IssueTechnology(this,id);
         [ServerRpc] public void CmdTechUse(int serial,string action) => RaidWorld.Instance?.UseTechnology(this,serial,action);
         internal float equipmentPace=1;
     }
@@ -31,32 +30,6 @@ namespace Raid
             bool ok=team.TryBuyTech(id,upgrade,rank,revision,SaveTransaction,out var reason);
             if(ok){Publish();diver.ConfirmInteraction();}
             SkillReply(diver.Owner,ok,reason);
-        }
-
-        internal void IssueTechnology(DiverMotor diver,string id)
-        {
-            if(!RigRequest(diver) || !ShipConsole.CanUseKind(diver,ShipConsoleKind.SkillTree))return;
-            var def=TechCatalog.Find(id);
-            if(def==null || team.TechRank(id,"unlock")==0)return;
-            if(Engaged(diver.OwnerId) || diver.GetComponent<HarpoonTool>()?.HandsFull==true)
-            {SkillReply(diver.Owner,false,"Сначала освободите руки");return;}
-            var existing=team.rigs.FindAll(r=>r.kind==id);
-            // Reclaim an unattended empty unit when all workshop slots are occupied.
-            // Loaded equipment remains at its mapped position.
-            bool replace=existing.Count>=TechRig.TotalLimit(team,def);
-            var old=replace?existing.Find(r=>r.CanRecall):null;
-            if(replace && old==null){SkillReply(diver.Owner,false,"Все экземпляры используются. Проверьте список установок.");return;}
-            MaterialCost cost=default;
-            if(id=="charge")
-            {
-                cost=new MaterialCost(tuning.chargeBiomass,0,tuning.chargeScrap,0);
-                if(!team.Treasury.Covers(cost)){SkillReply(diver.Owner,false,"Для снаряжения заряда не хватает материалов");return;}
-            }
-            if(!team.IssueRig(id,diver.transform.position,diver.OwnerId,old,cost,SaveTransaction))
-            {
-                SkillReply(diver.Owner,false,"Не удалось записать выдачу");return;
-            }
-            Publish();SkillReply(diver.Owner,true,"Выдано: "+def.title+" • под водой [T] установить");
         }
 
         bool Engaged(int owner) => team.rigs.Exists(r=>r.operatorId==owner || r.helperId==owner || r.baitId==owner);

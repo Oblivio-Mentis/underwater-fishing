@@ -63,7 +63,7 @@ namespace Raid
             oldShells.Clear();oldShells.AddRange(rigShells.Keys);rigHint=null;
             var camera=localDiver?localDiver.GetComponentInChildren<Camera>():null;
             var aim=camera?camera.transform.forward:Vector3.forward;
-            TechRig held=null,target=null,bait=null;
+            TechRig held=null,target=null,bait=null,handset=null;
             float best=9999;
             foreach(var r in view.rigs)
             {
@@ -80,6 +80,7 @@ namespace Raid
                 if(!camera)continue;
                 if(r.Carrying(localDiver.OwnerId))held=r;
                 if(r.baitId==localDiver.OwnerId)bait=r;
+                if(r.kind=="cage" && r.mode=="armed" && r.operatorId==localDiver.OwnerId)handset=r;
                 var v=r.position-camera.transform.position;
                 float along=Vector3.Dot(v,aim),error=(v-aim*along).magnitude;
                 float reach=tuning.interactionRange;
@@ -92,9 +93,12 @@ namespace Raid
             foreach(var serial in oldShells){if(rigShells[serial])Destroy(rigShells[serial].gameObject);rigShells.Remove(serial);}
             if(rigGuide)rigGuide.enabled=false;
             if(!localDiver || localDiver.IsHelpless || UI.UiInputGate.Blocked || Keyboard.current==null)return;
-            var selected=bait??held??target;
+            var selected=bait??held??target??handset;
             if(selected==null)return;
             string hint=ActionLabel(selected);
+            if(selected==handset)
+                hint=selected.baitId==localDiver.OwnerId?"Y закрыть клетку     U аварийный выход":"Y закрыть клетку     U передать пульт приманке";
+            else if(selected==bait)hint="U аварийный выход     Спуск у держателя пульта";
             if(held!=null && held.operatorId==localDiver.OwnerId)
             {
                 bool valid=Placement(held,localDiver,aim,view,out var point);

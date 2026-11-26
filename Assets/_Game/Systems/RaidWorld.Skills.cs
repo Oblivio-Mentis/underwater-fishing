@@ -111,7 +111,7 @@ namespace Raid
         {
             if(profile==null)return;
             ApplyProfile(connection,JsonUtility.ToJson(new PlayerProgress
-                { skills=profile.skills, revision=profile.revision }));
+                { skills=profile.skills, revision=profile.revision, techSlots=profile.techSlots }));
         }
 
         [TargetRpc]
