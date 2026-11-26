@@ -131,6 +131,7 @@ namespace Raid
             }
             yield return Wait("original owner recorded its private stacks",()=>Has("private-stacks"));
             Assert(cageParcelIds.Count==TechCatalog.Find("cage").stackBase+1 && chargeParcelIds.Count==1 &&
+                cageParcelIds.All(renderedParcelIds.Contains) && chargeParcelIds.All(renderedParcelIds.Contains) &&
                 restingParcelIds.Count==1 && report.longestParcelTravel>.05f && world.RackParcelCount==0,
                 "this client observed distinct moving models, one resting charge, no ejection for rejected requests and no parcel remaining");
             Assert(world.View.players.Count==0 && (report.seat==1 || world.LocalProgress.techSlots.All(s=>s.count==0)),

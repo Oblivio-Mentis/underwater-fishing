@@ -13,6 +13,7 @@ namespace Raid
     {
         int observedParcelOwner=-1;
         readonly HashSet<int> cageParcelIds=new(), chargeParcelIds=new(), restingParcelIds=new();
+        readonly HashSet<int> renderedParcelIds=new();
         readonly Dictionary<int,Vector3> firstParcelPosition=new();
         bool capturedFlight;
 
@@ -22,6 +23,14 @@ namespace Raid
                 !world.TryGetRackParcel(observedParcelOwner,out int serial,out var pos,out bool resting))return;
             if(world.RackParcelInFlight("cage"))cageParcelIds.Add(serial);
             if(world.RackParcelInFlight("charge"))chargeParcelIds.Add(serial);
+            if(!renderedParcelIds.Contains(serial))
+            {
+                string kind=cageParcelIds.Contains(serial)?"cage":chargeParcelIds.Contains(serial)?"charge":null;
+                var sample=kind==null?null:world.transform.Find($"Выдача · {kind} №{serial}/Образец · {kind}");
+                if(sample && sample.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh && filter.sharedMesh.vertexCount>0 &&
+                    sample.TryGetComponent<MeshRenderer>(out var renderer) && renderer.isActiveAndEnabled)
+                    renderedParcelIds.Add(serial);
+            }
             if(resting)restingParcelIds.Add(serial);
             if(!firstParcelPosition.TryGetValue(serial,out var start)){firstParcelPosition.Add(serial,pos);start=pos;}
             float distance=Vector3.Distance(start,pos);
