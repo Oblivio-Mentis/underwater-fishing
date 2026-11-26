@@ -38,7 +38,7 @@ namespace Raid
             float best=9999;
             foreach(var r in view.rigs)
             {
-                if(r.depth!=CurrentDepth)continue;
+                if(r.depth!=CurrentDepth || r.mode=="dropped")continue;
                 oldShells.Remove(r.serial);
                 bool fresh=!rigShells.TryGetValue(r.serial,out var shell);
                 if(fresh)

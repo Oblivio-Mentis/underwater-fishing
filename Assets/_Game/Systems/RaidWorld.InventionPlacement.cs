@@ -34,24 +34,35 @@ namespace Raid
             if(heading.sqrMagnitude<.01f)heading=diver.transform.forward;
             yaw=Quaternion.LookRotation(heading).eulerAngles.y;
             var facing=Quaternion.Euler(0,yaw,0);
-            float reach=Mathf.Max(3.4f,bounds.extents.magnitude*3f);
+            float reach=Mathf.Max(4.1f,bounds.extents.magnitude*3f);
             point=eye+aim*reach;
             reason="Наведитесь на свободное дно";
             if(diver.IsInside){reason="Установка доступна за бортом";return false;}
             if(!Physics.Raycast(eye,aim,out var floor,reach,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
             {
+                point=eye+aim*(reach*.73f);
                 if(aim.y>.2f ||
-                   !Physics.Raycast(point+Vector3.up*.15f,Vector3.down,out floor,2.5f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                   !Physics.Raycast(point+Vector3.up*.25f,Vector3.down,out floor,3.2f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                     return false;
             }
-            if(floor.normal.y<.72f || floor.collider.GetComponentInParent<DiverMotor>())
+            if(floor.normal.y<.62f || floor.collider.GetComponentInParent<DiverMotor>() ||
+               floor.collider.GetComponentInParent<FishActor>())
             {
                 point=floor.point-aim*(bounds.extents.magnitude+.12f);
                 return false;
             }
-            float slope=(Mathf.Abs(Vector3.Dot(floor.normal,facing*Vector3.right))*bounds.extents.x+
-                Mathf.Abs(Vector3.Dot(floor.normal,facing*Vector3.forward))*bounds.extents.z)/floor.normal.y;
-            point=floor.point+Vector3.up*(-bounds.min.y+slope+.035f);
+            float support=floor.point.y;
+            for(int corner=0;corner<4;corner++)
+            {
+                var contact=bounds.center+new Vector3((corner&1)==0?-bounds.extents.x:bounds.extents.x,0,
+                    (corner&2)==0?-bounds.extents.z:bounds.extents.z);
+                contact.y=0;
+                var above=floor.point+facing*contact+Vector3.up*.47f;
+                if(Physics.Raycast(above,Vector3.down,out var foot,.83f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) &&
+                   foot.normal.y>=.62f && !foot.collider.GetComponentInParent<DiverMotor>() &&
+                   !foot.collider.GetComponentInParent<FishActor>())support=Mathf.Max(support,foot.point.y);
+            }
+            point=new Vector3(floor.point.x,support-bounds.min.y+.04f,floor.point.z);
             var center=point+facing*bounds.center;
             if((eye-center).sqrMagnitude>(reach+1f)*(reach+1f) ||
                Physics.Linecast(eye,center,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))return false;
@@ -59,7 +70,7 @@ namespace Raid
             {reason="Для установки мало места";return false;}
             foreach(var other in state.rigs)
             {
-                if(other.serial==movingSerial || other.depth!=CurrentDepth || other.mode is "carried" or "spent")continue;
+                if(other.serial==movingSerial || other.depth!=CurrentDepth || other.mode is "carried" or "spent" or "dropped")continue;
                 var spacing=new Vector2(bounds.extents.x,bounds.extents.z).magnitude+Footprint(other.kind);
                 var offset=other.position-point;
                 if(Mathf.Abs(offset.y)<bounds.size.y+Footprint(other.kind) &&
@@ -68,7 +79,8 @@ namespace Raid
             }
             if(kind=="vacuum" && !state.CanPlaceVacuum(movingSerial,out reason))return false;
             if(movingSerial==0 && kind!="vacuum" &&
-               state.rigs.FindAll(r=>r.kind==kind).Count>=TechRig.TotalLimit(state,TechCatalog.Find(kind)))
+               state.rigs.FindAll(r=>r.kind==kind && r.mode is not ("dropped" or "spent")).Count>=
+               TechRig.TotalLimit(state,TechCatalog.Find(kind)))
             {reason="Достигнут лимит установок экипажа";return false;}
             reason=null;
             return true;
@@ -80,8 +92,8 @@ namespace Raid
             var tool=diver.GetComponent<HarpoonTool>();
             if(!tool || slot!=tool.ActiveSlot || !tool.CanDrawPocketInvention || kind=="charge" ||
                TechCatalog.Find(kind)==null || tool.InventionInSlot(slot).kind!=kind ||
-               !(direction.sqrMagnitude>.99f && direction.sqrMagnitude<1.01f) ||
-               Vector3.Dot(direction,diver.AimDirection)<.55f)return;
+               !(direction.sqrMagnitude>.99f && direction.sqrMagnitude<1.01f))return;
+            Physics.SyncTransforms();
             if(!FindInstallationSite(diver,kind,0,direction,team,out var position,out float yaw,out var reason))
             {InventoryReceipt(diver,profile,false,reason);return;}
             bool placed=team.DeployTechFromSlot(profile,slot-FirstCargoSlot,position,diver.OwnerId,

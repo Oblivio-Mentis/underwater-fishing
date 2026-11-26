@@ -37,7 +37,7 @@ namespace Raid
             windChargeSerial=-1;
             if(tool.ActiveSlot!=windChargeSlot || world.CurrentDepth!=windChargeDepth)return;
             float length=aim.sqrMagnitude;
-            if(!(length>.99f && length<1.01f) || Vector3.Dot(aim,AimDirection)<.342f)return;
+            if(!(length>.99f && length<1.01f))return;
             float strength=Mathf.Clamp01((Time.time-windChargeStarted)/Mathf.Max(.1f,world.tuning.ballWindSeconds));
             world.ThrowPocketCharge(this,tool,serial,aim.normalized,strength);
         }

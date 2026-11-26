@@ -284,7 +284,8 @@ namespace Raid.UI
                     mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
             }
             skills.Animate(Time.unscaledDeltaTime);
-            if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None && Context.World?.AimingAtVendingMachine!=true)Interact();
+            if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None &&
+               (Context.Interaction==UiInteraction.DroppedItem || Context.World?.AimingAtVendingMachine!=true))Interact();
             if(Time.unscaledTime>=nextRefresh)
             {
                 nextRefresh=Time.unscaledTime+.1f;Context.Refresh();
@@ -392,6 +393,17 @@ namespace Raid.UI
                 if(confirmAction!=null)CancelConfirmation();
                 ShowPage(UiPage.None);
             }
+            var tool=Context.Harpoon;
+            if(tool && tool.WindingCharge)
+            {
+                if(!allowed || Page!=UiPage.None)tool.CancelInventionGesture();
+                else if(tool.HandleInventionPointer(clicked,released))
+                {
+                    Context.World?.ClearVendingAim();
+                    UiInputGate.PointerReserved=true;
+                    return clicked || released;
+                }
+            }
             if(Page==UiPage.None && !WindingBall && Context.World?.PointAtVendingMachine(player,clicked && allowed)==true)
             {
                 UiInputGate.PointerReserved=true;
@@ -409,7 +421,8 @@ namespace Raid.UI
                 UiInputGate.PointerReserved=true;
                 return false;
             }
-            if(clicked && allowed && Page==UiPage.None && Context.Harpoon!=null && Context.Harpoon.ConsumeCargoPrimaryInput())
+            aimedPad=Nereid.AirlockPad.Aimed(player,cam);
+            if(clicked && allowed && Page==UiPage.None && tool && tool.ConsumeCargoPrimaryInput())
             {
                 UiInputGate.PointerReserved=true;
                 return true;
@@ -421,7 +434,12 @@ namespace Raid.UI
                 if(clicked && allowed)Send(WorldAction.Hoist);
                 return clicked;
             }
-            aimedPad=Nereid.AirlockPad.Aimed(player,cam);
+            if(Page==UiPage.None && allowed && station==null && aimedPad==null && tool &&
+               tool.HandleInventionPointer(clicked,released))
+            {
+                UiInputGate.PointerReserved=true;
+                return clicked || released;
+            }
             UiInputGate.PointerReserved=station!=null || aimedPad!=null;
             if(aimedPad!=null)
             {

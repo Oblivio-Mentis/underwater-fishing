@@ -349,7 +349,7 @@ namespace Raid.UI
         void DisplayEquipment(TeamProgress team)
         {
             var item=selectedItem;
-            var rigs=team.rigs?.FindAll(r=>r.kind==item.id);
+            var rigs=team.rigs?.FindAll(r=>r.kind==item.id && r.mode is not ("dropped" or "spent"));
             int count=rigs?.Count??0;
             rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
             var rig=count==0?null:rigs[rigIndex];

@@ -85,7 +85,9 @@ namespace Raid
             if(profile==null)return -1;
             var rig=team.rigs.Find(r=>-(long)r.serial==item.id && r.kind==item.invention && VisiblePackedItem(r));
             if(rig==null)return -1;
-            int slot=tool.FindInventionPocket(rig.kind,team.TechStackLimit(rig.kind));
+            int stackLimit=team.TechStackLimit(rig.kind);
+            int slot=tool.CanFitInvention(tool.ActiveSlot,rig.kind,stackLimit)
+                ?tool.ActiveSlot:tool.FindInventionPocket(rig.kind,stackLimit);
             if(slot<FirstCargoSlot)return -1;
             bool ok=team.StoreTechInSlot(profile,rig.serial,slot-FirstCargoSlot,diver.OwnerId,SaveTransaction,out var reason);
             if(ok){dropsDirty=true;Publish();}

@@ -71,27 +71,29 @@ namespace Raid
         internal bool WindingCharge => chargeSlot>=0 && chargeSlot==ActiveSlot;
         internal float ChargeFollowThroughUntil {get;private set;}
 
-        bool UsePocketInvention(bool controlling,bool pressed)
+        internal void CancelInventionGesture()
         {
+            if(chargeSlot<0)return;
+            chargeSlot=-1;
+            Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Cancel);
+        }
+
+        internal bool HandleInventionPointer(bool pressed,bool released)
+        {
+            if(!pressed && !released && chargeSlot<0)return false;
             var stack=InventionInSlot(ActiveSlot);
-            bool available=controlling && stack.count>0 && CanDrawPocketInvention;
-            var held=controlling?CarriedInvention:null;
+            bool available=stack.count>0 && CanDrawPocketInvention;
+            var held=CarriedInvention;
             bool carrying=held!=null && held.operatorId==OwnerId && MayHandleItems && !Motor.IsTrapped;
             if(chargeSlot>=0)
             {
                 bool stillHolding=chargeSerial==0?available && stack.kind=="charge":carrying && held.serial==chargeSerial;
                 if(!stillHolding || chargeSlot!=ActiveSlot)
                 {
-                    Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Cancel);
-                    chargeSlot=-1;
+                    CancelInventionGesture();
                     return false;
                 }
-                if(!_fire.IsPressed())
-                {
-                    Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Release);
-                    chargeSlot=-1;
-                    ChargeFollowThroughUntil=Time.unscaledTime+GoshaBallGrip.FollowThrough;
-                }
+                if(released)ReleasePocketCharge();
                 return true;
             }
             if((!available && !carrying) || !pressed)return false;
@@ -102,10 +104,18 @@ namespace Raid
                 chargeSerial=carrying?held.serial:0;
                 chargeStarted=Time.unscaledTime;
                 Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.WindUp);
+                if(released)ReleasePocketCharge();
             }
             else if(carrying)Motor.CmdTechUse(held.serial,"carry");
             else Motor.PlaceSelectedInvention(ActiveSlot,stack.kind);
             return true;
+        }
+
+        void ReleasePocketCharge()
+        {
+            Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Release);
+            chargeSlot=-1;
+            ChargeFollowThroughUntil=Time.unscaledTime+GoshaBallGrip.FollowThrough;
         }
 
         internal bool CanStowCarriedInvention(TechRig rig,out string reason)

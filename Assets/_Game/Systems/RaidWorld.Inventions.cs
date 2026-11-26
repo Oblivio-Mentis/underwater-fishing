@@ -72,7 +72,7 @@ namespace Raid
         {
             if(!RigRequest(diver))return;
             var r=team.rigs.Find(x=>x.serial==serial);
-            if(r==null || r.depth!=CurrentDepth)return;
+            if(r==null || r.depth!=CurrentDepth || r.mode=="dropped")return;
             int who=diver.OwnerId;
             bool carried=r.Carrying(who), bound=carried || r.baitId==who || r.operatorId==who || r.helperId==who;
             bool remote=r.kind=="cage" && r.baitId>=0 ||
@@ -160,6 +160,7 @@ namespace Raid
             for(int i=team.rigs.Count-1;i>=0;i--)
             {
                 var r=team.rigs[i];
+                if(r.mode=="dropped")continue;
                 var carrier=TechDiver(r.operatorId);
                 var helper=TechDiver(r.helperId);
                 if(r.baitId>=0 && !TechDiver(r.baitId)){r.baitId=-1;if(r.mode=="armed")r.mode="placed";}

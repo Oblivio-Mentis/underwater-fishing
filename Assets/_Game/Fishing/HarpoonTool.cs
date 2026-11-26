@@ -158,6 +158,7 @@ namespace Raid
         public bool SelectSlot(int slot)
         {
             if (!IsClientInitialized || !IsOwner || UI.UiInputGate.Blocked || !CanSelect(slot)) return false;
+            if(slot!=ActiveSlot)CancelInventionGesture();
             SelectSlotServer(slot);
             return true;
         }
@@ -254,6 +255,7 @@ namespace Raid
 
         public override void OnStopClient()
         {
+            chargeSlot=-1;
             _actions?.Dispose();
             _actions = null;
             if (_line != null) { _line.gameObject.SetActive(false); Destroy(_line.gameObject); _line = null; }
@@ -262,17 +264,25 @@ namespace Raid
         private void Update()
         {
             if (!IsClientInitialized || !IsOwner || _actions == null || tuning == null) return;
-            if (Application.isFocused && !UI.UiInputGate.Blocked && Keyboard.current?.qKey.wasPressedThisFrame == true)
-                RequestDropSelected();
             bool gameplay = Application.isFocused && !UI.UiInputGate.Blocked;
+            if(!gameplay || UI.CheatPanel.PointerActive || UI.UiInputGate.MonitorLook)
+                CancelInventionGesture();
+            if(gameplay && !UI.UiInputGate.MonitorLook && Keyboard.current?.qKey.wasPressedThisFrame==true)
+            {
+                CancelInventionGesture();
+                RequestDropSelected();
+            }
             bool rackPointer = !UI.UiInputGate.Active && RaidWorld.Instance && RaidWorld.Instance.RackFocused(Motor,true);
             bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved && !rackPointer;
             if(!_fire.IsPressed())_primaryConsumedUntilRelease=false;
             bool primaryPressed=controlling && _fire.WasPressedThisFrame();
-            bool itemConsumed=UsePocketInvention(controlling,primaryPressed) || primaryPressed && ConsumeCargoPrimaryInput();
+            bool itemConsumed=!UI.UiInputGate.Active && controlling &&
+                HandleInventionPointer(primaryPressed,_fire.WasReleasedThisFrame());
+            itemConsumed|=primaryPressed && !itemConsumed && ConsumeCargoPrimaryInput();
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
             bool cheatPointer = UI.CheatPanel.PointerActive;
-            bool maySelect=gameplay && (cheatPointer || !UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
+            bool maySelect=gameplay && (cheatPointer || WindingCharge || !UI.UiInputGate.PointerReserved ||
+                RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
             if (maySelect && !Motor.IsHelpless && UI.UiRoot.Instance?.EditingCheatQuantity != true)
             {
                 for (int i = 0; i < _select.Length; i++)
@@ -404,7 +414,7 @@ namespace Raid
         internal bool QaPrimaryOwned()
         {
             if(!IsClientInitialized || !IsOwner || QaMenuBlocked)return false;
-            return UsePocketInvention(true,true) || ConsumeCargoPrimaryInput() || QaFireOwned();
+            return HandleInventionPointer(true,true) || ConsumeCargoPrimaryInput() || QaFireOwned();
         }
 
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.

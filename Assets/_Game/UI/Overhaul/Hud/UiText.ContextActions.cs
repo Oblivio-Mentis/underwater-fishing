@@ -20,7 +20,7 @@ namespace Raid.UI
             }
             if(player.IsHelpless)return default;
             if(world.LookAtOwnParcel(player,out _))return new HudHint(Mark.Glove,new(Key.E,"Забрать выданный предмет"));
-            if(world.AimingAtVendingMachine)return default;
+            if(world.AimingAtVendingMachine && c.Interaction!=UiInteraction.DroppedItem)return default;
             if(c.Interaction==UiInteraction.Rescue && c.RescueTarget!=null)
             {
                 float progress=c.Rescue?.DisplayProgress??0;

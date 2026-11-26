@@ -63,7 +63,7 @@ namespace Raid
                 if(Time.realtimeSinceStartup>=until)
                 {
                     var w=Instance;var owner=w?w.localDiver:null;
-                    string status=w && owner?$" | focus={Application.isFocused} page={UiRoot.Instance?.Page} modal={UiInputGate.Modal} inside={owner.IsInside} near={w.NearInventionRack(owner)} cameraRay={w.RackFocused(owner,true)} serverRay={w.RackFocused(owner)} cameraProduct={w.RackAimForTrial(owner,true)} serverProduct={w.RackAimForTrial(owner,false)}":"";
+                    string status=w && owner?$" | focus={Application.isFocused} cursor={Cursor.lockState} page={UiRoot.Instance?.Page} modal={UiInputGate.Modal} reserved={UiInputGate.PointerReserved} LMB={Mouse.current?.leftButton.isPressed} inside={owner.IsInside} placement={w.PlacementHint} near={w.NearInventionRack(owner)} cameraProduct={w.RackAimForTrial(owner,true)} serverProduct={w.RackAimForTrial(owner,false)}":"";
                     if(w && owner && w.TryGetRackParcel(owner.OwnerId,out int id,out var pos,out bool resting))
                         status+=$" parcel={id} resting={resting} delta={pos-owner.transform.position}";
                     throw new TimeoutException(step+status);
@@ -221,6 +221,16 @@ namespace Raid
                 int expected=count;
                 await Order(trap.id,()=>gear.InventionInSlot(trapSlot).count==expected,"top up the existing trap stack to "+expected);
                 report.Check(gear.InventionInSlot(ballSlot).count==0,"The earlier empty pocket stayed empty at trap count "+expected+".");
+                if(count==2)
+                {
+                    await ReadProduct(trap.id,"Достигнут лимит команды");
+                    await CaptureRackUi(folder,"07-team-limit.png");
+                    await Denied(trap.id,"The server refused the third trap while there was room in the selected stack and a free pocket.");
+                    team.techPurchases.Add(new TechPurchase{item="trap",upgrade="limit",rank=2});
+                    Publish();
+                    await WaitRackUi(()=>view.TechRank("trap","limit")==2,"team limit increased to four with the matching rank");
+                    await ReadProduct(trap.id,"ЛКМ · Получить");
+                }
             }
             report.Check(gear.StoreBall() && gear.HasBallInSlot(ballSlot),"Replaced the ball into the free first ordinary pocket.");
             await Aim(other);
@@ -238,6 +248,7 @@ namespace Raid
             gear.RemoveBall();
             await Order(trap.id,()=>gear.InventionInSlot(ballSlot).kind=="trap" && gear.InventionInSlot(ballSlot).count==1,
                 "extra trap starts a second stack in the newly freed ordinary pocket");
+            await ReadProduct(trap.id,"Достигнут лимит команды");
             report.Check(balance.Equals(team.Treasury),"All physical rack deliveries were free.");
             report.Check(RackNormalHud(),"The normal HUD remained visible throughout both purchases.");
 
@@ -296,10 +307,8 @@ namespace Raid
             {
                 InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mouse.position.ReadValue()});
                 await Awaitable.WaitForSecondsAsync(.45f);
-                if(team.rigs.Count==0 && gear.QaBackgroundPocketDraw())
-                    report.backgroundInputRoutes.Add("Left mouse: ordinary equipped-item primary action");
                 await WaitRackUi(()=>view.rigs.Exists(r=>r.kind=="trap" && r.mode=="placed" && r.operatorId<0) &&
-                    gear.InventionInSlot(trapSlot).count==limit-1,"left click mounts a single trap from the selected ordinary pocket");
+                    gear.InventionInSlot(trapSlot).count==limit-1,"Mouse input in the regular UI mounts one trap from the hotbar");
             }
             finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});}
             await Awaitable.WaitForSecondsAsync(.35f);
@@ -311,6 +320,18 @@ namespace Raid
             await WaitRackUi(()=>view.rigs.Count==0 && gear.InventionInSlot(trapSlot).count==limit,"R returns the clean rig to its source stack");
             report.Check(gear.InventionInSlot(ballSlot).count==1 && gear.InventionInSlot(otherSlot).kind==other,
                 "Repacking restored the selected stack while preserving the other two ordinary pockets.");
+            await RackKey(Key.Q);
+            await WaitRackUi(()=>team.rigs.Any(r=>r.kind=="trap" && r.mode=="dropped") &&
+                gear.InventionInSlot(trapSlot).count==limit-1,"Q drops one packed trap onto the seabed");
+            var droppedTrap=team.rigs.Single(r=>r.kind=="trap" && r.mode=="dropped");
+            report.Check(VendorIssuedCount("trap")==4,"A trap dropped on the ground still belongs to the team's issued stock.");
+            host.LookAtConsole(droppedTrap.position);
+            await WaitRackUi(()=>TryAimDrop(host,out var drop) && drop.kind==DroppedKind.Invention,
+                "aiming exposes the packed trap as an ordinary pickup");
+            await CaptureRackUi(folder,"08b-dropped-trap.png");
+            await RackKey(Key.E);
+            await WaitRackUi(()=>team.rigs.Count==0 && gear.InventionInSlot(trapSlot).count==limit,
+                "E picks up the trap at the team cap and returns it to the selected stack");
             UiRoot.Instance.ShowPage(UiPage.Pause);
             await RackKey(Key.Tab);
             report.Check(UiRoot.Instance.Page==UiPage.Pause,"Tab during pause left the dialog in control.");
@@ -331,24 +352,16 @@ namespace Raid
                 HandModel("charge"),"the charge appears between the gloves when its slot is selected");
             await CaptureRackUi(folder,"09-dynamite-in-hands.png");
             var mousePosition=mouse.position.ReadValue();
-            bool inputWound=false;
             try
             {
                 InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mousePosition});
-                await Awaitable.WaitForSecondsAsync(.2f);
-                inputWound=gear.WindingCharge;
-                if(!inputWound && Application.isBatchMode)
-                {
-                    host.CmdChargeGesture(0,ChargeThrowAction.WindUp);
-                    report.backgroundInputRoutes.Add("Dynamite gesture through the owned throw RPC in the hidden player");
-                }
+                await WaitRackUi(()=>gear.WindingCharge,"Mouse input in the regular UI starts winding the charge",3);
                 await Awaitable.WaitForSecondsAsync(.13f);
-                report.Check((inputWound || Application.isBatchMode) && team.rigs.Count==0 && gear.InventionInSlot(trapSlot).count==2,
+                report.Check(team.rigs.Count==0 && gear.InventionInSlot(trapSlot).count==2,
                     "Holding left click winds up the charge in hand without lighting its fuse or consuming a stack.");
             }
             finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mousePosition});}
             await Awaitable.WaitForSecondsAsync(.13f);
-            if(!inputWound && Application.isBatchMode)host.CmdChargeGesture(0,ChargeThrowAction.Release);
             await WaitRackUi(()=>team.rigs.Any(r=>r.kind=="charge" && r.mode=="fuse") &&
                 gear.InventionInSlot(trapSlot).count==1,"releasing the mouse throws one live charge");
             var charge=team.rigs.Single(r=>r.kind=="charge");
@@ -379,12 +392,28 @@ namespace Raid
                 host.LookAtConsole(UiQaProbe.ReticleTarget(FindControl()));
                 await Awaitable.WaitForSecondsAsync(.30f);
             }
-            foreach(string id in new[]{"Sector8","TechItem-vacuum","TechNode-vacuum_capacity"})
+            await PointAtControl("Sector0");
+            report.Check(UiRoot.Instance.QaClickReticle(),"Opened the standard harpoon tree with the reticle.");
+            var nativeGraph=UiRoot.Instance.GetComponentsInChildren<RectTransform>()
+                .First(rect=>rect.name=="ProgressionGraphViewport");
+            var nativeBranch=nativeGraph.GetComponentInParent<CanvasGroup>();
+            await WaitRackUi(()=>nativeBranch.blocksRaycasts,"the original skill branch finished opening");
+            host.LookAtConsole(screen.position);
+            await CaptureRackUi(folder,"11a-native-harpoon.png");
+            foreach(string id in new[]{"ProgressionOverview","Sector8","TechCategory0","TechItem-vacuum"})
             {
                 await PointAtControl(id);
                 report.Check(UiRoot.Instance.QaClickReticle(),"Aimed at and clicked "+id+" on the physical screen.");
             }
+            await WaitRackUi(()=>nativeGraph.gameObject.activeInHierarchy && nativeBranch.blocksRaycasts &&
+                UiRoot.Instance.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("ProgressionStage"))==5,
+                "the technology tree uses the original harpoon viewport and five stage keys");
+            host.LookAtConsole(screen.position);
             await CaptureRackUi(folder,"11-technology-vacuum.png");
+            await PointAtControl("TechNode-vacuum_capacity");
+            report.Check(UiRoot.Instance.QaClickReticle(),"Selected a rank in the native skill graph.");
+            host.LookAtConsole(screen.position);
+            await CaptureRackUi(folder,"11b-technology-vacuum-rank.png");
             report.Check(TechRig.TotalLimit(team,TechCatalog.Find("vacuum"))==1,"The baseline limit is one vacuum for the team.");
             await PointAtControl("TechPurchase");
             report.Check(UiRoot.Instance.QaClickReticle(),"Clicked the available capacity upgrade on the physical screen.");
@@ -401,7 +430,12 @@ namespace Raid
             await WaitRackUi(()=>gear.InventionInSlot(trapSlot).kind=="vacuum" && HandModel("vacuum") &&
                 FindInstallationSite(host,"vacuum",0,host.AimDirection,team,out _,out _,out _),"a valid vacuum placement in the selected slot");
             await CaptureRackUi(folder,"12-vacuum-placement.png");
-            host.PlaceSelectedInvention(trapSlot,"vacuum");
+            try
+            {
+                InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mouse.position.ReadValue()});
+                await Awaitable.WaitForSecondsAsync(.2f);
+            }
+            finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});}
             await WaitRackUi(()=>team.rigs.Any(r=>r.kind=="vacuum" && r.mode=="placed") &&
                 gear.InventionInSlot(trapSlot).count==0,"an ordinary pocket item became an active vacuum installation");
             var vacuum=team.rigs.Single(r=>r.kind=="vacuum");
@@ -438,7 +472,6 @@ namespace Raid
             finally{UiInputGate.Active=previous;}
         }
         internal bool QaBackgroundPocketSelect(int slot) => QaBackgroundPocketAction(()=>SelectSlot(slot));
-        internal bool QaBackgroundPocketDraw() => QaBackgroundPocketAction(()=>UsePocketInvention(true,true),true);
         internal bool QaBackgroundPocketStow(int serial) => QaBackgroundPocketAction(()=>
         {
             Motor.CmdTechStore(serial);

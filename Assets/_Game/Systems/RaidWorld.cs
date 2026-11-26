@@ -345,7 +345,7 @@ namespace Raid
             for(int i=dropped.Count-1;i>=0;i--)
             {
                 var item=dropped[i];
-                if(item.kind!=DroppedKind.Catch || item.Fish==null) continue;
+                if(item.handDropped || item.kind!=DroppedKind.Catch || item.Fish==null) continue;
                 if(!CargoDispatch.ContainsDrop(this,item.position)) continue;
                 if(!team.LoadCargo(AttributeCatch(item.Fish.ToCargo(item.id)),progression)) continue;
                 dropped.RemoveAt(i);
@@ -401,7 +401,12 @@ namespace Raid
                 waveLossBudget-=count;stockLossDisplay.Value+=count;Publish();Save();
             }
         }
-        private void Publish() { if(team!=null) snapshot.Value=JsonUtility.ToJson(team.PublicView()); }
+        private void Publish()
+        {
+            if(team==null)return;
+            if(IsServerInitialized)RefreshVendorStock();
+            snapshot.Value=JsonUtility.ToJson(team.PublicView());
+        }
         private void Save()
         {
             if(saveFailed || team==null || string.IsNullOrEmpty(savePath)) return;

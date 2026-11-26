@@ -365,8 +365,8 @@ namespace Raid.UI
         {
             var rect=(RectTransform)button.transform;
             Vector2 location=rect.rect.center;
-            if(button is SkillSectorButton && int.TryParse(button.name.Substring("Sector".Length),out int sector))
-                location+=SkillBoardMesh.At(sector*SkillSectorGraphic.Spacing)*216;
+            if(button is SkillSectorButton sector && sector.Face)
+                location+=sector.Face.ReticlePoint;
             return rect.TransformPoint(location);
         }
 
