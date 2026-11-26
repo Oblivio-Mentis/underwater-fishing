@@ -1,0 +1,33 @@
+{
+  "gates": [
+    { "title": "Ручной промысел", "depth": 1, "previousStage": 0, "blueprints": 0 },
+    { "title": "Кооперативный промысел", "depth": 1, "previousStage": 1, "blueprints": 1 },
+    { "title": "Механизация", "depth": 2, "previousStage": 2, "blueprints": 2 },
+    { "title": "Автоматизация", "depth": 2, "previousStage": 3, "blueprints": 1 },
+    { "title": "Промышленный промысел", "depth": 2, "previousStage": 3, "blueprints": 3 }
+  ],
+  "recipes": [
+    { "item": "charge", "upgrade": "group", "stage": 2, "requireAny": ["charge/remote"] },
+    { "item": "cage", "upgrade": "select", "stage": 3 },
+    { "item": "cage", "upgrade": "bait", "stage": 4, "requireAny": ["cage/select"] },
+    { "item": "cage", "upgrade": "delivery", "stage": 4, "requireAny": ["robot/unlock","winch/auto"] },
+    { "item": "cage", "upgrade": "auto", "stage": 5, "requireAny": ["cage/bait"] },
+    { "item": "cage", "upgrade": "auto", "requireAny": ["cage/delivery"] },
+    { "item": "vacuum", "upgrade": "delivery", "stage": 5, "requireAny": ["mail/unlock"] },
+    { "item": "vacuum", "upgrade": "delivery", "requireAny": ["vacuum/auto"] },
+    { "item": "net", "upgrade": "delivery", "stage": 5, "requireAny": ["mail/unlock"] },
+    { "item": "net", "upgrade": "delivery", "requireAny": ["net/compact"] },
+    { "item": "trap", "upgrade": "delivery", "stage": 4, "requireAny": ["mail/unlock"] },
+    { "item": "trap", "upgrade": "group", "stage": 5, "requireAny": ["trap/delivery"] },
+    { "item": "bubbles", "upgrade": "group", "stage": 5, "requireAny": ["bubbles/auto"] },
+    { "item": "farm", "upgrade": "unlock", "requireAny": ["trap/unlock"] },
+    { "item": "farm", "upgrade": "delivery", "stage": 5, "requireAny": ["mail/unlock"] },
+    { "item": "farm", "upgrade": "delivery", "requireAny": ["farm/auto"] },
+    { "item": "winch", "upgrade": "delivery", "stage": 5, "requireAny": ["winch/auto"] },
+    { "item": "magnet", "upgrade": "delivery", "stage": 5, "requireAny": ["mail/unlock"] },
+    { "item": "magnet", "upgrade": "delivery", "requireAny": ["magnet/auto"] },
+    { "item": "oxygen", "upgrade": "quality", "stage": 5, "requireAny": ["oxygen/auto"] },
+    { "item": "robot", "upgrade": "delivery", "stage": 5, "requireAny": ["robot/auto"] },
+    { "item": "mail", "upgrade": "group", "stage": 5, "requireAny": ["mail/auto"] }
+  ]
+}

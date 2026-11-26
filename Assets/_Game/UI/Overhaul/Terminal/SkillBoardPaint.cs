@@ -42,7 +42,9 @@ namespace Raid.UI
     internal sealed class SkillSectorGraphic : MaskableGraphic, ICanvasRaycastFilter
     {
         internal const float Outer=308;
-        const float Inner=108, HalfAngle=21.45f;
+        internal const int Sectors=SkillTreeDefinition.BranchCount+1;
+        internal const float Spacing=360f/Sectors;
+        const float Inner=108, HalfAngle=Spacing*.5f-1f;
         static readonly Color Steel=new(.058f,.117f,.142f);
         static readonly Color Rim=new(.19f,.33f,.38f);
         float angle;
@@ -52,7 +54,7 @@ namespace Raid.UI
 
         internal void Bind(int index, Color tint)
         {
-            angle=index*45f;
+            angle=index*Spacing;
             accent=tint;
             SetVerticesDirty();
         }
