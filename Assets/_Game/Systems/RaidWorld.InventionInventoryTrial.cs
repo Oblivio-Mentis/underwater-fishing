@@ -134,13 +134,53 @@ namespace Raid
             report.Check(stored!=null && stored.techSlots[slot].count==limit && stored.techSlots[slot].kind=="trap","The selected full stack persisted in the player's private campaign profile.");
         }
 
-        static async Awaitable CaptureRackUi(string folder,string name)
+        string rackFramePath;
+        Texture2D rackBackdrop;
+        RenderTexture rackFrame,previousRackFrame;
+        async Awaitable CaptureRackUi(string folder,string name)
         {
-            // Capture after GUI repaint so the original frame contains both the physical room and its IMGUI inventory.
             await Awaitable.WaitForSecondsAsync(.25f);
             string path=Path.Combine(folder,name);
-            ScreenCapture.CaptureScreenshot(path);
-            await WaitRackUi(()=>File.Exists(path) && new FileInfo(path).Length>4096,"rendered screenshot "+name,10);
+            // The player's hidden swapchain can be black. Capture the local camera and its actual HUD,
+            // then paint this inventory's ordinary GUI repaint into the same offscreen surface.
+            UiQaProbe.CapturePeerCamera(path);
+            rackBackdrop=new Texture2D(2,2,TextureFormat.RGB24,false);
+            try
+            {
+                if(!rackBackdrop.LoadImage(File.ReadAllBytes(path)))throw new InvalidDataException("Camera capture invalid.");
+                rackFramePath=path;
+                await WaitRackUi(()=>rackFramePath==null,"inventory GUI repaint "+name,8);
+            }
+            finally{Destroy(rackBackdrop);rackBackdrop=null;rackFramePath=null;}
+        }
+        void BeginRackCapture()
+        {
+            if(rackFramePath==null || Event.current.type!=EventType.Repaint || !rackBackdrop)return;
+            previousRackFrame=RenderTexture.active;
+            rackFrame=RenderTexture.GetTemporary(Screen.width,Screen.height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            Graphics.Blit(rackBackdrop,rackFrame);
+            RenderTexture.active=rackFrame;
+            GL.PushMatrix();
+            GL.LoadPixelMatrix(0,Screen.width,Screen.height,0);
+        }
+        void EndRackCapture()
+        {
+            if(!rackFrame)return;
+            var photo=new Texture2D(rackFrame.width,rackFrame.height,TextureFormat.RGB24,false);
+            try
+            {
+                RenderTexture.active=rackFrame;
+                photo.ReadPixels(new Rect(0,0,rackFrame.width,rackFrame.height),0,0);
+                photo.Apply(false);
+                File.WriteAllBytes(rackFramePath,photo.EncodeToPNG());
+                rackFramePath=null;
+            }
+            finally
+            {
+                Destroy(photo);
+                GL.PopMatrix();RenderTexture.active=previousRackFrame;
+                RenderTexture.ReleaseTemporary(rackFrame);rackFrame=null;
+            }
         }
     }
 }
