@@ -44,17 +44,19 @@ namespace Raid.UI
         internal const float Outer=308;
         internal const int Sectors=SkillTreeDefinition.BranchCount+1;
         internal const float Spacing=360f/Sectors;
-        const float Inner=108, HalfAngle=Spacing*.5f-1f;
+        const float Inner=108;
         static readonly Color Steel=new(.058f,.117f,.142f);
         static readonly Color Rim=new(.19f,.33f,.38f);
-        float angle;
+        float angle,halfAngle;
         float progress;
         bool highlighted;
         Color accent;
+        internal Vector2 ReticlePoint => SkillBoardMesh.At(angle)*216;
 
-        internal void Bind(int index, Color tint)
+        internal void Bind(int index, Color tint,int sectors=Sectors)
         {
-            angle=index*Spacing;
+            float spacing=360f/sectors;
+            angle=index*spacing;halfAngle=spacing*.5f-1f;
             accent=tint;
             SetVerticesDirty();
         }
@@ -79,13 +81,13 @@ namespace Raid.UI
                 return false;
             float radius=local.sqrMagnitude;
             return radius>=Inner*Inner && radius<=Outer*Outer &&
-                Mathf.Abs(Mathf.DeltaAngle(angle,Mathf.Atan2(local.x,local.y)*Mathf.Rad2Deg))<=HalfAngle;
+                Mathf.Abs(Mathf.DeltaAngle(angle,Mathf.Atan2(local.x,local.y)*Mathf.Rad2Deg))<=halfAngle;
         }
 
         protected override void OnPopulateMesh(VertexHelper mesh)
         {
             mesh.Clear();
-            float from=angle-HalfAngle,to=angle+HalfAngle;
+            float from=angle-halfAngle,to=angle+halfAngle;
             SkillBoardMesh.Arc(mesh,Vector2.zero,Inner,Outer,from,to,22,
                 Color.Lerp(Steel,accent,highlighted?.18f:.025f));
             SkillBoardMesh.Arc(mesh,Vector2.zero,Inner+3,Inner+8,from+.4f,to-.4f,22,
