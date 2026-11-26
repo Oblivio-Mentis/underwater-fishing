@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -12,10 +13,11 @@ namespace Raid.UI
 
         public static bool PointerActive => UiRoot.Instance != null && UiRoot.Instance.CheatsOpen;
         internal bool IsOpen => surface.gameObject.activeSelf;
+        internal bool QuantityFocused => IsOpen && amount.isFocused;
 
         readonly UiRoot root;
         readonly RectTransform surface;
-        readonly CheatAmountPad amount;
+        readonly TMP_InputField amount;
         readonly TMP_Text resourceText, fishText, walletText, tankText, feedback;
         readonly Button grant, stock, noclip, fast;
         DiverMotor player;
@@ -28,7 +30,7 @@ namespace Raid.UI
             this.root = root;
             surface = UiKit.Panel(root.transform, "CheatPanel", UiTheme.Steel, true).rectTransform;
             UiKit.Place(surface, new Vector2(1, .5f), new Vector2(1, .5f),
-                new Vector2(-34, 0), new Vector2(474, 600));
+                new Vector2(-34, 0), new Vector2(474, 510));
             var border = surface.gameObject.AddComponent<Outline>();
             border.effectColor = UiTheme.Edge;
             border.effectDistance = new Vector2(1, -1);
@@ -41,7 +43,19 @@ namespace Raid.UI
             var close = MouseButton(header, "CheatClose", "Закрыть", root.CloseCheats);
             UiKit.Size(close, width: 108, flexibleWidth: 0);
 
-            amount = new CheatAmountPad(column);
+            var quantityRow = Row(column, "Quantity", 44);
+            var quantityLabel = UiKit.Label(quantityRow, "Quantity label", "Количество", 22, UiTheme.Muted);
+            UiKit.Size(quantityLabel, width: 166);
+            amount = UiKit.Input(quantityRow, "CheatAmountField", "1", "Введите число");
+            amount.contentType = TMP_InputField.ContentType.IntegerNumber;
+            amount.onValidateInput = (_, _, c) => c >= '0' && c <= '9' ? c : '\0';
+            amount.onFocusSelectAll = true;
+            amount.richText = false;
+            amount.navigation = new Navigation { mode = Navigation.Mode.None };
+            amount.textComponent.alignment = TextAlignmentOptions.MidlineLeft;
+            UiKit.Fill(amount.textViewport, 5);
+            UiKit.Fill(amount.textComponent.rectTransform, 1);
+            UiKit.Fill(amount.placeholder.rectTransform, 1);
             walletText = Section(column, "Казна экипажа");
             resourceText = Selector(column, "CheatResource", delta =>
                 resourceIndex = Wrap(resourceIndex + delta, ResourceIds.Length));
@@ -57,7 +71,18 @@ namespace Raid.UI
             fast = MouseButton(movement, "CheatFast", "Скорость ×4", () => ToggleMovement(false));
             feedback = UiKit.Label(column, "CheatFeedback", "", 19, UiTheme.Cyan);
             UiKit.Size(feedback, 42);
+            amount.onValueChanged.AddListener(QuantityChanged);
             surface.gameObject.SetActive(false);
+        }
+
+        int Quantity => int.TryParse(amount.text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) ? value : 0;
+
+        void QuantityChanged(string text)
+        {
+            bool invalid = text.Length > 0 && Quantity == 0;
+            UiKit.Set(feedback, invalid ? "Введите число от 1 до 2 147 483 647." : "");
+            feedback.color = invalid ? UiTheme.Amber : UiTheme.Cyan;
+            Refresh();
         }
 
         int SpeciesCount => root.Context.World?.CheatFishSpecies.Count ?? 0;
@@ -133,8 +158,9 @@ namespace Raid.UI
             fishIndex = Wrap(fishIndex, species.Count);
             UiKit.Set(fishText, species.Count == 0 ? "Нет доступных видов" : ReelReadout.Species(species[fishIndex]));
             UiKit.Set(tankText, "Резервуар  ·  свободно " + world.CheatFishRoom);
-            grant.interactable = amount.Value > 0;
-            stock.interactable = amount.Value > 0 && species.Count > 0 && world.CheatFishRoom > 0;
+            bool hasQuantity = Quantity > 0;
+            grant.interactable = hasQuantity;
+            stock.interactable = hasQuantity && species.Count > 0 && world.CheatFishRoom > 0;
             if (Time.unscaledTime >= movementDeadline ||
                 (requestedNoclip == player.CheatNoclip && requestedFast == player.CheatFast))
             {
@@ -164,15 +190,17 @@ namespace Raid.UI
 
         void GrantResource()
         {
-            if (player != null && amount.Value > 0)
-                player.CmdCheatGrantResource(ResourceIds[resourceIndex], amount.Value);
+            int value = Quantity;
+            if (player != null && value > 0)
+                player.CmdCheatGrantResource(ResourceIds[resourceIndex], value);
         }
 
         void AddFish()
         {
             var world = root.Context.World;
-            if (player != null && world != null && amount.Value > 0 && fishIndex < world.CheatFishSpecies.Count)
-                player.CmdCheatGrantFish(world.CheatFishSpecies[fishIndex], amount.Value);
+            int value = Quantity;
+            if (player != null && world != null && value > 0 && fishIndex < world.CheatFishSpecies.Count)
+                player.CmdCheatGrantFish(world.CheatFishSpecies[fishIndex], value);
         }
 
         void GrantResponded(bool accepted, int granted, string message)

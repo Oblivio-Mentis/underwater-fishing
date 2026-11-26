@@ -262,7 +262,7 @@ namespace Raid
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
             bool cheatPointer = UI.CheatPanel.PointerActive;
             bool maySelect=gameplay && (cheatPointer || !UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
-            if (maySelect && !Motor.IsHelpless)
+            if (maySelect && !Motor.IsHelpless && UI.UiRoot.Instance?.EditingCheatQuantity != true)
             {
                 for (int i = 0; i < _select.Length; i++)
                     if (_select[i].WasPressedThisFrame()) SelectSlot(i);

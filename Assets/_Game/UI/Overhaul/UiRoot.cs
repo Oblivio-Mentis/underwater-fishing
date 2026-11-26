@@ -55,6 +55,7 @@ namespace Raid.UI
         CheatPanel cheats;
         int ignoreWorldPointerThroughFrame = -1;
         internal bool CheatsOpen => cheats?.IsOpen == true;
+        internal bool EditingCheatQuantity => cheats?.QuantityFocused == true;
         internal bool TechnologyOpen => skills?.TechnologyOpen==true;
         CanvasGroup[] modalGroups;
         GameObject cancelConfirmationButton;
@@ -231,7 +232,9 @@ namespace Raid.UI
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
             if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
             if (CheatsOpen && (!Context.Connected || Context.Player.IsHelpless)) CloseCheats();
-            if (Application.isFocused && !overlay && Keyboard.current?.xKey.wasPressedThisFrame == true &&
+            var keyboard = Keyboard.current;
+            if (Application.isFocused && !overlay && keyboard != null && keyboard.xKey.wasPressedThisFrame &&
+                !keyboard.ctrlKey.isPressed && !keyboard.leftMetaKey.isPressed && !keyboard.rightMetaKey.isPressed &&
                 Context.Connected && Context.World != null && !Context.Player.IsHelpless && (Page == UiPage.None || computerSurface) &&
                 !confirmation.gameObject.activeSelf)
             {
@@ -247,7 +250,7 @@ namespace Raid.UI
                     SetCursor();
                 }
             }
-            if(Application.isFocused && !overlayBefore && Context.World?.InventionPanelOpen!=true && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if(Application.isFocused && !overlayBefore && !EditingCheatQuantity && Context.World?.InventionPanelOpen!=true && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
                 else if(Page==UiPage.SkillTree && skills.Back())boardInput.Clear();
