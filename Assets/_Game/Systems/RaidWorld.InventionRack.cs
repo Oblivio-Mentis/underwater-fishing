@@ -5,7 +5,14 @@ namespace Raid
 {
     public sealed partial class DiverMotor
     {
-        [ServerRpc] public void CmdRackTake(string kind) => RaidWorld.Instance?.TakeRackItem(this,kind);
+        public void CmdRackTake(string kind)
+        {
+            if(!NetworkObject || !IsClientInitialized || !IsOwner || !_camera)return;
+            // The click can precede the next periodic movement/aim packet.
+            RequestRackProduct(kind,_camera.ViewportPointToRay(new Vector3(.5f,.5f)).direction);
+        }
+        [ServerRpc(RequireOwnership=true)]
+        void RequestRackProduct(string kind,Vector3 direction) => RaidWorld.Instance?.TakeRackItem(this,kind,direction);
         [ServerRpc] public void CmdCollectRackParcel(int serial) => RaidWorld.Instance?.CollectRackParcel(this,serial);
         [ServerRpc] public void CmdTechEquipSlot(int slot) => RaidWorld.Instance?.EquipRackItem(this,slot);
         [ServerRpc] public void CmdTechStore(int serial) => RaidWorld.Instance?.StowRackItem(this,serial);
@@ -15,6 +22,8 @@ namespace Raid
     {
         Transform inventionRack;
         BoxCollider rackContact;
+        InventionVendorDisplay rackDisplay;
+        Matrix4x4 rackPhysicsPose;
         public Transform InventionRackTransform => inventionRack;
 
         void EnsureInventionRack()
@@ -35,22 +44,63 @@ namespace Raid
                 go.transform.SetParent(station.transform.parent,true);
                 inventionRack=go.transform;
                 rackContact=go.AddComponent<BoxCollider>();
-                rackContact.center=new Vector3(0,-.13f,-.24f);rackContact.size=new Vector3(1.32f,2.10f,.49f);
-                if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)TechRigShell.BuildDispenser(go);
+                const float back=-.485f;
+                rackContact.center=new Vector3(0,-.13f,(back+TechRigShell.VendorGlassZ)*.5f);
+                rackContact.size=new Vector3(1.32f,2.10f,TechRigShell.VendorGlassZ-back);
+                if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    rackDisplay=TechRigShell.BuildDispenser(go);
                 break;
             }
         }
 
-        public bool NearInventionRack(DiverMotor diver) => inventionRack && diver && diver.IsInside && !diver.IsHelpless && !diver.IsTrapped &&
-            Vector3.Distance(diver.transform.position+Vector3.up*.6f,inventionRack.position)<=tuning.interactionRange;
-        public bool RackFocused(DiverMotor diver,bool localCamera=false)
+        public bool NearInventionRack(DiverMotor diver)
         {
-            if(!NearInventionRack(diver))return false;
+            if(!inventionRack || !diver || !diver.IsInside || diver.IsHelpless || diver.IsTrapped)return false;
+            var pose=inventionRack.localToWorldMatrix;
+            if(rackPhysicsPose!=pose)
+            {
+                Physics.SyncTransforms();
+                rackPhysicsPose=pose;
+            }
             var eye=diver.transform.position+Vector3.up*.6f;
+            return (rackContact.ClosestPoint(eye)-eye).sqrMagnitude<=tuning.interactionRange*tuning.interactionRange;
+        }
+        Ray RackRay(DiverMotor diver,bool localCamera)
+        {
             var camera=localCamera?diver.GetComponentInChildren<Camera>():null;
-            var ray=camera?camera.ViewportPointToRay(new Vector3(.5f,.5f,0)):new Ray(eye,diver.AimDirection);
-            return Physics.Raycast(ray,out var hit,tuning.interactionRange,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) &&
+            return camera?new Ray(camera.transform.position,camera.ViewportPointToRay(new Vector3(.5f,.5f)).direction):
+                new Ray(diver.transform.position+Vector3.up*.6f,diver.AimDirection);
+        }
+        bool HitRack(Ray ray,out RaycastHit hit) =>
+            Physics.Raycast(ray,out hit,tuning.interactionRange,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) &&
                 hit.collider==rackContact;
+        public bool RackFocused(DiverMotor diver,bool localCamera=false) =>
+            NearInventionRack(diver) && HitRack(RackRay(diver,localCamera),out _);
+
+        internal bool TryRackProduct(DiverMotor diver,bool localCamera,out TechItem product)
+        {
+            product=null;
+            return NearInventionRack(diver) && RackProductOnRay(RackRay(diver,localCamera),out product);
+        }
+        bool RackProductOnRay(Ray ray,out TechItem product)
+        {
+            product=null;
+            if(!HitRack(ray,out var hit) || Vector3.Dot(hit.normal,inventionRack.forward)<.95f)return false;
+            return TechRigShell.TryVendorCell(inventionRack.InverseTransformPoint(hit.point),out product);
+        }
+        internal Vector3 RackProductPosition(string kind)
+        {
+            if(inventionRack)
+            {
+                var items=TechCatalog.Items;
+                for(int i=0;i<items.Length;i++)
+                    if(items[i].id==kind)return inventionRack.TransformPoint(TechRigShell.VendorCell(i));
+            }
+            return Vector3.zero;
+        }
+        internal void PresentRackAim(TechItem product,bool unlocked,bool fits)
+        {
+            if(rackDisplay)rackDisplay.PresentAim(product,unlocked,fits,view);
         }
 
         bool InventoryRequest(DiverMotor diver,out PlayerProgress profile)
@@ -86,10 +136,16 @@ namespace Raid
             return team.CanTakeTechFromRack(profile,kind,slot-FirstCargoSlot,out reason);
         }
 
-        internal void TakeRackItem(DiverMotor diver,string kind)
+        internal void TakeRackItem(DiverMotor diver,string kind,Vector3 direction)
         {
             if(!InventoryRequest(diver,out var profile))return;
-            if(!RackFocused(diver)){InventoryReceipt(diver,profile,false,"Подойдите к раздатчику и посмотрите на его дверцу");return;}
+            // The server supplies origin, reach, occlusion and cell geometry. Ignore stale backwards clicks.
+            float length=direction.sqrMagnitude;
+            Physics.SyncTransforms();
+            if(!(length>.99f && length<1.01f) || Vector3.Dot(direction,diver.AimDirection)<.342f ||
+                !NearInventionRack(diver) || !RackProductOnRay(new Ray(diver.transform.position+Vector3.up*.6f,direction),out var product) ||
+                product.id!=kind)
+            {InventoryReceipt(diver,profile,false,"Наведитесь на товар за стеклом");return;}
             if(!FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out _,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
             LaunchRackParcel(diver,kind);
         }

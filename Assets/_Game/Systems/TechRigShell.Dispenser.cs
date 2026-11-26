@@ -48,8 +48,29 @@ namespace Raid
             return label;
         }
 
+        internal const float VendorGlassZ=.125f;
+        const float CellHalfWidth=.107f,CellHalfHeight=.111f;
         static Vector3 Cell(int row,int column) => new(.255f-column*.235f,.465f-row*.253f,-.017f);
-        internal static void BuildDispenser(GameObject housing)
+        internal static Vector3 VendorCell(int index)
+        {
+            var center=Cell(index/4,index%4);
+            center.z=VendorGlassZ;
+            return center;
+        }
+        internal static bool TryVendorCell(Vector3 point,out TechItem item)
+        {
+            var items=TechCatalog.Items;
+            for(int i=0;i<items.Length;i++)
+            {
+                var distance=point-VendorCell(i);
+                if(Mathf.Abs(distance.x)>CellHalfWidth || Mathf.Abs(distance.y)>CellHalfHeight)continue;
+                item=items[i];
+                return true;
+            }
+            item=null;
+            return false;
+        }
+        internal static InventionVendorDisplay BuildDispenser(GameObject housing)
         {
             Materials();
             if(!dispenserMesh)
@@ -106,7 +127,7 @@ namespace Raid
             if(!windowMesh)
             {
                 windowMesh=new Mesh{name="Закалённое стекло"};
-                windowMesh.vertices=new[]{new Vector3(-.60f,-.395f,.125f),new Vector3(.38f,-.395f,.125f),new Vector3(.38f,.605f,.125f),new Vector3(-.60f,.605f,.125f)};
+                windowMesh.vertices=new[]{new Vector3(-.60f,-.406f,VendorGlassZ),new Vector3(.38f,-.406f,VendorGlassZ),new Vector3(.38f,.605f,VendorGlassZ),new Vector3(-.60f,.605f,VendorGlassZ)};
                 windowMesh.colors=new[]{new Color(.46f,.84f,.93f,.10f),new Color(.38f,.74f,.85f,.045f),new Color(.63f,.90f,.96f,.17f),new Color(.43f,.79f,.87f,.075f)};
                 windowMesh.triangles=new[]{0,1,2,0,2,3};windowMesh.RecalculateNormals();windowMesh.RecalculateBounds();
                 displayGlass=new Material(Shader.Find("Sprites/Default")){name="Стекло · торговый автомат"};
@@ -124,7 +145,13 @@ namespace Raid
             display.audioCue=housing.AddComponent<AudioSource>();display.audioCue.spatialBlend=1;display.audioCue.minDistance=1.2f;display.audioCue.maxDistance=12;display.audioCue.playOnAwake=false;
             if(!click)click=Tone("Выдача · привод",190,.12f);display.sound=click;
             var tint=new Color(.70f,.98f,.92f);
-            VendorLegend(housing.transform,"N E R E I D   /   С Н А Б Ж Е Н И Е",new(0,.80f,.123f),.61f,1.16f,tint);
+            display.title=VendorLegend(housing.transform,InventionVendorDisplay.ReadyTitle,new(0,.837f,.124f),.63f,1.13f,tint);
+            display.title.name="Название товара";
+            display.title.enableAutoSizing=true;
+            display.title.fontSizeMin=.38f;display.title.fontSizeMax=.63f;
+            display.title.rectTransform.sizeDelta=new Vector2(1.13f,.085f);
+            display.status=VendorLegend(housing.transform,InventionVendorDisplay.ReadyHint,new(0,.759f,.124f),.46f,1.13f,Color.white);
+            display.status.name="Состояние выдачи";
             VendorLegend(housing.transform,"ВЫДАЧА",new(-.075f,-.926f,.003f),.48f,.75f,new Color(.92f,.84f,.62f));
             display.code=VendorLegend(housing.transform,"ГОТОВ",new(.52f,.485f,.123f),.34f,.163f,tint);
             for(int row=0;row<4;row++)for(int col=0;col<3;col++)
@@ -140,29 +167,86 @@ namespace Raid
                 BuildSaleSample(anchor,item.id,.178f);display.products[item.id]=anchor.transform;
                 string code=((char)('A'+row)).ToString()+(col+1);
                 display.codes[item.id]=code;
-                var pos=Cell(row,col);VendorLegend(housing.transform,code,new Vector3(pos.x,pos.y-.095f,.108f),.23f,.15f,tint);
+                var pos=VendorCell(i);
+                display.labels[item.id]=VendorLegend(housing.transform,code+" −",
+                    new Vector3(pos.x,pos.y-.09f,pos.z+.009f),.30f,.19f,InventionVendorDisplay.Locked);
             }
+            var selection=new GameObject("Контур выбранного товара");selection.transform.SetParent(housing.transform,false);
+            var frame=selection.AddComponent<LineRenderer>();
+            frame.useWorldSpace=false;frame.loop=true;frame.positionCount=4;
+            frame.SetPositions(new[]{new Vector3(-CellHalfWidth,-CellHalfHeight),new Vector3(-CellHalfWidth,CellHalfHeight),
+                new Vector3(CellHalfWidth,CellHalfHeight),new Vector3(CellHalfWidth,-CellHalfHeight)});
+            frame.widthMultiplier=.010f;frame.numCornerVertices=2;
+            frame.sharedMaterial=displayGlass;frame.shadowCastingMode=ShadowCastingMode.Off;frame.receiveShadows=false;
+            frame.enabled=false;display.frame=frame;
+            return display;
         }
     }
 
     internal sealed class InventionVendorDisplay : MonoBehaviour
     {
+        internal const string ReadyTitle="N E R E I D   /   С Н А Б Ж Е Н И Е";
+        internal const string ReadyHint="Наведитесь на товар";
+        internal static readonly Color Locked=new(.94f,.66f,.39f);
+        static readonly Color Available=new(.57f,1,.81f),Full=new(1,.54f,.43f);
         internal readonly Dictionary<string,Transform> products=new();
         internal readonly Dictionary<string,string> codes=new();
+        internal readonly Dictionary<string,TMP_Text> labels=new();
         internal Transform flap;
-        internal TMP_Text code;
+        internal TMP_Text code,title,status;
+        internal LineRenderer frame;
         internal AudioSource audioCue;
         internal AudioClip sound;
         Transform moving;
         Vector3 origin;
-        float until;
+        float until,nextLabelRefresh;
+        TechItem aimed,dispatching;
+        bool researched,room;
+
+        internal void PresentAim(TechItem product,bool unlocked,bool fits,TeamProgress team)
+        {
+            if(Time.unscaledTime>=nextLabelRefresh && team!=null)
+            {
+                nextLabelRefresh=Time.unscaledTime+.20f;
+                foreach(var entry in labels)
+                {
+                    bool available=team.TechRank(entry.Key,"unlock")>0;
+                    var label=entry.Value;
+                    var color=available?Available:Locked;
+                    if(label.color==color)continue;
+                    label.color=color;
+                    label.text=codes[entry.Key]+(available?" +":" −");
+                }
+            }
+            if(aimed==product && researched==unlocked && room==fits)return;
+            aimed=product;researched=unlocked;room=fits;
+            frame.enabled=product!=null;
+            if(product!=null && products.TryGetValue(product.id,out var sample))
+            {
+                var p=sample.localPosition;
+                frame.transform.localPosition=new Vector3(p.x,p.y,TechRigShell.VendorGlassZ+.016f);
+                frame.startColor=frame.endColor=!researched?Locked:room?Available:Full;
+            }
+            RefreshReadout();
+        }
+
+        void RefreshReadout()
+        {
+            bool receipt=dispatching!=null && (aimed==null || aimed==dispatching);
+            var product=receipt?dispatching:aimed;
+            title.text=product?.title??ReadyTitle;
+            status.text=receipt?"Выдача началась":product==null?ReadyHint:!researched?"Нужен чертёж":!room?"Нет места":"ЛКМ · Получить";
+            status.color=receipt || (product!=null && room && researched)?Available:product==null?Color.white:!researched?Locked:Full;
+            code.text=product!=null && codes.TryGetValue(product.id,out var cell)?cell:"ГОТОВ";
+        }
 
         internal void Dispense(string item)
         {
             if(moving)moving.localPosition=origin;
             moving=products.TryGetValue(item,out var value)?value:null;
             if(moving)origin=moving.localPosition;
-            if(code && codes.TryGetValue(item,out var label))code.text=label;
+            dispatching=TechCatalog.Find(item);
+            RefreshReadout();
             until=Time.unscaledTime+.8f;
             if(audioCue && sound)audioCue.PlayOneShot(sound,.55f);
         }
@@ -173,7 +257,7 @@ namespace Raid
             float travel=Mathf.Sin(Mathf.PI*phase);
             flap.localRotation=Quaternion.Euler(-63*travel,0,0);
             if(moving)moving.localPosition=origin+Vector3.forward*(travel*.048f);
-            if(phase==0){moving=null;if(code)code.text="ГОТОВ";}
+            if(phase==0){moving=null;dispatching=null;RefreshReadout();}
         }
     }
 }
