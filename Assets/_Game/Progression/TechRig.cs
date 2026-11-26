@@ -74,7 +74,7 @@ namespace Raid
             int placed=0;
             foreach(var rig in rigs)
             {
-                if(rig.serial==existingSerial || rig.kind!="vacuum" || rig.mode is "carried" or "stored")continue;
+                if(rig.serial==existingSerial || rig.kind!="vacuum" || rig.mode is "carried" or "stored" or "dropped")continue;
                 placed++;
             }
             if(placed>=limit)
