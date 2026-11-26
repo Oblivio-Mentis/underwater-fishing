@@ -16,11 +16,18 @@ namespace Raid
         readonly HashSet<int> renderedParcelIds=new();
         readonly Dictionary<int,Vector3> firstParcelPosition=new();
         bool capturedFlight;
+        float nextTraceAt;
 
         void LateUpdate()
         {
             if(observedParcelOwner<0 || !world || !world.NetworkObject || !world.IsClientInitialized ||
                 !world.TryGetRackParcel(observedParcelOwner,out int serial,out var pos,out bool resting))return;
+            if(Host && Time.unscaledTime>=nextTraceAt)
+            {
+                nextTraceAt=Time.unscaledTime+.06f;
+                string trace=world.QaDescribeRackShot(observedParcelOwner);
+                if(trace!=null)File.AppendAllText(FileFor("parcel-trajectory.tsv"),trace+System.Environment.NewLine);
+            }
             if(world.RackParcelInFlight("cage"))cageParcelIds.Add(serial);
             if(world.RackParcelInFlight("charge"))chargeParcelIds.Add(serial);
             if(!renderedParcelIds.Contains(serial))
@@ -146,6 +153,27 @@ namespace Raid
             Assert(FleetDigest(world.View)==report.fleetHash,"canceling issuance preserved the entire fleet, stock and shared treasury");
             Mark("cancel-done-"+report.seat);
             yield return Wait("every seat finished the canceled-flight check",()=>All("cancel-done-"));
+        }
+    }
+
+    public sealed partial class RaidWorld
+    {
+        internal string QaDescribeRackShot(int owner)
+        {
+            var order=orders.Find(o=>o.parcel.owner==owner);
+            var diver=TechDiver(owner);
+            if(order==null || !diver)return null;
+            var point=order.parcel.position;
+            string RayTo(Vector3 target)
+            {
+                bool hit=Physics.Linecast(point,target,out var contact,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
+                string obstacle=hit?contact.collider.name+(contact.collider.GetComponentInParent<DiverMotor>()==diver?"(owner)":""):"clear";
+                return Vector3.Distance(point,target).ToString("F3",System.Globalization.CultureInfo.InvariantCulture)+"/"+obstacle;
+            }
+            var root=diver.transform.position;
+            return string.Join("\t",order.parcel.serial,order.parcel.kind,order.age.ToString("F3",System.Globalization.CultureInfo.InvariantCulture),
+                order.parcel.resting,point.ToString("F3"),root.ToString("F3"),RayTo(root+Vector3.up*.53f),
+                RayTo(root+Vector3.up*.65f),RayTo(root+Vector3.up*.79f-diver.transform.right*.18f));
         }
     }
 }
