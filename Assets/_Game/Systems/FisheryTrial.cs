@@ -100,7 +100,8 @@ namespace Raid
             yield return Wait("authoritative expedition, reef and crew",()=>
             {
                 world=RaidWorld.Instance;
-                if(!world || !world.IsServerInitialized || world.Team==null || world.TravelRemaining>0 || !world.threats || !world.threats.Reef.Active)return false;
+                if(!world || !world.NetworkObject || !world.IsServerInitialized || world.Team==null || world.TravelRemaining>0 ||
+                    !world.threats || !world.threats.NetworkObject || !world.threats.Reef.Active)return false;
                 host=DiverMotor.ServerDivers.FirstOrDefault(d=>d && d.IsOwner && d.IsServerInitialized);
                 peer=DiverMotor.ServerDivers.FirstOrDefault(d=>d && !d.IsOwner && d.IsServerInitialized);
                 return host && (!requirePeer || peer);
