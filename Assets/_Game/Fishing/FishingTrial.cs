@@ -600,28 +600,25 @@ namespace Raid
         private IEnumerator VerifyGripAndFriendTether(FishActor fish)
         {
             Phase("Grip stabilization and friend tether rescue");
-            StageCooperativePull(fish);
+            StageCooperativePull(fish,true);
             host.QaHoldOwned(false, 0);
             yield return Pause(.15f);
-            Vector3 before = host.transform.position;
-            for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
-            float unassisted = Vector3.Distance(before, host.transform.position);
-
             helper.Motor.Teleport(host.transform.position-host.Motor.AimDirection*1.1f);
             Physics.SyncTransforms();
-            string grab=Send("fish_grip",3);
+            int samples=fish.GripTugSamples;
+            string grab=Send("fish_grip",8);
             yield return Wait(() => ReadClient()?.request==grab && helper.AssistTarget == host.Motor && host.IsAssisted,
                 3, "Remote owner's E grip did not attach to the active fisherman.");
-            before = host.transform.position;
-            for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
-            float assisted = Vector3.Distance(before, host.transform.position);
+            // Measure the same live line at the same instant. Different time windows can compare a slack line to a taut one.
+            yield return Wait(()=>fish.GripTugSamples>samples,6,"No active, tensioned line sampled the helper's grip.");
+            float unassisted=fish.GripBaselineSpeed, assisted=fish.GripTargetSpeed;
             Send("fish_grip",0);
             yield return Wait(() => helper.AssistTarget == null && !host.IsAssisted, 3, "E grip did not detach.");
-            Require(unassisted > .03f && assisted < unassisted * .85f,
-                $"E grip did not reduce towing: unassisted={unassisted:F3}, assisted={assisted:F3}.");
+            Require(unassisted>0 && assisted>0 && assisted<unassisted*.85f && Mathf.Abs(assisted-unassisted*host.tuning.gripTugMultiplier)<.001f,
+                $"E grip tug speed mismatch: unassisted={unassisted:F3}, assisted={assisted:F3}.");
             Require(fish.HookCount == 1 && host.HookedFish == fish && fish.SoloTow,
                 "E grip incorrectly replaced the second harpoon or advanced the heavy catch.");
-            Check($"E grip reduced towing from {unassisted:F3} m to {assisted:F3} m without replacing the second hook.");
+            Check($"E grip reduced a tensioned single line's tug target from {unassisted:F3} to {assisted:F3} m/s without replacing the second hook.");
 
             // Just as for HookPeer, stage the lane but send the ordinary input through the independent owner.
             float deadline=Time.unscaledTime+5, nextShot=0;
@@ -721,7 +718,7 @@ namespace Raid
             }
         }
 
-        private void StageCooperativePull(FishActor fish)
+        private void StageCooperativePull(FishActor fish,bool stretchLine=false)
         {
             // Find a clear water lane for the pair. Cliff-side hooks stay attached but
             // can require swimmers to reposition before both reels can close in.
@@ -736,7 +733,8 @@ namespace Raid
             {
                 var outward=(Quaternion.AngleAxis(yaw,Vector3.up)*current+Vector3.up*.48f).normalized;
                 var lateral=Vector3.Cross(Vector3.up,outward).normalized;
-                Vector3 lead=center+outward*3.9f,support=center+outward*6.2f+lateral*.65f;
+                float payout=stretchLine?Mathf.Clamp(host.LineLength+.4f,3.9f,host.tuning.maxRange-1.5f):3.9f;
+                Vector3 lead=center+outward*payout,support=lead+outward*2.3f+lateral*.65f;
                 if(Physics.CheckSphere(lead,.85f,mask,QueryTriggerInteraction.Ignore) ||
                     Physics.CheckSphere(support,.85f,mask,QueryTriggerInteraction.Ignore) ||
                     !SeesFish(lead) || !SeesFish(support))continue;
