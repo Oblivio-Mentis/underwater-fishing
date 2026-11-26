@@ -260,7 +260,7 @@ namespace Raid
                 if(!well || !well.gameObject.activeInHierarchy)return false;
                 var art=well.Find("Item")?.GetComponent<Image>();
                 var label=well.Find("Stack count")?.GetComponent<TMP_Text>();
-                return art && art.enabled && art.sprite && art.sprite.name==kind && label && label.enabled &&
+                return art && art.enabled && art.sprite && art.sprite.name==kind && art.sprite.texture.name=="NereidInventionIcons" && label && label.enabled &&
                     label.text=="\u00d7"+count;
             }
             await WaitRackUi(()=>HudStack(trapSlot,"trap",limit) && HudStack(ballSlot,"trap",1) && HudStack(otherSlot,other,1),

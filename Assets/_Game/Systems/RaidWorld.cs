@@ -104,11 +104,12 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { CloseInventionInventory();ClearRackParcelViews();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
+        public override void OnStopClient() { ClearVendingAim();ClearRackParcelViews();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
             view=JsonUtility.FromJson<TeamProgress>(newValue);
+            if(rackDisplay)rackDisplay.RefreshLabels(view);
             ApplyLocalTuning();
         }
         private void ApplyLocalTuning()
@@ -128,8 +129,9 @@ namespace Raid
             ApplyLocalTuning();
             EnsureInventionRack();
             PresentRackParcels();
-            PresentInventionInventory();
-            if(!UI.UiInputGate.Active && !InventionPanelOpen && localDiver!=null && !InventionRackTargeted(localDiver) && interact!=null && interact.WasPressedThisFrame())
+            if(!UI.UiInputGate.Active && localDiver!=null)
+                PointAtVendingMachine(localDiver,Application.isFocused && Mouse.current?.leftButton.wasPressedThisFrame==true);
+            if(!UI.UiInputGate.Active && localDiver!=null && !AimingAtVendingMachine && interact!=null && interact.WasPressedThisFrame())
             {
                 if(TryAimDrop(localDiver, out var item)) localDiver.GetComponent<HarpoonTool>()?.RequestPickup(item.id);
                 else if(CanUseTerminal)

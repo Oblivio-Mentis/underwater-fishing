@@ -265,7 +265,8 @@ namespace Raid
             if (Application.isFocused && !UI.UiInputGate.Blocked && Keyboard.current?.qKey.wasPressedThisFrame == true)
                 RequestDropSelected();
             bool gameplay = Application.isFocused && !UI.UiInputGate.Blocked;
-            bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved;
+            bool rackPointer = !UI.UiInputGate.Active && RaidWorld.Instance && RaidWorld.Instance.RackFocused(Motor,true);
+            bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved && !rackPointer;
             if(!_fire.IsPressed())_primaryConsumedUntilRelease=false;
             bool primaryPressed=controlling && _fire.WasPressedThisFrame();
             bool itemConsumed=primaryPressed && (TryDrawPocketInvention() || ConsumeCargoPrimaryInput());

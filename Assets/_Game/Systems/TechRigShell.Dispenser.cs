@@ -199,33 +199,37 @@ namespace Raid
         internal AudioClip sound;
         Transform moving;
         Vector3 origin;
-        float until,nextLabelRefresh;
+        float until;
+        int lastRevision=-1, lastPurchaseCount=-1;
         TechItem aimed,dispatching;
-        bool researched,room;
+        VendorAction action;
 
-        internal void PresentAim(TechItem product,bool unlocked,bool fits,TeamProgress team)
+        internal void RefreshLabels(TeamProgress team)
         {
-            if(Time.unscaledTime>=nextLabelRefresh && team!=null)
+            if(team==null || (team.teamRevision==lastRevision && team.techPurchases.Count==lastPurchaseCount))return;
+            lastRevision=team.teamRevision;
+            lastPurchaseCount=team.techPurchases.Count;
+            foreach(var entry in labels)
             {
-                nextLabelRefresh=Time.unscaledTime+.20f;
-                foreach(var entry in labels)
-                {
-                    bool available=team.TechRank(entry.Key,"unlock")>0;
-                    var label=entry.Value;
-                    var color=available?Available:Locked;
-                    if(label.color==color)continue;
-                    label.color=color;
-                    label.text=codes[entry.Key]+(available?" +":" −");
-                }
+                bool available=team.TechRank(entry.Key,"unlock")>0;
+                var label=entry.Value;
+                var color=available?Available:Locked;
+                if(label.color==color)continue;
+                label.color=color;
+                label.text=codes[entry.Key]+(available?" +":" −");
             }
-            if(aimed==product && researched==unlocked && room==fits)return;
-            aimed=product;researched=unlocked;room=fits;
+        }
+
+        internal void PresentAim(TechItem product,VendorAction next)
+        {
+            if(aimed==product && action==next)return;
+            aimed=product;action=next;
             frame.enabled=product!=null;
             if(product!=null && products.TryGetValue(product.id,out var sample))
             {
                 var p=sample.localPosition;
                 frame.transform.localPosition=new Vector3(p.x,p.y,TechRigShell.VendorGlassZ+.016f);
-                frame.startColor=frame.endColor=!researched?Locked:room?Available:Full;
+                frame.startColor=frame.endColor=ActionColor();
             }
             RefreshReadout();
         }
@@ -235,10 +239,23 @@ namespace Raid
             bool receipt=dispatching!=null && (aimed==null || aimed==dispatching);
             var product=receipt?dispatching:aimed;
             title.text=product?.title??ReadyTitle;
-            status.text=receipt?"Выдача началась":product==null?ReadyHint:!researched?"Нужен чертёж":!room?"Нет места":"ЛКМ · Получить";
-            status.color=receipt || (product!=null && room && researched)?Available:product==null?Color.white:!researched?Locked:Full;
+            status.text=receipt?"Выдача началась":action switch {
+                VendorAction.Ready => "ЛКМ · Получить",
+                VendorAction.Locked => "Нужен чертёж",
+                VendorAction.Full => "Нет места",
+                VendorAction.Dispensing => "Идёт выдача",
+                VendorAction.CollectParcel => "Заберите предмет с палубы",
+                _ => product==null?ReadyHint:"Ожидание"
+            };
+            status.color=receipt?Available:ActionColor();
             code.text=product!=null && codes.TryGetValue(product.id,out var cell)?cell:"ГОТОВ";
         }
+        Color ActionColor() => action switch {
+            VendorAction.Ready or VendorAction.Dispensing => Available,
+            VendorAction.Full => Full,
+            VendorAction.Locked or VendorAction.CollectParcel => Locked,
+            _ => Color.white
+        };
 
         internal void Dispense(string item)
         {

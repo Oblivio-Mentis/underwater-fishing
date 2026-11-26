@@ -19,7 +19,7 @@ namespace Raid.UI
     {
         public static bool Active, Modal, AllowAssist, PointerReserved, MonitorLook;
         public static float ResumeAt;
-        public static bool Blocked => RaidWorld.Instance?.InventionPanelOpen==true || Active && (Modal || Time.unscaledTime < ResumeAt || !Application.isFocused);
+        public static bool Blocked => Active && (Modal || Time.unscaledTime < ResumeAt || !Application.isFocused);
         public static void Reset() { Active=false; Modal=false; AllowAssist=false; PointerReserved=false; MonitorLook=false; ResumeAt=0; }
     }
     public enum UiPage { None, Main, Connection, Crew, Terminal, Cargo, Pause, Settings, SkillTree }

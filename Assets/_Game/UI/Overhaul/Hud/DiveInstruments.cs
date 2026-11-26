@@ -17,6 +17,14 @@ namespace Raid.UI
         static readonly Color Gold=new Color(1f,.76f,.32f);
         static readonly Vector2 Center=new Vector2(.5f,.5f);
         static Sprite[] art;
+        // NereidInventionIcons uses four columns, read from the top-left.
+        static readonly string[] inventionCells={
+            "charge","vacuum","net","trap",
+            "lure","bubbles","farm","cage",
+            "winch","magnet","oxygen","robot",
+            "mail","basket"
+        };
+        static Texture2D inventionAtlas;
         static readonly Dictionary<string,Sprite> inventionIcons=new();
         readonly Image[] slotRim=new Image[HarpoonTool.MaximumSlots], slotArt=new Image[HarpoonTool.MaximumSlots], crewGauge=new Image[5], contacts=new Image[5];
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[HarpoonTool.MaximumSlots];
@@ -222,10 +230,13 @@ namespace Raid.UI
         static Sprite InventionIcon(string kind)
         {
             if(inventionIcons.TryGetValue(kind,out var icon) && icon!=null)return icon;
-            var texture=Resources.Load<Texture2D>("Technology/Icons/"+kind);
-            if(texture)
+            int cell=System.Array.IndexOf(inventionCells,kind);
+            if(!inventionAtlas)inventionAtlas=Resources.Load<Texture2D>("NereidInventionIcons");
+            if(inventionAtlas && cell>=0)
             {
-                icon=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),Center,100,0,SpriteMeshType.FullRect);
+                float w=inventionAtlas.width*.25f,h=inventionAtlas.height*.25f;
+                var rect=new Rect(cell%4*w,(3-cell/4)*h,w,h);
+                icon=Sprite.Create(inventionAtlas,rect,Center,100,0,SpriteMeshType.FullRect);
                 icon.name=kind;
                 icon.hideFlags=HideFlags.HideAndDontSave;
             }

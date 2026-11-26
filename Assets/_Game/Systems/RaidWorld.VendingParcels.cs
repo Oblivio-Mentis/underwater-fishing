@@ -176,7 +176,7 @@ namespace Raid
                 if(!parcel.resting)model.Rotate(13*Time.deltaTime,78*Time.deltaTime,32*Time.deltaTime,Space.Self);
             }
             foreach(var id in obsoleteParcels){Destroy(parcelModels[id].gameObject);parcelModels.Remove(id);}
-            if(!InventionPanelOpen && !UI.UiInputGate.Blocked && Keyboard.current?.eKey.wasPressedThisFrame==true &&
+            if(!UI.UiInputGate.Blocked && !UI.CheatPanel.PointerActive && Keyboard.current?.eKey.wasPressedThisFrame==true &&
                 LookAtOwnParcel(localDiver,out int claim))localDiver.CmdCollectRackParcel(claim);
         }
         void ClearRackParcelViews()

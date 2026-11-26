@@ -241,7 +241,6 @@ namespace Raid.UI
                 if (CheatsOpen) CloseCheats();
                 else
                 {
-                    if (Context.World.InventionPanelOpen) Context.World.CloseInventionInventory();
                     if (computerSurface) ClosePanel();
                     CancelBallGesture();
                     cheats ??= new CheatPanel(this);
@@ -250,7 +249,7 @@ namespace Raid.UI
                     SetCursor();
                 }
             }
-            if(Application.isFocused && !overlayBefore && !EditingCheatQuantity && Context.World?.InventionPanelOpen!=true && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            if(Application.isFocused && !overlayBefore && !EditingCheatQuantity && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
                 else if(Page==UiPage.SkillTree && skills.Back())boardInput.Clear();
@@ -261,11 +260,11 @@ namespace Raid.UI
             bool skillPurchase=Page==UiPage.SkillTree && mouse!=null && mouse.rightButton.wasPressedThisFrame;
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
             bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true &&
-                Context.World?.InventionPanelOpen!=true && Context.World?.InventionRackTargeted(Context.Player)!=true &&
                 Context.World?.LookAtOwnParcel(Context.Player,out _)!=true;
             bool consumed=false;
             if (CheatsOpen || Time.frameCount <= ignoreWorldPointerThroughFrame)
             {
+                Context.World?.ClearVendingAim();
                 UiInputGate.PointerReserved = true;
                 aimedPad = null;
                 AimedCargoDispatch = false;
@@ -276,7 +275,7 @@ namespace Raid.UI
                     mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
             }
             skills.Animate(Time.unscaledDeltaTime);
-            if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None)Interact();
+            if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None && Context.World?.AimingAtVendingMachine!=true)Interact();
             if(Time.unscaledTime>=nextRefresh)
             {
                 nextRefresh=Time.unscaledTime+.1f;Context.Refresh();
@@ -371,7 +370,11 @@ namespace Raid.UI
             if(activeSkillStation!=null && (player==null || player!=skillStationPlayer || player.IsHelpless ||
                 !player.IsInside || !activeSkillStation.InRange(player)))ClearSkillStation();
             if(WindingBall && (UiInputGate.Modal || !Context.Connected || player==null || player.IsHelpless || overlayBefore || Context.World==null || !Context.World.GoshaBallInHands(player)))CancelBallGesture();
-            if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))return false;
+            if(!Context.Connected || player==null || player.IsDead || overlayBefore || (Page!=UiPage.None&&!computerSurface))
+            {
+                Context.World?.ClearVendingAim();
+                return false;
+            }
             var cam=player.GetComponentInChildren<Camera>();
             var station=ShipConsole.ResolveSight(player,cam);
             if(station!=dismissedMonitor)dismissedMonitor=null;
@@ -380,6 +383,12 @@ namespace Raid.UI
                 if(confirmAction!=null)CancelConfirmation();
                 ShowPage(UiPage.None);
             }
+            if(Page==UiPage.None && !WindingBall && Context.World?.PointAtVendingMachine(player,clicked && allowed)==true)
+            {
+                UiInputGate.PointerReserved=true;
+                return clicked;
+            }
+            if(Page!=UiPage.None || WindingBall)Context.World?.ClearVendingAim();
             if(Context.World!=null && Context.World.GoshaBallInHands(player))
             {
                 UiInputGate.PointerReserved=true;
