@@ -19,6 +19,8 @@ namespace Raid
             public int seat, owner, players;
             public int fleetCount, lastRigSerial, trackedCatchIds, snapshotBytes;
             public string fleetHash;
+            public int visibleCageParcels, visibleChargeParcels;
+            public float longestParcelTravel;
             public string status="running", phase, error;
             public List<string> checks=new();
         }
@@ -253,6 +255,7 @@ namespace Raid
             }
             yield return Wait("host completed persistence checks",()=>Has("finished"));
             yield return VerifyReconnection(serial,peerProfile);
+            yield return VerifyInterruptedParcel(peerProfile);
         }
     }
 }

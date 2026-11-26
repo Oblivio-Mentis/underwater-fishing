@@ -51,6 +51,7 @@ namespace Raid
             yield return Wait("charge blueprint for the second independent slot",()=>world.View.TechRank("charge","unlock")==1);
             var before=world.View.Treasury;
             int revision=world.View.teamRevision;
+            observedParcelOwner=PeerId;
             if(report.seat==1)
             {
                 yield return new WaitForSecondsRealtime(.4f);
@@ -63,6 +64,7 @@ namespace Raid
                 var peer=DiverMotor.ServerDivers.Single(d=>d && d.OwnerId==PeerId);
                 peer.Teleport(rackAt);
                 Mark("first-rack");
+                yield return StageMissedParcel(peer,rack);
                 yield return Wait("operator requested a stack upgrade",()=>Has("need-stack-research"));
                 Assert(world.Team.Treasury.Equals(before) && world.Team.teamRevision==revision,
                     "neither filling a stack nor equipping and returning a charge debits the shared treasury");
@@ -82,6 +84,9 @@ namespace Raid
                 {
                     local.CmdRackTake("cage",0);
                     int expected=count;
+                    yield return Wait("an actual cage is travelling before any private item is awarded",()=>
+                        world.RackParcelInFlight("cage") && world.TryGetRackParcel(local.OwnerId,out _,out _,out bool resting) && !resting);
+                    Assert(world.LocalProgress.techSlots[0].count==expected-1,"cage in flight has not been credited to the slot");
                     yield return Wait("first technical slot now holds "+expected,()=>world.LocalProgress.techSlots[0].count==expected);
                     yield return new WaitForSecondsRealtime(.35f);
                 }
@@ -90,9 +95,7 @@ namespace Raid
                 yield return RejectRackRequest("cage",0,"dispenser rejected a full stack");
                 Assert(world.LocalProgress.techSlots[0].count==initial && world.LocalProgress.revision==inventoryRevision,
                     "attempting to take another cage into the full selected slot leaves its stack unchanged");
-                local.CmdRackTake("charge",1);
-                yield return Wait("second slot receives a free charge",()=>world.LocalProgress.techSlots[1].kind=="charge" &&
-                    world.LocalProgress.techSlots[1].count==1 && world.View.rigs.Count==0);
+                yield return CollectMissedParcel();
                 yield return new WaitForSecondsRealtime(.35f);
                 local.CmdTechEquipSlot(1);
                 yield return Wait("owner selected the second slot and equipped that charge",()=>world.LocalProgress.techSlots[1].count==0 &&
@@ -127,6 +130,9 @@ namespace Raid
                 Mark("private-stacks",InventoryDigest(world.LocalProgress));
             }
             yield return Wait("original owner recorded its private stacks",()=>Has("private-stacks"));
+            Assert(cageParcelIds.Count==TechCatalog.Find("cage").stackBase+1 && chargeParcelIds.Count==1 &&
+                restingParcelIds.Count==1 && report.longestParcelTravel>.05f && world.RackParcelCount==0,
+                "this client observed distinct moving models, one resting charge, no ejection for rejected requests and no parcel remaining");
             Assert(world.View.players.Count==0 && (report.seat==1 || world.LocalProgress.techSlots.All(s=>s.count==0)),
                 "private technical slots are hidden from other owners and the shared world snapshot");
         }
