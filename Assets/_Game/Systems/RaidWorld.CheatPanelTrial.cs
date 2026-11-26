@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raid.UI;
 using TMPro;
 using UnityEngine;
@@ -18,7 +19,7 @@ namespace Raid
         [Serializable] sealed class CheatUiReport
         {
             public string status="running",phase,error,resource,fish;
-            public int granted,stocked,inputSystemEdits,focusedTmpEdits;
+            public int granted,stocked,inputSystemEdits,focusedTmpEdits,overflowRequested,overflowGranted;
             public float focusedTravel;
             public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
             public float embeddedDepth,observedClearOffset,restoredClearOffset,reverseTravel;
@@ -79,15 +80,58 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.13f);
         }
 
-        static string CheatText(string name)
+        static bool CheatPageVisible(bool fish) =>
+            GameObject.Find(fish?"CheatFishPage":"CheatResourcesPage") &&
+            !GameObject.Find(fish?"CheatResourcesPage":"CheatFishPage") &&
+            GameObject.Find("CheatResourcesTab") && GameObject.Find("CheatFishTab");
+
+        static bool CheatCardSelected(string id)
         {
-            var obj=GameObject.Find(name);
-            if(!obj)throw new InvalidOperationException("Missing panel label "+name);
-            var tmp=obj.GetComponent<TMP_Text>()??obj.GetComponentInChildren<TMP_Text>();
-            if(tmp)return tmp.text;
-            var text=obj.GetComponent<Text>()??obj.GetComponentInChildren<Text>();
-            if(text)return text.text;
-            throw new InvalidOperationException("Missing text on "+name);
+            var card=GameObject.Find(id);
+            var stripe=card?card.transform.Find("Selected")?.GetComponent<Graphic>():null;
+            return stripe && stripe.enabled && stripe.gameObject.activeInHierarchy;
+        }
+
+        static bool CheatCardCount(string id,int count)
+        {
+            var card=GameObject.Find(id);
+            var label=card?card.transform.Find("Count")?.GetComponent<TMP_Text>():null;
+            return label && label.isActiveAndEnabled && Regex.IsMatch(label.text,@"(?<!\d)"+count+@"(?!\d)");
+        }
+
+        static void CheckCheatLayout(CheatUiReport report,bool fish)
+        {
+            Canvas.ForceUpdateCanvases();
+            report.Check(CheatPageVisible(fish),"Only the "+(fish?"fish":"resources")+" page is visible and both category tabs are available.");
+            var panel=GameObject.Find("CheatPanel")?.GetComponent<RectTransform>();
+            if(!panel)throw new InvalidOperationException("Cheat panel rectangle was missing.");
+            var canvas=panel.GetComponentInParent<Canvas>().rootCanvas;
+            var camera=canvas.renderMode==RenderMode.ScreenSpaceOverlay?null:canvas.worldCamera;
+            var corners=new Vector3[4];
+            panel.GetWorldCorners(corners);
+            if(corners.Any(c=>{
+                var point=RectTransformUtility.WorldToScreenPoint(camera,c);
+                return point.x<Screen.width*.5f-1 || point.x>Screen.width+1 || point.y< -1 || point.y>Screen.height+1;
+            }))throw new InvalidOperationException("The "+(fish?"fish":"resources")+" panel does not fit the right half of the game screen.");
+            var bounds=panel.rect;
+            foreach(var control in panel.GetComponentsInChildren<Selectable>())
+            {
+                if(!control.isActiveAndEnabled)continue;
+                var rect=(RectTransform)control.transform;
+                rect.GetWorldCorners(corners);
+                if(rect.rect.width<=0 || rect.rect.height<=0 || corners.Any(c=>{
+                    Vector2 point=panel.InverseTransformPoint(c);
+                    return point.x<bounds.xMin-1 || point.x>bounds.xMax+1 || point.y<bounds.yMin-1 || point.y>bounds.yMax+1;
+                }))throw new InvalidOperationException("Active control outside panel bounds: "+control.name);
+            }
+            report.Check(true,"All visible buttons and the quantity field on the "+(fish?"fish":"resources")+" page fit inside the right-hand panel.");
+        }
+
+        static void CheckCheatConsole(CheatUiReport report)
+        {
+            if(Application.platform==RuntimePlatform.WindowsPlayer && Debug.isDebugBuild)
+                report.Check(!Debug.developerConsoleEnabled && !Debug.developerConsoleVisible,
+                    "Windows Development Player has its built-in developer console disabled and hidden.");
         }
 
         static async Awaitable ClickCheatControl(string name)
@@ -154,6 +198,7 @@ namespace Raid
         {
             var diver=localDiver;
             report.phase="open panel and keyboard isolation";
+            CheckCheatConsole(report);
             report.Check(team.tank.Count==0 && CheatWallet().All(x=>x==0),"Isolated campaign begins with an empty aquarium and treasury.");
             if(threats)threats.enabled=false;
             team.goshaMet=team.goshaTamed=true;
@@ -177,12 +222,16 @@ namespace Raid
             await TapCheatKey(Key.X);
             await AwaitCheatUi(()=>GameObject.Find("CheatGrant") && CheatPanel.PointerActive,"X opens the cheat panel");
             report.Check(!UiInputGate.Blocked && UiRoot.Instance.Page==UiPage.None,"X opened the panel while the gameplay input gate remained open.");
-            await ClickCheatControl("CheatResourceNext");
+            CheckCheatLayout(report,false);
+            await ClickCheatControl("CheatResource_chitin");
+            report.Check(CheatCardSelected("CheatResource_chitin") && !CheatCardSelected("CheatResource_biomass"),
+                "The chitin card became selected and the biomass card is unselected.");
             var field=GameObject.Find("CheatAmountField")?.GetComponent<TMP_InputField>();
             report.Check(field && field.text=="1","The quantity is a TMP input field starting at 1.");
-            string resource=CheatText("CheatResourceText"),fish=CheatText("CheatFishText");
+            var grant=GameObject.Find("CheatGrant")?.GetComponent<Button>();
+            report.Check(grant && grant.IsInteractable(),"The common grant button is available on the resources tab.");
             foreach(var key in new[]{Key.Digit6,Key.RightArrow,Key.DownArrow,Key.Enter,Key.NumpadEnter})await TapCheatKey(key);
-            report.Check(!field.isFocused && field.text=="1" && CheatText("CheatResourceText")==resource && CheatText("CheatFishText")==fish &&
+            report.Check(!field.isFocused && field.text=="1" && CheatPageVisible(false) && CheatCardSelected("CheatResource_chitin") &&
                 CheatWallet().All(n=>n==0) && team.tank.Count==0,"With quantity unfocused, digits, arrows and Enter did not change the panel or dispatch a grant.");
             var tool=diver.GetComponent<HarpoonTool>();
             await TapCheatKey(Key.Digit2);
@@ -215,7 +264,9 @@ namespace Raid
             await AwaitCheatUi(()=>CheatWallet().Sum()-before.Sum()==17,"17 units credited");
             var diffs=CheatWallet().Zip(before,(a,b)=>a-b).ToArray();
             report.Check(diffs[1]==17 && diffs.Count(x=>x==0)==3,"A real mouse grant increased only the selected chitin by 17.");
-            await ClickCheatControl("CheatResourceNext");
+            await ClickCheatControl("CheatResource_scrap");
+            report.Check(CheatCardSelected("CheatResource_scrap") && !CheatCardSelected("CheatResource_chitin"),
+                "The scrap card replaced chitin as the highlighted selection.");
             await ClickCheatControl("CheatAmountField");
             await SelectCheatAmount(report,field);
             await EditCheatField(report,field,Key.Digit2,KeyCode.Alpha2,'2',()=>field.text=="2");
@@ -224,21 +275,61 @@ namespace Raid
             await ClickCheatControl("CheatGrant");
             await AwaitCheatUi(()=>team.scrap==23,"23 scrap credited");
             report.Check(team.chitin==17 && team.scrap==23 && team.biomass==0 && team.electronics==0,"A second mouse selection credited 23 scrap while preserving the other resources.");
-            report.resource=resource+", "+CheatText("CheatResourceText");report.granted=40;
-            await ClickCheatControl("CheatFishNext");
-            string selectedFish=CheatText("CheatFishText");
-            report.Check(fish!=selectedFish,"Mouse advanced to a different fish species.");
+            report.resource="chitin, scrap";report.granted=40;
+            await AwaitCheatUi(()=>CheatCardCount("CheatResource_chitin",17) && CheatCardCount("CheatResource_scrap",23),
+                "resource cards display the replicated crew balances");
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-resources.png"));
+
+            await ClickCheatControl("CheatFishTab");
+            CheckCheatLayout(report,true);
+            report.Check(GameObject.Find("CheatAmountField")==field.gameObject && field.text=="23" &&
+                GameObject.Find("CheatGrant")==grant.gameObject,"The fish page uses the same amount field and grant button.");
+            await ClickCheatControl("CheatResourcesTab");
+            report.Check(CheatPageVisible(false) && field.text=="23" && CheatWallet().Sum()==40 && team.tank.Count==0,
+                "Reopening the resource tab kept the quantity and did not grant anything.");
+            await ClickCheatControl("CheatFishTab");
+            string selectedFish=CheatFishSpecies.Contains("Lanternfish")?"Lanternfish":CheatFishSpecies.First();
+            var otherFish=CheatFishSpecies.First(id=>id!=selectedFish);
+            if(!CheatCardSelected("CheatFish_"+otherFish))await ClickCheatControl("CheatFish_"+otherFish);
+            await ClickCheatControl("CheatFish_"+selectedFish);
+            report.Check(CheatPageVisible(true) && CheatCardSelected("CheatFish_"+selectedFish) && !CheatCardSelected("CheatFish_"+otherFish),
+                "A direct click selected a different live fish species and transferred the card highlight.");
             await ClickCheatControl("CheatAmountField");
             await SelectCheatAmount(report,field);
             await EditCheatField(report,field,Key.Digit3,KeyCode.Alpha3,'3',()=>field.text=="3");
-            await ClickCheatControl("CheatStock");
+            await ClickCheatControl("CheatGrant");
             await AwaitCheatUi(()=>team.tank.Count==3,"three fish appear in the aquarium");
             var ids=team.tank.Select(x=>x.id).ToArray();
-            report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) && selectedFish==ReelReadout.Species(team.tank[0].species) &&
+            report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) && selectedFish==team.tank[0].species &&
                 CheatWallet().Sum()==40,"Mouse stocked three distinct catches of a single species without changing the materials.");
             report.fish=team.tank[0].species;report.stocked=3;
             report.Check(field.textComponent.text.TrimEnd('\u200b') == "3", "The visible quantity matches the three stocked fish.");
-            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-panel.png"));
+            await AwaitCheatUi(()=>CheatCardCount("CheatFish_"+selectedFish,3),"fish card shows three specimens after replication");
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-fish.png"));
+            File.Copy(Path.Combine(folder,"cheat-fish.png"),Path.Combine(folder,"cheat-panel.png"),true);
+
+            // Exercise the aquarium's actual remaining capacity through the same quantity field and mouse button.
+            report.phase="fish quantity beyond the remaining capacity";
+            int room=CheatFishRoom,oldTank=team.tank.Count;
+            report.Check(room>0,"There is remaining reservoir space for the overflow request.");
+            int requested=checked(room+3);
+            await ClickCheatControl("CheatAmountField");
+            await SelectCheatAmount(report,field);
+            string typed="";
+            foreach(char digit in requested.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            {
+                typed+=digit;
+                int number=digit-'0';
+                var key=(Key)Enum.Parse(typeof(Key),"Digit"+number);
+                var code=(KeyCode)Enum.Parse(typeof(KeyCode),"Alpha"+number);
+                await EditCheatField(report,field,key,code,digit,()=>field.text==typed);
+            }
+            await ClickCheatControl("CheatGrant");
+            await AwaitCheatUi(()=>CheatFishRoom==0 && team.tank.Count==oldTank+room,"only the remaining reservoir capacity was granted");
+            report.overflowRequested=requested;report.overflowGranted=room;
+            report.Check(team.tank.Select(c=>c.id).Distinct().Count()==team.tank.Count && team.tank.All(c=>c.species==selectedFish) &&
+                CheatWallet().Sum()==40 && CheatPageVisible(true),"The oversized request filled the remaining space with unique specimens, preserving the treasury.");
+            CheckCheatConsole(report);
 
             report.phase="movement and collision from real input";
             async Awaitable<float> Walk(float duration,bool fromStart=true)
