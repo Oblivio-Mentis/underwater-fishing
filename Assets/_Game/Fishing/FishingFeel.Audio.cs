@@ -5,7 +5,7 @@ namespace Raid
     public sealed partial class FishingFeel
     {
         AudioSource cueSource, reelSource;
-        AudioClip shotClip, hookClip, coordinatedClip, soloClip, warningClip, reelClip;
+        AudioClip shotClip, hookClip, coordinatedClip, soloClip, warningClip;
         bool audioReady;
         float nextListenerCheck, nextPreBreakWarning;
 
@@ -30,7 +30,7 @@ namespace Raid
             coordinatedClip = LoadFishingClip("coordinated");
             soloClip = LoadFishingClip("solo");
             warningClip = LoadFishingClip("warning");
-            reelClip = LoadFishingClip("reel");
+            reelSource.clip = LoadFishingClip("reel");
         }
 
         static AudioClip LoadFishingClip(string id)
