@@ -98,5 +98,36 @@
   "screenshots": {
     "workshop.png": "Four-seat host camera at the research terminal.",
     "charge-on-deck.png": "Receiving client camera aimed at the fallen charge before pressing E."
+  },
+  "followupBuild": {
+    "build": "RAID020-Technology-QA",
+    "assemblyCSharpSha256": "c9210f755ca0bde07c84e3b9171cdcbb9648e143a4a162d6ac3bc83842c9ba22",
+    "sessions": [
+      {
+        "players": 2,
+        "passedSeats": [
+          0,
+          1
+        ],
+        "snapshotUtf8Bytes": [
+          69147
+        ],
+        "maxObservedFlightMetres": 1.524
+      },
+      {
+        "players": 4,
+        "passedSeats": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "snapshotUtf8Bytes": [
+          69148
+        ],
+        "maxObservedFlightMetres": 1.524
+      }
+    ],
+    "diagnostics": "Repeated after updating terminal font marker and handling silent batch players. All six logs clear of the prior font and audio messages."
   }
 }
