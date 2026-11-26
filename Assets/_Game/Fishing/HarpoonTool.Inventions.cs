@@ -19,7 +19,6 @@ namespace Raid
                 pockets[i]=item;
             }
             inventionPocketsRestored=true;
-            SetPocketCapacity(requestedPocketCapacity);
         }
 
         internal bool CanFitInvention(int hotbarSlot,string kind,int limit)
@@ -74,7 +73,7 @@ namespace Raid
         internal bool CanStowCarriedInvention(TechRig rig,out string reason)
         {
             var world=RaidWorld.Instance;
-            var team=world?world.View:null;
+            var team=world?(IsServerInitialized?world.Team:world.View):null;
             reason=null;
             if(team==null || rig==null || rig.mode!="carried" || rig.operatorId!=OwnerId ||
                 !MayHandleItems || Motor.IsTrapped)return false;

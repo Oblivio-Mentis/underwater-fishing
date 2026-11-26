@@ -89,17 +89,18 @@ namespace Raid
             if(sender.TransportIndex==1)
             {
                 string address=sender.GetAddress();
-                if(!ulong.TryParse(address,out var steamId) || steamId==0)return;
+                if(!ulong.TryParse(address,out var steamId) || steamId==0){StartGuestPockets(sender);return;}
                 key="steam:"+steamId;
             }
             else
             {
-                if(!Guid.TryParseExact(localKey,"N",out var lanId))return;
+                if(!Guid.TryParseExact(localKey,"N",out var lanId)){StartGuestPockets(sender);return;}
                 key="lan:"+lanId.ToString("N");
             }
             foreach(var pair in crewProfiles)
                 if(pair.Value==key && pair.Key!=sender && pair.Key.IsActive && pair.Key.FirstObject!=null)
                 {
+                    StartGuestPockets(sender);
                     SkillReply(sender,false,"Этот профиль уже в экспедиции");
                     return;
                 }
@@ -107,15 +108,28 @@ namespace Raid
             SendProfile(sender,team.RegisterPlayer(key));
         }
 
+        // An unbound guest can still catch fish and carry the ball without borrowing another diver's saved equipment.
+        void StartGuestPockets(NetworkConnection connection)
+        {
+            crewProfiles.Add(connection,null);
+            connection.FirstObject.GetComponent<HarpoonTool>()?.SyncInventionPockets(Array.Empty<TechSlot>());
+        }
+
         void SendProfile(NetworkConnection connection,PlayerProgress profile)
         {
             if(profile==null)return;
-            ApplyProfile(connection,JsonUtility.ToJson(new PlayerProgress
-                { skills=profile.skills, revision=profile.revision, techSlots=profile.techSlots }));
+            var tool=connection.FirstObject ? connection.FirstObject.GetComponent<HarpoonTool>() : null;
+            if(tool)
+            {
+                tool.SyncInventionPockets(profile.pocketStacks);
+                tool.SetPocketCapacity(3+SkillTreeDefinition.Value(profile.skills,SkillLine.Pockets));
+            }
+            ApplyProfile(connection,profile.skills,profile.revision);
         }
 
         [TargetRpc]
-        void ApplyProfile(NetworkConnection target,string data) => LocalProgress=JsonUtility.FromJson<PlayerProgress>(data);
+        void ApplyProfile(NetworkConnection target,List<SkillId> skills,int revision) =>
+            LocalProgress=new PlayerProgress { skills=new List<SkillId>(skills), revision=revision, pocketStacks=null };
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         internal void RefreshCrewProfilesForTrial()=>PublishProfiles();

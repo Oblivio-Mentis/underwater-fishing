@@ -18,7 +18,7 @@ namespace Raid
         sealed class RackOrder
         {
             internal RackParcel parcel;
-            internal int slot;
+            internal bool missedCatch;
             internal float age,sendAt;
             internal Vector3 velocity;
         }
@@ -48,7 +48,7 @@ namespace Raid
         {
             for(int i=orders.Count-1;i>=0;i--)if(orders[i].parcel.owner==owner)RemoveOrder(i);
         }
-        void LaunchRackParcel(DiverMotor diver,string kind,int slot)
+        void LaunchRackParcel(DiverMotor diver,string kind)
         {
             foreach(var previous in orders)if(previous.parcel.owner==diver.OwnerId)
             {
@@ -61,7 +61,7 @@ namespace Raid
             var order=new RackOrder
             {
                 parcel=new RackParcel{serial=++vendingSequence,owner=diver.OwnerId,kind=kind,position=start},
-                slot=slot,velocity=(target-start)/flight-Physics.gravity*(flight*.5f)
+                velocity=(target-start)/flight-Physics.gravity*(flight*.5f)
             };
             orders.Add(order);vendingParcels.Add(order.parcel);
         }
@@ -69,7 +69,9 @@ namespace Raid
         {
             var order=orders[index];var profile=team.Player(ProgressKey(diver));
             if(profile==null)return false;
-            bool ok=team.TakeTechFromRack(profile,order.parcel.kind,order.slot,SaveTransaction,out var reason);
+            string kind=order.parcel.kind;
+            bool ok=FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out int slot,out var reason) &&
+                team.TakeTechFromRack(profile,kind,slot-FirstCargoSlot,SaveTransaction,out reason);
             if(ok)RemoveOrder(index);
             InventoryReceipt(diver,profile,ok,reason);return ok;
         }
@@ -123,12 +125,11 @@ namespace Raid
                     else order.velocity=Vector3.ProjectOnPlane(order.velocity,nearest.normal)*.45f;
                 }
                 order.parcel.position=destination;
-                if(order.age>=tuning.dispenserFlightSeconds*.78f && !order.parcel.resting && ReachesReceiver(from,destination,diver))
+                if(!order.missedCatch && order.age>=tuning.dispenserFlightSeconds*.78f && !order.parcel.resting && ReachesReceiver(from,destination,diver))
                 {
                     if(SettleOrder(i,diver))continue;
-                    // The reservation has no value until the existing save transaction commits.
-                    order.velocity=Vector3.zero;
-                    order.parcel.resting=true;
+                    // A pocket may fill during flight. Let the case fall so its owner can make room and pick it up.
+                    order.missedCatch=true;
                 }
                 if(order.parcel.resting || order.age>=order.sendAt)
                 {order.sendAt=order.age+.08f;vendingParcels[i]=order.parcel;}

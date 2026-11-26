@@ -42,13 +42,11 @@ namespace Raid
         private readonly SyncVar<int> pocketCapacity = new(3);
         public int PocketCapacity => pocketCapacity.Value;
         public int SlotCount => PocketCapacity+2;
-        internal const int MaximumSlots=9;
-        int requestedPocketCapacity=3;
+        internal const int MaximumSlots=2+TechSlot.PocketCount;
         bool inventionPocketsRestored;
         internal void SetPocketCapacity(int value)
         {
-            requestedPocketCapacity=Mathf.Clamp(value,3,MaximumSlots-2);
-            value=requestedPocketCapacity;
+            value=Mathf.Clamp(value,3,MaximumSlots-2);
             for(int slot=MaximumSlots-1;slot>=value+2;slot--)
                 if(PocketOccupied(slot)){value=slot-1;break;}
             if(pocketCapacity.Value!=value)pocketCapacity.Value=value;

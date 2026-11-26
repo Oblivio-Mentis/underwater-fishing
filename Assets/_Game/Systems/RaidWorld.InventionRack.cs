@@ -5,10 +5,10 @@ namespace Raid
 {
     public sealed partial class DiverMotor
     {
-        [ServerRpc] public void CmdRackTake(string kind,int slot) => RaidWorld.Instance?.TakeRackItem(this,kind,slot);
+        [ServerRpc] public void CmdRackTake(string kind) => RaidWorld.Instance?.TakeRackItem(this,kind);
         [ServerRpc] public void CmdCollectRackParcel(int serial) => RaidWorld.Instance?.CollectRackParcel(this,serial);
         [ServerRpc] public void CmdTechEquipSlot(int slot) => RaidWorld.Instance?.EquipRackItem(this,slot);
-        [ServerRpc] public void CmdTechStore(int serial,int slot) => RaidWorld.Instance?.StowRackItem(this,serial,slot);
+        [ServerRpc] public void CmdTechStore(int serial) => RaidWorld.Instance?.StowRackItem(this,serial);
     }
 
     public sealed partial class RaidWorld
@@ -66,23 +66,47 @@ namespace Raid
             if(accepted)diver.ConfirmInteraction();
             SkillReply(diver.Owner,accepted,reason);
         }
-        internal void TakeRackItem(DiverMotor diver,string kind,int slot)
+        const int FirstCargoSlot = 2;
+
+        bool FindStoragePocket(HarpoonTool tool, PlayerProgress profile, string kind, out int slot, out string reason)
+        {
+            slot = -1;
+            int limit = team.TechStackLimit(kind);
+            if (limit == 0 || team.TechRank(kind,"unlock") == 0)
+            {
+                reason = "Сначала исследуйте чертёж";
+                return false;
+            }
+            if (tool) slot = tool.FindInventionPocket(kind,limit);
+            if (slot < FirstCargoSlot)
+            {
+                reason = "В инвентаре нет места";
+                return false;
+            }
+            return team.CanTakeTechFromRack(profile,kind,slot-FirstCargoSlot,out reason);
+        }
+
+        internal void TakeRackItem(DiverMotor diver,string kind)
         {
             if(!InventoryRequest(diver,out var profile))return;
             if(!RackFocused(diver)){InventoryReceipt(diver,profile,false,"Подойдите к раздатчику и посмотрите на его дверцу");return;}
-            if(!team.CanTakeTechFromRack(profile,kind,slot,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
-            LaunchRackParcel(diver,kind,slot);
+            if(!FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out _,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
+            LaunchRackParcel(diver,kind);
         }
         internal void EquipRackItem(DiverMotor diver,int slot)
         {
             if(!InventoryRequest(diver,out var profile))return;
-            if(Engaged(diver.OwnerId) || diver.GetComponent<HarpoonTool>()?.HandsFull==true)
+            var tool=diver.GetComponent<HarpoonTool>();
+            if(!tool || slot<FirstCargoSlot || slot>=tool.SlotCount || slot!=tool.ActiveSlot ||
+                tool.InventionInSlot(slot).count<=0)
+            {InventoryReceipt(diver,profile,false,"Выберите карман со снаряжением");return;}
+            if(Engaged(diver.OwnerId) || !tool.CanDrawPocketInvention)
             {InventoryReceipt(diver,profile,false,"Для снаряжения нужны свободные руки");return;}
-            bool ok=team.DeployTechFromSlot(profile,slot,diver.transform.position,diver.OwnerId,SaveTransaction,out var reason);
+            bool ok=team.DeployTechFromSlot(profile,slot-FirstCargoSlot,diver.transform.position,diver.OwnerId,SaveTransaction,out var reason);
             if(ok)Publish();
             InventoryReceipt(diver,profile,ok,reason);
         }
-        internal void StowRackItem(DiverMotor diver,int serial,int slot)
+        internal void StowRackItem(DiverMotor diver,int serial)
         {
             if(!InventoryRequest(diver,out var profile))return;
             var rig=team.rigs.Find(r=>r.serial==serial);
@@ -90,7 +114,14 @@ namespace Raid
             if(rig==null || rig.depth!=CurrentDepth || (!rig.Carrying(diver.OwnerId) &&
                 (Vector3.Distance(eye,rig.position)>tuning.interactionRange || Physics.Linecast(eye,rig.position,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))))
             {InventoryReceipt(diver,profile,false,"Подойдите к установке");return;}
-            bool ok=team.StoreTechInSlot(profile,serial,slot,diver.OwnerId,SaveTransaction,out var reason);
+            var tool=diver.GetComponent<HarpoonTool>();
+            if(!tool)return;
+            int slot=tool.ActiveSlot;
+            if(!rig.Carrying(diver.OwnerId) || !tool.CanFitInvention(slot,rig.kind,team.TechStackLimit(rig.kind)))
+            {
+                if(!FindStoragePocket(tool,profile,rig.kind,out slot,out var issue)){InventoryReceipt(diver,profile,false,issue);return;}
+            }
+            bool ok=team.StoreTechInSlot(profile,serial,slot-FirstCargoSlot,diver.OwnerId,SaveTransaction,out var reason);
             if(ok)Publish();
             InventoryReceipt(diver,profile,ok,reason);
         }
