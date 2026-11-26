@@ -12,11 +12,13 @@ using UnityEngine.UI;
 namespace Raid
 {
     // One opt-in fixture per independent player process. Only the host seeds the disposable campaign.
-    internal sealed class TechCrewTrial : MonoBehaviour
+    internal sealed partial class TechCrewTrial : MonoBehaviour
     {
         [Serializable] sealed class Report
         {
             public int seat, owner, players;
+            public int fleetCount, lastRigSerial, trackedCatchIds, snapshotBytes;
+            public string fleetHash;
             public string status="running", phase, error;
             public List<string> checks=new();
         }
@@ -222,6 +224,8 @@ namespace Raid
             }
             Mark("paired-"+report.seat);
             yield return Wait("crew observed both handles",()=>All("paired-"));
+            string peerProfile=Host?world.ProgressKey(DiverMotor.ServerDivers.Single(d=>d && d.OwnerId==PeerId)):null;
+            yield return VerifyFleet();
             if(report.seat==1)
             {
                 FindAnyObjectByType<RaidSession>().Disconnect();
@@ -240,12 +244,14 @@ namespace Raid
                     local.CmdTechUse(serial,"release");
                     yield return Wait("owner set down the installation",()=>world.View.rigs.Exists(r=>r.serial==serial && r.CanRecall));
                     var saved=TeamSave.Load(save);
-                    Assert(saved.TechRank("cage","unlock")==1 && saved.rigs.Count==1 && saved.rigs[0].serial==serial &&
-                        saved.rigs[0].CanRecall,"disk reload retains the released cage and researched equipment");
+                    Assert(saved.TechRank("cage","unlock")==1 && saved.rigs.Count==report.fleetCount &&
+                        saved.rigs.Single(r=>r.serial==serial).CanRecall && FleetDigest(saved)==report.fleetHash,
+                        "disk reload retains the released cage, fleet and complete catch manifest");
                     Mark("finished");
                 }
             }
             yield return Wait("host completed persistence checks",()=>Has("finished"));
+            yield return VerifyReconnection(serial,peerProfile);
         }
     }
 }
