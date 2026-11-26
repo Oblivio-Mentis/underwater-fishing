@@ -259,7 +259,10 @@ namespace Raid
             thrum=Mathf.Lerp(thrum,wantThrum,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
             float drift=flying?.06f:Phase==CablePhase.Retracting?.035f:.012f*(1-shownLoad);
             float twang=Mathf.Sin(now*62f)*thrum+Mathf.Sin(now*41f+1.3f)*thrum*.5f;
-            for(int i=0;i<points.Length;i++)
+            // The muzzle and nock are physical attachment points; only the cable between them vibrates.
+            points[0]=from;
+            points[^1]=to;
+            for(int i=1;i<points.Length-1;i++)
             {
                 float t=i/(float)(points.Length-1),envelope=Mathf.Sin(t*Mathf.PI);
                 float standing=Mathf.Sin(t*Mathf.PI*3f)*twang+Mathf.Sin(t*Mathf.PI*5f+now*9f)*thrum*.35f;
