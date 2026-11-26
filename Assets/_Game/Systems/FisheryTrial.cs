@@ -127,6 +127,7 @@ namespace Raid
             yield return Charge();
             yield return Trap();
             yield return Cage();
+            yield return CageDelivery();
             if(peer)yield return Nets();
         }
 
@@ -267,6 +268,106 @@ namespace Raid
                 "a failed cage releases its captive back into the real predator director");
         }
 
+        void GrantModule(string kind,string module,int rank=1)
+        {
+            if(world.Team.TechRank(kind,module)>=rank)return;
+            world.Team.techPurchases.Add(new TechPurchase{item=kind,upgrade=module,rank=rank});
+        }
+
+        void Hoist(long id)
+        {
+            Check(world.Team.BeginHoist(world.progression),"cargo lift accepts the monster for delivery");
+            world.Team.TickHoist(100f,world.progression);
+            Check(world.Team.tank.Count(f=>f.id==id)==1 && world.Team.deliveredIds.Count(i=>i==id)==1,
+                "one live captive reaches the common ship reservoir");
+        }
+
+        IEnumerator CageDelivery()
+        {
+            report.phase="team towing and processing, followed by automatic capture and robot delivery";Write();
+            var hand=Stage("cage",ground);
+            host.Teleport(ground+Vector3.left*1.25f);
+            if(peer)peer.Teleport(ground+Vector3.right*1.25f);
+            world.threats.StageFisheryTrialAngler(ground+Vector3.up*ActiveFisheryTuning.Get.cageTetherHeight);
+            Check(Use(hand,host) && Use(hand,peer?peer:host),"working crew secures a second live target");
+            world.TrialTickFishery(hand,TechCatalog.Find("cage").interval+.1f);
+            long processed=hand.contents.Single().id;
+            yield return new WaitForSecondsRealtime(.3f);
+            host.CmdTechUse(hand.serial,"carry");
+            yield return Wait("diver attached for manual cage tow",()=>hand.Carrying(host.OwnerId),8);
+            if(peer)
+            {
+                world.UseTechnology(peer,hand.serial,"carry");
+                yield return Wait("second diver attached for manual cage tow",()=>hand.Carrying(peer.OwnerId),8);
+                Vector3 before=hand.position;
+                host.Teleport(before+new Vector3(-.8f,.5f,1.6f));
+                peer.Teleport(before+new Vector3(.8f,.5f,1.6f));
+                yield return Wait("two divers move the occupied cage",()=>Vector3.Distance(before,hand.position)>.4f,5);
+                Check(hand.helperId==peer.OwnerId && hand.contents.Single().id==processed &&
+                    Mathf.Abs(host.equipmentPace-world.tuning.teamTowSpeed)<.01f,
+                    "both real owners share the occupied cage and its team towing speed");
+            }
+            // The verified tow above uses normal movement. Shorten the empty swim between reef and freight berth.
+            var dock=world.CargoLoadingPosition;
+            host.Teleport(dock);if(peer)peer.Teleport(dock+Vector3.right*.8f);
+            hand.position=dock;
+            yield return new WaitForSecondsRealtime(.3f);
+            host.CmdTechUse(hand.serial,"unload");
+            yield return Wait("manual captive at cargo berth",()=>world.Team.cargo.Any(c=>c.id==processed),8);
+            Check(hand.contents.Count==0,"manual delivery empties the towed cage");
+            Hoist(processed);
+            int biomass=world.Team.biomass,chitin=world.Team.chitin;
+            Check(world.Team.CreditProcessedCatch(processed,world.progression,out var materials) &&
+                materials.biomass>0 && materials.chitin>0 && world.Team.biomass>biomass && world.Team.chitin>chitin &&
+                !world.Team.Feed(processed),"processing a delivered reef angler pays materials once");
+            world.Team.rigs.Remove(hand);
+
+            var automatic=Stage("cage",ground);
+            host.Teleport(ground+Vector3.left);
+            Check(!Use(automatic,host,"alternate"),"base cage rejects an artificial lure");
+            GrantModule("cage","unlock");GrantModule("cage","select");
+            world.threats.StageFisheryTrialAngler(ground+Vector3.up*ActiveFisheryTuning.Get.cageTetherHeight);
+            world.TrialTickFishery(automatic,.1f);
+            Check(automatic.mode=="placed" && Use(automatic,host),"a purchased sensor alone still needs a volunteer");
+            world.TrialTickFishery(automatic,.1f);
+            Check(automatic.mode=="closing" && Use(automatic,host,"alternate"),"sensor recognizes the live angler and starts closure with a volunteer");
+            GrantModule("cage","bait");GrantModule("cage","auto");GrantModule("cage","delivery");
+            world.TrialTickFishery(automatic,.1f);
+            Check(automatic.mode=="closing" && automatic.baitId<0 && !world.IsCageBait(host),"autonomous mode and artificial bait start a real catch without a volunteer");
+            world.TrialTickFishery(automatic,TechCatalog.Find("cage").interval+.1f);
+            long fed=automatic.contents.Single().id;
+            Check(automatic.mode=="captured" && fed!=processed,"autonomous capture yields a separate live monster");
+
+            // Find a physically unobstructed approach to the actual loading berth for the robot and the loaded cage.
+            Vector3 berth=dock+Vector3.up;
+            Vector3 start=default;
+            bool clear=false;
+            for(int height=0;height<=3 && !clear;height++)
+                for(int i=0;i<16 && !clear;i++)
+                {
+                    var candidate=berth+Quaternion.Euler(0,i*22.5f,0)*Vector3.forward*5+Vector3.up*height;
+                    if(!RaidWorld.IndustryCanPull(candidate,berth,.6f) || ReefHabitats.InShelter(candidate))continue;
+                    start=candidate;clear=true;
+                }
+            Check(clear,"cargo berth has a clear underwater approach for towing");
+            automatic.position=start;
+            GrantModule("robot","unlock");GrantModule("robot","auto");GrantModule("robot","capacity",2);GrantModule("robot","delivery");
+            var robot=Stage("robot",start+Vector3.up*.65f);
+            Check(world.TrialUseIndustry(robot,host,"alternate"),"operator starts the equipped autonomous transport robot");
+            bool towed=false;
+            for(int i=0;i<300 && automatic.contents.Count>0;i++)
+            {
+                world.TrialTickIndustry(robot,.05f);
+                towed|=robot.targetSerial==automatic.serial;
+            }
+            Check(towed && Vector3.Distance(automatic.position,start)>.5f && automatic.contents.Count==0 &&
+                world.Team.cargo.Count(f=>f.id==fed)==1,"robot physically tows the occupied cage and loads its unique captive into the lift");
+            Hoist(fed);
+            int food=world.Team.offeringPoints;
+            Check(world.Team.Feed(fed,world.progression) && world.Team.offeringPoints>food && !world.Team.Process(fed),
+                "the second industrial catch feeds the crew's offering reserve exactly once");
+        }
+
         IEnumerator Nets()
         {
             report.phase="two network owners close a seine and operate a pump";Write();
@@ -302,6 +403,8 @@ namespace Raid
         internal bool TrialUseFishery(TechRig rig,DiverMotor player,string action) => UseActiveRig(rig,player,action,player.AimDirection);
         internal void TrialTickFishery(TechRig rig,float elapsed) => TickActiveRig(rig,elapsed);
         internal void PublishFisheryTrial() => Publish();
+        internal bool TrialUseIndustry(TechRig rig,DiverMotor player,string action) => UseIndustrialRig(rig,player,action,player.AimDirection);
+        internal void TrialTickIndustry(TechRig rig,float elapsed) => TickIndustrialRig(rig,elapsed);
     }
 
     public sealed partial class ThreatDirector
