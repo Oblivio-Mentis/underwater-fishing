@@ -38,12 +38,7 @@ namespace Raid
             return surplus;
         }
 
-        public static int Arrive(TeamProgress team,TechRig courier,ProgressionTuning tuning)
-        {
-            int moved=0;
-            while(courier.contents.Count>0 && team.Deposit(courier.contents[0],tuning))
-            {courier.contents.RemoveAt(0);moved++;}
-            return moved;
-        }
+        public static int Arrive(TeamProgress team,TechRig courier,ProgressionTuning tuning,System.Func<bool> persist=null)
+            => team.SettleRigCargo(courier,tuning,true,persist);
     }
 }

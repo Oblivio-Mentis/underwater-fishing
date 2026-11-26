@@ -87,8 +87,7 @@ namespace Raid
 
         bool DeliverTowedCage(TechRig cage)
         {
-            if(cage.contents.Count==0 || !team.LoadCargo(cage.contents[0],progression))return false;
-            cage.contents.RemoveAt(0);
+            if(team.SettleRigCargo(cage,progression,false,SaveTransaction)==0)return false;
             if(cage.contents.Count==0)
             {
                 cage.mode="placed";cage.operatorId=cage.helperId=cage.baitId=-1;cage.progress=cage.timer=0;
