@@ -76,6 +76,7 @@ namespace Raid
             {
                 yield return Wait("first physical rack approach",()=>Has("first-rack"));
                 yield return FaceStation(rack,rackAt,"operator in front of physical dispenser");
+                Assert(world.InventionRackTargeted(local),"the independent client's own reticle recognizes the cabinet for the E interaction");
                 int initial=world.View.TechStackLimit("cage");
                 for(int count=1;count<=initial;count++)
                 {
