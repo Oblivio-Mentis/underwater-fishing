@@ -41,6 +41,7 @@ namespace Raid.UI
 
         readonly UiRoot app;
         readonly RectTransform overview, dial, detail, graphArea, graph, dataPanel, hintPanel;
+        readonly RectTransform skillControls, skillGraph;
         readonly CanvasGroup overviewGroup, detailGroup;
         readonly TMP_Text section, stageTitle, title, scope, description, before, after, note, response;
         readonly TMP_Text[] treasury, costs, requirements=new TMP_Text[3];
@@ -90,31 +91,34 @@ namespace Raid.UI
             Place(detail,0,94,1176,658);
             detailGroup=detail.gameObject.AddComponent<CanvasGroup>();
             Key(detail,"ProgressionOverview","‹  Все ветки",19,7,158,43,()=>Back());
+            skillControls=UiKit.Node(detail,"Skill navigation");
+            UiKit.Fill(skillControls);
             for(int i=0;i<stageKeys.Length;i++)
             {
                 int index=i+1;
-                stageKeys[i]=Key(detail,"ProgressionStage"+index,SkillTreeDefinition.Roman(index),
+                stageKeys[i]=Key(skillControls,"ProgressionStage"+index,SkillTreeDefinition.Roman(index),
                     196+i*58,7,51,43,()=>FocusStage(index));
             }
-            stageTitle=Label(detail,"Technology stage",502,8,368,42,"",20,Muted);
-            Key(detail,"ProgressionCenter","Центр",949,7,212,43,ResetGraph);
+            stageTitle=Label(skillControls,"Technology stage",502,8,368,42,"",20,Muted);
+            Key(skillControls,"ProgressionCenter","Центр",949,7,212,43,ResetGraph);
 
             graphArea=Box(detail,"ProgressionGraphViewport",19,61,GraphWidth,GraphHeight,Steel,true).rectTransform;
             graphArea.gameObject.AddComponent<RectMask2D>();
             graphArea.gameObject.AddComponent<SkillGraphPan>().View=this;
             graph=UiKit.Node(graphArea,"Skill branch graph");
             UiKit.Place(graph,Center,Center,Vector2.zero,new(GraphWidth,GraphHeight));
+            skillGraph=UiKit.Node(graph,"Skill ranks");UiKit.Fill(skillGraph);
             for(int i=0;i<5;i++)
             {
                 float left=103+i*109;
-                Box(graph,"Stage division",left,20,1,524,new Color(.106f,.192f,.226f));
-                Label(graph,"Stage marker",left+4,22,108,29,SkillTreeDefinition.Roman(i+1),18,Muted,true);
+                Box(skillGraph,"Stage division",left,20,1,524,new Color(.106f,.192f,.226f));
+                Label(skillGraph,"Stage marker",left+4,22,108,29,SkillTreeDefinition.Roman(i+1),18,Muted,true);
             }
-            var ink=UiKit.Node(graph,"Rank links");
+            var ink=UiKit.Node(skillGraph,"Rank links");
             UiKit.Fill(ink);
             wires=ink.gameObject.AddComponent<SkillWires>();
             wires.raycastTarget=false;
-            rootSymbol=CenterIcon(Emblem(graph,"Branch entry",Entry,45),"Entry icon",29);
+            rootSymbol=CenterIcon(Emblem(skillGraph,"Branch entry",Entry,45),"Entry icon",29);
             for(int i=0;i<cards.Length;i++)cards[i]=MakeCard();
 
             var card=Box(detail,"Selected perk",793,61,368,GraphHeight,Night).rectTransform;
@@ -137,7 +141,7 @@ namespace Raid.UI
                 requirements[i]=Label(dataPanel,"Requirement "+(i+1),23,335+i*25,323,24,"",18,Muted);
             costs=MaterialStrip(dataPanel,"Purchase cost",19,421,330,47);
             note=Label(dataPanel,"Availability",22,471,324,31,"",18,Muted,true);
-            buy=Key(dataPanel,"BuySkill","Купить  ·  ПКМ по узлу",22,509,324,42,()=>Buy(selected));
+            buy=Key(dataPanel,"BuySkill","Купить  ·  ПКМ по узлу",22,509,324,42,()=>{if(TechnologyOpen)BuyTechnology();else Buy(selected);});
 
             hintPanel=UiKit.Node(card,"Branch guidance");
             UiKit.Fill(hintPanel);
@@ -146,9 +150,9 @@ namespace Raid.UI
             hintIcon.rectTransform.anchoredPosition=new Vector2(0,38);
             Label(hintPanel,"Selected perk hint",18,322,332,35,"Выберите узел",24,Muted,true);
 
-            Label(detail,"Graph controls",20,628,750,29,"ЛКМ — выбор   ·   ПКМ — покупка   ·   Колесо — масштаб   ·   ЛКМ на поле — сдвиг",18,Muted);
+            Label(skillControls,"Graph controls",20,628,750,29,"ЛКМ — выбор   ·   ПКМ — покупка   ·   Колесо — масштаб   ·   ЛКМ на поле — сдвиг",18,Muted);
             response=Label(surface,"Purchase reply",24,762,1128,35,"",20,Ink,true);
-            BuildTechnologyPage(surface);
+            BuildTechnologyPage();
             ResetMode();
             Root.gameObject.SetActive(false);
         }
@@ -203,7 +207,7 @@ namespace Raid.UI
 
         Card MakeCard()
         {
-            var rect=UiKit.Node(graph,"Rank");
+            var rect=UiKit.Node(skillGraph,"Rank");
             UiKit.Place(rect,Center,Center,Vector2.zero,new(48,48));
             var face=rect.gameObject.AddComponent<SkillNodeBadge>();
             var button=rect.gameObject.AddComponent<SkillPurchaseButton>();
@@ -233,6 +237,7 @@ namespace Raid.UI
         internal void Open()
         {
             pending=filled=SkillId.None;
+            ClearTechRequest();
             approved=false;
             deadline=responseUntil=0;
             UiKit.Set(response,"");
@@ -243,7 +248,6 @@ namespace Raid.UI
 
         internal bool Back()
         {
-            if(technologyPage.gameObject.activeSelf){ResetMode();return true;}
             if(transition<1)return true;
             if(branch<0)return false;
             ChangeBranch(-1);
@@ -255,7 +259,7 @@ namespace Raid.UI
             branch=targetBranch=-1;
             transition=1;
             selected=SkillId.None;
-            technologyPage.gameObject.SetActive(false);
+            SetTechnologyMode(false);
             overview.gameObject.SetActive(true);
             detail.gameObject.SetActive(false);
             overviewGroup.alpha=1;
@@ -276,7 +280,9 @@ namespace Raid.UI
             detailGroup.blocksRaycasts=false;
             if(index>=0)
             {
-                BindBranch(index);
+                bool technology=index==SkillTreeDefinition.BranchCount;
+                SetTechnologyMode(technology);
+                if(technology)SelectCategory(category);else BindBranch(index);
                 detail.gameObject.SetActive(true);
                 detailGroup.alpha=0;
             }
@@ -300,7 +306,8 @@ namespace Raid.UI
             dial.localScale=Vector3.one;
             dial.anchoredPosition=Vector2.zero;
             detail.localScale=Vector3.one;
-            UiKit.Set(section,branch<0?"МОДУЛИ NEREID":SkillTreeDefinition.Branches[branch].Name);
+            UiKit.Set(section,branch<0?"МОДУЛИ NEREID":TechnologyOpen?"ТЕХНОЛОГИИ":SkillTreeDefinition.Branches[branch].Name);
+            if(branch<0)SetTechnologyMode(false);
             Invalidate();
             Refresh();
         }
@@ -448,9 +455,9 @@ namespace Raid.UI
             targetZoom=next;
         }
 
-        static Vector2 ClampPan(Vector2 requested,float scale)
+        Vector2 ClampPan(Vector2 requested,float scale)
         {
-            Vector2 limit=new Vector2(GraphWidth,GraphHeight)*(scale-1)*.5f;
+            Vector2 limit=graphArea.rect.size*(scale-1)*.5f;
             return new(Mathf.Clamp(requested.x,-limit.x,limit.x),Mathf.Clamp(requested.y,-limit.y,limit.y));
         }
 
@@ -539,7 +546,8 @@ namespace Raid.UI
             Subscribe(app.Context.World);
             var profile=subscribed?.LocalProgress;
             var team=app.Context.View;
-            if(technologyPage.gameObject.activeSelf && team!=null)RefreshTechnology(team);
+            CheckTechRequest(team);
+            if(TechnologyOpen && team!=null)RefreshTechnology(team);
             int p=profile?.revision??-1, t=team?.teamRevision??-1;
             var money=team?.Treasury??default;
             if(pending!=SkillId.None)
@@ -570,7 +578,7 @@ namespace Raid.UI
             shownTreasury=money;
             PresentMaterials(treasury,money);
             RefreshSectors();
-            if(branch<0 && targetBranch<0)return;
+            if(TechnologyOpen || branch<0 && targetBranch<0)return;
             wires.SetOwned(PersonalSkills(),TeamSkills());
             foreach(var card in cards) if(card.Node!=null)DisplayCard(card,money);
             DisplayDetails(money);
@@ -596,11 +604,16 @@ namespace Raid.UI
                 UiKit.Set(sectors[i].Count,count[i]+" / "+SkillTreeDefinition.NodesPerBranch);
             }
             var team=app.Context.View;
-            int opened=0;
-            foreach(var item in TechCatalog.Items)if((team?.TechRank(item.id,"unlock")??0)>0)opened++;
+            int ownedRanks=0,totalRanks=0;
+            foreach(var item in TechCatalog.Items)
+                foreach(var upgrade in item.upgrades)
+                {
+                    ownedRanks+=team?.TechRank(item.id,upgrade.id)??0;
+                    totalRanks+=upgrade.values.Length;
+                }
             var inventions=sectors[SkillTreeDefinition.BranchCount];
-            inventions.Face.SetProgress(opened/(float)TechCatalog.Items.Length);
-            UiKit.Set(inventions.Count,opened+" / "+TechCatalog.Items.Length);
+            inventions.Face.SetProgress(totalRanks>0?(float)ownedRanks/totalRanks:0);
+            UiKit.Set(inventions.Count,ownedRanks+" / "+totalRanks);
         }
 
         void DisplayCard(Card card,MaterialCost money)
@@ -684,7 +697,7 @@ namespace Raid.UI
             var profile=context.World?.LocalProgress;
             var team=context.View;
             var node=SkillTreeDefinition.Get(id);
-            if(transition<1 || pending!=SkillId.None || profile==null || team==null ||
+            if(transition<1 || pending!=SkillId.None || pendingTech!=null || profile==null || team==null ||
                 context.Player==null || context.Player.IsHelpless || !context.NearTerminal || node?.Branch!=branch)return;
             Select(id);
             if(Status(node,Owned(node),team.Treasury)!=SkillNodeState.Available)return;
@@ -698,9 +711,10 @@ namespace Raid.UI
 
         void OnReply(bool success,string explanation)
         {
-            if(technologyPage.gameObject.activeSelf)
+            if(pendingTech!=null)
             {
-                techRequestUntil=0;
+                techAccepted=success;
+                if(!success)ClearTechRequest();
                 shownTechView=null;
                 ShowResponse(explanation,success);
                 Refresh();

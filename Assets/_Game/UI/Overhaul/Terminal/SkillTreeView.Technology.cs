@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,214 +11,296 @@ namespace Raid.UI
     {
         static readonly Color TechGreen=new(.58f,.84f,.65f);
         static readonly string[] Categories={"Активная рыбалка","Пассивная добыча","Охота на монстров","Оборудование"};
+        const float TechGraphHeight=468;
 
-        RectTransform technologyPage, upgradeList;
-        ScrollRect upgradeScroll;
-        readonly List<Button> techItems=new(), techNodes=new();
-        readonly Button[] categoryKeys=new Button[4];
-        TMP_Text itemTitle, itemPurpose, scopeCaption, effectCaption, tuningCaption, gateCaption, equipmentInfo;
-        TMP_Text[] techCosts;
-        TMP_Text rackHint;
-        Button techPurchase, previousRig, nextRig, robotCamera, trapDispatch;
-        TechItem selectedItem;
-        TechUpgrade selectedUpgrade;
-        TeamProgress shownTechView;
-        int category, rigIndex, selectedRobot;
-        float techRequestUntil;
-        internal bool TechnologyOpen => technologyPage && technologyPage.gameObject.activeInHierarchy;
-
-        void BuildTechnologyPage(Transform surface)
+        sealed class TechRankCard
         {
-            technologyPage=UiKit.Node(surface,"TechnologyWorkshop");
-            Place(technologyPage,0,94,1176,662);
-            Key(technologyPage,"TechnologyOverview","‹  Все ветки",19,5,158,45,()=>Back());
+            internal TechUpgrade Upgrade;
+            internal int Rank;
+            // SkillWires uses these per-graph keys only to color bought connections.
+            internal SkillId WireKey;
+            internal SkillNodeBadge Face;
+            internal TMP_Text Numeral;
+        }
+
+        RectTransform technologyPage,techGraph,itemStrip;
+        SkillWires techWires;
+        Image equipmentArt;
+        TMP_Text equipmentInfo;
+        Button previousRig,nextRig,robotCamera,trapDispatch;
+        readonly List<TechRankCard> techRanks=new();
+        readonly List<SkillId> ownedTechLinks=new();
+        readonly Button[] categoryKeys=new Button[4];
+        readonly Dictionary<TechItem,Button> itemKeys=new();
+        readonly Dictionary<string,Sprite> blueprintArt=new();
+        TechItem selectedItem,pendingTech;
+        TechUpgrade pendingUpgrade;
+        TechRankCard selectedTech;
+        TeamProgress shownTechView;
+        int category,rigIndex,selectedRobot,pendingTechRank;
+        float techRequestUntil;
+        bool techAccepted,techControl;
+        internal bool TechnologyOpen=>technologyPage && technologyPage.gameObject.activeInHierarchy;
+
+        void BuildTechnologyPage()
+        {
+            // The ninth sector shares the viewport, zoom, reticle, detail card and purchase controls.
+            technologyPage=UiKit.Node(detail,"Technology navigation");
+            UiKit.Fill(technologyPage);
             for(int i=0;i<Categories.Length;i++)
             {
-                int tab=i;
-                categoryKeys[i]=Key(technologyPage,"TechCategory"+i,Categories[i],187+244*i,5,238,45,
-                    ()=>SelectCategory(tab));
+                int index=i;
+                categoryKeys[i]=Key(technologyPage,"TechCategory"+i,Categories[i],187+i*244,7,238,43,()=>SelectCategory(index));
             }
-            var items=Box(technologyPage,"Blueprint rack",19,67,284,503,Steel).rectTransform;
-            Label(items,"Rack title",15,10,250,35,"ЧЕРТЕЖИ",23,Muted);
-            // The biggest category is industrial equipment. Grow the list from data, within a scrollable rack.
-            var itemScroll=UiKit.Scroll(items,"Inventions",out var itemList);
-            Place((RectTransform)itemScroll.transform,4,53,276,440);
-            foreach(var item in TechCatalog.Items)
-            {
-                var key=UiKit.Button(itemList,"TechItem-"+item.id,item.title,()=>SelectItem(item),false,57);
-                techItems.Add(key);
-                var plate=Resources.Load<Texture2D>("Technology/Icons/"+item.id);
-                if(!plate)continue;
-                var icon=UiKit.Node(key.transform,"Equipment");
-                Place(icon,5,5,47,47);
-                var image=icon.gameObject.AddComponent<RawImage>();image.texture=plate;image.raycastTarget=false;
-                var caption=key.GetComponentInChildren<TMP_Text>();
-                caption.rectTransform.offsetMin=new Vector2(57,4);caption.rectTransform.offsetMax=new Vector2(-6,-4);
-                caption.enableAutoSizing=true;caption.fontSizeMin=15;caption.fontSizeMax=22;
-            }
+            itemStrip=UiKit.Node(technologyPage,"Чертежи категории");
+            Place(itemStrip,19,62,GraphWidth,44);
+            Key(technologyPage,"TechCenter","Центр",692,62,81,44,ResetGraph);
+            techGraph=UiKit.Node(graph,"Technology ranks");UiKit.Fill(techGraph);
 
-            var modules=Box(technologyPage,"Module rack",311,67,387,503,Steel).rectTransform;
-            itemTitle=Label(modules,"Item",16,10,347,38,"",29,Ink);
-            itemPurpose=Paragraph(modules,"Purpose",16,51,349,79,20,Muted,15);
-            upgradeScroll=UiKit.Scroll(modules,"Modules",out upgradeList);
-            Place((RectTransform)upgradeScroll.transform,5,136,377,358);
-
-            var details=Box(technologyPage,"Technology readout",706,67,455,503,Night).rectTransform;
-            Box(details,"Edge",0,0,455,3,TechGreen);
-            scopeCaption=Label(details,"Module kind",12,12,430,31,"",21,TechGreen);
-            effectCaption=Paragraph(details,"Selected module",12,55,424,116,24,Ink,17);
-            tuningCaption=Label(details,"Rank change",12,176,428,45,"",25,Cyan);
-            gateCaption=Paragraph(details,"Research status",12,232,425,72,19,Muted,15);
-            techCosts=MaterialStrip(details,"Next rank price",9,312,436,57);
-            techPurchase=Key(details,"TechPurchase","Купить",9,382,436,47,BuyTechnology);
-            rackHint=Paragraph(details,"Equipment rack",12,439,426,51,20,Muted,16);
-
-            Box(technologyPage,"Equipment footer",19,577,1142,76,Steel);
-            equipmentInfo=Paragraph(technologyPage,"Equipment status",31,586,775,65,21,Ink,16);
-            previousRig=Key(technologyPage,"PreviousRig","‹",816,590,42,45,()=>BrowseRig(-1));
-            nextRig=Key(technologyPage,"NextRig","›",864,590,42,45,()=>BrowseRig(1));
-            robotCamera=Key(technologyPage,"RobotCamera","Камера робота",912,590,235,45,()=>
+            var fleet=Box(technologyPage,"Equipment in the expedition",19,590,GraphWidth,63,Steel).rectTransform;
+            equipmentArt=CenterIcon(fleet,"Оборудование",40);
+            Place(equipmentArt.rectTransform,8,10,40,40);
+            equipmentInfo=Paragraph(fleet,"Equipment status",57,4,475,55,19,Ink,15);
+            previousRig=Key(fleet,"PreviousRig","‹",533,9,38,44,()=>BrowseRig(-1));
+            nextRig=Key(fleet,"NextRig","›",575,9,38,44,()=>BrowseRig(1));
+            robotCamera=Key(fleet,"RobotCamera","Камера",620,9,126,44,()=>
             {
                 if(selectedRobot<=0 || app.Context.World==null)return;
                 app.Context.World.RequestRobotConsole(selectedRobot);
                 app.ClosePanel();
             });
-            trapDispatch=Key(technologyPage,"DispatchTrapNetwork","Отправить улов сети",912,590,235,45,()=>
-                app.Context.Player?.CmdDispatchTrapNetwork());
-            technologyPage.gameObject.SetActive(false);
+            trapDispatch=Key(fleet,"DispatchTrapNetwork","Сдать улов",620,9,126,44,()=>app.Context.Player?.CmdDispatchTrapNetwork());
+            Label(technologyPage,"Graph gestures",793,628,368,29,"Колесо — масштаб   ·   Потяните поле для сдвига",17,Muted,true);
         }
 
-        void OpenTechnology()
+        void SetTechnologyMode(bool active)
         {
-            if(transition<1)return;
-            UiKit.Set(section,"ТЕХНОЛОГИИ И ИЗОБРЕТЕНИЯ");
-            overview.gameObject.SetActive(false);
-            detail.gameObject.SetActive(false);
-            technologyPage.gameObject.SetActive(true);
-            techRequestUntil=0;
-            SelectCategory(category);
+            technologyPage.gameObject.SetActive(active);techGraph.gameObject.SetActive(active);
+            skillGraph.gameObject.SetActive(!active);skillControls.gameObject.SetActive(!active);
+            Place(graphArea,19,active?115:61,GraphWidth,active?TechGraphHeight:GraphHeight);
+            graph.sizeDelta=new Vector2(GraphWidth,active?TechGraphHeight:GraphHeight);
+            Place(title.rectTransform,22,active?73:83,325,active?63:78);
+            Place(description.rectTransform,22,active?138:164,325,active?99:69);
+            description.fontSizeMin=active?15:17;
+            Place(requirements[1].rectTransform,23,360,323,24);
+            requirements[1].textWrappingMode=active?TextWrappingModes.Normal:TextWrappingModes.NoWrap;
+            requirements[2].gameObject.SetActive(true);
+            if(active){dataPanel.gameObject.SetActive(false);hintPanel.gameObject.SetActive(true);buy.interactable=false;}
+            buy.name=active?"TechPurchase":"BuySkill";
+            UiKit.Caption(buy,"Купить  ·  ПКМ по узлу");
+            shownTechView=null;
         }
+
+        void OpenTechnology()=>ChangeBranch(SkillTreeDefinition.BranchCount);
 
         void SelectCategory(int value)
         {
             category=value;
-            TechItem first=null;
-            for(int i=0;i<techItems.Count;i++)
+            UiKit.Clear(itemStrip);itemKeys.Clear();
+            var items=TechCatalog.Items.Where(item=>item.category==value).ToArray();
+            if(items.Length==0)return;
+            float width=666f/items.Length;
+            for(int i=0;i<items.Length;i++)
             {
-                var item=TechCatalog.Items[i];
-                bool visible=item.category==value;
-                techItems[i].gameObject.SetActive(visible);
-                if(visible && first==null)first=item;
+                var item=items[i];
+                itemKeys[item]=Key(itemStrip,"TechItem-"+item.id,item.title,i*width,0,width-4,44,()=>SelectItem(item));
             }
             for(int i=0;i<categoryKeys.Length;i++)
                 categoryKeys[i].targetGraphic.color=i==value?Color.Lerp(Steel,TechGreen,.3f):Steel;
-            if(first!=null)SelectItem(first);
+            SelectItem(selectedItem!=null && selectedItem.category==value?selectedItem:items[0]);
+        }
+
+        Sprite BlueprintSprite(TechItem item)
+        {
+            if(blueprintArt.TryGetValue(item.id,out var sprite))return sprite;
+            var texture=Resources.Load<Texture2D>("Technology/Icons/"+item.id);
+            sprite=texture?Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),Center):
+                DiveInstruments.Art(DiveInstruments.Mark.Wrench);
+            blueprintArt.Add(item.id,sprite);
+            return sprite;
         }
 
         void SelectItem(TechItem item)
         {
-            selectedItem=item;
-            selectedUpgrade=item.Upgrade("unlock");
-            rigIndex=0;
-            UiKit.Set(itemTitle,item.title);
-            UiKit.Set(itemPurpose,item.description);
-            UiKit.Clear(upgradeList);
-            techNodes.Clear();
-            foreach(var node in item.upgrades)
-                techNodes.Add(UiKit.Button(upgradeList,"TechNode-"+node.id,node.title,
-                    ()=>{selectedUpgrade=node;shownTechView=null;Refresh();},false,48));
-            upgradeScroll.verticalNormalizedPosition=1;
+            selectedItem=item;rigIndex=0;
+            UiKit.Clear(techGraph);techRanks.Clear();
+            var ink=UiKit.Node(techGraph,"Исследованные связи");UiKit.Fill(ink);
+            techWires=ink.gameObject.AddComponent<SkillWires>();techWires.raycastTarget=false;
+            var links=new List<SkillWires.Link>();
+            var blueprint=item.Upgrade("unlock");
+            Vector2 origin=new(-316,0);
+            var entry=AddTechRank(blueprint,1,origin,68,true);
+            var upgrades=item.upgrades.Where(u=>u!=blueprint).ToArray();
+            int columns=upgrades.Length==0?1:upgrades.Max(u=>u.values.Length);
+            float spacing=Mathf.Min(67f,406f/Mathf.Max(1,upgrades.Length-1));
+            float diameter=Mathf.Min(44f,spacing-6f);
+            for(int i=0;i<upgrades.Length;i++)
+            {
+                var upgrade=upgrades[i];
+                float y=((upgrades.Length-1)*.5f-i)*spacing;
+                var previous=entry;
+                for(int level=1;level<=upgrade.values.Length;level++)
+                {
+                    float x=10+(level-1)*(295f/Mathf.Max(1,columns-1));
+                    Vector2 point=new(x,y);
+                    var node=AddTechRank(upgrade,level,point,diameter,false);
+                    Vector2 from=previous.Face.rectTransform.anchoredPosition;
+                    links.Add(level==1?new(previous.WireKey,node.WireKey,KindColor(upgrade.kind),origin,new(-263,0),new(-263,y),point):
+                        new(previous.WireKey,node.WireKey,KindColor(upgrade.kind),from,point));
+                    previous=node;
+                }
+                var row=UiKit.Node(techGraph,"Линия "+upgrade.id);
+                UiKit.Place(row,Center,Center,new(-135,y),new(225,Mathf.Min(43,spacing-3)));
+                var plate=row.gameObject.AddComponent<Image>();plate.color=Steel;
+                var label=UiKit.Label(row,"Название линии",upgrade.title,19,Ink);
+                UiKit.Fill(label.rectTransform);label.margin=new Vector4(5,0,5,0);
+                label.alignment=TextAlignmentOptions.MidlineLeft;
+                var choose=row.gameObject.AddComponent<Button>();choose.targetGraphic=plate;
+                choose.onClick.AddListener(()=>SelectNextTechRank(upgrade));
+            }
+            techWires.SetLinks(links);
+            foreach(var pair in itemKeys)
+                pair.Value.targetGraphic.color=pair.Key==item?Color.Lerp(Steel,TechGreen,.3f):Steel;
+            equipmentArt.sprite=BlueprintSprite(item);
+            selectedTech=entry;
+            ResetGraph();
             shownTechView=null;
-            Refresh();
+            Invalidate();Refresh();
+        }
+
+        TechRankCard AddTechRank(TechUpgrade upgrade,int level,Vector2 at,float side,bool blueprint)
+        {
+            var rect=UiKit.Node(techGraph,"TechNode-"+upgrade.id+(level==1?"":"-"+level));
+            UiKit.Place(rect,Center,Center,at,Vector2.one*side);
+            var face=rect.gameObject.AddComponent<SkillNodeBadge>();
+            face.Accent=KindColor(upgrade.kind);face.Capstone=blueprint;
+            var pick=rect.gameObject.AddComponent<SkillPurchaseButton>();
+            pick.targetGraphic=face;pick.transition=Selectable.Transition.None;
+            var card=new TechRankCard{Face=face,Upgrade=upgrade,Rank=level,WireKey=(SkillId)(techRanks.Count+1)};
+            if(blueprint)CenterIcon(rect,"Чертёж",36).sprite=BlueprintSprite(selectedItem);
+            else
+            {
+                card.Numeral=UiKit.Label(rect,"Ранг",SkillTreeDefinition.Roman(level),19,Ink);
+                UiKit.Fill(card.Numeral.rectTransform);card.Numeral.alignment=TextAlignmentOptions.Center;
+            }
+            pick.onClick.AddListener(()=>SelectTechRank(card));
+            pick.Purchase=()=>{SelectTechRank(card);BuyTechnology();};
+            techRanks.Add(card);
+            return card;
+        }
+
+        void SelectNextTechRank(TechUpgrade upgrade)
+        {
+            int current=app.Context.View?.TechRank(selectedItem.id,upgrade.id)??0;
+            SelectTechRank(techRanks.Find(r=>r.Upgrade==upgrade && r.Rank==Mathf.Min(current+1,upgrade.values.Length)));
+        }
+
+        void SelectTechRank(TechRankCard card)
+        {
+            if(card==null)return;
+            selectedTech=card;shownTechView=null;Refresh();
         }
 
         void BrowseRig(int delta)
         {
-            rigIndex+=delta;
-            shownTechView=null;
-            Refresh();
+            rigIndex+=delta;shownTechView=null;Refresh();
+        }
+
+        static SkillNodeState TechStatus(TeamProgress team,TechItem item,TechRankCard card)
+        {
+            int owned=team.TechRank(item.id,card.Upgrade.id);
+            if(card.Rank<=owned)return SkillNodeState.Purchased;
+            if(card.Rank!=owned+1 || team.TechRequirement(item,card.Upgrade)!=null)return SkillNodeState.MissingRank;
+            return team.Treasury.Covers(card.Upgrade.NextCost(owned))?SkillNodeState.Available:SkillNodeState.MissingMaterials;
         }
 
         void RefreshTechnology(TeamProgress team)
         {
-            if(shownTechView==team && (techRequestUntil==0 || Time.unscaledTime<techRequestUntil))return;
-            if(Time.unscaledTime>=techRequestUntil)techRequestUntil=0;
-            shownTechView=team;
-            var item=selectedItem;
-            var node=selectedUpgrade;
-            if(item==null || node==null)return;
-            for(int i=0;i<techItems.Count;i++)
-            {
-                var row=TechCatalog.Items[i];
-                if(row.category!=category)continue;
-                techItems[i].targetGraphic.color=row==item?Color.Lerp(Steel,TechGreen,.26f):Night;
-                UiKit.Caption(techItems[i],(team.TechRank(row.id,"unlock")>0?"[+]  ":"")+row.title);
-            }
-            for(int i=0;i<item.upgrades.Length;i++)
-            {
-                var row=item.upgrades[i];
-                int owned=team.TechRank(item.id,row.id);
-                string state=owned==row.values.Length?"[+]":team.TechRequirement(item,row)!=null?"—":
-                    team.Treasury.Covers(row.NextCost(owned))?"+":"·";
-                UiKit.Caption(techNodes[i],$"{state}   {row.title}   {owned}/{row.values.Length}");
-                techNodes[i].targetGraphic.color=row==node?Color.Lerp(Steel,KindColor(row.kind),.32f):Night;
-            }
-            int rank=team.TechRank(item.id,node.id);
-            bool complete=rank>=node.values.Length;
-            MaterialCost cost=complete?default:node.NextCost(rank);
-            int stage=TechCatalog.Stage(item,node);
-            string blocked=team.TechRequirement(item,node);
-            bool enough=team.Treasury.Covers(cost);
-            UiKit.Set(scopeCaption,"ЭКИПАЖ   /   "+KindLabel(node.kind));
-            scopeCaption.color=KindColor(node.kind);
-            UiKit.Set(effectCaption,node.title+"\n"+node.description);
-            string current=rank==0?(node.id=="stack"?item.stackBase+" шт. в слоте":node.kind=="stat"?"Базовый":"Закрыто"):ValueLabel(node,rank);
-            UiKit.Set(tuningCaption,complete?current:current+"   →   "+ValueLabel(node,rank+1));
-            UiKit.Set(gateCaption,"Стадия "+SkillTreeDefinition.Roman(stage)+" · "+TechCatalog.StageTitle(stage)+"\n"+
-                (blocked??(enough?"Материалы доступны":"Не хватает материалов")));
-            PresentMaterials(techCosts,cost,team.Treasury);
             bool control=app.Context.NearTerminal && app.Context.Player!=null && !app.Context.Player.IsHelpless;
-            techPurchase.interactable=control && blocked==null && enough && techRequestUntil==0;
-            UiKit.Caption(techPurchase,complete?"Приобретено":techRequestUntil>0?"Ожидание хоста…":"Купить для экипажа");
-            var rigs=team.rigs?.FindAll(r=>r.kind==item.id);
-            int count=rigs?.Count??0;
-            int limit=TechRig.TotalLimit(team,item);
-            bool unlocked=team.TechRank(item.id,"unlock")>0;
-            UiKit.Set(rackHint,unlocked
-                ? $"Бесплатно в раздатчике у монитора  ·  {team.TechStackLimit(item.id)} шт. в слоте  ·  в работе {count}/{limit}"
-                : "После открытия можно взять в раздатчике на корабле");
-            rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
-            var rig=count==0?null:rigs[rigIndex];
-            string status=rig==null?"Экземпляров в экспедиции нет":
-                $"№{rig.serial}   ·   {RigState(rig.mode)}   ·   {rig.health:P0}   ·   {RaidWorld.EquipmentReadout(rig,team)}\n"+
-                $"Глубина {rig.depth}   ·   координаты {rig.position.x:0} / {rig.position.y:0} / {rig.position.z:0}";
-            bool network=item.id=="trap" && team.TechRank("trap","group")>0;
-            if(network && count>0)
+            if(selectedTech==null || shownTechView==team && control==techControl)return;
+            shownTechView=team;techControl=control;
+            ownedTechLinks.Clear();
+            foreach(var card in techRanks)
             {
-                int alarms=0,stock=0;
-                foreach(var trap in rigs){stock+=trap.contents.Count;if(RaidWorld.TrapAlarm(team,trap))alarms++;}
-                status+="   ·   сеть: "+stock+" рыб, сигналов "+alarms;
+                var state=TechStatus(team,selectedItem,card);
+                if(state==SkillNodeState.Purchased)ownedTechLinks.Add(card.WireKey);
+                card.Face.State=state;card.Face.Selected=card==selectedTech;card.Face.SetVerticesDirty();
+                if(card.Numeral)card.Numeral.color=state==SkillNodeState.MissingRank?Muted:Ink;
             }
-            trapDispatch.gameObject.SetActive(network);
-            trapDispatch.interactable=network && control && count>0;
-            UiKit.Set(equipmentInfo,status);
-            previousRig.interactable=rigIndex>0;
-            nextRig.interactable=rigIndex+1<count;
-            selectedRobot=rig!=null && item.id=="robot" && rig.depth==team.expeditionDepth?rig.serial:0;
-            robotCamera.gameObject.SetActive(item.id=="robot");
-            robotCamera.interactable=control && selectedRobot>0;
+            techWires.SetOwned(ownedTechLinks,Empty);
+            DisplayTechDetails(team);
+            DisplayEquipment(team);
         }
 
-        static string KindLabel(string kind)=>kind switch
+        void DisplayTechDetails(TeamProgress team)
         {
-            "unlock"=>"ЧЕРТЁЖ", "stat"=>"ПАРАМЕТР", "automation"=>"АВТОМАТИКА", _=>"ФУНКЦИЯ"
-        };
+            var item=selectedItem;
+            var card=selectedTech;
+            var node=card.Upgrade;
+            int owned=team.TechRank(item.id,node.id);
+            int level=card.Rank;
+            var state=TechStatus(team,item,card);
+            bool bought=state==SkillNodeState.Purchased;
+            bool blueprint=node.id=="unlock";
+            dataPanel.gameObject.SetActive(true);hintPanel.gameObject.SetActive(false);
+            detailSymbol.sprite=BlueprintSprite(item);detailSymbol.color=Color.white;
+            scope.color=KindColor(node.kind);
+            UiKit.Set(scope,blueprint?"ЭКИПАЖ  /  ЧЕРТЁЖ":"ЭКИПАЖ  /  "+SkillTreeDefinition.Roman(level));
+            UiKit.Set(title,blueprint?item.title:node.title+(node.values.Length>1?" "+SkillTreeDefinition.Roman(level):""));
+            UiKit.Set(description,blueprint?item.description:node.id=="stack"?
+                "Увеличивает число экземпляров этого изобретения в одном кармане водолаза. Вместимость действует для всего экипажа.":node.description);
+            UiKit.Set(before,ValueLabel(item,node,owned));
+            UiKit.Set(after,bought?"—":ValueLabel(item,node,level));after.color=KindColor(node.kind);
+            int stage=TechCatalog.Stage(item,node);
+            UiKit.Set(requirements[0],"Стадия "+SkillTreeDefinition.Roman(stage)+" · "+TechCatalog.StageTitle(stage));
+            string blocked=bought?null:level>owned+1?"Сначала изучите ранг "+SkillTreeDefinition.Roman(level-1):team.TechRequirement(item,node);
+            Place(requirements[1].rectTransform,23,360,323,blocked==null?24:49);
+            requirements[2].gameObject.SetActive(blocked==null);
+            UiKit.Set(requirements[1],blocked??(blueprint?"Бесплатная выдача в раздатчике":item.title));
+            UiKit.Set(requirements[2],blueprint?"В кармане до "+team.TechStackLimit(item.id)+" шт.":"Изучено "+owned+" из "+node.values.Length);
+            requirements[0].color=requirements[2].color=Muted;requirements[1].color=blocked==null?Muted:Amber;
+            PresentMaterials(costs,node.NextCost(level-1),team.Treasury);
+            bool waiting=pendingTech!=null || pending!=SkillId.None;
+            note.color=state==SkillNodeState.Available?Cyan:bought?Muted:Amber;
+            UiKit.Set(note,waiting?"Подтверждение хоста…":bought?"Куплено":blocked!=null?"Пока недоступно":
+                !techControl?"Подойдите к монитору":state==SkillNodeState.Available?"Готово к покупке":"Не хватает материалов");
+            buy.interactable=!waiting && techControl && state==SkillNodeState.Available;
+            UiKit.Caption(buy,bought?"Приобретено":"Купить  ·  ПКМ по узлу");
+        }
+
+        static string ValueLabel(TechItem item,TechUpgrade upgrade,int rank)
+        {
+            if(upgrade.id=="stack")return (rank==0?item.stackBase:Mathf.RoundToInt(upgrade.values[rank-1]))+" шт.";
+            if(upgrade.id=="vacuum_capacity")return (1+(rank==0?0:Mathf.RoundToInt(upgrade.values[rank-1])))+" шт.";
+            if(upgrade.kind=="stat")return "×"+(rank==0?1:upgrade.values[rank-1]).ToString("0.##");
+            return rank==0?"Закрыто":upgrade.values.Length==1?"Открыто":"Ур. "+rank;
+        }
+
         static Color KindColor(string kind)=>kind switch
         {
             "unlock"=>TechGreen, "stat"=>Cyan, "automation"=>Amber, _=>new Color(.80f,.72f,.93f)
         };
-        static string ValueLabel(TechUpgrade node,int rank)=>node.id=="stack"?node.values[rank-1].ToString("0")+" шт. в слоте":node.kind=="stat"?
-            $"×{node.values[rank-1]:0.##}":node.values.Length==1?"Открыто":"Уровень "+rank;
+
+        void DisplayEquipment(TeamProgress team)
+        {
+            var item=selectedItem;
+            var rigs=team.rigs?.FindAll(r=>r.kind==item.id);
+            int count=rigs?.Count??0;
+            rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
+            var rig=count==0?null:rigs[rigIndex];
+            bool network=item.id=="trap" && team.TechRank("trap","group")>0;
+            string status=item.title+" · в работе "+count+"/"+TechRig.TotalLimit(team,item);
+            if(rig!=null)status+="\n№"+rig.serial+" · "+RigState(rig.mode)+" · "+rig.health.ToString("P0")+
+                " · глубина "+rig.depth+" · "+$"{rig.position.x:0} / {rig.position.y:0} / {rig.position.z:0}"+
+                "\n"+RaidWorld.EquipmentReadout(rig,team);
+            if(network && count>0)status+=" · улов "+rigs.Sum(r=>r.contents.Count)+", сигналы "+rigs.Count(r=>RaidWorld.TrapAlarm(team,r));
+            UiKit.Set(equipmentInfo,status);
+            previousRig.gameObject.SetActive(count>1);nextRig.gameObject.SetActive(count>1);
+            previousRig.interactable=rigIndex>0;nextRig.interactable=rigIndex+1<count;
+            selectedRobot=rig!=null && item.id=="robot" && rig.depth==team.expeditionDepth?rig.serial:0;
+            robotCamera.gameObject.SetActive(item.id=="robot");robotCamera.interactable=techControl && selectedRobot>0;
+            trapDispatch.gameObject.SetActive(network);trapDispatch.interactable=techControl && count>0;
+        }
 
         static string RigState(string mode)=>mode switch
         {
@@ -228,18 +311,29 @@ namespace Raid.UI
 
         void BuyTechnology()
         {
-            if(!techPurchase.interactable || app.Context.View==null)return;
             var team=app.Context.View;
-            app.Context.Player.CmdTechBuy(selectedItem.id,selectedUpgrade.id,
-                team.TechRank(selectedItem.id,selectedUpgrade.id),team.teamRevision);
-            WaitTechnology();
+            if(!TechnologyOpen || transition<1 || pendingTech!=null || pending!=SkillId.None ||
+                selectedTech==null || team==null || !app.Context.NearTerminal || app.Context.Player==null ||
+                app.Context.Player.IsHelpless || TechStatus(team,selectedItem,selectedTech)!=SkillNodeState.Available)return;
+            pendingTech=selectedItem;pendingUpgrade=selectedTech.Upgrade;pendingTechRank=selectedTech.Rank;techAccepted=false;
+            techRequestUntil=Time.unscaledTime+7;
+            shownTechView=null;Refresh();
+            app.Context.Player.CmdTechBuy(pendingTech.id,pendingUpgrade.id,pendingTechRank-1,team.teamRevision);
         }
 
-        void WaitTechnology()
+        void CheckTechRequest(TeamProgress team)
         {
-            techRequestUntil=Time.unscaledTime+1;
-            shownTechView=null;
-            Refresh();
+            if(pendingTech==null)return;
+            if(techAccepted && team!=null && team.TechRank(pendingTech.id,pendingUpgrade.id)>=pendingTechRank)ClearTechRequest();
+            else if(Time.unscaledTime>techRequestUntil)
+            {
+                ClearTechRequest();ShowResponse("Не получено подтверждение покупки",false);
+            }
+        }
+
+        void ClearTechRequest()
+        {
+            pendingTech=null;pendingUpgrade=null;techAccepted=false;shownTechView=null;
         }
     }
 }
