@@ -99,9 +99,9 @@ namespace Raid
             for(int i=0;i<dropped.Count;i++)
             {
                 var item=dropped[i];
-                if(item.kind!=DroppedKind.Catch || !item.Fish || item.Fish.cargoSize>free || item.Fish.cargoSize*IndustrialSettings.fishSlotKg>freeKg || !CloseToPayload(item.position,rig.position) ||
+                if(item.kind!=DroppedKind.Catch || item.spoiled || !item.Fish || item.Fish.cargoSize>free || item.Fish.cargoSize*IndustrialSettings.fishSlotKg>freeKg || !CloseToPayload(item.position,rig.position) ||
                     !IndustryCanPull(item.position,rig.position,.08f)) continue;
-                rig.contents.Add(AttributeCatch(item.Fish.ToCargo(item.id)));dropped.RemoveAt(i);return true;
+                rig.contents.Add(AttributeCatch(item.Fish.ToCargo(item.id)));RemoveDrop(item.id);return true;
             }
             return false;
         }

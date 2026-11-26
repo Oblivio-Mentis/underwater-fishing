@@ -44,7 +44,8 @@ namespace Raid.UI
 
         readonly UiRoot app;
         readonly RectTransform overview, dial, detail, graphArea, graph, dataPanel, hintPanel;
-        readonly RectTransform skillControls, skillGraph;
+        readonly RectTransform skillControls, skillGraph, statComparison, blueprintGuide;
+        readonly TMP_Text blueprintDirections;
         readonly CanvasGroup overviewGroup, detailGroup;
         readonly TMP_Text section, stageTitle, title, scope, description, before, after, note, response;
         readonly TMP_Text[] treasury, costs, requirements=new TMP_Text[3];
@@ -134,12 +135,21 @@ namespace Raid.UI
             scope=Label(dataPanel,"Scope",88,25,250,38,"",22,Muted);
             title=Paragraph(dataPanel,"Full perk name",22,83,325,78,31,Ink,20);
             description=Paragraph(dataPanel,"Real effect",22,164,325,69,22,Muted,17);
-            Box(dataPanel,"Effect strip",22,242,324,82,Steel);
-            Label(dataPanel,"Current value caption",29,245,134,20,"СЕЙЧАС",16,Muted,true);
-            Label(dataPanel,"Target value caption",204,245,134,20,"ПОСЛЕ",16,Muted,true);
-            before=Label(dataPanel,"Current value",30,270,132,44,"",29,Ink,true);
-            Label(dataPanel,"Effect direction",162,270,42,44,"→",26,Muted,true);
-            after=Label(dataPanel,"New value",201,270,137,44,"",29,Cyan,true);
+            statComparison=UiKit.Node(dataPanel,"Effect comparison");
+            UiKit.Fill(statComparison);
+            Box(statComparison,"Effect strip",22,242,324,82,Steel);
+            Label(statComparison,"Current value caption",29,245,134,20,"СЕЙЧАС",16,Muted,true);
+            Label(statComparison,"Target value caption",204,245,134,20,"ПОСЛЕ",16,Muted,true);
+            before=Label(statComparison,"Current value",30,270,132,44,"",29,Ink,true);
+            Label(statComparison,"Effect direction",162,270,42,44,"→",26,Muted,true);
+            after=Label(statComparison,"New value",201,270,137,44,"",29,Cyan,true);
+            blueprintGuide=UiKit.Node(dataPanel,"Invention guide");
+            UiKit.Fill(blueprintGuide);
+            Box(blueprintGuide,"Guide background",22,164,324,184,Steel);
+            Box(blueprintGuide,"Guide accent",22,164,3,184,Cyan);
+            Label(blueprintGuide,"Guide label",36,172,285,24,"НАЗНАЧЕНИЕ",16,Cyan);
+            blueprintDirections=Paragraph(blueprintGuide,"Invention instructions",34,201,303,136,19,Ink,16);
+            blueprintGuide.gameObject.SetActive(false);
             for(int i=0;i<requirements.Length;i++)
                 requirements[i]=Label(dataPanel,"Requirement "+(i+1),23,335+i*25,323,24,"",18,Muted);
             costs=MaterialStrip(dataPanel,"Purchase cost",19,421,330,47);
@@ -681,6 +691,7 @@ namespace Raid.UI
             scope.color=accent;
             UiKit.Set(scope,node.Team?"КОМАНДА":"ЛИЧНОЕ");
             UiKit.Set(title,node.Name);
+            ShowBlueprintGuide(false);
             UiKit.Set(description,node.Effect);
             int magnitude=SkillTreeDefinition.Value(owned,node.Line);
             UiKit.Set(before,SkillTreeDefinition.FormatValue(node.Line,magnitude));

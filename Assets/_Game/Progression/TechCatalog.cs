@@ -21,7 +21,7 @@ namespace Raid
     [Serializable]
     public sealed class TechItem
     {
-        public string id, title, description;
+        public string id, title, purpose, description;
         public int category, stage, limit, capacity;
         public int stackBase=1;
         public float interval, radius, range;
@@ -76,7 +76,7 @@ namespace Raid
             {
                 if(item==null || string.IsNullOrWhiteSpace(item.id) || byId.ContainsKey(item.id) ||
                     item.category<0 || item.category>3 || item.stage<1 || item.stage>5 ||
-                    item.limit<1 || item.upgrades==null)
+                    item.limit<1 || item.upgrades==null || string.IsNullOrWhiteSpace(item.purpose) || string.IsNullOrWhiteSpace(item.description))
                     throw new InvalidOperationException("Invalid technology entry.");
                 var keys=new HashSet<string>(StringComparer.Ordinal);
                 foreach(var node in item.upgrades)

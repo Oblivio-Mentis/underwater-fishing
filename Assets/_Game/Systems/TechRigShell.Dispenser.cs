@@ -87,8 +87,8 @@ namespace Raid
                 var p=new Press();
                 p.Box(new(0,-.13f,-.34f),new(1.32f,2.10f,.48f),3);
                 p.Box(new(0,-1.13f,-.22f),new(1.37f,.10f,.62f),0);
-                p.Box(new(0,.80f,-.20f),new(1.34f,.26f,.61f),2);
-                p.Box(new(0,.795f,.077f),new(1.19f,.184f,.074f),0);
+                p.Box(new(0,.833f,-.20f),new(1.34f,.325f,.61f),2);
+                p.Box(new(0,.830f,.077f),new(1.19f,.278f,.074f),0);
                 p.Box(new(0,.682f,.088f),new(1.16f,.015f,.036f),4);
                 // Shop window, shelf rails and individual spiral feeds.
                 p.Box(new(-.11f,.074f,-.170f),new(1.00f,1.17f,.095f),0);
@@ -154,12 +154,20 @@ namespace Raid
             display.audioCue=housing.AddComponent<AudioSource>();display.audioCue.spatialBlend=1;display.audioCue.minDistance=1.2f;display.audioCue.maxDistance=12;display.audioCue.playOnAwake=false;
             if(!click)click=Tone("Выдача · привод",190,.12f);display.sound=click;
             var tint=new Color(.70f,.98f,.92f);
-            display.title=VendorLegend(housing.transform,InventionVendorDisplay.ReadyTitle,new(0,.837f,.124f),.63f,1.13f,tint);
+            display.title=VendorLegend(housing.transform,InventionVendorDisplay.ReadyTitle,new(0,.913f,.124f),.63f,1.13f,tint);
             display.title.name="Название товара";
             display.title.enableAutoSizing=true;
             display.title.fontSizeMin=.38f;display.title.fontSizeMax=.63f;
             display.title.rectTransform.sizeDelta=new Vector2(1.13f,.085f);
-            display.status=VendorLegend(housing.transform,InventionVendorDisplay.ReadyHint,new(0,.759f,.124f),.46f,1.13f,Color.white);
+            display.purpose=VendorLegend(housing.transform,"",new(0,.827f,.124f),.45f,1.10f,new Color(.76f,.88f,.86f));
+            display.purpose.name="Назначение изобретения";
+            display.purpose.enableAutoSizing=true;
+            display.purpose.fontSizeMin=.35f;
+            display.purpose.fontSizeMax=.45f;
+            display.purpose.rectTransform.sizeDelta=new Vector2(1.10f,.085f);
+            display.purpose.textWrappingMode=TextWrappingModes.Normal;
+            display.purpose.overflowMode=TextOverflowModes.Ellipsis;
+            display.status=VendorLegend(housing.transform,InventionVendorDisplay.ReadyHint,new(0,.742f,.124f),.46f,1.13f,Color.white);
             display.status.name="Состояние выдачи";
             VendorLegend(housing.transform,"ВЫДАЧА",new(-.075f,-.926f,.003f),.48f,.75f,new Color(.92f,.84f,.62f));
             display.code=VendorLegend(housing.transform,"ГОТОВ",new(.52f,.485f,.123f),.34f,.163f,tint);
@@ -202,7 +210,7 @@ namespace Raid
         internal readonly Dictionary<string,string> codes=new();
         internal readonly Dictionary<string,TMP_Text> labels=new();
         internal Transform flap;
-        internal TMP_Text code,title,status;
+        internal TMP_Text code,title,purpose,status;
         internal LineRenderer frame;
         internal AudioSource audioCue;
         internal AudioClip sound;
@@ -248,6 +256,7 @@ namespace Raid
             bool receipt=dispatching!=null && (aimed==null || aimed==dispatching);
             var product=receipt?dispatching:aimed;
             title.text=product?.title??ReadyTitle;
+            purpose.text=product?.purpose??"";
             status.text=receipt?"Выдача началась":action switch {
                 VendorAction.Ready => "ЛКМ · Получить",
                 VendorAction.Locked => "Нужен чертёж",

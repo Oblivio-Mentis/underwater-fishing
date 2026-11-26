@@ -5,7 +5,11 @@ namespace Raid
 {
     public sealed partial class TechRigShell
     {
-        internal const float VacuumInletHeight=1.16f;
+        internal const float VacuumScale=1.84f;
+        const float VacuumFloor=-.326f;
+        internal const float VacuumInletHeight=VacuumFloor+(1.16f-VacuumFloor)*VacuumScale;
+        internal static Vector3 VacuumPoint(Vector3 point) =>
+            Vector3.up*VacuumFloor+(point-Vector3.up*VacuumFloor)*VacuumScale;
         readonly Dictionary<long,Transform> vacuumFish=new();
         readonly List<long> departedFish=new();
 
@@ -51,6 +55,7 @@ namespace Raid
                 housing.Ring(new(side*.71f,.79f,.31f),.075f,.075f,.015f,4,12);
             }
             housing.Tube(new(0,.91f,0),new(0,1.024f,0),.13f,.068f,2,12);
+            for(int i=0;i<housing.verts.Count;i++)housing.verts[i]=VacuumPoint(housing.verts[i]);
         }
 
         void DisplayVacuumSchool(TechRig rig)
@@ -74,7 +79,7 @@ namespace Raid
                 float radius=.27f+.14f*Mathf.Abs(Mathf.Sin(phase*4.13f));
                 float heading=now*(.75f+.43f*Mathf.Abs(Mathf.Cos(phase*2)))+phase;
                 float vertical=.12f+.21f*Mathf.Sin(phase*2.6f+now*.54f);
-                fish.localPosition=new Vector3(Mathf.Cos(heading)*radius,vertical,Mathf.Sin(heading)*radius);
+                fish.localPosition=VacuumPoint(new Vector3(Mathf.Cos(heading)*radius,vertical,Mathf.Sin(heading)*radius));
                 fish.localRotation=Quaternion.LookRotation(new Vector3(-Mathf.Sin(heading),.11f*Mathf.Cos(heading),Mathf.Cos(heading)));
             }
             foreach(long id in departedFish)

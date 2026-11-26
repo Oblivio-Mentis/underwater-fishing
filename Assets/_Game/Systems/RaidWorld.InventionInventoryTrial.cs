@@ -449,6 +449,22 @@ namespace Raid
                 "the technology tree uses the original harpoon viewport and five stage keys");
             host.LookAtConsole(screen.position);
             await CaptureRackUi(folder,"11-technology-vacuum.png");
+            await PointAtControl("TechNode-unlock");
+            report.Check(UiRoot.Instance.QaClickReticle(),"The vacuum blueprint opens an illustrated guide panel.");
+            await WaitRackUi(()=>UiRoot.Instance.GetComponentsInChildren<TMP_Text>().Any(label=>
+                    label.name=="Invention instructions" && label.text==TechCatalog.Find("vacuum").description),
+                "the monitor shows the complete vacuum instructions");
+            var guide=UiRoot.Instance.GetComponentsInChildren<TMP_Text>().Single(label=>label.name=="Invention instructions");
+            foreach(var invention in TechCatalog.Items)
+            {
+                guide.text=invention.description;
+                guide.ForceMeshUpdate();
+                if(guide.isTextTruncated)throw new InvalidOperationException("Invention guide does not fit: "+invention.id);
+            }
+            guide.text=TechCatalog.Find("vacuum").description;
+            report.Check(true,"The descriptions of all inventions fit the physical monitor panel.");
+            host.LookAtConsole(screen.position);
+            await CaptureRackUi(folder,"11c-vacuum-guide.png");
             await PointAtControl("TechNode-vacuum_capacity");
             report.Check(UiRoot.Instance.QaClickReticle(),"Selected a rank in the native skill graph.");
             host.LookAtConsole(screen.position);
@@ -464,10 +480,29 @@ namespace Raid
             profile.pocketStacks[trapSlot-2]=new TechSlot{kind="vacuum",count=1};
             SendProfile(host.Owner,profile);
             Publish();
-            host.Teleport(installationPosition);
-            host.LookAtConsole(installationTarget);
+            Vector3 vacuumSite=default, vacuumObserver=default;
+            bool foundVacuumSite=false;
+            for(int i=0;i<60 && !foundVacuumSite;i++)
+            {
+                float angle=i*2.4f;
+                var direction=new Vector3(Mathf.Sin(angle),0,Mathf.Cos(angle));
+                var survey=installationTarget+direction*(2.3f+i*.51f)+Vector3.up*5;
+                if(!Physics.Raycast(survey,Vector3.down,out var floor,40,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
+                var observer=floor.point+Vector3.up*1.36f+direction*3.5f;
+                host.Teleport(observer);
+                Physics.SyncTransforms();
+                var sight=(floor.point-observer-Vector3.up*.6f).normalized;
+                if(!FindInstallationSite(host,"vacuum",0,sight,team,out _,out _,out _))continue;
+                foundVacuumSite=true;
+                vacuumSite=floor.point;
+                vacuumObserver=observer;
+            }
+            report.Check(foundVacuumSite,"The larger collector fits on a clear part of the seabed.");
+            host.LookAtConsole(vacuumSite);
             await WaitRackUi(()=>gear.InventionInSlot(trapSlot).kind=="vacuum" && HandModel("vacuum") &&
                 FindInstallationSite(host,"vacuum",0,host.AimDirection,team,out _,out _,out _),"a valid vacuum placement in the selected slot");
+            report.Check(TechRigShell.EquipmentMesh("vacuum").bounds.size.y>2.5f,
+                "The installed vacuum has a full-size housing and cage more than 2.5 metres tall.");
             await CaptureRackUi(folder,"12-vacuum-placement.png");
             try
             {
@@ -483,7 +518,7 @@ namespace Raid
             Vector3 inlet=VacuumInlet(vacuum);
             var start=inlet+Vector3.up*2.7f+Vector3.left*1.25f;
             fish.transform.position=start;
-            host.Teleport(installationPosition);
+            host.Teleport(vacuumObserver);
             host.LookAtConsole(inlet+Vector3.up*.66f);
             await WaitRackUi(()=>vacuum.progress>.1f &&
                 Vector3.Distance(fish.transform.position,start)>.3f,"the current noticeably moves a fish from several metres away");
@@ -509,10 +544,14 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.22f);
             report.Check((swimStart-inCage.transform.localPosition).magnitude>.025f,
                 "The captured specimen swims visibly inside the collector cage.");
+            host.LookAtConsole(Vector3.Lerp(vacuum.position,inlet,.46f));
+            await CaptureRackUi(folder,"14a-vacuum-scale.png",.21f);
             vacuum.timer=20;
             var releasedCatch=vacuum.contents[0].id;
             int beforePickup=vacuum.contents.Count;
-            host.LookAtConsole(vacuum.position+Vector3.up*.23f);
+            Vector3 near=Vector3.ProjectOnPlane(vacuumObserver-vacuum.position,Vector3.up).normalized;
+            host.Teleport(vacuum.position+near*2.3f+Vector3.up*.49f);
+            host.LookAtConsole(vacuum.position+TechRigShell.VacuumPoint(Vector3.up*.17f));
             await WaitRackUi(()=>SightCatchOutlet(host,host.AimDirection,team)?.serial==vacuum.serial,"aim at the vacuum output");
             await CaptureRackUi(folder,"14-vacuum-counter.png",.08f);
             try

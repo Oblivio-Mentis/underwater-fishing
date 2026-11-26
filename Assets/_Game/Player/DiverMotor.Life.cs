@@ -14,7 +14,7 @@ namespace Raid
         Vector3 deathAnchor;
         float deathAge, lastStationPress, goshaFall;
         Image deathShade;
-        bool viewingDeath;
+        bool viewingDeath, driftingAfterBlast;
         public bool IsDead => _state.Value.Dead;
         public bool IsConsumed => _state.Value.Consumed;
         public bool CanRespawn => IsDead && _state.Value.MayReturn;
@@ -72,6 +72,9 @@ namespace Raid
             _serverSprint=false;
             _lastInputTime=float.NegativeInfinity;
             ResetIndoorMovement();
+            Vector3 launch=blastVelocity;
+            blastVelocity=Vector3.zero;
+            driftingAfterBlast=!consumed && launch.sqrMagnitude>1;
             if(consumed){ShowBite();return;}
 
             var body=new GameObject("Inert diver "+OwnerId);
@@ -86,7 +89,12 @@ namespace Raid
             deathBody.linearDamping=2.6f;
             deathBody.angularDamping=2.4f;
             deathBody.maxAngularVelocity=.9f;
-            deathBody.constraints=RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+            if(driftingAfterBlast)
+            {
+                deathBody.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
+                deathBody.linearVelocity=launch;
+            }
+            else deathBody.constraints=RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
             deathBody.AddTorque(transform.forward*(state.Inside?1.8f:.32f),ForceMode.VelocityChange);
         }
 
@@ -105,7 +113,13 @@ namespace Raid
             {
                 state.Inside=IsSealedInterior(deathBody.position);
                 deathBody.useGravity=state.Inside;
-                if(!deathBody.useGravity)
+                if(driftingAfterBlast && deathAge>=1.1f)
+                {
+                    driftingAfterBlast=false;
+                    deathAnchor=deathBody.position;
+                    deathBody.constraints=RigidbodyConstraints.FreezePositionX | RigidbodyConstraints.FreezePositionZ;
+                }
+                if(!deathBody.useGravity && !driftingAfterBlast)
                 {
                     float surface=deathAnchor.y+.08f*Mathf.Sin(deathAge*1.32f);
                     deathBody.AddForce(Vector3.up*((surface-deathBody.position.y)*9f-deathBody.linearVelocity.y*1.5f),ForceMode.Acceleration);

@@ -63,6 +63,8 @@ namespace Raid
             crewProfiles.Clear();
             ServerManager.OnRemoteConnectionState+=UnbindProfile;
             catchOwners.Clear();
+            looseFishMotion.Clear();
+            blastCatches.Clear();
             ResetFishRoute();
             ResetAirlock();
             message.Value="Depth 1: catch fish and deliver cargo";
@@ -146,6 +148,7 @@ namespace Raid
             if(!IsServerInitialized || team==null) return;
             EnsureInventionRack();
             TickRackOrders(Time.fixedDeltaTime);
+            TickLooseFish(Time.fixedDeltaTime);
             TickAirlock();
             TickTech(Time.fixedDeltaTime);
             TickGosha();
@@ -345,10 +348,10 @@ namespace Raid
             for(int i=dropped.Count-1;i>=0;i--)
             {
                 var item=dropped[i];
-                if(item.handDropped || item.kind!=DroppedKind.Catch || item.Fish==null) continue;
+                if(item.handDropped || item.spoiled || item.kind!=DroppedKind.Catch || item.Fish==null) continue;
                 if(!CargoDispatch.ContainsDrop(this,item.position)) continue;
                 if(!team.LoadCargo(AttributeCatch(item.Fish.ToCargo(item.id)),progression)) continue;
-                dropped.RemoveAt(i);
+                RemoveDrop(item.id);
                 Publish();
                 Save();
             }

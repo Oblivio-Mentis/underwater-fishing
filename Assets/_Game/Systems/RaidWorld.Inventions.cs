@@ -68,7 +68,7 @@ namespace Raid
             return null;
         }
         static bool Heavy(TechRig rig) => rig.kind is "cage" or "net" or "winch" or "vacuum" || rig.contents.Count>2;
-        static float Footprint(string kind) => kind is "cage" or "vacuum"?.82f:kind is "farm" or "robot"?.55f:kind=="charge"?.14f:.38f;
+        static float Footprint(string kind) => kind=="vacuum"?.82f*TechRigShell.VacuumScale:kind=="cage"?.82f:kind is "farm" or "robot"?.55f:kind=="charge"?.14f:.38f;
         internal void UseTechnology(DiverMotor diver,int serial,string action)
         {
             if(!RigRequest(diver))return;

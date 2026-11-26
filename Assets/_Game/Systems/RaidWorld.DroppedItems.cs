@@ -11,9 +11,9 @@ namespace Raid
         public DroppedKind kind;
         public NetworkObject species;
         public string invention;
-        public bool handDropped;
+        public bool handDropped,dead,spoiled;
         public Vector3 position;
-        public float yaw;
+        public float yaw,pitch,roll;
         public FishActor Fish => species == null ? null : species.GetComponent<FishActor>();
         public string Label => kind==DroppedKind.Invention ? TechCatalog.Find(invention)?.title ?? invention :
             kind==DroppedKind.Harpoon ? "гарпун" : UI.ReelReadout.Species(Fish?.SpeciesId);
@@ -102,11 +102,21 @@ namespace Raid
         }
 
         internal bool CanRegisterDrop(long id) => IsServerInitialized && id > 0 && DropIndex(id) < 0;
-        internal void RegisterDrop(DroppedItem item) => dropped.Add(item);
+        internal void RegisterDrop(DroppedItem item)
+        {
+            if(item.kind==DroppedKind.Catch && blastCatches.Contains(item.id) && !item.dead)
+            {
+                item.dead=true;
+                item.roll=90;
+            }
+            dropped.Add(item);
+        }
         internal void RemoveDrop(long id)
         {
             int index = DropIndex(id);
-            if (index >= 0) dropped.RemoveAt(index);
+            if (index < 0)return;
+            dropped.RemoveAt(index);
+            looseFishMotion.Remove(id);
         }
 
         internal Vector3 PlaceItem(DiverMotor diver,float radius=.17f,float clearance=.17f)
@@ -134,6 +144,7 @@ namespace Raid
             DroppedItem closest=default;
             void Consider(DroppedItem candidate)
             {
+                if(candidate.spoiled)return;
                 Vector3 offset = candidate.position - eye;
                 float distance = offset.magnitude;
                 if (distance > 3 || distance < .02f || !tool.CanPickUp(candidate)) return;
@@ -209,38 +220,52 @@ namespace Raid
         }
     }
 
-    sealed class DroppedItemView : MonoBehaviour
+    sealed partial class DroppedItemView : MonoBehaviour
     {
         readonly List<Mesh> ownedMeshes = new();
-        bool built;
+        CatchFishModel fishModel;
+        bool built,dead;
+        Vector3 targetPosition;
+        Quaternion targetRotation;
 
         internal bool Show(DroppedItem item)
         {
-            transform.SetPositionAndRotation(item.position, Quaternion.Euler(0, item.yaw, item.kind == DroppedKind.Harpoon ? 76 : 12));
-            if (built) return true;
-            if (item.kind == DroppedKind.Harpoon)
+            targetPosition=item.position;
+            float roll=item.dead?item.roll:item.kind==DroppedKind.Harpoon?76:12;
+            targetRotation=Quaternion.Euler(item.pitch,item.yaw,roll);
+            if(!built || !item.dead)transform.SetPositionAndRotation(targetPosition,targetRotation);
+            if(!built)
             {
-                var source = HarpoonPresentation.ActiveModel;
-                if (source == null || !source.MakeWorldModel(transform, ownedMeshes, out _, out _, out _, out _)) return false;
-                transform.localScale = Vector3.one * 1.48f;
+                if(item.kind==DroppedKind.Harpoon)
+                {
+                    var source=HarpoonPresentation.ActiveModel;
+                    if(source==null || !source.MakeWorldModel(transform,ownedMeshes,out _,out _,out _,out _))return false;
+                    transform.localScale=Vector3.one*1.48f;
+                }
+                else if(item.kind==DroppedKind.Invention)
+                {
+                    if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
+                        TechRigShell.BuildSaleSample(gameObject,item.invention,.39f);
+                }
+                else
+                {
+                    if(!item.Fish)return false;
+                    fishModel=CatchFishModel.Create(transform,item.Fish.SpeciesId,item.dead?item.id:0).GetComponent<CatchFishModel>();
+                    transform.localScale=Vector3.one*(item.Fish.RequiresPartner?1.25f:.68f);
+                }
+                built=true;
             }
-            else if(item.kind==DroppedKind.Invention)
+            if(item.dead && !dead && fishModel)
             {
-                if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
-                    TechRigShell.BuildSaleSample(gameObject,item.invention,.39f);
+                dead=true;
+                PresentDeadFish();
             }
-            else
-            {
-                if (item.Fish == null) return false;
-                CatchFishModel.Create(transform, item.Fish.SpeciesId);
-                transform.localScale = Vector3.one * (item.Fish.RequiresPartner ? 1.25f : .68f);
-            }
-            return built = true;
+            return true;
         }
 
         void OnDestroy()
         {
-            foreach (var mesh in ownedMeshes) if (mesh != null) Destroy(mesh);
+            foreach(var mesh in ownedMeshes)if(mesh)Destroy(mesh);
         }
     }
 }

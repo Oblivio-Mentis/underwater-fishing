@@ -355,7 +355,7 @@ namespace Raid
         {
             "cage"=>new(.6f,.53f,-.62f),
             "charge"=>new(0,.135f,0),
-            "vacuum"=>new(.48f,.92f,0),
+            "vacuum"=>VacuumPoint(new(.48f,.92f,0)),
             _=>new(0,.29f,0)
         };
 

@@ -180,7 +180,26 @@ namespace Raid
             finally{UnityEngine.Random.state=stream;}
             var drop=Enumerable.Range(0,world.DroppedCount).Select(world.DroppedAt).FirstOrDefault(x=>x.id==id);
             Check(charge.mode=="spent" && host.Health<hp,"pulse consumes the charge and hurts the nearby diver");
-            Check(drop.id==id && drop.Fish==sample && !sample.IsFreeSwimming,"affected school fish becomes an identifiable world drop");
+            Check(drop.id==id && drop.Fish==sample && !sample.IsFreeSwimming && drop.dead && !drop.spoiled,
+                "affected school fish becomes an identifiable corpse and preserves the same catch ID");
+            if(peer)
+            {
+                Check(peer.ObservedBlast.Velocity.magnitude>30 && peer.ObservedBlast.Velocity.y>6,
+                    "the diver next to the epicentre receives a strong upward and outward launch");
+                yield return Wait("observer simulates the remote diver blast ragdoll",
+                    ()=>peer.GetComponent<DiverSuitVisual>() is DiverSuitVisual visual && visual.HasBlastPose,1.2f);
+            }
+            Vector3 originalPosition=drop.position;
+            DroppedItem Current() => Enumerable.Range(0,world.DroppedCount).Select(world.DroppedAt).FirstOrDefault(x=>x.id==id);
+            yield return Wait("the fish drifts away from the explosion and rotates onto its side",
+                ()=>Vector3.Distance(Current().position,originalPosition)>.55f && Mathf.Abs(Current().roll)>89,3);
+            drop=Current();
+            host.Teleport(drop.position-host.AimDirection*1.15f-Vector3.up*.6f);
+            yield return Wait("a white outline appears around the nearby dead fish",()=>world.TrialFishOutline(id),3);
+            host.LookAtConsole(Current().position);
+            yield return null;
+            Raid.UI.UiQaProbe.CapturePeerCamera(Path.Combine(output,"blast-catch-outline.png"));
+            drop=Current();
             host.Teleport(drop.position-host.AimDirection*1.05f-Vector3.up*.6f);
             Physics.SyncTransforms();
             var tool=host.GetComponent<HarpoonTool>();
@@ -188,8 +207,6 @@ namespace Raid
             Check(visible && aimed.id==id,"owner sight targets the dropped catch (wanted "+id+", sight "+aimed.id+", available "+tool.CanPickUp(drop)+")");
             // The two QA player windows run in the background. Submit the same owner RPC as E without an OS focus dependency.
             tool.FisheryTrialPickup(id);
-            if(peer)yield return Wait("observer simulates the remote diver blast ragdoll",
-                ()=>peer.GetComponent<DiverSuitVisual>() is DiverSuitVisual visual && visual.HasBlastPose,1.2f);
             yield return Wait("dropped fish in owner's inventory",()=>Enumerable.Range(2,tool.PocketCapacity).Any(slot=>tool.CatchIdInSlot(slot)==id),10);
             Check(!Enumerable.Range(0,world.DroppedCount).Any(i=>world.DroppedAt(i).id==id),"pickup retires exactly the same world drop");
             report.chargeCatch=id;
@@ -449,7 +466,7 @@ namespace Raid
                 net.position=ground+Vector3.back*7f;
                 vacuum.timer=30;
                 report.vacuumSerial=vacuum.serial;
-                report.vacuumOutlet=vacuum.position+Vector3.up*.17f;
+                report.vacuumOutlet=vacuum.position+TechRigShell.VacuumPoint(Vector3.up*.17f);
                 peer.Teleport(vacuum.position+Vector3.right*2f);
                 world.PublishFisheryTrial();
                 var guest=peer.GetComponent<HarpoonTool>();
@@ -468,6 +485,8 @@ namespace Raid
         internal bool TrialUseFishery(TechRig rig,DiverMotor player,string action) => UseActiveRig(rig,player,action,player.AimDirection);
         internal void TrialTickFishery(TechRig rig,float elapsed) => TickActiveRig(rig,elapsed);
         internal void PublishFisheryTrial() => Publish();
+        internal bool TrialFishOutline(long id) => dropViews.TryGetValue(id,out var model) &&
+            model.GetComponentsInChildren<MeshRenderer>().Any(render=>render.name=="Proximity outline" && render.enabled);
         internal bool VisibleFisheryTrialRig(int serial) => rigShells.TryGetValue(serial,out var shell) && shell && shell.gameObject.activeInHierarchy;
         internal bool TrialUseIndustry(TechRig rig,DiverMotor player,string action) => UseIndustrialRig(rig,player,action,player.AimDirection);
         internal void TrialTickIndustry(TechRig rig,float elapsed) => TickIndustrialRig(rig,elapsed);

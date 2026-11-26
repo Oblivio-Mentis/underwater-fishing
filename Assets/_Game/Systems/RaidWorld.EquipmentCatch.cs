@@ -24,7 +24,8 @@ namespace Raid
                 if(rig.depth!=CurrentDepth || !HasCatchOutlet(rig) ||
                    rig.mode is "carried" or "dropped" or "spent" or "stored" or "netting")continue;
                 if(rig.kind!="vacuum" && rig.contents.Count==0)continue;
-                var point=rig.position+Vector3.up*.17f;
+                var outlet=rig.kind=="vacuum"?TechRigShell.VacuumPoint(Vector3.up*.17f):Vector3.up*.17f;
+                var point=rig.position+outlet;
                 Vector3 offset=point-eye;
                 float along=Vector3.Dot(offset,aim);
                 if(along<=0 || along>=best || (offset-aim*along).sqrMagnitude>

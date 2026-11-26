@@ -52,7 +52,7 @@ namespace Raid
             }
             meterInk=new MaterialPropertyBlock();
             bool vacuum=kind=="vacuum";
-            float width=vacuum?.99f:.54f,height=vacuum?.164f:.112f;
+            float width=vacuum?1.34f:.54f,height=vacuum?.206f:.112f;
             if(vacuum && !vacuumMeterMesh)vacuumMeterMesh=CatchMeterMesh(width,height);
             if(!vacuum && !meterMesh)meterMesh=CatchMeterMesh(width,height);
             var bounds=EquipmentMesh(kind).bounds;
@@ -62,7 +62,7 @@ namespace Raid
                 int side=i==0?-1:1;
                 var meter=new GameObject("Улов · шкала");
                 meter.transform.SetParent(transform,false);
-                float elevation=vacuum?.52f:kind=="cage"?.56f:bounds.max.y+.06f;
+                float elevation=vacuum?VacuumPoint(new Vector3(0,.52f,0)).y:kind=="cage"?.56f:bounds.max.y+.06f;
                 float end=i==0?bounds.min.z:bounds.max.z;
                 meter.transform.SetLocalPositionAndRotation(new Vector3(0,elevation,end+side*.015f),
                     Quaternion.Euler(0,i==0?0:180,0));

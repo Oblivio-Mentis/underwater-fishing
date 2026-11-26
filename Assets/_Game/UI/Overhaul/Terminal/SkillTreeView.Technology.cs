@@ -318,7 +318,9 @@ namespace Raid.UI
             scope.color=Cyan;
             UiKit.Set(scope,blueprint?"ЭКИПАЖ  /  ЧЕРТЁЖ":"ЭКИПАЖ  /  "+SkillTreeDefinition.Roman(level));
             UiKit.Set(title,blueprint?item.title:node.title+(node.values.Length>1?" "+SkillTreeDefinition.Roman(level):""));
-            UiKit.Set(description,blueprint?item.description:node.id=="stack"?
+            ShowBlueprintGuide(blueprint);
+            if(blueprint)UiKit.Set(blueprintDirections,item.description);
+            else UiKit.Set(description,node.id=="stack"?
                 "Увеличивает число экземпляров этого изобретения в одном кармане водолаза. Вместимость действует для всего экипажа.":node.description);
             UiKit.Set(before,ValueLabel(item,node,owned));
             UiKit.Set(after,bought?"—":ValueLabel(item,node,level));after.color=Cyan;
@@ -336,6 +338,18 @@ namespace Raid.UI
                 !techControl?"Подойдите к монитору":state==SkillNodeState.Available?"Готово к покупке":"Не хватает материалов");
             buy.interactable=!waiting && techControl && state==SkillNodeState.Available;
             UiKit.Caption(buy,bought?"Приобретено":"Купить  ·  ПКМ по узлу");
+        }
+
+        void ShowBlueprintGuide(bool visible)
+        {
+            description.gameObject.SetActive(!visible);
+            statComparison.gameObject.SetActive(!visible);
+            blueprintGuide.gameObject.SetActive(visible);
+            for(int i=0;i<requirements.Length;i++)
+            {
+                float y=visible?351+i*22:335+i*25;
+                Place(requirements[i].rectTransform,23,y,323,visible?21:24);
+            }
         }
 
         static string ValueLabel(TechItem item,TechUpgrade upgrade,int rank)
