@@ -19,7 +19,7 @@ namespace Raid
         {
             public string status="running",phase,error,resource,fish;
             public int granted,stocked;
-            public float baselineMetresPerSecond,fastMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
+            public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
             public List<string> checks=new();
             public void Check(bool ok,string description)
             {
@@ -172,16 +172,16 @@ namespace Raid
             await ClickCheatButton("CheatStock");
             await AwaitCheatUi(()=>team.tank.Count==3,"three fish appear in the aquarium");
             var ids=team.tank.Select(x=>x.id).ToArray();
-            report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) &&
+            report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) && selectedFish==ReelReadout.Species(team.tank[0].species) &&
                 CheatWallet().Sum()==40,"Mouse stocked three distinct catches of a single species without changing the materials.");
             report.fish=team.tank[0].species;report.stocked=3;
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-panel.png"));
 
             report.phase="movement and collision from real input";
-            async Awaitable<float> Walk(float duration)
+            async Awaitable<float> Walk(float duration,bool fromStart=true)
             {
-                diver.Teleport(origin);
-                diver.LookAtConsole(origin+forward*22+Vector3.up*.65f);
+                if(fromStart)diver.Teleport(origin);
+                diver.LookAtConsole(diver.transform.position+forward*22+Vector3.up*.65f);
                 await Awaitable.WaitForSecondsAsync(.27f);
                 var start=diver.transform.position;
                 float startTime=Time.time;
@@ -205,6 +205,8 @@ namespace Raid
             report.Check(report.fastMetresPerSecond>report.baselineMetresPerSecond*1.25f,"The fast switch measurably increased movement over the same clear lane.");
             await ClickCheatButton("CheatFast");
             await AwaitCheatUi(()=>!diver.CheatFast,"fast disabled");
+            report.restoredMetresPerSecond=await Walk(.85f);
+            report.Check(Mathf.Abs(report.restoredMetresPerSecond-report.baselineMetresPerSecond)<report.baselineMetresPerSecond*.4f,"Switching fast off restored the ordinary movement speed in the same lane.");
             var barrier=new GameObject("QA collision bulkhead");
             try
             {
@@ -216,7 +218,8 @@ namespace Raid
                 report.Check(report.blockedTravel>.25f && report.blockedTravel<2.1f,"Normal movement stopped at the physical fixture bulkhead.");
                 await ClickCheatButton("CheatNoclip");
                 await AwaitCheatUi(()=>diver.CheatNoclip,"noclip enabled");
-                report.throughWallTravel=(await Walk(duration))*duration;
+                await Walk(duration,false);
+                report.throughWallTravel=Vector3.Dot(diver.transform.position-origin,forward);
                 report.Check(report.throughWallTravel>2.65f,"With noclip on, the same W input crossed the far face of the actual collider.");
                 await ClickCheatButton("CheatNoclip");
                 await AwaitCheatUi(()=>!diver.CheatNoclip,"noclip disabled");
