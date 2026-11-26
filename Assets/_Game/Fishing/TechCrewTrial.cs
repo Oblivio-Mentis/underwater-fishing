@@ -163,7 +163,21 @@ namespace Raid
             }
             yield return Wait("simultaneous purchase barrier",()=>Has("race"));
             int revision=int.Parse(File.ReadAllText(FileFor("setup")));
-            if(report.seat<2)local.CmdTechBuy("trap","unlock",0,revision);
+            if(report.seat<2)
+            {
+                bool? accepted=null;
+                string explanation=null;
+                void Receipt(bool ok,string reason){accepted=ok;explanation=reason;}
+                world.SkillResponded+=Receipt;
+                local.CmdTechBuy("trap","unlock",0,revision);
+                yield return Wait("server replied to this owner's request",()=>accepted.HasValue);
+                world.SkillResponded-=Receipt;
+                Mark("receipt-"+report.seat,accepted==true?"accepted":"rejected");
+                Assert(!string.IsNullOrEmpty(explanation),"server receipt: "+explanation);
+            }
+            yield return Wait("both purchase receipts",()=>Has("receipt-0") && Has("receipt-1"));
+            Assert(new[]{"receipt-0","receipt-1"}.Count(key=>File.ReadAllText(FileFor(key))=="accepted")==1,
+                "server accepted exactly one contender and explicitly rejected the other");
             yield return Wait("first research accepted on every seat",()=>world.View.TechRank("trap","unlock")==1);
             var balance=initialWallet.Subtract(TechCatalog.Find("trap").Upgrade("unlock").NextCost(0));
             Assert(world.View.teamRevision==revision+1 && world.View.Treasury.Equals(balance) && world.View.rigs.Count==0,
@@ -200,6 +214,12 @@ namespace Raid
                 local.CmdTechUse(serial,"carry");
             }
             yield return Wait("second owner takes a handle",()=>world.View.rigs.Exists(r=>r.serial==serial && r.helperId>=0 && r.operatorId==PeerId));
+            if(Host && SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)
+            {
+                local.LookAtConsole(world.View.rigs.Single(r=>r.serial==serial).position);
+                yield return new WaitForSecondsRealtime(.3f);
+                UiQaProbe.CapturePeerCamera(FileFor("cooperative-cage.png"));
+            }
             Mark("paired-"+report.seat);
             yield return Wait("crew observed both handles",()=>All("paired-"));
             if(report.seat==1)
