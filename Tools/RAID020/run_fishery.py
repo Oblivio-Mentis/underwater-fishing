@@ -10,7 +10,7 @@ import time
 import uuid
 
 
-def run(player, output):
+def run(player, output, bow_only=False):
     executable = player.resolve(strict=True)
     folder = output.resolve() / ("fishery-" + time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
     folder.mkdir(parents=True)
@@ -31,8 +31,9 @@ def run(player, output):
         children.append(subprocess.Popen(args, cwd=executable.parent, startupinfo=startup))
 
     try:
+        scenario = ["-raid-bow-only"] if bow_only else []
         launch("host", "-raid-fishery-trial", str(folder), "-raid-fishery-duo",
-               "-raid-save", str(folder / "campaign.json"))
+               "-raid-save", str(folder / "campaign.json"), *scenario)
         deadline = time.monotonic() + 120
         while time.monotonic() < deadline:
             log = folder / "host.log"
@@ -97,6 +98,11 @@ def run(player, output):
                 with image.open("rb") as shot:
                     if shot.read(8) != bytes.fromhex("89504e470d0a1a0a"):
                         raise ValueError("Invalid screenshot")
+                if bow_only:
+                    if not report["twoDivers"]:
+                        raise ValueError("The bow trial requires an independent client")
+                    print(f"{len(report['checks'])} bow and pipe checks passed, frames and report in {folder}")
+                    return
                 if not report["twoDivers"] or not report["netCatch"] or not report["vacuumCatch"]:
                     raise ValueError("Two-owner field checks missing")
                 _, shared = guest_state()
@@ -125,5 +131,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("player", type=Path, help="Path to the development UnderwaterFishing.exe")
     parser.add_argument("output", type=Path, help="Parent directory for per-run PNG, JSON, save and logs")
+    parser.add_argument("--bow-only", action="store_true", help="Run the kraken and pipe presentation scenario")
     options = parser.parse_args()
-    run(options.player, options.output)
+    run(options.player, options.output, options.bow_only)

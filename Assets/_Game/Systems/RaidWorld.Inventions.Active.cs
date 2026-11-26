@@ -85,6 +85,7 @@ namespace Raid
             if(rig.mode!="fuse")return;
             if(rig.depth==CurrentDepth && rig.anchor.sqrMagnitude>0)
                 FlyCharge(rig,Mathf.Min(dt,Mathf.Max(0,rig.timer)));
+            if(rig.mode!="fuse")return;
             rig.timer -= dt;
             if (rig.timer > 0) return;
             rig.mode = "spent";

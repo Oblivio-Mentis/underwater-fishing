@@ -131,7 +131,7 @@ namespace Raid
 
     sealed partial class DroppedItemView
     {
-        static Material outlineMaterial;
+        static Material outlineMask,outlineEdge,outlineInk;
         MeshRenderer[] corpseOutline;
         MaterialPropertyBlock outlineParameters;
         static readonly int OutlineOpacity=Shader.PropertyToID("_Opacity");
@@ -155,30 +155,74 @@ namespace Raid
                 }
             }
 
-            if(!outlineMaterial)
+            if(!outlineMask)
             {
                 var shader=Resources.Load<Shader>("RaidFishOutline");
                 if(!shader)return;
-                outlineMaterial=new Material(shader){name="Catch · white proximity outline",hideFlags=HideFlags.DontSave};
+                outlineMask=OutlinePass(shader,0,Color.clear,2994,true);
+                outlineEdge=OutlinePass(shader,5.1f,new Color(.02f,.065f,.087f,.82f),3003,false);
+                outlineInk=OutlinePass(shader,3.2f,new Color(.93f,1f,.99f,1),3004,false);
             }
             outlineParameters=new MaterialPropertyBlock();
-            corpseOutline=new MeshRenderer[surfaces.Length];
+            corpseOutline=new MeshRenderer[surfaces.Length*3];
             for(int i=0;i<surfaces.Length;i++)
             {
                 var skin=surfaces[i];
-                var shell=new GameObject("Proximity outline");
-                shell.transform.SetParent(skin.transform,false);
-                var mesh=skin.GetComponent<MeshFilter>().sharedMesh;
-                shell.AddComponent<MeshFilter>().sharedMesh=mesh;
-                var outline=shell.AddComponent<MeshRenderer>();
-                var materials=new Material[mesh.subMeshCount];
-                System.Array.Fill(materials,outlineMaterial);
-                outline.sharedMaterials=materials;
-                outline.shadowCastingMode=ShadowCastingMode.Off;
-                outline.receiveShadows=false;
-                outline.enabled=false;
-                corpseOutline[i]=outline;
+                var mesh=CreateOutlineHull(skin.GetComponent<MeshFilter>().sharedMesh);
+                ownedMeshes.Add(mesh);
+                corpseOutline[i*3]=OutlinePart(skin.transform,mesh,outlineMask);
+                corpseOutline[i*3+1]=OutlinePart(skin.transform,mesh,outlineEdge);
+                corpseOutline[i*3+2]=OutlinePart(skin.transform,mesh,outlineInk);
             }
+        }
+
+        static Material OutlinePass(Shader shader,float width,Color ink,int queue,bool mask)
+        {
+            var material=new Material(shader){name="Catch · silhouette",hideFlags=HideFlags.DontSave,renderQueue=queue};
+            material.SetFloat("_Width",width);
+            material.SetColor("_Ink",ink);
+            material.SetFloat("_Cull",(int)(mask?CullMode.Back:CullMode.Front));
+            material.SetFloat("_Channels",mask?0:15);
+            material.SetFloat("_StencilCompare",(int)(mask?CompareFunction.Always:CompareFunction.NotEqual));
+            material.SetFloat("_StencilPass",(int)(mask?StencilOp.Replace:StencilOp.Keep));
+            material.SetFloat("_StencilWrite",mask?8:0);
+            return material;
+        }
+
+        static MeshRenderer OutlinePart(Transform skin,Mesh mesh,Material ink)
+        {
+            var part=new GameObject("Proximity outline");
+            part.transform.SetParent(skin,false);
+            part.AddComponent<MeshFilter>().sharedMesh=mesh;
+            var draw=part.AddComponent<MeshRenderer>();
+            draw.sharedMaterial=ink;
+            draw.shadowCastingMode=ShadowCastingMode.Off;
+            draw.receiveShadows=false;
+            draw.enabled=false;
+            return draw;
+        }
+
+        static Mesh CreateOutlineHull(Mesh source)
+        {
+            var vertices=source.vertices;
+            var normals=source.normals;
+            var shared=new Dictionary<Vector3Int,Vector3>();
+            var keys=new Vector3Int[vertices.Length];
+            for(int i=0;i<vertices.Length;i++)
+            {
+                var key=keys[i]=Vector3Int.RoundToInt(vertices[i]*10000);
+                shared.TryGetValue(key,out var normal);
+                shared[key]=normal+normals[i];
+            }
+            for(int i=0;i<normals.Length;i++)
+            {
+                var smooth=shared[keys[i]];
+                if(smooth.sqrMagnitude>.0001f)normals[i]=smooth.normalized;
+            }
+            var result=new Mesh{name="Catch silhouette · welded normals",
+                vertices=vertices,normals=normals,triangles=source.triangles,bounds=source.bounds};
+            var bounds=result.bounds;bounds.Expand(.25f);result.bounds=bounds;
+            return result;
         }
 
         void LateUpdate()
@@ -189,8 +233,8 @@ namespace Raid
                 Quaternion.Slerp(transform.rotation,targetRotation,blend));
             if(corpseOutline==null)return;
             var diver=UI.UiRoot.Instance?.Context.Player;
-            float distance=diver && !diver.IsDead?Vector3.Distance(diver.transform.position,transform.position):10;
-            float intensity=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(6.5f,12.5f,distance));
+            float distance=diver && !diver.IsDead?Vector3.Distance(diver.transform.position,transform.position):float.PositiveInfinity;
+            float intensity=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(10f,18f,distance));
             outlineParameters.SetFloat(OutlineOpacity,intensity);
             foreach(var outline in corpseOutline)
             {

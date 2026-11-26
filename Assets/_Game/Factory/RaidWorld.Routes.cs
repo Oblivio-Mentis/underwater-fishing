@@ -97,7 +97,7 @@ namespace Raid
             state.elapsed+=Time.fixedDeltaTime;
             routeElapsed=state.elapsed;
             bool changed=false;
-            while(state.completed<routeIds.Count && state.elapsed>=FishFlow.DeliverySeconds+state.completed*FishFlow.Interval)
+            while(state.completed<routeIds.Count && state.elapsed>=FishFlow.DeliverySeconds+FishFlow.LaunchAt(state.completed))
             {
                 long id=routeIds[state.completed];
                 try

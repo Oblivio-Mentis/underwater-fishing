@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace Raid.Nereid
 {
-    // Presentation of confirmed feeding only. Mounting steel, economy, RPCs and player control are untouched.
+    // Presents confirmed meals and the bow creature’s reaction to a swallowed charge.
     [DefaultExecutionOrder(650)]
-    public sealed class NereidFeedingReaction : MonoBehaviour
+    public sealed partial class NereidFeedingReaction : MonoBehaviour
     {
         [Header("Presentation")]
         [Min(.2f)] public float burpDelay=.44f;
@@ -36,6 +36,7 @@ namespace Raid.Nereid
         Vector3 upperPosition,lowerPosition,upperScale,lowerScale,throatScale;
         readonly List<OrganicPart> dentition=new();
         struct OrganicPart {public Transform transform;public Vector3 position,scale;public bool upper,tongue;}
+        AnchoredLip upperLip,lowerLip;
         MeshFilter throatFilter;
         Mesh originalThroat,animatedThroat;
         Vector3[] throatRest,throatWork;
@@ -73,6 +74,8 @@ namespace Raid.Nereid
                 float floor=mouth.TransformPoint(lowerPosition+Vector3.up*(lowerMesh.sharedMesh.bounds.min.y*lowerScale.y)).y;
                 maxLowerTravel=Mathf.Max(.035f,(floor-.06f)/Mathf.Max(.001f,Mathf.Abs(mouth.lossyScale.y)));
             }
+            upperLip=new AnchoredLip(factory.upperJaw);
+            lowerLip=new AnchoredLip(factory.lowerJaw);
             creature=Object.FindAnyObjectByType<NereidCreatureMotion>();
             foreach(Transform child in mouth)
             {
@@ -126,7 +129,7 @@ namespace Raid.Nereid
             {if(hasSnapshot)ResetObservation();AnimateMouth();return;}
             var route=world.FishRoute;
             if(!hasSnapshot||observedWorld!=world)
-            {ResetObservation();observedWorld=world;hasSnapshot=true;Baseline(route);AnimateMouth();return;}
+            {ResetObservation();observedWorld=world;hasSnapshot=true;Baseline(route);PresentFieryBurp(world);AnimateMouth();return;}
             if(route.sequence!=sequence)
             {if(route.sequence<sequence){ResetObservation();observedWorld=world;hasSnapshot=true;}Baseline(route);}
             else
@@ -142,7 +145,7 @@ namespace Raid.Nereid
             }
             if(route.feeding&&(route.active||burpAt>=0))ObserveFood(world);
             if(burpAt>=0&&Time.time>=burpAt)Burp();
-            AnimateMouth();UpdateBurst();
+            PresentFieryBurp(world);AnimateMouth();UpdateBurst();
         }
         void Baseline(FishRouteState route)
         {sequence=route.sequence;completed=route.completed;wasActive=route.active;wasFeeding=route.feeding;foodPeak=0;foodRequired=0;if(route.feeding)ObserveFood(observedWorld);if(!route.active)lastScheduled=route.sequence;}
@@ -205,18 +208,19 @@ namespace Raid.Nereid
             float charge=burpAt>=0?Mathf.Clamp01(1-(burpAt-Time.time)/Mathf.Max(.2f,burpDelay)):0;
             float age=BurpAge;
             float release=age>=0&&age<burstDuration?Mathf.SmoothStep(0,1,age/.075f)*Mathf.Exp(-age*.9f)*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.8f,burstDuration,age))):0;
-            float opening=swallow*.17f+release*.46f*Mathf.Sqrt(LastBurpSeverity)-charge*.11f;
+            float opening=swallow*.17f+release*.46f*Mathf.Sqrt(LastBurpSeverity)-charge*.11f
+                + incomingFishGape + fieryOpening;
             float lowerOpening=Mathf.Min(opening,maxLowerTravel),upperOpening=opening*.65f+Mathf.Max(0,opening-lowerOpening)*.8f;
             JawOpeningMetres=Mathf.Max(0,(lowerOpening+upperOpening)*Mathf.Abs(mouth.lossyScale.y));
             factory.upperJaw.localPosition=upperPosition+Vector3.up*upperOpening;
             factory.lowerJaw.localPosition=lowerPosition+Vector3.down*lowerOpening;
-            float widen=swallow*.045f+release*.07f-charge*.022f;
-            // FactoryVisuals has already written ordinary breathing. Only organic lip/teeth geometry moves.
-            factory.upperJaw.localScale=Vector3.Scale(factory.upperJaw.localScale,new Vector3(1+widen,1,1));
-            factory.lowerJaw.localScale=Vector3.Scale(factory.lowerJaw.localScale,new Vector3(1+widen*1.25f,1,1));
+            float widen=swallow*.045f+release*.07f-charge*.022f+Mathf.Max(0,fieryOpening)*.12f;
+            upperLip?.Deform(upperOpening,widen);
+            lowerLip?.Deform(-lowerOpening,widen*1.25f);
             foreach(var part in dentition)if(part.transform!=null)
             {
-                part.transform.localPosition=part.position+Vector3.up*(part.upper?upperOpening:-lowerOpening)+(part.tongue?Vector3.forward*(swallow*.13f-release*.16f):Vector3.zero);
+                float travel=(part.upper?upperOpening:-lowerOpening)*(part.tongue?1:AnchoredLip.Flex(part.position.x));
+                part.transform.localPosition=part.position+Vector3.up*travel+(part.tongue?Vector3.forward*(swallow*.13f-release*.16f):Vector3.zero);
                 part.transform.localScale=Vector3.Scale(part.scale,new Vector3(1+widen*(part.upper?1:1.25f),1,part.tongue?1-swallow*.12f:1));
             }
             ThroatWaveAmount=swallow*.14f+release*.19f+charge*.08f;
@@ -335,6 +339,7 @@ namespace Raid.Nereid
         {if(ps==null||mouth==null)return;ps.transform.position=mouth.TransformPoint(new Vector3(0,-.12f,-.48f));ps.transform.rotation=Quaternion.LookRotation(-mouth.forward,mouth.up);}
         void ResetObservation()
         {
+            ResetFieryBurp();
             hasSnapshot=false;observedWorld=null;burpAt=-1;pendingSequence=int.MinValue;lastScheduled=int.MinValue;swallowAt=-10;LastBurpTime=-1;jetUntil=0;JawOpeningMetres=ThroatWaveAmount=0;
             if(mist!=null){SetRate(mist,0);mist.Clear();}if(drops!=null){SetRate(drops,0);drops.Clear();}if(bubbles!=null){SetRate(bubbles,0);bubbles.Clear();}
             foreach(var ring in foam)if(ring!=null)ring.enabled=false;if(pressureLight!=null)pressureLight.intensity=0;
@@ -345,6 +350,7 @@ namespace Raid.Nereid
         {
             if(factory!=null&&factory.upperJaw!=null){factory.upperJaw.localPosition=upperPosition;factory.upperJaw.localScale=upperScale;}
             if(factory!=null&&factory.lowerJaw!=null){factory.lowerJaw.localPosition=lowerPosition;factory.lowerJaw.localScale=lowerScale;}
+            upperLip?.Restore();lowerLip?.Restore();
             if(throat!=null)throat.localScale=throatScale;
             foreach(var part in dentition)if(part.transform!=null){part.transform.localPosition=part.position;part.transform.localScale=part.scale;}
             if(throatFilter!=null&&originalThroat!=null)throatFilter.sharedMesh=originalThroat;
@@ -352,7 +358,9 @@ namespace Raid.Nereid
         void OnDisable(){ResetObservation();if(ready)RestoreMouth();}
         void OnDestroy()
         {
+            DestroyFieryBurp();
             RestoreMouth();if(animatedThroat!=null)Destroy(animatedThroat);
+            upperLip?.Dispose();lowerLip?.Dispose();
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);
             if(dropTexture!=null)Destroy(dropTexture);if(bubbleTexture!=null)Destroy(bubbleTexture);

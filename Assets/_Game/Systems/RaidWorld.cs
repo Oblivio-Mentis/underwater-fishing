@@ -65,6 +65,7 @@ namespace Raid
             catchOwners.Clear();
             looseFishMotion.Clear();
             blastCatches.Clear();
+            ResetKrakenBreath();
             ResetCrabs();
             ResetFishRoute();
             ResetAirlock();
@@ -154,6 +155,7 @@ namespace Raid
             TickCrabs();
             TickAirlock();
             TickTech(Time.fixedDeltaTime);
+            TickKrakenBreath(Time.fixedDeltaTime);
             TickGosha();
             TickRouteClock();
             AbsorbCageDrops();
@@ -384,6 +386,7 @@ namespace Raid
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
+            ResetKrakenBreath();
             ResetCrabs();
             ResetGosha();
             depth.Value=pendingDepth;

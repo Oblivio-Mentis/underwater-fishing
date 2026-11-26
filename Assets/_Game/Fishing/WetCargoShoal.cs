@@ -15,6 +15,7 @@ namespace Raid
             internal bool InCage, Arriving, Routing;
             internal int DeliveryRank;
             internal Vector3 ExitStart;
+            internal Quaternion ExitRotation;
             // Entered through the pet hatch: the model travels its short glass line first.
             internal float HatchStartedAt = -1;
         }
@@ -325,18 +326,21 @@ namespace Raid
             for(int index=route.completed;index<route.total;index++)
             {
                 if(world.ActiveRouteId(index)!=id)continue;
-                float age=factory.Elapsed-index*Factory.FactoryVisuals.FishInterval;
+                float age=factory.Elapsed-FishFlow.LaunchAt(index);
                 if(age<0)return false;
                 age=Mathf.Min(Factory.FactoryVisuals.FishSeconds,age);
                 if(!fish.Routing)
                 {
                     fish.Routing=true;fish.Arriving=false;
                     fish.ExitStart=factory.transform.InverseTransformPoint(fish.Model.position);
+                    fish.ExitRotation=fish.Model.rotation;
                 }
-                var point=factory.PathPosition(index,age,fish.ExitStart,route.feeding);
-                Move(fish.Model,factory.transform.TransformPoint(point),23);
-                float consumed=Mathf.InverseLerp(7.55f,8,age);
-                fish.Model.localScale=Vector3.one*(fish.Size/Mathf.Max(.01f,reservoir.lossyScale.x))*Mathf.Lerp(1,.09f,consumed);
+                var pose=factory.SampleTransfer(index,age,fish.ExitStart,route.feeding);
+                var rotation=factory.transform.rotation*pose.Rotation;
+                float caught=Mathf.SmoothStep(0,1,age/.42f);
+                fish.Model.SetPositionAndRotation(factory.transform.TransformPoint(pose.Position),
+                    Quaternion.Slerp(fish.ExitRotation,rotation,caught));
+                fish.Model.localScale=Vector3.one*(fish.Size/Mathf.Max(.01f,reservoir.lossyScale.x)*pose.Scale);
                 return true;
             }
             if(fish.Routing){fish.Routing=false;fish.Arriving=true;}

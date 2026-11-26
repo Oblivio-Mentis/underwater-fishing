@@ -111,6 +111,11 @@ namespace Raid
                 return host && (!requirePeer || peer);
             },120);
             report.twoDivers=peer;
+            if(Environment.GetCommandLineArgs().Contains("-raid-bow-only"))
+            {
+                yield return BowAndPipeTrial();
+                yield break;
+            }
             yield return Wait("a live school in open water",()=>
             {
                 foreach(var candidate in FishActor.ServerSchool)

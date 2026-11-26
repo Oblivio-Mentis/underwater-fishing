@@ -103,7 +103,7 @@ namespace Raid
 
         private float Strength => depthTier > 1 ? Mathf.Max(1f, tuning.depthTwoStrength) : 1f;
 
-        public void StartWave(float deficit, int masteredDepth)
+        public void StartWave(float deficit, int masteredDepth, bool provoked=false)
         {
             if (!IsServerInitialized || WaveActive || !Finite(deficit) || deficit <= 0f) return;
             ThreatSnapshot next = state.Value;
@@ -117,7 +117,7 @@ namespace Raid
             var navigation = Nereid.NereidDeckNavigation.Active;
             reservoirWall = navigation ? navigation.reservoirGlass : vessel == null ? null : vessel.transform.Find("Cylindrical tank collision")?.GetComponent<Collider>();
             next.WaveHealth = tuning.waveHealth * Mathf.Max(1, masteredDepth - 1) * Mathf.Lerp(.5f, 1f, waveDeficit);
-            next.Message = "ГОЛОД: мелководный налётчик идёт к резервуару! Защитите запас гарпунами.";
+            next.Message = provoked ? "ТРЕВОГА: рёв кракена привлёк нового налётчика!" : "ГОЛОД: мелководный налётчик идёт к резервуару! Защитите запас гарпунами.";
             waveRemaining = Mathf.Max(1f, tuning.waveSeconds); stockCooldown = 0f; stockAttacks = 0; throughAirlock = false;factoryWaypoint=0;
             state.Value = next;
         }

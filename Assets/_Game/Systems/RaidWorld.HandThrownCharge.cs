@@ -188,6 +188,8 @@ namespace Raid
                     if(collider.GetComponentInParent<DiverMotor>() || collider.GetComponentInParent<FishActor>())continue;
                     if(nearest<0 || gearHits[i].distance<gearHits[nearest].distance)nearest=i;
                 }
+                var obstacle=nearest<0?default:gearHits[nearest];
+                if(TrySwallowCharge(rig,travel,obstacle))return;
                 if(nearest<0){rig.position+=travel;rig.anchor=velocity;continue;}
                 var contact=gearHits[nearest];
                 rig.position+=direction*Mathf.Max(0,contact.distance-.002f);

@@ -3,10 +3,9 @@ using UnityEngine;
 namespace Raid.Factory
 {
     /// <summary>Presentation of a server-approved batch. Owns no inventory, physics authority or networking.</summary>
-    public sealed class FactoryVisuals : MonoBehaviour
+    public sealed partial class FactoryVisuals : MonoBehaviour
     {
-        public const float FishSeconds=8f;
-        public const float FishInterval=.18f;
+        public const float FishSeconds=FishFlow.DeliverySeconds;
         public const int PoolSize=48;
         public Transform fishTemplate;
         public Transform tankCenter;
@@ -35,6 +34,7 @@ namespace Raid.Factory
         float batchStarted,nextStockRead;
         int stockCount;
         Vector3 upperScale,lowerScale;
+        Transform livingTongue;
         static readonly int ColorId=Shader.PropertyToID("_BaseColor");
         static readonly int EmissionId=Shader.PropertyToID("_EmissionColor");
         static readonly int MapId=Shader.PropertyToID("_BaseMap_ST");
@@ -43,7 +43,7 @@ namespace Raid.Factory
         public bool IsPlaying => batchActive;
         public bool IsProcessing => batchActive && !batchFeeding;
         public float Elapsed => batchActive?Mathf.Max(0,Time.time-batchStarted):0;
-        public float Duration => FishSeconds+Mathf.Max(0,batchCount-1)*FishInterval;
+        public float Duration => FishSeconds+FishFlow.LaunchAt(Mathf.Max(0,batchCount-1));
 
         void Awake()
         {
@@ -64,13 +64,19 @@ namespace Raid.Factory
                 bubble.GetComponent<MeshFilter>().sharedMesh=bubbleMesh!=null?bubbleMesh:fishTemplate.GetComponentInChildren<MeshFilter>().sharedMesh;
                 bubbleRenderers[i]=bubble.GetComponent<MeshRenderer>();bubbleRenderers[i].sharedMaterial=shell!=null?shell:bubbleMaterial;
             }
-            if(upperJaw!=null)upperScale=upperJaw.localScale;if(lowerJaw!=null)lowerScale=lowerJaw.localScale;
+            if(upperJaw)
+            {
+                upperScale=upperJaw.localScale;
+                if(upperJaw.parent)livingTongue=upperJaw.parent.Find("Curved muscular tongue");
+            }
+            if(lowerJaw)lowerScale=lowerJaw.localScale;
         }
 
         /// <summary>elapsed is server batch age, allowing a late observer to show the same in-flight fish.</summary>
         public void PlayBatch(bool feeding,int count,int visualSeed,float elapsed=0)
         {
             if(count<=0){StopBatch();return;}
+            if(!batchActive || batchSeed!=visualSeed)effectsSequence=-1;
             batchFeeding=feeding;batchCount=count;batchSeed=visualSeed;batchStarted=Time.time-Mathf.Max(0,elapsed);
             if(elapsed>=Duration){StopBatch();return;}
             batchActive=true;UpdateFish();
@@ -84,91 +90,29 @@ namespace Raid.Factory
 
         void Update()
         {
-            UpdateFish();UpdateStock();UpdateMachinery();UpdateBubbles();
+            UpdateFish();UpdateStock();UpdateMachinery();UpdateBubbles();UpdateTransferEffects();
         }
 
         void UpdateFish()
         {
             if(!batchActive || individualStock)return;
             float elapsed=Elapsed;
-            // 48 slots at .18 s spacing recycle after 8.64 s; every fish completes its full 8 s before reuse.
-            int latest=Mathf.Min(batchCount-1,Mathf.FloorToInt(elapsed/FishInterval));
+            // Pool reuse is slower than the complete transit time, including the bursts in the launch cadence.
+            int latest=FishFlow.Started(elapsed,batchCount)-1;
             for(int slot=0;slot<travelling.Length;slot++)
             {
                 var fish=travelling[slot];if(fish==null)continue;
                 int index=slot>latest?-1:slot+((latest-slot)/PoolSize)*PoolSize;
-                float age=index<0?-1:elapsed-index*FishInterval;
+                float age=index<0?-1:elapsed-FishFlow.LaunchAt(index);
                 bool visible=index>=0 && index<batchCount && age>=0 && age<FishSeconds;
                 fish.gameObject.SetActive(visible);if(!visible)continue;
-                Vector3 p=Position(index,age),next=Position(index,Mathf.Min(FishSeconds-.001f,age+.025f));
-                fish.localPosition=p;
-                if((next-p).sqrMagnitude>.00001f)fish.localRotation=Quaternion.LookRotation(next-p)*Quaternion.Euler(0,0,Mathf.Sin(age*11+index)*7);
-                float swallow=Mathf.InverseLerp(7.55f,8f,age);fish.localScale=Vector3.one*Mathf.Lerp(.72f,.06f,swallow);
+                var origin=(tankCenter?transform.InverseTransformPoint(tankCenter.position):new Vector3(0,1.35f,-3))
+                    +new Vector3(Mathf.Sin(index*2.1f+batchSeed)*.45f,Mathf.Sin(index*1.9f)*.25f,Mathf.Cos(index*1.7f+batchSeed)*.5f);
+                var pose=SampleTransfer(index,age,origin,batchFeeding);
+                fish.SetLocalPositionAndRotation(pose.Position,pose.Rotation);
+                fish.localScale=Vector3.one*(.72f*pose.Scale);
             }
             if(elapsed>=Duration)StopBatch();
-        }
-
-        Vector3 Position(int index,float age)
-        {
-            Vector3 origin=(tankCenter==null?new Vector3(0,1.35f,-3):tankCenter.localPosition)+new Vector3(Mathf.Sin(index*2.1f+batchSeed)*.45f,Mathf.Sin(index*1.9f)*.25f,Mathf.Cos(index*1.7f+batchSeed)*.5f);
-            return PathPosition(index,age,origin,batchFeeding);
-        }
-
-        internal Vector3 PathPosition(int index,float age,Vector3 origin,bool feeding)
-        {
-            var line=feeding?feedRoute:processRoute;
-            if(line && line.IsConnected)
-            {
-                const float enterAt=.9f;
-                float exitAt=feeding?7.55f:4.7f;
-                if(age<enterAt) return Vector3.Lerp(origin,transform.InverseTransformPoint(line.WorldPoint(0)),Smooth(age/enterAt));
-                if(age<=exitAt) return transform.InverseTransformPoint(line.WorldPoint(Mathf.InverseLerp(enterAt,exitAt,age)));
-                Vector3 outletPosition=transform.InverseTransformPoint(line.WorldPoint(1));
-                if(feeding)
-                    return Vector3.Lerp(outletPosition,feedThroat?transform.InverseTransformPoint(feedThroat.position):outletPosition,Mathf.InverseLerp(exitAt,FishSeconds,age));
-                if(processorDrop && processorIntake && processorGrinder)
-                {
-                    int slot=(int)((uint)(index+batchSeed)%4);
-                    Vector3 laneOffset=Vector3.right*(beltX[slot]-(beltX[0]+beltX[3])*.5f);
-                    var drop=transform.InverseTransformPoint(processorDrop.TransformPoint(laneOffset));
-                    var intakePoint=transform.InverseTransformPoint(processorIntake.TransformPoint(laneOffset));
-                    var grinder=transform.InverseTransformPoint(processorGrinder.TransformPoint(laneOffset));
-                    float fall=Mathf.Sqrt(2*Mathf.Max(.01f,transform.TransformVector(outletPosition-drop).y)/9.81f);
-                    float landedAt=Mathf.Min(7.4f,exitAt+fall);
-                    if(age<landedAt)
-                    {
-                        float t=Mathf.InverseLerp(exitAt,landedAt,age);
-                        Vector3 point=Vector3.Lerp(outletPosition,drop,t);
-                        point.y=Mathf.Lerp(outletPosition.y,drop.y,t*t);
-                        return point;
-                    }
-                    if(age<7.55f)return Vector3.Lerp(drop,intakePoint,Mathf.InverseLerp(landedAt,7.55f,age));
-                    return Vector3.Lerp(intakePoint,grinder,Mathf.InverseLerp(7.55f,FishSeconds,age));
-                }
-                return outletPosition;
-            }
-            var path=feeding?feedTube:processTube;
-            if(path==null||path.Length<2)return origin;
-            if(age<.9f)return Vector3.Lerp(origin,path[0],Smooth(age/.9f));
-            if(feeding)
-            {
-                if(age<7.55f)return Along(path,(age-.9f)/6.65f);
-                return Vector3.Lerp(path[path.Length-1],new Vector3(0,1.75f,8.7f),(age-7.55f)/.45f);
-            }
-            const float releaseAt=4.7f;Vector3 outlet=path[path.Length-1];
-            if(age<releaseAt)return Along(path,(age-.9f)/(releaseAt-.9f));
-            int lane=(int)((uint)(index+batchSeed)%4);
-            Vector3 start=ProcessorPoint(new Vector3(beltX[lane],beltY,-4.95f));
-            Vector3 intake=ProcessorPoint(new Vector3(beltX[lane],beltY,-6.42f));
-            Vector3 end=ProcessorPoint(new Vector3(beltX[lane],.65f,-6.94f));
-            // Fish travel in factory-local coordinates; gravity remains 9.81 m/s² in world space.
-            float scaleY=Mathf.Max(.001f,Mathf.Abs(transform.lossyScale.y));
-            float fallSeconds=Mathf.Sqrt(2*Mathf.Max(.01f,outlet.y-start.y)*scaleY/9.81f);
-            float fallAge=age-releaseAt;
-            if(fallAge<fallSeconds)return new Vector3(Mathf.Lerp(outlet.x,start.x,fallAge/fallSeconds),outlet.y-.5f*(9.81f/scaleY)*fallAge*fallAge,Mathf.Lerp(outlet.z,start.z,fallAge/fallSeconds));
-            float onBelt=releaseAt+fallSeconds;
-            if(age<7.55f)return Vector3.Lerp(start,intake,Mathf.InverseLerp(onBelt,7.55f,age));
-            return Vector3.Lerp(intake,end,(age-7.55f)/.45f);
         }
 
         public Vector3 ProcessorPoint(Vector3 localPoint) => Vector3.Scale(localPoint,processorScale)+processorOffset;
@@ -187,8 +131,8 @@ namespace Raid.Factory
             if(batchActive)
             {
                 float age=Elapsed;
-                int started=Mathf.Clamp(Mathf.FloorToInt(age/FishInterval)+1,0,batchCount);
-                int finished=age<FishSeconds?0:Mathf.Clamp(Mathf.FloorToInt((age-FishSeconds)/FishInterval)+1,0,batchCount);
+                int started=FishFlow.Started(age,batchCount);
+                int finished=FishFlow.Started(age-FishSeconds,batchCount);
                 inFlight=started-finished;
             }
             int stationary=Mathf.Clamp(stockCount-inFlight,0,stock.Length);
