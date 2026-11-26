@@ -29,7 +29,7 @@ namespace Raid
             yield return Wait("guest selected ordinary pocket "+(slot+1),()=>Gear.ActiveSlot==slot);
         }
 
-        IEnumerator RejectRackRequest(string kind,string description)
+        IEnumerator RejectRackRequest(string kind,string description,string expectedReason=null)
         {
             bool? accepted=null;
             string explanation=null;
@@ -38,7 +38,8 @@ namespace Raid
             local.CmdRackTake(kind);
             yield return Wait("server replied to rejected dispenser request",()=>accepted.HasValue);
             world.SkillResponded-=Receipt;
-            Assert(accepted==false && !string.IsNullOrEmpty(explanation),description+" ("+explanation+")");
+            Assert(accepted==false && !string.IsNullOrEmpty(explanation) && (expectedReason==null || explanation==expectedReason),
+                description+" ("+explanation+")");
             yield return new WaitForSecondsRealtime(.4f);
         }
 
@@ -119,7 +120,6 @@ namespace Raid
                 yield return Wait("host's trap reached its own ordinary hotbar",()=>
                     Gear.InventionInSlot(2).kind=="trap" && Gear.InventionInSlot(2).count==1 && world.RackParcelCount==0);
                 Assert(OtherOwnerPocketsIntact(),"The host received its own trap in its first ordinary pocket.");
-                local.Teleport(screen.position-screen.forward*1.71f+screen.right*.64f-Vector3.up*.38f);
                 var peer=DiverMotor.ServerDivers.Single(d=>d && d.OwnerId==PeerId);
                 var peerGear=peer.GetComponent<HarpoonTool>();
                 Assert(peerGear.SlotCount==5 && peerGear.StoreBall() && peerGear.BallSlot==ChargePocket,
@@ -127,7 +127,16 @@ namespace Raid
                 var species=FishActor.ServerSchool.First(f=>f && !f.RequiresPartner);
                 peerGear.StagePocketForTrial(species,world.Team.NewTechCatchId(),FishPocket);
                 peer.Teleport(rackAt);
+                var beside=rackAt-rack.right*.75f+rack.forward*.22f;
+                local.Teleport(beside);
+                yield return FaceStation(rack,beside,"host alongside the guest with its own clear line of sight");
+                yield return AimAtRackProduct("cage");
                 Mark("first-rack");
+                yield return Wait("guest has reserved the only cage in the chute",()=>world.RackParcelInFlight("cage"));
+                Assert(world.VendorIssuedCount("cage")==1 && !world.TryGetRackParcel(local.OwnerId,out _,out _,out _),
+                    "The airborne guest parcel consumes the team allowance before any pocket receives it.");
+                yield return RejectRackRequest("cage","Another owner with free pockets cannot claim that reserved cage",RaidWorld.VendorTeamLimitReason);
+                local.Teleport(screen.position-screen.forward*1.71f+screen.right*.64f-Vector3.up*.38f);
                 yield return Wait("guest observed refusal with cage, ball and fish filling its three pockets",()=>Has("guest-full"));
                 peerGear.RemoveBall();
                 Mark("free-charge-pocket");
@@ -165,7 +174,7 @@ namespace Raid
                 if(SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)UiQaProbe.CapturePeerCamera(FileFor("dispenser.png"));
                 int inventoryRevision=world.LocalProgress.revision;
                 yield return AimAtRackProduct("cage");
-                yield return RejectRackRequest("cage","dispenser rejected a full stack with the correct cell targeted");
+                yield return RejectRackRequest("cage","The team already owns its one cage in an ordinary pocket",RaidWorld.VendorTeamLimitReason);
                 Assert(Gear.InventionInSlot(CagePocket).count==initial && Gear.HasBallInSlot(ChargePocket) &&
                     Gear.CatchIdInSlot(FishPocket)==fishId && world.LocalProgress.revision==inventoryRevision,
                     "Full ordinary pockets refused another cage without losing the ball, the real fish or the filled stack.");
@@ -197,19 +206,21 @@ namespace Raid
                 yield return Wait("physical dispenser after research",()=>Has("upgraded-rack"));
                 yield return FaceStation(rack,rackAt,"operator returned to physical dispenser");
                 yield return AimAtRackProduct("cage");
-                local.CmdRackTake("cage");
-                yield return Wait("same cage pocket now exceeds its old maximum",()=>Gear.InventionInSlot(CagePocket).count==initial+1);
+                yield return RejectRackRequest("cage","Increasing one pocket's stack size cannot issue a second team cage",RaidWorld.VendorTeamLimitReason);
+                Assert(world.VendorIssuedCount("cage")==initial && Gear.InventionInSlot(CagePocket).count==initial,
+                    "The rejected request left the free space in the upgraded pocket and its existing cage intact.");
                 yield return new WaitForSecondsRealtime(.35f);
                 yield return SelectGuestPocket(CagePocket);
                 local.CmdTechEquipSlot(CagePocket);
-                yield return Wait("selected cage pocket deployed a cage and consumed exactly one",()=>Gear.InventionInSlot(CagePocket).count==initial &&
-                    Gear.InventionInSlot(ChargePocket).count==1 && world.View.rigs.Exists(r=>r.kind=="cage" && r.operatorId==local.OwnerId));
+                yield return Wait("selected cage pocket deployed its only cage and transferred its allocation",()=>Gear.InventionInSlot(CagePocket).count==0 &&
+                    Gear.InventionInSlot(ChargePocket).count==1 && world.VendorIssuedCount("cage")==1 &&
+                    world.View.rigs.Exists(r=>r.kind=="cage" && r.operatorId==local.OwnerId));
                 Assert(world.View.Treasury.Equals(paid) && world.View.teamRevision==revision+1,
                     "free retrieval and equipment use after the upgrade preserve the wallet");
                 Mark("private-stacks",OwnerInventoryDigest());
             }
             yield return Wait("original owner recorded its private stacks",()=>Has("private-stacks"));
-            Assert(cageParcelIds.Count==TechCatalog.Find("cage").stackBase+1 && chargeParcelIds.Count==1 &&
+            Assert(cageParcelIds.Count==TechCatalog.Find("cage").stackBase && chargeParcelIds.Count==1 &&
                 cageParcelIds.All(renderedParcelIds.Contains) && chargeParcelIds.All(renderedParcelIds.Contains) &&
                 restingParcelIds.Count==1 && report.longestParcelTravel>.05f && world.RackParcelCount==0,
                 "this client observed distinct moving models, one resting charge, no ejection for rejected requests and no parcel remaining");
