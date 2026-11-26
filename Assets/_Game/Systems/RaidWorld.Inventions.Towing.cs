@@ -71,7 +71,8 @@ namespace Raid
             float mass=target!=null?RigWeight(target):passenger?1:Mathf.Max(1,dropped[index].Fish?dropped[index].Fish.cargoSize:1);
             float speed=IndustrialSettings.towSpeed*IndustryValue(cable,"speed")*Mathf.Min(1,IndustryValue(cable,"reinforced")/mass);
             Vector3 next=Vector3.MoveTowards(position,towards,speed*dt);
-            if(!IndustryCanPull(position,next,target!=null?.45f:.16f) || !IndustryCanPull(position+Vector3.up*.2f,towards,.03f))
+            if(mass*IndustrialSettings.towUnitWeight>TechCatalog.Find("winch").capacity*IndustryValue(cable,"reinforced") ||
+                !IndustryCanPull(position,next,target!=null?.45f:.16f) || !IndustryCanPull(position+Vector3.up*.2f,towards,.03f))
             {
                 cable.progress+=dt;
                 if(cable.progress>=IndustrialSettings.overloadSeconds) {cable.health=Mathf.Max(.05f,cable.health-.2f);ClearCable(cable);}

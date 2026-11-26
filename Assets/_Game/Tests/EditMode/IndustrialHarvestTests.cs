@@ -13,6 +13,9 @@ namespace Raid.Tests
             var rig=new TechRig{kind="farm",depth=1,care=30f};
             rig.brood.Add(Fish(91));rig.brood.Add(Fish(92));
             Assert.IsTrue(IndustryManifest.AdvanceFarm(team,rig,300,10,4,false));
+            Assert.AreEqual(4,rig.brood.Count);
+            Assert.AreEqual(0,rig.contents.Count);
+            Assert.AreEqual(2,IndustryManifest.HarvestSurplus(rig));
             Assert.AreEqual(2,rig.contents.Count);
             Assert.AreNotEqual(rig.contents[0].id,rig.contents[1].id);
             Assert.AreEqual(2,rig.brood.Count);
@@ -21,6 +24,7 @@ namespace Raid.Tests
             Assert.IsFalse(IndustryManifest.AdvanceFarm(team,rig,300,10,4,false));
             Assert.AreEqual(0,rig.contents.Count);
             Assert.IsTrue(IndustryManifest.AdvanceFarm(team,rig,10,10,4,true));
+            Assert.AreEqual(1,IndustryManifest.HarvestSurplus(rig));
             Assert.AreEqual(1,rig.contents.Count);
         }
 
