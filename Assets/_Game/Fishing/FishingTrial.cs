@@ -632,9 +632,18 @@ namespace Raid
             }
             Require(host.IsPulled && host.HookedFish==fish,"Friend tether broke the original fishing line.");
             Require(!host.IsAssisted, "Grip and friend tether remained stacked.");
+            bool RescueReeling() => helper.Reeling && helper.TetherTarget==host.Motor && host.TetherOwner==helper.Motor;
+            string reelRequest=Send("fish_reel",1.2f);
+            yield return Wait(()=>ReadClient()?.request==reelRequest && RescueReeling(),3,
+                "Peer failed to acknowledge rescue reeling on the server-owned friend tether.");
             float separation = Vector3.Distance(host.transform.position, helper.transform.position);
-            Send("fish_reel",1.2f);
-            yield return Pause(.65f);
+            float finish=Time.unscaledTime+.65f;
+            while(Time.unscaledTime<finish)
+            {
+                Require(RescueReeling(),"Rescue ownership or reeling ceased during the measurement.");
+                yield return null;
+            }
+            Require(RescueReeling(),"Rescue ownership or reeling ceased before the final measurement.");
             float rescuedSeparation = Vector3.Distance(host.transform.position, helper.transform.position);
             Require(rescuedSeparation < separation && fish.HookCount == 1 && host.HookedFish == fish,
                 $"Friend tether did not counter towing: {separation:F3} -> {rescuedSeparation:F3} m.");
