@@ -148,6 +148,12 @@ namespace Raid
                 "rejoining restores no departed ownership, second handles or voluntary tethers");
             Assert(state.TechRank("trap","unlock")==1 && state.TechRank("cage","unlock")==1 && FleetDigest(state)==report.fleetHash,
                 "rejoining receives identical researched ranks, unique cargo IDs and treasury without a second purchase");
+            Assert(state.players.Count==0,"replicated public snapshot contains no private profile or slot data");
+            if(report.seat==1)
+                Assert(InventoryDigest(world.LocalProgress)==File.ReadAllText(FileFor("private-stacks")),
+                    "rejoined owner restored the exact two independent equipment stacks and profile revision");
+            else
+                Assert(world.LocalProgress.techSlots.All(slot=>slot.count==0),"another owner's two stacks never enter this private inventory");
             Mark("rejoined-"+report.seat);
             yield return Wait("all players observed the reconnect",()=>All("rejoined-"));
         }
