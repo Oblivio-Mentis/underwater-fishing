@@ -12,6 +12,7 @@ namespace Raid
 {
     public sealed partial class RaidWorld
     {
+        static bool rackUiFixture;
         [Serializable] sealed class RackReport
         {
             public string status="running",phase,error;
@@ -41,12 +42,14 @@ namespace Raid
                 if(s<0 || s+1>=args.Length || !args.Contains("-raid-host") || p<0 || p+1>=args.Length || !Guid.TryParse(args[p+1],out _) ||
                     !string.Equals(Path.GetFullPath(args[s+1]),save,StringComparison.OrdinalIgnoreCase) || File.Exists(save))
                     throw new InvalidOperationException("Rack UI trial needs a new rack-ui-campaign.json in its own folder, -raid-host and a fixture -raid-profile GUID.");
+                rackUiFixture=true;
                 await WaitRackUi(()=>Instance && Instance.LocalProgress?.techSlots?.Length==4 && Instance.localDiver &&
                     Instance.IsServerInitialized && Instance.InventionRackTransform && UiRoot.Instance && UiRoot.Instance.Context.Connected,"private inventory and physical rack",95);
                 await Instance.RunRackUiTrial(report,folder);
                 report.status="passed";
             }
             catch(Exception error){report.status="failed";report.error=error.ToString();}
+            rackUiFixture=false;
             File.WriteAllText(path,JsonUtility.ToJson(report,true));
             UnityEngine.Debug.Log("[RackUI] "+report.status+" "+report.phase+" "+report.error);
             if(!Application.isEditor)Application.Quit(report.status=="passed"?0:1);
@@ -57,7 +60,14 @@ namespace Raid
             float until=Time.realtimeSinceStartup+timeout;
             while(!ready())
             {
-                if(Time.realtimeSinceStartup>=until)throw new TimeoutException(step);
+                if(Time.realtimeSinceStartup>=until)
+                {
+                    var w=Instance;var owner=w?w.localDiver:null;
+                    string status=w && owner?$" | focus={Application.isFocused} page={UiRoot.Instance?.Page} modal={UiInputGate.Modal} inside={owner.IsInside} near={w.NearInventionRack(owner)} cameraRay={w.RackFocused(owner,true)} serverRay={w.RackFocused(owner)} panel={w.inventoryPanel} receipt={w.inventoryNotice}":"";
+                    if(w && owner && w.TryGetRackParcel(owner.OwnerId,out int id,out var pos,out bool resting))
+                        status+=$" parcel={id} resting={resting} delta={pos-owner.transform.position}";
+                    throw new TimeoutException(step+status);
+                }
                 await Awaitable.NextFrameAsync();
             }
         }
@@ -87,6 +97,14 @@ namespace Raid
             report.stackLimit=limit;
             report.Check(limit>1,"The researched trap has an upgraded, multi-item slot capacity.");
             var host=localDiver;
+            // Select the ordinary free-hands slot so the harpoon cannot obscure the chute on the real camera.
+            var gear=host.GetComponent<HarpoonTool>();
+            if(gear.ActiveSlot!=1)
+            {
+                await RackKey(Key.Digit2);
+                if(gear.ActiveSlot!=1)gear.SelectSlot(1);
+                await WaitRackUi(()=>gear.ActiveSlot==1,"normal free-hands fishing slot");
+            }
             var rack=InventionRackTransform;
             var wideView=rack.position+rack.forward*2.3f+rack.right*.16f-Vector3.up*.63f;
             host.Teleport(wideView);
