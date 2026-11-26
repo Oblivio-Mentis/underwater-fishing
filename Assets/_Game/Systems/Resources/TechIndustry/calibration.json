@@ -1,0 +1,22 @@
+{
+    "towSpeed": 2.6,
+    "overloadSeconds": 4.0,
+    "robotSpeed": 3.5,
+    "airFlow": 4.5,
+    "airRegeneration": 0.8,
+    "regenerationDepth": 6.0,
+    "signalPull": 1.25,
+    "bubbleThickness": 2.1,
+    "bubbleHeight": 4.0,
+    "bubblePush": 1.6,
+    "manualDuration": 35.0,
+    "hoseDockDistance": 3.5,
+    "transferReach": 8.0,
+    "careCycles": 3.0,
+    "magnetSpeed": 1.6,
+    "maxMagnetLoad": 65.0,
+    "metalWeight": 30.0,
+    "crateWeight": 75.0,
+    "airFillDistance": 5.0,
+    "robotBaseCapacity": 2
+}

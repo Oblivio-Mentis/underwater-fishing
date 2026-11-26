@@ -142,6 +142,39 @@ namespace Raid
             return true;
         }
 
+        internal bool FromEquipmentToHands(CatchItem item,DiverMotor diver)
+        {
+            if (!IsServerInitialized || IsVisible || !item.IsSalvage || item.id!=CargoId || tier!=item.depthTier ||
+                !diver.TryGetComponent<HarpoonTool>(out var tool) || !tool.CanEquipSalvage) return false;
+            tool.EquipSalvageHands();
+            position.Value=diver.transform.position;
+            carrier.Value=diver.NetworkObject;
+            visible.Value=true;
+            shape.enabled=false;
+            return true;
+        }
+
+        internal bool PullWithMagnet(Vector3 towards, float step)
+        {
+            if (!IsServerInitialized || !IsFreeOnSeabed || !RaidWorld.IndustryCanPull(transform.position, towards, .12f)) return false;
+            transform.position = position.Value = Vector3.MoveTowards(transform.position, towards, step);
+            return true;
+        }
+
+        internal bool IntoEquipment(List<CatchItem> destination, int freeSpace, DiverMotor unloading = null)
+        {
+            if (!IsServerInitialized || !IsVisible || CarryWeight > freeSpace || destination.Exists(c => c.id == CargoId)) return false;
+            if (unloading ? !IsCarriedBy(unloading) : !IsFreeOnSeabed) return false;
+            var cargo = CatchItem.Salvage(CargoId, tier, scrap, electronics);
+            cargo.cargoSize = CarryWeight;
+            if (!string.IsNullOrEmpty(Collector)) cargo.caughtBy = new[] { Collector };
+            destination.Add(cargo);
+            visible.Value = false;
+            carrier.Value = null;
+            shape.enabled = false;
+            return true;
+        }
+
         internal bool CanPickUp(HarpoonTool tool) => IsFreeOnSeabed && tool!=null
             && tool.CanEquipSalvage && Vector3.Distance(tool.transform.position,transform.position)<=3f;
 
