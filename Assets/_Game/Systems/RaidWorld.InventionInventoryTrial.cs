@@ -127,12 +127,16 @@ namespace Raid
                     "camera and authoritative crosshair both point at "+kind);
                 await Awaitable.WaitForSecondsAsync(.12f);
             }
-            async Awaitable ReadProduct(string kind)
+            async Awaitable ReadProduct(string kind,string expectedStatus)
             {
                 var title=TechCatalog.Find(kind).title;
+                var point=RackProductPosition(kind);
                 await WaitRackUi(()=>rack.GetComponentsInChildren<TextMeshPro>().Any(label=>label.enabled && label.text==title) &&
-                    rack.GetComponentsInChildren<LineRenderer>().Any(line=>line.enabled && line.positionCount>=4),
-                    "world-space product title and cell outline belong to the aimed "+kind);
+                    rack.GetComponentsInChildren<TextMeshPro>().Any(label=>label.enabled && label.text==expectedStatus) &&
+                    rack.GetComponentsInChildren<LineRenderer>().Any(line=>line.enabled && line.positionCount==4 &&
+                        Vector3.Distance(line.transform.position,point)<.05f),
+                    "machine shows the status, title and highlight at the physical cell for "+kind);
+                report.Check(true,"Machine display and outline matched "+kind+" ("+expectedStatus+").");
             }
             async Awaitable Denied(string kind,string reason)
             {
@@ -180,14 +184,14 @@ namespace Raid
                 !TryRackProduct(host,true,out _) && !TryRackProduct(host,false,out _),"reticle on the cabinet keypad beside the product window");
             await Denied(trap.id,"Aiming at the cabinet body cannot issue an item.");
             await Aim("charge");
-            await ReadProduct("charge");
+            await ReadProduct("charge","Нужен чертёж");
             report.Check(view.TechRank("charge","unlock")==0,"The crosshair recognized the locked charge in its own physical cell.");
             UiRoot.Instance.QaClickReticle();
             await Awaitable.WaitForSecondsAsync(.35f);
             report.Check(RackParcelCount==0 && pockets.All(i=>gear.InventionInSlot(i).count==0),"Clicking a locked product left both the chute and inventory empty.");
             await Denied("charge","The server rejected a locked product even when the reticle matched its cell.");
             await Aim(trap.id);
-            await ReadProduct(trap.id);
+            await ReadProduct(trap.id,"ЛКМ · Получить");
             const string other="magnet";
             await Denied(other,"The server rejected a different researched item while the reticle pointed at the trap.");
             await RackKey(Key.E);
@@ -220,13 +224,14 @@ namespace Raid
             }
             report.Check(gear.StoreBall() && gear.HasBallInSlot(ballSlot),"Replaced the ball into the free first ordinary pocket.");
             await Aim(other);
-            await ReadProduct(other);
+            await ReadProduct(other,"ЛКМ · Получить");
             report.Check(Vector3.Distance(RackProductPosition(trap.id),RackProductPosition(other))>.10f,
                 "The second researched product is in a physically different display cell.");
             await CaptureRackUi(folder,"06-second-product-aim.png");
             await Order(other,()=>gear.InventionInSlot(otherSlot).kind==other && gear.InventionInSlot(otherSlot).count==1,
                 "left click on a different product placed it in the last free pocket");
             await Aim(trap.id);
+            await ReadProduct(trap.id,"Нет места");
             await Denied(trap.id,"A perfectly aimed order was refused with all ordinary pockets occupied.");
             report.Check(gear.HasBallInSlot(ballSlot) && gear.InventionInSlot(trapSlot).count==limit &&
                 gear.InventionInSlot(otherSlot).kind==other,"Full pockets preserved the ball, the full trap stack and the other item.");
