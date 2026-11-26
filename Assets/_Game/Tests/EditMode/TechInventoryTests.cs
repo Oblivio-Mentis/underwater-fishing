@@ -130,6 +130,24 @@ namespace Raid.Tests
             finally{File.Delete(path);File.Delete(path+".bak");}
         }
 
+        [Test] public void APartiallyDrainedCompressorCannotRefillByPassingThroughAStack()
+        {
+            var team=Team("oxygen");
+            team.techPurchases.Add(new TechPurchase{item="oxygen",upgrade="capacity",rank=1});
+            var owner=team.RegisterPlayer("diver");
+            var station=team.AddRig("oxygen",Vector3.zero,3);
+            int capacity=team.TechUnitCapacity("oxygen");
+            station.air=capacity-.25f;
+            Assert.That(team.StoreTechInSlot(owner,station.serial,0,3,()=>true,out string reason),Is.False);
+            StringAssert.Contains("заправьте",reason);
+            Assert.That(station.air,Is.EqualTo(capacity-.25f));
+            Assert.That(team.rigs.Single(),Is.SameAs(station));
+            Assert.That(owner.techSlots[0].count,Is.Zero);Assert.That(owner.revision,Is.Zero);
+            station.air=capacity;
+            Assert.That(team.StoreTechInSlot(owner,station.serial,0,3,()=>true,out _),Is.True);
+            Assert.That(owner.techSlots[0].count,Is.EqualTo(1));Assert.That(team.rigs,Is.Empty);
+        }
+
         [Serializable] sealed class Envelope{public string format,payload,sha256;}
     }
 }
