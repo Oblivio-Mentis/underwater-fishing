@@ -43,6 +43,7 @@ namespace Raid.Nereid
         bool pending = true;
         MaterialPropertyBlock flow;
         MeshRenderer shell;
+        PipeInteriorWater interiorWater;
         static readonly int FlowActive = Shader.PropertyToID("_FlowActive");
         public bool IsConnected => source && destination && knots.Count >= 2;
         public float Length { get { EnsureCurrent(); return distances.Count == 0 ? 0 : distances[^1]; } }
@@ -130,6 +131,7 @@ namespace Raid.Nereid
             shell.sharedMaterials = build.Apply(skin);
             shell.shadowCastingMode = ShadowCastingMode.Off;
             PositionValve();
+            interiorWater?.Rebuild(samples,distances,radius);
         }
 
         void PositionValve()
@@ -156,8 +158,27 @@ namespace Raid.Nereid
             shell.SetPropertyBlock(flow);
         }
 
+        internal void PresentInteriorWater(float head,float tail,float pressure)
+        {
+            if(pressure<=.01f || head<=tail+.001f)
+            {
+                interiorWater?.Hide();
+                return;
+            }
+            EnsureCurrent();
+            if(samples.Count<2)return;
+            if(interiorWater==null)
+            {
+                interiorWater=new PipeInteriorWater(transform);
+                interiorWater.Rebuild(samples,distances,radius);
+            }
+            interiorWater.Present(head,tail,pressure);
+        }
+
         void OnDisable()
         {
+            interiorWater?.Dispose();
+            interiorWater=null;
             if (!skin) return;
             var filter=GetComponent<MeshFilter>();
             if (filter && filter.sharedMesh == skin) filter.sharedMesh = null;

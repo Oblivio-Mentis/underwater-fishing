@@ -15,6 +15,8 @@ namespace Raid
             Check(factory && factory.upperJaw && factory.feedThroat && factory.feedRoute && factory.processRoute,
                 "The authored mouth and both physical pipe routes are present");
             var mouth=factory.upperJaw.parent;
+            var shoal=FindAnyObjectByType<WetCargoShoal>();
+            Check(shoal,"The live aquarium displays actual catch models");
             var origin=mouth.TransformPoint(new Vector3(0,-.12f,-1.03f));
             var forward=-mouth.forward;
             var right=mouth.right;
@@ -55,6 +57,8 @@ namespace Raid
                 yield return StageTransfer(factory,false);
                 yield return Wait("aquarium suction reaches full strength",()=>factory.Elapsed>.65f,4);
                 BowFrame(camera,tank-tanker.normalized*1.3f+Vector3.up*.67f+right*.66f,tank-tanker.normalized*.28f,"pipe-suction.png");
+                yield return Wait("water advances inside the processing pipe",()=>factory.Elapsed>3.65f,7);
+                Check(VisiblePipeWater(factory.processRoute),"The processing pipe has a visible internal water mesh before discharge");
                 yield return Wait("processing outlet expels fish and water",()=>factory.Elapsed>5.28f,8);
                 var outlet=factory.processRoute.WorldPoint(1);
                 BowFrame(camera,outlet+Vector3.up*.45f+right*1.82f+forward*1.03f,
@@ -65,9 +69,24 @@ namespace Raid
                 yield return Wait("processing batch finishes",()=>!world.FishRoute.active,7);
                 int foodBefore=world.Team.offeringPoints;
                 yield return StageTransfer(factory,true);
-                yield return Wait("fish land on the tongue under the feeding outlet",()=>factory.Elapsed>7.64f,14);
+                yield return Wait("water reaches the final feeding sight glass",()=>factory.Elapsed>6.9f,13);
+                Check(VisiblePipeWater(factory.feedRoute),"Water fills the feeding sight glass from the inside");
+                var barrier=mouth.Find("Mouth concealed throat barrier");
+                var tunnel=mouth.Find("Deep living throat").GetComponent<MeshFilter>().sharedMesh;
+                Check(barrier.GetComponent<Collider>().enabled && !barrier.GetComponent<MeshRenderer>().enabled &&
+                    tunnel.bounds.max.z>4,"A curved four-metre gullet hides the collision barrier while keeping it solid");
+                yield return Wait("full-size fish reach the tongue",()=>factory.Elapsed>7.41f,4);
+                var fish=shoal.ModelFor(81010);
+                Check(fish,"The first feeding fish is visible at the outlet");
+                Vector3 originalSize=fish.localScale;
+                var earlier=mouth.InverseTransformPoint(fish.position);
                 BowFrame(camera,origin+forward*3.7f+right*1.13f+Vector3.up*.61f,
                     mouth.position+Vector3.up*.24f,"mouth-water-and-fish.png");
+                yield return Wait("the same fish moves into the curved gullet",()=>factory.Elapsed>7.83f,4);
+                Check(fish && shoal.ModelFor(81010)==fish && Vector3.Distance(originalSize,fish.localScale)<.0001f &&
+                    mouth.InverseTransformPoint(fish.position).z>earlier.z+.8f,"The physical fish advances down the gullet at full size");
+                BowFrame(camera,origin+forward*3.45f-right*.87f+Vector3.up*.48f,
+                    mouth.TransformPoint(new Vector3(.04f,-.03f,1.35f)),"kraken-gullet.png");
                 yield return Wait("feeding batch finishes",()=>!world.FishRoute.active,7);
                 var runningWater=factory.transform.Find("Feeding pipe water discharge")?.GetComponent<MeshRenderer>();
                 Check(runningWater && runningWater.enabled,"Water continues to pour after the final fish reaches the mouth");
@@ -78,6 +97,12 @@ namespace Raid
                 report.screenshot="kraken-fire.png";
             }
             finally { if(camera)Destroy(camera.gameObject); }
+        }
+
+        static bool VisiblePipeWater(Nereid.NereidPipeRoute route)
+        {
+            var water=route.transform.Find("Water inside the pipe");
+            return water && water.GetComponent<MeshRenderer>().enabled && water.GetComponent<MeshFilter>().sharedMesh.vertexCount>0;
         }
 
         IEnumerator StageTransfer(FactoryVisuals factory,bool feeding)

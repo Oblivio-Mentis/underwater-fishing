@@ -39,6 +39,9 @@ namespace Raid.Nereid
         AnchoredLip upperLip,lowerLip;
         MeshFilter throatFilter;
         Mesh originalThroat,animatedThroat;
+        MeshRenderer throatSurface,throatBarrier;
+        Material originalThroatMaterial,deepThroatMaterial;
+        bool barrierWasVisible;
         Vector3[] throatRest,throatWork;
         bool throatWasDeformed;
         ParticleSystem mist,drops,bubbles;
@@ -58,7 +61,7 @@ namespace Raid.Nereid
         void OnEnable()
         {
             if(mist!=null)mist.Play();if(drops!=null)drops.Play();if(bubbles!=null)bubbles.Play();
-            if(throatFilter!=null&&animatedThroat!=null)throatFilter.sharedMesh=animatedThroat;
+            ShowLivingThroat();
         }
         bool TryBind()
         {
@@ -90,9 +93,22 @@ namespace Raid.Nereid
                 throatScale=throat.localScale;throatFilter=throat.GetComponent<MeshFilter>();
                 if(throatFilter!=null&&throatFilter.sharedMesh!=null)
                 {
-                    originalThroat=throatFilter.sharedMesh;animatedThroat=Instantiate(originalThroat);animatedThroat.name="Living throat / confirmed meal wave";
+                    originalThroat=throatFilter.sharedMesh;
+                    throatSurface=throat.GetComponent<MeshRenderer>();
+                    var barrier=mouth.Find("Mouth concealed throat barrier");
+                    if(barrier)throatBarrier=barrier.GetComponent<MeshRenderer>();
+                    barrierWasVisible=throatBarrier && throatBarrier.enabled;
+                    var materialShader=Resources.Load<Shader>("RaidKrakenGullet");
+                    if(throatSurface && materialShader)
+                    {
+                        originalThroatMaterial=throatSurface.sharedMaterial;
+                        deepThroatMaterial=new Material(materialShader);
+                        animatedThroat=KrakenGullet.Build();
+                    }
+                    else animatedThroat=Instantiate(originalThroat);
                     animatedThroat.MarkDynamic();throatRest=animatedThroat.vertices;throatWork=new Vector3[throatRest.Length];
-                    var bounds=animatedThroat.bounds;bounds.Expand(.8f);animatedThroat.bounds=bounds;throatFilter.sharedMesh=animatedThroat;
+                    var bounds=animatedThroat.bounds;bounds.Expand(.8f);animatedThroat.bounds=bounds;
+                    ShowLivingThroat();
                 }
             }
             var source=Resources.Load<Material>("NereidBubbles");
@@ -203,6 +219,7 @@ namespace Raid.Nereid
         {
             if(factory==null||factory.upperJaw==null||factory.lowerJaw==null)return;
             if(!factory.isActiveAndEnabled){RestoreMouth();return;}
+            ShowLivingThroat();
             float swallowAge=Time.time-swallowAt;
             float swallow=swallowAge>=0&&swallowAge<.52f?Mathf.Sin(swallowAge/.52f*Mathf.PI):0;
             float charge=burpAt>=0?Mathf.Clamp01(1-(burpAt-Time.time)/Mathf.Max(.2f,burpDelay)):0;
@@ -239,7 +256,14 @@ namespace Raid.Nereid
                 Vector3 p=throatRest[i];float z=Mathf.Clamp01((p.z-min)/length);
                 float travelling=Mathf.Exp(-Mathf.Pow((z-swallowAge/.55f)/.23f,2))*swallow*.19f;
                 float ripple=release*(.12f+.065f*Mathf.Sin(z*10-Time.time*18))+charge*.07f;
-                p.x*=1+travelling+ripple;p.y*=1+travelling+ripple;throatWork[i]=p;
+                if(deepThroatMaterial)
+                {
+                    var center=KrakenGullet.Center(p.z);
+                    float effect=(travelling+ripple)*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.80f,2.5f,p.z)));
+                    p.x+=(p.x-center.x)*effect;p.y+=(p.y-center.y)*effect;
+                }
+                else {p.x*=1+travelling+ripple;p.y*=1+travelling+ripple;}
+                throatWork[i]=p;
             }
             animatedThroat.vertices=throatWork;animatedThroat.RecalculateNormals();throatWasDeformed=active;
         }
@@ -346,6 +370,15 @@ namespace Raid.Nereid
             if(creature!=null)creature.ClearFeedingReaction();
             CameraImpulse?.Cancel();
         }
+        void ShowLivingThroat()
+        {
+            if(!throatFilter || !animatedThroat || throatFilter.sharedMesh==animatedThroat)return;
+            throatFilter.sharedMesh=animatedThroat;
+            if(!deepThroatMaterial)return;
+            throatSurface.sharedMaterial=deepThroatMaterial;
+            if(throatBarrier)throatBarrier.enabled=false;
+        }
+
         void RestoreMouth()
         {
             if(factory!=null&&factory.upperJaw!=null){factory.upperJaw.localPosition=upperPosition;factory.upperJaw.localScale=upperScale;}
@@ -353,13 +386,16 @@ namespace Raid.Nereid
             upperLip?.Restore();lowerLip?.Restore();
             if(throat!=null)throat.localScale=throatScale;
             foreach(var part in dentition)if(part.transform!=null){part.transform.localPosition=part.position;part.transform.localScale=part.scale;}
-            if(throatFilter!=null&&originalThroat!=null)throatFilter.sharedMesh=originalThroat;
+            if(throatFilter && originalThroat)throatFilter.sharedMesh=originalThroat;
+            if(deepThroatMaterial && throatSurface)throatSurface.sharedMaterial=originalThroatMaterial;
+            if(throatBarrier)throatBarrier.enabled=barrierWasVisible;
         }
         void OnDisable(){ResetObservation();if(ready)RestoreMouth();}
         void OnDestroy()
         {
             DestroyFieryBurp();
             RestoreMouth();if(animatedThroat!=null)Destroy(animatedThroat);
+            if(deepThroatMaterial)Destroy(deepThroatMaterial);
             upperLip?.Dispose();lowerLip?.Dispose();
             if(particleMaterial!=null)Destroy(particleMaterial);if(mistMaterial!=null)Destroy(mistMaterial);if(mistTexture!=null)Destroy(mistTexture);
             if(dropMaterial!=null)Destroy(dropMaterial);if(bubbleMaterial!=null)Destroy(bubbleMaterial);

@@ -50,9 +50,11 @@ namespace Raid.Factory
                 float swing=Mathf.Sin(t*Mathf.PI);
                 float roll=seed+t*(7+2*Mathf.Cos(seed));
                 var offset=axis*new Vector3(Mathf.Cos(roll)*room*swing,Mathf.Sin(roll)*room*.86f*swing,0);
+                float scale=.62f+Mathf.Sin(roll)*.055f*swing;
+                if(feeding)scale=Mathf.Lerp(scale,1,Smooth(Mathf.InverseLerp(.89f,1,t)));
                 return new TransferPose(PipePoint(line,fallback,phase,origin)+offset,
                     axis*Quaternion.Euler(Mathf.Cos(roll)*14*swing,Mathf.Sin(roll)*20*swing,Mathf.Sin(roll*.71f)*50),
-                    .62f+Mathf.Sin(roll)*.055f*swing);
+                    scale);
             }
             var outlet=PipePoint(line,fallback,1,origin);
             var exit=PipeRotation(line,fallback,1,origin);
@@ -69,9 +71,10 @@ namespace Raid.Factory
 
         TransferPose FeedPose(float age,float seed,Vector3 outlet,Quaternion exit)
         {
-            const float tongueAt=7.62f;
+            const float tongueAt=7.48f;
             var throat=feedThroat?transform.InverseTransformPoint(feedThroat.position):new Vector3(0,1.75f,8.7f);
-            var forward=feedThroat && upperJaw?transform.InverseTransformDirection(upperJaw.parent.forward):exit*Vector3.forward;
+            var mouth=upperJaw?upperJaw.parent:null;
+            var forward=mouth?transform.InverseTransformDirection(mouth.forward):exit*Vector3.forward;
             float side=Mathf.Sin(seed)*.23f;
             var tongue=livingTongue?transform.InverseTransformPoint(livingTongue.TransformPoint(new Vector3(.08f+side,-.43f,.51f)))
                 :throat-forward*.48f+Vector3.right*side-Vector3.up*.13f;
@@ -81,13 +84,23 @@ namespace Raid.Factory
                 float t=Mathf.InverseLerp(FishFlow.FeedOutlet,tongueAt,age);
                 var point=Vector3.Lerp(outlet,tongue,t)+exit*Vector3.forward*(Mathf.Sin(t*Mathf.PI)*.25f);
                 point+=Vector3.up*(Mathf.Sin(t*Mathf.PI)*.27f);
-                return new TransferPose(point,Quaternion.Slerp(exit*Quaternion.Euler(48*Mathf.Sin(t*Mathf.PI),0,Mathf.Sin(seed)*36*t),facing,t),Mathf.Lerp(.62f,1,t));
+                return new TransferPose(point,Quaternion.Slerp(exit*Quaternion.Euler(48*Mathf.Sin(t*Mathf.PI),0,Mathf.Sin(seed)*36*t),facing,t),1);
             }
             float bite=Mathf.InverseLerp(tongueAt,FishSeconds,age);
-            var intoThroat=Vector3.Lerp(tongue,throat,bite*bite);
-            intoThroat+=Vector3.up*Mathf.Sin(bite*Mathf.PI*1.7f)*.16f;
-            return new TransferPose(intoThroat,facing*Quaternion.Euler(-37*bite,0,Mathf.Sin(bite*11+seed)*17*bite),
-                Mathf.Lerp(1,.06f,Smooth(Mathf.InverseLerp(.28f,1,bite))));
+            Vector3 intoThroat=SwallowPoint(mouth,tongue,throat,bite);
+            Vector3 ahead=SwallowPoint(mouth,tongue,throat,Mathf.Min(1,bite+.04f));
+            var rotation=Quaternion.Slerp(facing,Facing(ahead-intoThroat,facing),Smooth(bite*3.7f));
+            return new TransferPose(intoThroat,rotation*Quaternion.Euler(0,0,Mathf.Sin(bite*8+seed)*18*bite),1);
+        }
+
+        Vector3 SwallowPoint(Transform mouth,Vector3 tongue,Vector3 throat,float t)
+        {
+            if(!mouth)return Vector3.Lerp(tongue,throat+Vector3.forward*2.05f,t*t);
+            const float start=.51f, exit=3.86f;
+            float depth=Mathf.Lerp(start,exit,Mathf.Pow(t,1.55f));
+            Vector3 point=transform.InverseTransformPoint(mouth.TransformPoint(Nereid.KrakenGullet.Center(depth)));
+            Vector3 enter=transform.InverseTransformPoint(mouth.TransformPoint(Nereid.KrakenGullet.Center(start)));
+            return point+(tongue-enter)*(1-Smooth(t/.61f));
         }
 
         TransferPose ProcessPose(int index,float age,float seed,Vector3 outlet,Quaternion exit)

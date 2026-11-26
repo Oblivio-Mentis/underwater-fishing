@@ -141,13 +141,18 @@ namespace Raid.Factory
 
         void UpdateTransferEffects()
         {
-            float intake=0,outlet=0;
+            float intake=0,outlet=0,waterHead=0,waterTail=0;
             if(batchActive)
             {
                 float elapsed=Elapsed;
                 intake=FishFlow.Started(elapsed+.09f,batchCount)>FishFlow.EnteredPipe(elapsed-.22f,batchCount)?1:0;
                 float travel=batchFeeding?FishFlow.FeedOutlet:FishFlow.ProcessOutlet;
-                float lastExit=travel+FishFlow.LaunchAt(batchCount-1);
+                float lastLaunch=FishFlow.LaunchAt(batchCount-1);
+                float lastExit=travel+lastLaunch;
+                float waterAt=FishFlow.EntrySeconds-.30f;
+                float transit=travel-.19f-waterAt;
+                waterHead=Mathf.Clamp01((elapsed-waterAt)/transit);
+                waterTail=Mathf.Clamp01((elapsed-waterAt-lastLaunch-1.32f)/transit);
                 outlet=elapsed>=travel-.19f && elapsed<=lastExit+1.16f?1:0;
                 if(batchFeeding)
                 {
@@ -161,6 +166,8 @@ namespace Raid.Factory
                     UpdateGrinderFragments(elapsed);
                 }
             }
+            if(processRoute)processRoute.PresentInteriorWater(waterHead,waterTail,batchFeeding?0:1);
+            if(feedRoute)feedRoute.PresentInteriorWater(waterHead,waterTail,batchFeeding?1:0);
             Vector3? beltSplash=processorDrop?processorDrop.position+Vector3.up*.07f:null;
             Vector3? tongueSplash=livingTongue?livingTongue.TransformPoint(new Vector3(.10f,-.53f,.33f)):null;
             processWater?.Present(processRoute,batchFeeding?0:intake,batchFeeding?0:outlet,beltSplash);
