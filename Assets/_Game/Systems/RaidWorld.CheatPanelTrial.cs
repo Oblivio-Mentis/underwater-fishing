@@ -230,6 +230,11 @@ namespace Raid
             report.Check(field && field.text=="1","The quantity is a TMP input field starting at 1.");
             var grant=GameObject.Find("CheatGrant")?.GetComponent<Button>();
             report.Check(grant && grant.IsInteractable(),"The common grant button is available on the resources tab.");
+            await ClickCheatControl("CheatMore");
+            report.Check(field.text=="2","Clicking plus increments the entered amount.");
+            await ClickCheatControl("CheatLess");
+            report.Check(field.text=="1" && !GameObject.Find("CheatLess").GetComponent<Button>().IsInteractable() &&
+                CheatWallet().All(n=>n==0),"Clicking minus returns to one without granting or allowing a smaller amount.");
             foreach(var key in new[]{Key.Digit6,Key.RightArrow,Key.DownArrow,Key.Enter,Key.NumpadEnter})await TapCheatKey(key);
             report.Check(!field.isFocused && field.text=="1" && CheatPageVisible(false) && CheatCardSelected("CheatResource_chitin") &&
                 CheatWallet().All(n=>n==0) && team.tank.Count==0,"With quantity unfocused, digits, arrows and Enter did not change the panel or dispatch a grant.");

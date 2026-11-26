@@ -71,6 +71,15 @@ namespace Raid.UI
         int requestSequence,pendingRequestId;
         string beforeFingerprint;
 
+#if UNITY_STANDALONE && !UNITY_EDITOR
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSplashScreen)]
+        static void HidePlayerLogOverlay()
+        {
+            Debug.developerConsoleVisible = false;
+            Debug.developerConsoleEnabled = false;
+        }
+#endif
+
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void StartFullscreen()
