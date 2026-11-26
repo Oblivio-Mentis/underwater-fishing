@@ -21,7 +21,9 @@ namespace Raid
         Vector3[] slack;
         public static void Present(GameObject model, TechRig rig)
         {
-            if (!model || (rig.kind!="net" && rig.kind!="vacuum")) return;
+            if (!model) return;
+            if (rig.kind=="cage"){model.GetComponent<TechRigShell>().DisplayCageHandset(rig);return;}
+            if (rig.kind!="net" && rig.kind!="vacuum") return;
             var lines=model.GetComponent<RigFishingLines>();
             bool active=rig.mode is "netting" or "pumping" or "working" or "jammed";
             if (!active && !lines) return;
