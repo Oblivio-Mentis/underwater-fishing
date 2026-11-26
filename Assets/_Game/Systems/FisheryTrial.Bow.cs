@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using Raid.Factory;
 using UnityEngine;
@@ -59,6 +60,7 @@ namespace Raid
                 BowFrame(camera,tank-tanker.normalized*1.3f+Vector3.up*.67f+right*.66f,tank-tanker.normalized*.28f,"pipe-suction.png");
                 yield return Wait("water advances inside the processing pipe",()=>factory.Elapsed>3.65f,7);
                 Check(VisiblePipeWater(factory.processRoute),"The processing pipe has a visible internal water mesh before discharge");
+                Check(JoinedPipeWater(factory.processRoute),"One mesh connects the processing pipe bore and the falling water");
                 yield return Wait("processing outlet expels fish and water",()=>factory.Elapsed>5.28f,8);
                 var outlet=factory.processRoute.WorldPoint(1);
                 BowFrame(camera,outlet+Vector3.up*.45f+right*1.82f+forward*1.03f,
@@ -71,6 +73,7 @@ namespace Raid
                 yield return StageTransfer(factory,true);
                 yield return Wait("water reaches the final feeding sight glass",()=>factory.Elapsed>6.9f,13);
                 Check(VisiblePipeWater(factory.feedRoute),"Water fills the feeding sight glass from the inside");
+                Check(JoinedPipeWater(factory.feedRoute),"The feeding pipe bore shares actual mesh faces with the falling water");
                 var barrier=mouth.Find("Mouth concealed throat barrier");
                 var tunnel=mouth.Find("Deep living throat").GetComponent<MeshFilter>().sharedMesh;
                 Check(barrier.GetComponent<Collider>().enabled && !barrier.GetComponent<MeshRenderer>().enabled &&
@@ -88,8 +91,12 @@ namespace Raid
                 BowFrame(camera,origin+forward*3.45f-right*.87f+Vector3.up*.48f,
                     mouth.TransformPoint(new Vector3(.04f,-.03f,1.35f)),"kraken-gullet.png");
                 yield return Wait("feeding batch finishes",()=>!world.FishRoute.active,7);
-                var runningWater=factory.transform.Find("Feeding pipe water discharge")?.GetComponent<MeshRenderer>();
-                Check(runningWater && runningWater.enabled,"Water continues to pour after the final fish reaches the mouth");
+                var runningWater=factory.feedRoute.transform.Find("Continuous pipe flow").GetComponent<MeshRenderer>();
+                var discharge=new MaterialPropertyBlock();
+                runningWater.GetPropertyBlock(discharge);
+                Vector4 flow=discharge.GetVector("_Window");
+                Check(runningWater.enabled && flow.x>flow.z+flow.w && flow.y<flow.z+flow.w,
+                    "The same water surface keeps pouring after the final fish reaches the mouth");
                 Check(world.Team.offeringPoints>foodBefore &&
                     !world.Team.tank.Exists(fish=>fish.id>=81000 && fish.id<=81013),
                     "Both routed batches completed and the fed fish contributed to the offering");
@@ -101,8 +108,22 @@ namespace Raid
 
         static bool VisiblePipeWater(Nereid.NereidPipeRoute route)
         {
-            var water=route.transform.Find("Water inside the pipe");
+            var water=route.transform.Find("Continuous pipe flow");
             return water && water.GetComponent<MeshRenderer>().enabled && water.GetComponent<MeshFilter>().sharedMesh.vertexCount>0;
+        }
+
+        static bool JoinedPipeWater(Nereid.NereidPipeRoute route)
+        {
+            var mesh=route.transform.Find("Continuous pipe flow").GetComponent<MeshFilter>().sharedMesh;
+            var channels=new List<Vector4>();
+            mesh.GetUVs(1,channels);
+            var triangles=mesh.triangles;
+            for(int i=0;i<triangles.Length;i+=3)
+            {
+                float a=channels[triangles[i]].x,b=channels[triangles[i+1]].x,c=channels[triangles[i+2]].x;
+                if(Mathf.Min(a,b,c)<=1 && Mathf.Max(a,b,c)>1)return true;
+            }
+            return false;
         }
 
         IEnumerator StageTransfer(FactoryVisuals factory,bool feeding)

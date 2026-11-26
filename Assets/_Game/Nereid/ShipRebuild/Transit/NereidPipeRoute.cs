@@ -158,21 +158,26 @@ namespace Raid.Nereid
             shell.SetPropertyBlock(flow);
         }
 
-        internal void PresentInteriorWater(float head,float tail,float pressure)
+        internal bool PresentWater(float head,float tail,float boreSeconds,Vector3? receiver,out PipeSpill spill)
         {
-            if(pressure<=.01f || head<=tail+.001f)
+            spill=default;
+            if(!isActiveAndEnabled || head<=.005f || tail>=boreSeconds+PipeSpill.TravelSeconds+.08f)
             {
                 interiorWater?.Hide();
-                return;
+                return false;
             }
             EnsureCurrent();
-            if(samples.Count<2)return;
+            if(samples.Count<2)return false;
+            var heading=transform.TransformVector(samples[^1]-samples[^2]).normalized;
+            if(heading.sqrMagnitude<.01f)return false;
+            spill=new PipeSpill(transform.TransformPoint(samples[^1]),heading,receiver);
             if(interiorWater==null)
             {
                 interiorWater=new PipeInteriorWater(transform);
                 interiorWater.Rebuild(samples,distances,radius);
             }
-            interiorWater.Present(head,tail,pressure);
+            interiorWater.Present(head,tail,boreSeconds,spill);
+            return true;
         }
 
         void OnDisable()

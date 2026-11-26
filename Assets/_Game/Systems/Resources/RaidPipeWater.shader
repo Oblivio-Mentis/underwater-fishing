@@ -1,8 +1,8 @@
-Shader "Raid/Water inside pressure pipes"
+Shader "Raid/Continuous pipe water"
 {
     Properties
     {
-        _Window ("Water head, tail, pressure", Vector)=(0,0,0,0)
+        _Window ("Water head, tail, pipe and spill travel time", Vector)=(0,0,0,0)
     }
     SubShader
     {
@@ -22,24 +22,25 @@ Shader "Raid/Water inside pressure pipes"
             CBUFFER_END
 
             struct Input { float3 position:POSITION; float2 uv:TEXCOORD0; float4 flow:TEXCOORD1; };
-            struct Surface { float4 position:SV_POSITION; float2 uv:TEXCOORD0; float2 flow:TEXCOORD1; };
+            struct Surface { float4 position:SV_POSITION; float2 uv:TEXCOORD0; float3 flow:TEXCOORD1; };
 
             Surface Vert(Input input)
             {
                 Surface output;
-                float wave=sin(input.uv.x*12-_Time.y*11)+.45*sin(input.uv.x*19+input.uv.y*8-_Time.y*17);
+                float wave=sin(input.uv.x*12-_Time.y*11)+.45*sin(input.uv.x*19-_Time.y*17);
                 input.position.y+=input.flow.z*.45*wave;
                 output.position=TransformObjectToHClip(input.position);
                 output.uv=input.uv;
-                output.flow=input.flow.xy;
+                output.flow=input.flow.xyw;
                 return output;
             }
 
             half4 Frag(Surface input) : SV_Target
             {
                 float along=input.flow.x;
-                float edge=smoothstep(-.008,.023,_Window.x-along);
-                float wake=_Window.y<.001?1:smoothstep(-.005,.04,along-_Window.y);
+                float transit=min(along,1)*_Window.z+max(along-1,0)*_Window.w;
+                float edge=smoothstep(-.025,.10,_Window.x-transit);
+                float wake=_Window.y<=0?1:smoothstep(-.022,.16,transit-_Window.y);
                 float band=input.uv.x*1.48-_Time.y*2.85;
                 float foam=smoothstep(.65,.99,sin(band*5.1+sin(input.uv.y*7.1+band)*1.65));
                 float ripples=.50+.50*sin(band*11.7+input.uv.y*13.1);
@@ -49,7 +50,8 @@ Shader "Raid/Water inside pressure pipes"
                 half3 body=lerp(half3(.045,.27,.36),half3(.16,.62,.73),smoothstep(-.80,.14,input.uv.y));
                 half3 color=lerp(body,half3(.27,.72,.80),upper);
                 color=lerp(color,half3(.73,1.04,1.06),rip*(.50+.41*upper)+crest*(1-upper)*.22);
-                return half4(color,saturate((.67+.22*upper+.09*rip)*edge*wake*_Window.z));
+                float exposed=smoothstep(0,.65,along-1);
+                return half4(color,saturate((.67+.22*upper+.09*rip)*edge*wake*input.flow.z*lerp(1,.80,exposed)));
             }
             ENDHLSL
         }
