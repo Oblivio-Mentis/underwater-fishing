@@ -1,0 +1,102 @@
+{
+  "date": "2026-11-26",
+  "build": "RAID020-Crew / Windows Development / Direct3D 11",
+  "assemblyCSharpSha256": "820a7624a960de99d5b0d44227c5d26f9d2d73291fdbe4922d513cfbcf143be3",
+  "fixture": "TechCrewTrial",
+  "launcher": "Tools/RAID020/run_technology_crew.py",
+  "transport": "FishNet LAN, standalone host and independent clients on one machine",
+  "campaignSchema": 6,
+  "sessions": [
+    {
+      "players": 2,
+      "passedSeats": [
+        0,
+        1
+      ],
+      "purchaseReplies": [
+        "accepted",
+        "rejected"
+      ],
+      "checkedInstallations": 40,
+      "lastRigSerial": 41,
+      "checkedCatchIds": 192,
+      "snapshotUtf8Bytes": 69147,
+      "manifestSha256Base64": "Uw0kcyjhrWhHD0e2JOzNSSdKqYG2KmyoWv/FDwuiqQc=",
+      "observedParcelsPerSeat": {
+        "cage": 2,
+        "charge": 2
+      },
+      "maximumObservedFlightMetres": 1.524,
+      "receiverBeforeAndAfterFirstReconnect": [
+        1,
+        2
+      ],
+      "restoredInventory": {
+        "revision": 6,
+        "slots": [
+          "cage x1",
+          "charge x1",
+          null,
+          null
+        ]
+      },
+      "interruptedChargeSerial": 4
+    },
+    {
+      "players": 4,
+      "passedSeats": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "purchaseReplies": [
+        "accepted",
+        "rejected"
+      ],
+      "checkedInstallations": 40,
+      "lastRigSerial": 41,
+      "checkedCatchIds": 192,
+      "snapshotUtf8Bytes": 69147,
+      "manifestSha256Base64": "Uw0kcyjhrWhHD0e2JOzNSSdKqYG2KmyoWv/FDwuiqQc=",
+      "observedParcelsPerSeat": {
+        "cage": 2,
+        "charge": 2
+      },
+      "maximumObservedFlightMetres": 1.524,
+      "receiverBeforeAndAfterFirstReconnect": [
+        3,
+        4
+      ],
+      "restoredInventory": {
+        "revision": 6,
+        "slots": [
+          "cage x1",
+          "charge x1",
+          null,
+          null
+        ]
+      },
+      "interruptedChargeSerial": 4
+    }
+  ],
+  "checks": [
+    "Two real RPC requests competed for one rank. One reply accepted, one rejected; the treasury was charged once.",
+    "The remote client aimed the cabinet, observed the requested cage in flight before credit, and got one free item on contact.",
+    "The server rejected a dispenser request from the research terminal and rejected a full selected stack without firing.",
+    "A missed charge reached the floor. E transferred it once, and retrying the old serial produced no second item.",
+    "The receiver equipped and returned the charge using slot 2. Research increased the capacity of slot 1 and taking another cage cost nothing.",
+    "Each process rendered the active sample mesh for both issued cage shots and the missed charge.",
+    "The assisting player inherited the same physical cage after its carrier disconnected, released it, and the host reloaded the saved fleet.",
+    "All peers matched the full fleet manifest, old-depth traps, reservoir, treasury and ranks. Only the owning client received its private slot data.",
+    "The same profile rejoined twice. Disconnecting during the last charge flight canceled the parcel, left the profile revision unchanged and credited no item."
+  ],
+  "testSetup": "The host seeded trial materials and loaded fleet stock, teleported divers into reproducible poses and moved the intended recipient away to force a miss. Purchases, dispensing, pickup, equipping and returning equipment used real owner RPCs.",
+  "diagnostics": [
+    "Each batch player logged two AudioClip.SetData failures in TechRigShell.Tone. Each host also logged a missing U+2713 glyph in PTSans-SDF. No managed exception or save error appeared in these six player logs."
+  ],
+  "screenshots": {
+    "workshop.png": "Four-seat host camera at the research terminal.",
+    "charge-on-deck.png": "Receiving client camera aimed at the fallen charge before pressing E."
+  }
+}
