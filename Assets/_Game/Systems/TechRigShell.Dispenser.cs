@@ -11,14 +11,13 @@ namespace Raid
         static Material displayGlass;
         static readonly Dictionary<string,Mesh> samples=new();
 
-        internal static void BuildSaleSample(GameObject target,string kind,float width)
+        internal static Mesh EquipmentMesh(string kind)
         {
-            Materials();
             if(!samples.TryGetValue(kind,out var sample) || !sample)
             {
                 if(!library.TryGetValue(kind,out var parts) || !parts[0])library[kind]=parts=Design(kind);
                 var vertices=new List<Vector3>();var uv=new List<Vector2>();
-                var indices=new List<int>[palette.Length];for(int i=0;i<indices.Length;i++)indices[i]=new();
+                var indices=new List<int>[colors.Length];for(int i=0;i<indices.Length;i++)indices[i]=new();
                 for(int i=0;i<3;i++)
                 {
                     var m=parts[i];int first=vertices.Count;
@@ -28,14 +27,24 @@ namespace Raid
                     uv.AddRange(m.uv);
                     for(int sub=0;sub<m.subMeshCount;sub++)foreach(int n in m.GetTriangles(sub))indices[sub].Add(first+n);
                 }
-                sample=new Mesh{name="Товар · "+kind};sample.SetVertices(vertices);sample.SetUVs(0,uv);sample.subMeshCount=palette.Length;
+                sample=new Mesh{name="Товар · "+kind};sample.SetVertices(vertices);sample.SetUVs(0,uv);sample.subMeshCount=colors.Length;
                 for(int i=0;i<indices.Length;i++)sample.SetTriangles(indices[i],i,false);
                 sample.RecalculateNormals();sample.RecalculateBounds();samples[kind]=sample;
             }
+            return sample;
+        }
+
+        internal static void BuildSaleSample(GameObject target,string kind,float width)
+        {
+            Materials();
+            var sample=EquipmentMesh(kind);
             var item=new GameObject("Образец · "+kind);item.transform.SetParent(target.transform,false);
             var size=sample.bounds.size;float scale=width/Mathf.Max(.01f,size.x,size.y,size.z);
             item.transform.localScale=Vector3.one*scale;item.transform.localPosition=-sample.bounds.center*scale;
-            item.AddComponent<MeshFilter>().sharedMesh=sample;item.AddComponent<MeshRenderer>().sharedMaterials=palette;
+            item.AddComponent<MeshFilter>().sharedMesh=sample;
+            var renderer=item.AddComponent<MeshRenderer>();
+            renderer.sharedMaterials=palette;
+            renderer.shadowCastingMode=ShadowCastingMode.Off;
         }
 
         static TMP_Text VendorLegend(Transform parent,string text,Vector3 at,float size,float width,Color tint)

@@ -269,7 +269,7 @@ namespace Raid
             bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved && !rackPointer;
             if(!_fire.IsPressed())_primaryConsumedUntilRelease=false;
             bool primaryPressed=controlling && _fire.WasPressedThisFrame();
-            bool itemConsumed=primaryPressed && (TryDrawPocketInvention() || ConsumeCargoPrimaryInput());
+            bool itemConsumed=UsePocketInvention(controlling,primaryPressed) || primaryPressed && ConsumeCargoPrimaryInput();
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
             bool cheatPointer = UI.CheatPanel.PointerActive;
             bool maySelect=gameplay && (cheatPointer || !UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
@@ -404,7 +404,7 @@ namespace Raid
         internal bool QaPrimaryOwned()
         {
             if(!IsClientInitialized || !IsOwner || QaMenuBlocked)return false;
-            return TryDrawPocketInvention() || ConsumeCargoPrimaryInput() || QaFireOwned();
+            return UsePocketInvention(true,true) || ConsumeCargoPrimaryInput() || QaFireOwned();
         }
 
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.

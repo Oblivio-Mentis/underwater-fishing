@@ -68,26 +68,6 @@ namespace Raid
         }
         static bool Heavy(TechRig rig) => rig.kind is "cage" or "net" or "winch" or "vacuum" || rig.contents.Count>2;
         static float Footprint(string kind) => kind=="cage"?.82f:kind is "farm" or "robot"?.55f:kind=="charge"?.14f:.38f;
-        bool Placement(TechRig rig,DiverMotor diver,Vector3 direction,TeamProgress state,out Vector3 point)
-        {
-            Vector3 eye=diver.transform.position+Vector3.up*.65f;
-            float radius=Footprint(rig.kind);
-            float reach=Mathf.Max(2.5f,radius*3.2f);
-            point=eye+direction.normalized*reach;
-            if(diver.IsInside || !Physics.Raycast(eye,direction,out var floor,reach+1f,~0,QueryTriggerInteraction.Ignore))
-            {
-                if(diver.IsInside || !Physics.Raycast(point+Vector3.up*.5f,Vector3.down,out floor,2.6f,~0,QueryTriggerInteraction.Ignore))
-                    return false;
-            }
-            if(floor.normal.y<.65f || floor.collider.GetComponentInParent<DiverMotor>())return false;
-            point=floor.point+Vector3.up*(radius+.06f);
-            if(Vector3.Distance(eye,point)>reach+1 || Physics.Linecast(eye,point,~0,QueryTriggerInteraction.Ignore) ||
-               Physics.CheckSphere(point,radius,~0,QueryTriggerInteraction.Ignore))return false;
-            foreach(var other in state.rigs)
-                if(other.serial!=rig.serial && other.depth==rig.depth && Vector3.Distance(other.position,point)<radius+Footprint(other.kind))return false;
-            return true;
-        }
-
         internal void UseTechnology(DiverMotor diver,int serial,string action)
         {
             if(!RigRequest(diver))return;
@@ -95,7 +75,7 @@ namespace Raid
             if(r==null || r.depth!=CurrentDepth)return;
             int who=diver.OwnerId;
             bool carried=r.Carrying(who), bound=carried || r.baitId==who || r.operatorId==who || r.helperId==who;
-            bool remote=r.kind=="charge" && r.mode=="remote" || r.kind=="cage" && r.baitId>=0 ||
+            bool remote=r.kind=="cage" && r.baitId>=0 ||
                 r.kind=="winch" && team.TechRank("winch","remote")>0;
             if(r.kind=="mail" && r.flight=="transit")return;
             var eye=diver.transform.position+Vector3.up*.65f;
@@ -107,9 +87,13 @@ namespace Raid
                 if(carried)
                 {
                     if(r.helperId==who){r.helperId=-1;}
-                    else if(Placement(r,diver,diver.AimDirection,team,out var at))
-                    {r.Detach(); r.position=r.anchor=at;r.localStock=null;r.timer=0;r.progress=0;}
-                    else return;
+                    else
+                    {
+                        if(r.kind=="charge")return;
+                        if(!FindInstallationSite(diver,r.kind,r.serial,diver.AimDirection,team,out var at,out var yaw,out var reason))
+                        {SkillReply(diver.Owner,false,reason);return;}
+                        r.Detach();r.position=r.anchor=at;r.yaw=yaw;r.localStock=null;r.timer=0;r.progress=0;
+                    }
                 }
                 else if(!Engaged(who) && r.mode=="carried" && r.helperId<0 && Heavy(r) && diver.GetComponent<HarpoonTool>()?.HandsFull!=true){r.helperId=who;}
                 else if(!Engaged(who) && r.baitId<0 && r.operatorId<0 && (r.mode is "placed" or "captured" or "damaged" or "closed" or "working") &&

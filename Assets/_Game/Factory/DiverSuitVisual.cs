@@ -17,6 +17,7 @@ namespace Raid
         DiverMotor diver;
         HarpoonTool tool;
         Transform body,head,gun,fishAnchor;
+        HeldInvention invention;
         Vector3 leftShoulderRest;
         internal Transform GoshaPerch {get;private set;}
         GameObject fishModel;
@@ -52,6 +53,7 @@ namespace Raid
             }
             leftShoulderRest=arms[0].Upper.localPosition;
             gun=DiveOutfit.Pivot(body,"Service harpoon",Vector3.zero);
+            invention=new HeldInvention(body);
             fishAnchor=DiveOutfit.Pivot(arms[1].End,"Pocket catch",V(-.032f,.058f,.06f));
             fishAnchor.localRotation=Quaternion.Euler(0,-65,-6);
             fishAnchor.localScale=Vector3.one*.27f;
@@ -123,6 +125,11 @@ namespace Raid
             if(world && lastBallLaunch!=world.Gosha.BallLaunch && world.Gosha.Thrower==diver.OwnerId)throwFollow=GoshaBallGrip.FollowThrough;
             if(world)lastBallLaunch=world.Gosha.BallLaunch;
             throwFollow=Mathf.Max(0,throwFollow-dt);
+            var stack=tool.InventionInSlot(displaySlot);
+            string heldKind=!diver.IsHelpless && !ball && !cuddling && !held && !helper && stack.count>0?stack.kind:null;
+            var inventionCenter=new Vector3(.04f,.08f,.48f)+GoshaBallGrip.Lower(GoshaBallGrip.Stow(draw));
+            var inventionGrip=Quaternion.Euler(-8,heldKind=="charge"?-37:-14,-6);
+            invention.Present(heldKind,inventionCenter,inventionGrip);
             var pocket=!ball&&!cuddling&&!held?tool.FishInSlot(displaySlot):null;
             gun.gameObject.SetActive(!diver.IsDead && !cuddling && !held && !helper && throwFollow<=0 && tool.OwnsHarpoon && displaySlot==0);
             var shownFish=tool.HoldingHeavyCatch?tool.LiftedHeavy:pocket;
@@ -152,7 +159,7 @@ namespace Raid
                 Pose(legs[i],thigh,0,s*4+gait.Lateral*cycle*stride*11f*(1-swimming),knee,0,ankle);
                 float shoulder=cycle*stride*(27f+run*16f),elbow=-18-run*36-Mathf.Max(0,cycle)*17*stride;
                 float roll=s*7,yaw=0,wrist=83;
-                if(held||helper||ball||cuddling)
+                if(held||helper||ball||cuddling||heldKind!=null)
                 {
                     shoulder=helper?-73:-42;elbow=helper?-13:-51;roll=s*(helper?4:19);yaw=-s*12;
                 }
@@ -171,10 +178,20 @@ namespace Raid
                     float press=Mathf.Sin(reach*Mathf.PI);
                     shoulder=Mathf.Lerp(shoulder,-89,press);elbow=Mathf.Lerp(elbow,-6,press);roll*=1-press;yaw*=1-press;
                 }
-                if(swimming>.01f&&(held||helper||gun.gameObject.activeSelf||pocket!=null))shoulder-=lean*.73f;
+                if(swimming>.01f&&(held||helper||gun.gameObject.activeSelf||pocket!=null||heldKind!=null))shoulder-=lean*.73f;
                 Pose(arms[i],shoulder,yaw,roll,elbow,0,wrist);
             }
-            if(ball || cuddling || salvage!=null)
+            if(heldKind!=null)
+            {
+                for(int i=0;i<2;i++)
+                {
+                    int side=i==0?-1:1;
+                    ReachGrip(arms[i],body.TransformPoint(inventionCenter+inventionGrip*HeldInvention.Grip(heldKind,side)),
+                        body.rotation*inventionGrip*Quaternion.Euler(-12,-side*27,-side*57),
+                        body.TransformDirection(new Vector3(side*.8f,-.65f,-.3f)));
+                }
+            }
+            else if(ball || cuddling || salvage!=null)
             {
                 var center=ball?BallCenter:salvage!=null?LootActor.ObserverCenter:new Vector3(0,.18f,.48f);
                 for(int i=0;i<2;i++)
@@ -198,7 +215,7 @@ namespace Raid
             else if(gun.gameObject.activeSelf && weaponBuilt)HoldHarpoon(beat,idle);
             var motion=fall>.1f?Action.Knockdown:throwFollow>0?Action.Throw:reach>.01f?Action.PressPanel:draw>0?Action.SwapEquipment:
                 cuddling?Action.PetGosha:ball?(wind>.01f?Action.WindThrow:Action.HoldBall):
-                salvage!=null?Action.CarrySalvage:shownFish!=null?Action.CarryFish:kick>.01f?Action.Shoot:
+                salvage!=null?Action.CarrySalvage:shownFish!=null||heldKind!=null?Action.CarryFish:kick>.01f?Action.Shoot:
                 helper||tool.HookedFish!=null?Action.Reel:gun.gameObject.activeSelf?Action.Harpoon:
                 !diver.IsWalking?Action.Swim:run>.15f?Action.Sprint:speed>.1f?Action.Walk:Action.Idle;
             ApplyAppearance(motion,dt);

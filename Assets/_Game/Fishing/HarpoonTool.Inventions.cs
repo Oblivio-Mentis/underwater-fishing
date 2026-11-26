@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Raid
 {
     public sealed partial class HarpoonTool
@@ -61,12 +63,48 @@ namespace Raid
             !TetherActive && !HasBallLine && AssistTarget==null && HookedFish==null &&
             !RaidWorld.Instance.IsHoldingGosha(Motor) && !RaidWorld.Instance.GoshaBallInHands(Motor);
 
-        bool TryDrawPocketInvention()
+        int chargeSlot=-1;
+        int chargeSerial;
+        float chargeStarted;
+        internal float ChargeWind => chargeSlot==ActiveSlot && chargeSlot>=0
+            ?Mathf.Clamp01((Time.unscaledTime-chargeStarted)/.65f):0f;
+        internal bool WindingCharge => chargeSlot>=0 && chargeSlot==ActiveSlot;
+        internal float ChargeFollowThroughUntil {get;private set;}
+
+        bool UsePocketInvention(bool controlling,bool pressed)
         {
-            if(!IsClientInitialized || !IsOwner || UI.UiInputGate.Blocked ||
-                InventionInSlot(ActiveSlot).count<=0 || !CanDrawPocketInvention)return false;
+            var stack=InventionInSlot(ActiveSlot);
+            bool available=controlling && stack.count>0 && CanDrawPocketInvention;
+            var held=controlling?CarriedInvention:null;
+            bool carrying=held!=null && held.operatorId==OwnerId && MayHandleItems && !Motor.IsTrapped;
+            if(chargeSlot>=0)
+            {
+                bool stillHolding=chargeSerial==0?available && stack.kind=="charge":carrying && held.serial==chargeSerial;
+                if(!stillHolding || chargeSlot!=ActiveSlot)
+                {
+                    Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Cancel);
+                    chargeSlot=-1;
+                    return false;
+                }
+                if(!_fire.IsPressed())
+                {
+                    Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.Release);
+                    chargeSlot=-1;
+                    ChargeFollowThroughUntil=Time.unscaledTime+GoshaBallGrip.FollowThrough;
+                }
+                return true;
+            }
+            if((!available && !carrying) || !pressed)return false;
             _primaryConsumedUntilRelease=true;
-            Motor.CmdTechEquipSlot(ActiveSlot);
+            if((carrying?held.kind:stack.kind)=="charge")
+            {
+                chargeSlot=ActiveSlot;
+                chargeSerial=carrying?held.serial:0;
+                chargeStarted=Time.unscaledTime;
+                Motor.CmdChargeGesture(chargeSerial,ChargeThrowAction.WindUp);
+            }
+            else if(carrying)Motor.CmdTechUse(held.serial,"carry");
+            else Motor.PlaceSelectedInvention(ActiveSlot,stack.kind);
             return true;
         }
 
@@ -79,7 +117,7 @@ namespace Raid
                 !MayHandleItems || Motor.IsTrapped)return false;
             if(!team.CanPackInvention(rig,OwnerId,out reason))return false;
             if(FindInventionPocket(rig.kind,team.TechStackLimit(rig.kind))>=0)return true;
-            reason="Для установки нет свободного места в карманах";
+            reason="В карманах нет места для оборудования";
             return false;
         }
 

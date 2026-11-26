@@ -70,6 +70,10 @@ namespace Raid
         }
 
         public bool DeployTechFromSlot(PlayerProgress profile,int index,Vector3 position,int owner,Func<bool> persist,out string reason)
+            => DeployTechFromSlot(profile,index,position,owner,null,persist,out reason);
+
+        public bool DeployTechFromSlot(PlayerProgress profile,int index,Vector3 position,int owner,
+            Action<TechRig> configure,Func<bool> persist,out string reason)
         {
             if(!InventoryPocket(profile,index,out reason))return false;
             var slot=profile.pocketStacks[index];
@@ -77,15 +81,18 @@ namespace Raid
             if(slot.count<=0 || definition==null || TechRank(slot.kind,"unlock")==0){reason="В кармане нет изобретения";return false;}
             if(owner<0 || !FiniteRig(position) || rigs.Exists(r=>r.operatorId==owner || r.helperId==owner || r.baitId==owner))
             {reason="Сначала освободите руки";return false;}
-            if(lastRigSerial==int.MaxValue || rigs.FindAll(r=>r.kind==slot.kind).Count>=TechRig.TotalLimit(this,definition))
+            if(slot.kind=="vacuum" && !CanPlaceVacuum(0,out reason))return false;
+            if(lastRigSerial==int.MaxValue || slot.kind!="vacuum" &&
+                rigs.FindAll(r=>r.kind==slot.kind).Count>=TechRig.TotalLimit(this,definition))
             {reason="Достигнут лимит одновременно выставленного оборудования";return false;}
             int serial=lastRigSerial;
             var rig=AddRig(slot.kind,position,owner);
             bool committed=false;
             try
             {
+                configure?.Invoke(rig);
                 committed=ChangePocketStack(profile,index,slot.kind,-1,persist);
-                reason=committed?"Снаряжение в руках":"Не удалось записать развёртывание";
+                reason=committed?"Снаряжение использовано":"Не удалось записать развёртывание";
                 return committed;
             }
             finally

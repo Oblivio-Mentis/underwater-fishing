@@ -159,8 +159,8 @@ namespace Raid
             host.Teleport(ground+Vector3.back*2.1f);
             var id=FishAt(ground+Vector3.right*.6f);
             float hp=host.Health;
-            Check(!Use(charge,host,"alternate"),"a base charge rejects the remote action");
-            Check(Use(charge,host) && charge.mode=="fuse","a real placed charge arms its fuse");
+            Check(!Use(charge,host,"alternate") && !Use(charge,host),"a placed charge rejects old remote activation");
+            charge.mode="fuse";charge.timer=TechCatalog.Find("charge").interval;charge.anchor=Vector3.zero;
             // Select the normal preserved-fish outcome and leave the world's random stream untouched.
             var stream=UnityEngine.Random.state;
             try
@@ -419,7 +419,7 @@ namespace Raid
 
         IEnumerator Nets()
         {
-            report.phase="two network owners close a seine and operate a pump";Write();
+            report.phase="two network owners close a seine and verify autonomous suction";Write();
             var net=Stage("net",ground);
             host.Teleport(ground+new Vector3(-.55f,0,-2));peer.Teleport(ground+new Vector3(.55f,0,-2));
             Check(Use(net,host) && Use(net,peer) && net.operatorId!=net.helperId && net.helperId==peer.OwnerId,"two connected owners take opposite ends of the seine");
@@ -433,15 +433,11 @@ namespace Raid
             Check(Use(net,host,"alternate") && net.contents.Any(c=>c.id==id) && !sample.IsFreeSwimming,"manual closure takes a school fish inside the swept polygon");
             report.netCatch=id;
             var vacuum=Stage("vacuum",ground);
-            host.Teleport(ground+Vector3.back*.7f);peer.Teleport(ground+Vector3.right*1.6f);
-            var aim=host.AimDirection;
-            id=FishAt(host.transform.position+Vector3.up*.3f+aim*1.4f);
-            Check(Use(vacuum,host),"the first diver takes the hose");
-            world.TrialTickFishery(vacuum,.02f);
-            Check(vacuum.contents.Count==0 && sample.IsFreeSwimming,"an unaided base pump waits for the second operator");
-            Check(Use(vacuum,peer),"a second authenticated diver grips the pump");
-            world.TrialTickFishery(vacuum,.02f);
-            Check(vacuum.contents.Any(c=>c.id==id) && !sample.IsFreeSwimming,"cooperative suction captures a real fish at the intake");
+            host.Teleport(ground+Vector3.back*6);peer.Teleport(ground+Vector3.right*6);
+            id=FishAt(vacuum.position+Vector3.up*.22f+Vector3.left*.1f);
+            for(int i=0;i<30 && vacuum.contents.Count==0;i++)world.TrialTickIndustry(vacuum,.1f);
+            Check(vacuum.contents.Any(c=>c.id==id) && !sample.IsFreeSwimming && vacuum.operatorId<0 && vacuum.helperId<0,
+                "the installed vacuum captures a real fish at its intake with no operators nearby");
             report.vacuumCatch=id;
             yield break;
         }

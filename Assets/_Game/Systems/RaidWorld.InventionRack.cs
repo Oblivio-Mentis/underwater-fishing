@@ -173,8 +173,9 @@ namespace Raid
             {InventoryReceipt(diver,profile,false,"Подойдите к установке");return;}
             var tool=diver.GetComponent<HarpoonTool>();
             if(!tool)return;
+            if(!rig.Carrying(diver.OwnerId) && (!tool.CanDrawPocketInvention || Engaged(diver.OwnerId)))return;
             int slot=tool.ActiveSlot;
-            if(!rig.Carrying(diver.OwnerId) || !tool.CanFitInvention(slot,rig.kind,team.TechStackLimit(rig.kind)))
+            if(!tool.CanFitInvention(slot,rig.kind,team.TechStackLimit(rig.kind)))
             {
                 if(!FindStoragePocket(tool,profile,rig.kind,out slot,out var issue)){InventoryReceipt(diver,profile,false,issue);return;}
             }

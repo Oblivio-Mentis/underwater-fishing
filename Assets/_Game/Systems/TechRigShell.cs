@@ -246,11 +246,27 @@ namespace Raid
                     Skids(p,.24f,.25f);Drum(p,.02f,-.08f,.22f,.19f);
                     foreach(int s in new[]{-1,1}){p.Box(new(s*.17f,0,.19f),new(.13f,.14f,.5f),5);p.Box(new(s*.17f,0,.44f),new(.13f,.14f,.09f),1);}
                     break;
-                case "vacuum":case "mail":
+                case "vacuum":
+                    Skids(p,.33f,.37f);
+                    p.Tube(new(0,-.24f,0),new(0,-.02f,0),.27f,.31f,3,18);
+                    p.Tube(new(0,-.03f,0),new(0,.09f,0),.26f,.23f,0,18);
+                    p.Ring(new(0,.03f,0),.309f,.309f,.028f,2,24);
+                    p.Ring(new(0,.24f,0),.314f,.314f,.037f,1,24);
+                    p.Ring(new(0,.18f,0),.225f,.225f,.021f,4,20);
+                    for(int i=0;i<12;i++)
+                    {
+                        float a=i*Mathf.PI/6;
+                        var rim=new Vector3(Mathf.Cos(a)*.31f,0,Mathf.Sin(a)*.31f);
+                        p.Rod(rim*.90f+Vector3.up*.04f,rim+Vector3.up*.24f,.024f,i%3==0?2:1);
+                        p.Rod(rim*.76f+Vector3.up*.19f,rim*.21f+Vector3.up*.095f,.018f,3);
+                    }
+                    p.Box(new(0,-.16f,-.32f),new(.28f,.23f,.13f),2);
+                    break;
+                case "mail":
                     Skids(p,.32f,.39f);Drum(p,.04f,-.12f,.24f,.27f);
-                    p.Tube(new(0,.02f,.04f),new(0,.12f,.55f),.12f,kind=="vacuum"?.27f:.16f,3);
-                    for(int i=0;i<6;i++){float t=i/6f;var c=new Vector3(0,.02f+.1f*t,.1f+.45f*t);p.Rod(c,c+Vector3.forward*.017f,.14f+(kind=="vacuum"?.13f:.035f)*t,1);}
-                    if(kind=="mail")p.Box(new(0,.32f,-.11f),new(.30f,.18f,.37f),2);
+                    p.Tube(new(0,.02f,.04f),new(0,.12f,.55f),.12f,.16f,3);
+                    for(int i=0;i<6;i++){float t=i/6f;var c=new Vector3(0,.02f+.1f*t,.1f+.45f*t);p.Rod(c,c+Vector3.forward*.017f,.14f+.035f*t,1);}
+                    p.Box(new(0,.32f,-.11f),new(.30f,.18f,.37f),2);
                     break;
                 default:p.Box(Vector3.zero,new(.36f,.25f,.48f),3);break;
             }
@@ -314,6 +330,7 @@ namespace Raid
         public void Display(TechRig rig,bool snap)
         {
             transform.position=snap?rig.position:Vector3.Lerp(transform.position,rig.position,1-Mathf.Exp(-Time.deltaTime*14));
+            transform.rotation=Quaternion.Euler(0,rig.yaw,model=="cage" && rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
             if(rig.mode!=lastMode && lastMode!=null)
             {
                 var cue=rig.mode is "armed" or "captured" or "fuse"?chirp:click;
@@ -338,7 +355,6 @@ namespace Raid
                 occupant.gameObject.SetActive(rig.contents.Count>0);
                 if(rig.contents.Count>0)captiveMesh.sharedMesh=library[model][rig.contents[0].species=="NetEel"?4:3];
                 occupant.localRotation=Quaternion.Euler(0,Mathf.Sin(Time.time*4)*14,0);
-                transform.localRotation=Quaternion.Euler(0,0,rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
             }
             else if(busy)drive.Rotate(Vector3.right,Time.deltaTime*100,Space.Self);
             lamp.gameObject.SetActive(snap || (!busy && light<3) || Mathf.Sin(Time.time*(light==3?9:rig.mode=="fuse"?17:4)+rig.serial)>-.5f);

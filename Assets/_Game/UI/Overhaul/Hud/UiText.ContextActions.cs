@@ -43,10 +43,12 @@ namespace Raid.UI
             var rig=tool.CarriedInvention;
             if(rig!=null)
             {
-                var stow=tool.CanStowCarriedInvention(rig,out var reason)?new HudBinding(Key.R,"Убрать в карман"):default;
-                var place=rig.operatorId==player.OwnerId && !player.IsInside?new HudBinding(Key.T,"Установить"):default;
+                var stow=tool.CanStowCarriedInvention(rig,out _)?new HudBinding(Key.R,"Убрать в карман"):default;
                 string label=TechCatalog.Find(rig.kind)?.title ?? "Корзина улова";
-                return new(Mark.Wrench,new(Key.Q,"Отпустить"),stow,place,note:string.IsNullOrEmpty(reason)?label:reason);
+                var place=rig.operatorId!=player.OwnerId?default:rig.kind=="charge"
+                    ?new HudBinding(Key.Left,"Бросить")
+                    :new HudBinding(Key.Left,world.PlacementHint??"Установить");
+                return new(Mark.Wrench,place,stow,new(Key.Q,"Отпустить"),note:label){caution=world.PlacementHint!=null};
             }
             var assist=tool.AssistTarget;
             var owner=assist?assist.GetComponent<HarpoonTool>():tool;
@@ -76,7 +78,15 @@ namespace Raid.UI
             }
             var stack=tool.InventionInSlot(tool.ActiveSlot);
             if(stack.count>0 && tool.CanDrawPocketInvention && !UiInputGate.PointerReserved)
-                return new(Mark.Wrench,new(Key.Left,"Взять в руки"),note:(TechCatalog.Find(stack.kind)?.title ?? stack.kind)+"  ×"+stack.count);
+            {
+                string note=(TechCatalog.Find(stack.kind)?.title ?? stack.kind)+"  ×"+stack.count;
+                if(stack.kind=="charge")
+                    return new(Mark.Wrench,new(tool.WindingCharge?Key.LiftLeft:Key.Left,
+                        tool.WindingCharge?"Отпустите для броска":"Бросить · удерживайте для замаха"),note:note);
+                bool available=world.PlacementHint==null;
+                return new(Mark.Wrench,new(available?Key.Left:Key.None,world.PlacementHint??"Установить"),note:note){caution=!available};
+            }
+            if(world.AimedInvention!=null && !UiInputGate.PointerReserved)return InstalledEquipment(c,world.AimedInvention);
             switch(c.Interaction)
             {
                 case UiInteraction.PetGosha:return new(Mark.Glove,new(Key.E,"Взять и погладить Гошу"));
@@ -126,6 +136,34 @@ namespace Raid.UI
             if(!string.IsNullOrEmpty(orders))return Training(world,orders);
             return default;
         }
+
+        static HudHint InstalledEquipment(UiContext c,TechRig rig)
+        {
+            var primary=rig.kind switch
+            {
+                "trap"=>new HudBinding(Key.Y,"Переключить ловушку"),
+                "cage"=>c.Player.IsTrapped?new(Key.U,"Аварийный выход"):new(Key.Y,"Закрыть / открыть клеть"),
+                "net"=>rig.mode=="netting"?new(Key.U,"Стянуть невод"):new(Key.Y,"Взять кромку"),
+                "oxygen"=>new(Key.Y,"Подключить кислород"),
+                "lure"=>new(Key.Y,"Подать сигнал"),
+                "bubbles"=>new(Key.Y,"Переключить питание"),
+                "farm"=>new(Key.Y,"Заселить / собрать"),
+                "winch"=>new(Key.Y,"Управлять лебёдкой"),
+                "robot"=>new(Key.Y,"Передать груз"),
+                "mail"=>new(Key.Y,"Загрузить / отправить"),
+                "magnet"=>new(Key.Y,"Переключить магнит"),
+                _=>default
+            };
+            var unload=rig.contents.Count>0?new HudBinding(Key.I,"Разгрузить"):default;
+            var move=rig.health<.99f?new HudBinding(Key.O,"Ремонт"):
+                c.Harpoon.CanDrawPocketInvention && c.View.CanPackInvention(rig,c.Player.OwnerId,out _)
+                    ?new HudBinding(Key.R,"Забрать в карман"):new HudBinding(Key.T,"Перенести");
+            string name=TechCatalog.Find(rig.kind)?.title??"Корзина улова";
+            string state=rig.kind=="vacuum" && rig.health>0?(rig.contents.Count>=c.View.TechUnitCapacity(rig.kind)?"Заполнен":"Всасывает автоматически"):
+                RaidWorld.RigModeName(rig.mode);
+            return new(Mark.Wrench,primary,unload,move,note:name+" · "+state+" · "+RaidWorld.EquipmentReadout(rig,c.View));
+        }
+
         static Mark Icon(DroppedKind kind)=>kind switch {DroppedKind.Harpoon=>Mark.Spear,DroppedKind.Ball=>Mark.Ball,DroppedKind.Catch=>Mark.Lantern,_=>Mark.Crate};
         static HudHint Training(RaidWorld world,string orders)
         {
