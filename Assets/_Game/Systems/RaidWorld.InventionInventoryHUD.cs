@@ -108,7 +108,7 @@ namespace Raid
         void SelectRackBlueprint(int index)
         {
             rackSelection=index;
-            rackScroll.y=Mathf.Max(0,index*34f-66f);
+            rackScroll.y=Mathf.Max(0,(index/2)*76f-76f);
         }
 
         TechRig HeldInventoryRig()
@@ -127,7 +127,7 @@ namespace Raid
             int count=slot.count;
             if(inventoryPanel==InventoryPanel.Rack)
             {
-                label="Взять  +1";reason="";
+                label="Выдать  +1";reason="";
                 if(rackBlueprints.Count==0){reason="Сначала исследуйте чертёж на инженерном терминале.";return false;}
                 var item=rackBlueprints[rackSelection];
                 if(view.TechRank(item.id,"unlock")<=0){reason="Чертёж ещё не исследован.";return false;}
@@ -233,7 +233,7 @@ namespace Raid
             {
                 var focus=new Rect((width-230)/2,height*.56f,230,31);
                 InventoryFill(focus,InventoryInk);
-                InventoryText(new Rect(focus.x+12,focus.y,focus.width-24,31),"[E]  Раздатчик снаряжения",inventoryLabel,UiTheme.Cyan);
+                InventoryText(new Rect(focus.x+12,focus.y,focus.width-24,31),"[E]  Автомат снаряжения",inventoryLabel,UiTheme.Cyan);
             }
             const float slotsWidth=4*55+96;
             float x=(width-slotsWidth)/2;
@@ -256,16 +256,17 @@ namespace Raid
         void DrawInventoryPanel(float screenWidth,float screenHeight)
         {
             bool rack=inventoryPanel==InventoryPanel.Rack;
-            float height=rack?436:224;
-            var box=new Rect((screenWidth-610)/2,(screenHeight-height)/2,610,height);
-            InventoryFill(new Rect(0,0,screenWidth,screenHeight),new Color(0,.03f,.045f,.50f));
+            float height=rack?420:224;
+            float width=rack?Mathf.Min(484,screenWidth*.47f):610;
+            var box=new Rect(rack?screenWidth-width-12:(screenWidth-width)/2,(screenHeight-height)/2,width,height);
+            if(!rack)InventoryFill(new Rect(0,0,screenWidth,screenHeight),new Color(0,.03f,.045f,.50f));
             GUI.BeginGroup(box);
             InventoryFill(new Rect(0,0,box.width,height),InventoryInk);
             InventoryFill(new Rect(0,0,box.width,3),UiTheme.Cyan);
-            InventoryText(new Rect(20,11,490,35),rack?"Раздатчик снаряжения":"Инвентарь технологий",inventoryHeading,UiTheme.Text);
-            if(InventoryButton(new Rect(539,15,50,28),"Esc",false))CloseInventionInventory();
-            DrawInventorySlots();
-            if(rack)DrawBlueprints();
+            InventoryText(new Rect(16,11,width-90,35),rack?"Автомат снаряжения":"Инвентарь технологий",inventoryHeading,UiTheme.Text);
+            if(InventoryButton(new Rect(width-63,15,47,28),"Esc",false))CloseInventionInventory();
+            DrawInventorySlots(width);
+            if(rack)DrawBlueprints(width);
             else
             {
                 var held=HeldInventoryRig();
@@ -275,49 +276,57 @@ namespace Raid
                 InventoryText(new Rect(20,126,570,30),state,inventoryLabel,UiTheme.Text);
             }
             bool allowed=InventoryAction(out var label,out var reason);
-            var button=new Rect(20,height-51,206,34);
+            var button=new Rect(16,height-54,rack?132:206,38);
             if(InventoryButton(button,label+"   ↵",allowed,allowed))InventoryAction();
-            string note=!allowed?reason:rack?"Бесплатно  ·  удерживайте Enter для пополнения":"←  →   выбрать слот";
+            string note=!allowed?reason:rack?"Бесплатно  ·  удерживайте Enter":"←  →   выбрать слот";
             if(Time.unscaledTime<inventoryNoticeUntil && !string.IsNullOrEmpty(inventoryNotice))note=inventoryNotice;
-            InventoryText(new Rect(237,height-54,352,40),note,inventorySmall,allowed?UiTheme.Muted:UiTheme.Amber);
+            InventoryText(new Rect(button.xMax+10,height-57,width-button.xMax-24,45),note,inventorySmall,allowed?UiTheme.Muted:UiTheme.Amber);
             GUI.EndGroup();
         }
 
-        void DrawInventorySlots()
+        void DrawInventorySlots(float width)
         {
             for(int i=0;i<4;i++)
             {
                 var slot=LocalProgress.techSlots[i];
                 int count=slot.count;
-                var r=new Rect(20+i*143,55,137,62);
+                float stride=(width-30)/4f;
+                var r=new Rect(16+i*stride,55,stride-5,60);
                 bool selected=i==inventorySlot;
                 InventoryFill(r,selected?new Color32(40,78,77,255):InventoryRow);
                 if(selected)InventoryFill(new Rect(r.x,r.yMax-3,r.width,3),UiTheme.Cyan);
-                InventoryText(new Rect(r.x+7,r.y+1,82,20),"СЛОТ "+(i+1),inventorySmall,UiTheme.Muted);
+                InventoryText(new Rect(r.x+5,r.y+1,r.width-8,20),"СЛОТ "+(i+1),inventorySmall,UiTheme.Muted);
                 var icon=count>0?InventoryPlate(slot.kind):null;
-                if(icon)GUI.DrawTexture(new Rect(r.x+4,r.y+22,34,32),icon,ScaleMode.ScaleToFit);
-                InventoryText(new Rect(r.x+(icon?42:7),r.y+20,r.width-(icon?46:12),29),count>0?count+" / "+view.TechStackLimit(slot.kind):"Свободен",inventoryLabel,UiTheme.Text);
+                if(icon)GUI.DrawTexture(new Rect(r.x+3,r.y+23,29,28),icon,ScaleMode.ScaleToFit);
+                InventoryText(new Rect(r.x+(icon?34:5),r.y+20,r.width-(icon?36:8),29),count>0?count+" / "+view.TechStackLimit(slot.kind):"Свободен",inventoryLabel,UiTheme.Text);
                 if(GUI.Button(r,new GUIContent("",count>0?InventoryTitle(slot.kind):"Свободный слот"),GUIStyle.none))inventorySlot=i;
             }
         }
 
-        void DrawBlueprints()
+        void DrawBlueprints(float width)
         {
-            InventoryText(new Rect(20,124,570,23),"Исследованные чертежи  ·  ↑ ↓",inventorySmall,UiTheme.Muted);
-            var area=new Rect(20,149,570,216);
+            InventoryText(new Rect(16,121,width-32,24),"Доступное снаряжение   ↑ ↓",inventorySmall,UiTheme.Muted);
+            var area=new Rect(16,150,width-32,200);
             if(rackBlueprints.Count==0)return;
-            float listWidth=area.width-19;
-            rackScroll=GUI.BeginScrollView(area,rackScroll,new Rect(0,0,listWidth,rackBlueprints.Count*34),false,false);
+            float listWidth=area.width-17;
+            int rows=(rackBlueprints.Count+1)/2;
+            rackScroll=GUI.BeginScrollView(area,rackScroll,new Rect(0,0,listWidth,rows*76),false,false);
+            float stride=listWidth/2;
             for(int i=0;i<rackBlueprints.Count;i++)
             {
                 var item=rackBlueprints[i];
-                var row=new Rect(0,i*34,listWidth,31);
+                var row=new Rect((i%2)*stride,(i/2)*76,stride-5,71);
                 bool selected=i==rackSelection;
                 InventoryFill(row,selected?new Color32(40,78,77,255):InventoryRow);
+                if(selected)InventoryFill(new Rect(row.x,row.y,3,row.height),UiTheme.Cyan);
+                float iconWidth=Mathf.Clamp(row.width*.26f,26,48);
                 var icon=InventoryPlate(item.id);
-                if(icon)GUI.DrawTexture(new Rect(3,row.y+1,31,29),icon,ScaleMode.ScaleToFit);
-                InventoryText(new Rect(42,row.y,382,31),item.title,inventoryLabel,UiTheme.Text);
-                InventoryText(new Rect(435,row.y,105,31),"до "+view.TechStackLimit(item.id)+" / слот",inventorySmall,UiTheme.Cyan);
+                if(icon)GUI.DrawTexture(new Rect(row.x+5,row.y+6,iconWidth,row.height-12),icon,ScaleMode.ScaleToFit);
+                float tx=row.x+iconWidth+9;
+                inventorySmall.wordWrap=true;
+                InventoryText(new Rect(tx,row.y+2,row.xMax-tx-4,41),item.title,inventorySmall,UiTheme.Text);
+                inventorySmall.wordWrap=false;
+                InventoryText(new Rect(tx,row.y+39,row.xMax-tx-3,26),"До "+view.TechStackLimit(item.id)+" / слот",inventorySmall,UiTheme.Cyan);
                 if(GUI.Button(row,GUIContent.none,GUIStyle.none))rackSelection=i;
             }
             GUI.EndScrollView();
