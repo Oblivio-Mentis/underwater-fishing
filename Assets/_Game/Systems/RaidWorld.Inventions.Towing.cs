@@ -46,7 +46,7 @@ namespace Raid
             var target=IndustryRig(cable.targetSerial);
             if(target==null && automatic && IndustryUnlocked(cable,"delivery") && cable.towCargo==0 && cable.towDiver<0)
             {
-                target=ClosestIndustryRig(cable,cable.position,IndustryRange(cable),x=>x.kind=="cage"&& x.contents.Count>0 && x.baitId<0 && x.mode=="captured" && !RigAlreadyTowed(x) &&
+                target=ClosestIndustryRig(cable,cable.position,IndustryRange(cable),x=>x.kind=="cage"&& x.contents.Count>0 && x.baitId<0 && x.mode=="captured" && IndustryUnlocked(x,"delivery") && !RigAlreadyTowed(x) &&
                     (x.position-cable.position).sqrMagnitude>4f);
                 cable.targetSerial=target?.serial??0;
             }
