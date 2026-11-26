@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
+using System.Text;
 using System.Runtime.InteropServices;
 using Raid.UI;
 using TMPro;
@@ -20,7 +20,7 @@ namespace Raid
         [Serializable] sealed class CheatUiReport
         {
             public string status="running",phase,error,resource,fish;
-            public int granted,stocked,inputSystemEdits,nativeGuiEdits;
+            public int granted,stocked,inputSystemEdits,windowMessageEdits,focusedTmpEdits;
             public bool clipboardPaste;
             public float focusedTravel;
             public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
@@ -117,16 +117,34 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.13f);
         }
 
-        // TMP's desktop input field consumes native GUI events in OnUpdateSelected.
-        // Headless Input System keyboards can update gameplay while producing no legacy GUI events.
-        static readonly MethodInfo queueCheatGuiEvent=typeof(Event).GetMethod("QueueEvent",
-            BindingFlags.Static|BindingFlags.NonPublic,null,new[]{typeof(Event)},null);
+#if UNITY_STANDALONE_WIN
+        delegate bool CheatWindowPredicate(IntPtr hwnd,IntPtr arg);
+        [DllImport("user32.dll")] static extern bool EnumWindows(CheatWindowPredicate callback,IntPtr arg);
+        [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hwnd,out uint pid);
+        [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassNameW(IntPtr hwnd,StringBuilder name,int length);
+        [DllImport("user32.dll")] static extern bool PostMessageW(IntPtr hwnd,uint message,IntPtr wParam,IntPtr lParam);
 
-        static void QueueCheatGuiKey(KeyCode key,char character,EventModifiers modifiers=EventModifiers.None)
+        static bool PostCheatFieldKey(char character,KeyCode key)
         {
-            if(queueCheatGuiEvent==null)throw new MissingMethodException("UnityEngine.Event.QueueEvent");
-            queueCheatGuiEvent.Invoke(null,new object[]{new Event{type=EventType.KeyDown,keyCode=key,character=character,modifiers=modifiers}});
+            if(Application.isBatchMode)return false;
+            IntPtr window=IntPtr.Zero;
+            uint processId=(uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+            EnumWindows((handle,_)=>{
+                GetWindowThreadProcessId(handle,out var pid);
+                if(pid!=processId)return true;
+                var name=new StringBuilder(64);
+                if(GetClassNameW(handle,name,name.Capacity)==0 || name.ToString()!="UnityWndClass")return true;
+                window=handle;
+                return false;
+            },IntPtr.Zero);
+            if(window==IntPtr.Zero)return false;
+            if(character!='\0')return PostMessageW(window,0x102,(IntPtr)character,(IntPtr)1);
+            // A native backspace is delivered to this Player window only.
+            if(key!=KeyCode.Backspace)return false;
+            return PostMessageW(window,0x100,(IntPtr)8,(IntPtr)0x000E0001) &&
+                   PostMessageW(window,0x101,(IntPtr)8,(IntPtr)unchecked((int)0xC00E0001));
         }
+#endif
 
         static bool CheatFieldFocused(TMP_InputField field) =>
             field && field.isFocused && EventSystem.current && EventSystem.current.currentSelectedGameObject==field.gameObject;
@@ -144,13 +162,30 @@ namespace Raid
             }
             finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
             await Awaitable.WaitForSecondsAsync(.10f);
-            if(!expected())
+            if(expected())
             {
-                QueueCheatGuiKey(keyCode,character,control?EventModifiers.Control:EventModifiers.None);
-                await AwaitCheatUi(expected,"TMP handles "+keyCode+" (current amount '"+field.text+"')",2);
-                report.nativeGuiEdits++;
+                if(!already)report.inputSystemEdits++;
             }
-            else if(!already)report.inputSystemEdits++;
+            else
+            {
+#if UNITY_STANDALONE_WIN
+                if(!control && PostCheatFieldKey(character,keyCode))
+                {
+                    await Awaitable.WaitForSecondsAsync(.18f);
+                    if(expected())report.windowMessageEdits++;
+                }
+#endif
+                // Headless players may have no window or desktop text events. Feed the public
+                // TMP keyboard handler only after the pointer and EventSystem selected this field.
+                if(!expected())
+                {
+                    if(!CheatFieldFocused(field))throw new InvalidOperationException("Lost focus before TMP fallback for "+key);
+                    field.ProcessEvent(new Event{type=EventType.KeyDown,keyCode=keyCode,character=character,
+                        modifiers=control?EventModifiers.Control:EventModifiers.None});
+                    await AwaitCheatUi(expected,"Focused TMP handles "+keyCode+" (current amount '"+field.text+"')",2);
+                    report.focusedTmpEdits++;
+                }
+            }
             if(!CheatFieldFocused(field))throw new InvalidOperationException("Quantity lost keyboard focus on "+key);
         }
 
@@ -249,7 +284,9 @@ namespace Raid
             {
                 InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState(Key.W));
                 InputSystem.QueueTextEvent(TrialKeyboard,'w');
-                QueueCheatGuiKey(KeyCode.W,'w');
+#if UNITY_STANDALONE_WIN
+                PostCheatFieldKey('w',KeyCode.W);
+#endif
                 await Awaitable.WaitForSecondsAsync(.6f);
             }
             finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
