@@ -147,6 +147,9 @@ namespace Raid
                 !NearInventionRack(diver) || !HitRack(new Ray(diver.transform.position+Vector3.up*.6f,direction),out var product) ||
                 product==null || product.id!=kind)
             {InventoryReceipt(diver,profile,false,"Наведитесь на товар за стеклом");return;}
+            RefreshVendorStock();
+            if(team.TechRank(kind,"unlock")>0 && VendorIssuedCount(kind)>=TechRig.TotalLimit(team,product))
+            {InventoryReceipt(diver,profile,false,VendorTeamLimitReason);return;}
             if(!FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out _,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
             LaunchRackParcel(diver,kind);
         }
