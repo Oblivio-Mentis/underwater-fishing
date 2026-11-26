@@ -10,7 +10,7 @@ namespace Raid
         public int serial, depth=1, operatorId=-1, helperId=-1, baitId=-1;
         public string kind, mode="placed", flight="";
         public Vector3 position, anchor, destination;
-        public float timer, progress, health=1, air=-1, care;
+        public float timer, progress, health=1, air=-1, care, yaw;
         public int targetSerial, selection, cycle, towDiver=-1;
         public long towCargo;
         public bool CanRecall => operatorId<0 && helperId<0 && baitId<0 && contents.Count==0 && brood.Count==0 &&
@@ -84,7 +84,8 @@ namespace Raid
                     (rig.kind!="basket" && TechCatalog.Find(rig.kind)==null) || string.IsNullOrEmpty(rig.mode) ||
                     !FiniteRig(rig.position) || !FiniteRig(rig.anchor) || !FiniteRig(rig.destination) ||
                     !float.IsFinite(rig.health) || !float.IsFinite(rig.timer) || !float.IsFinite(rig.progress) ||
-                    !float.IsFinite(rig.care) || !float.IsFinite(rig.air) || rig.contents==null || rig.brood==null)
+                    !float.IsFinite(rig.care) || !float.IsFinite(rig.air) || !float.IsFinite(rig.yaw) ||
+                    rig.contents==null || rig.brood==null)
                     throw new InvalidOperationException("Invalid installation.");
                 lastRigSerial=Math.Max(lastRigSerial,rig.serial);
                 foreach(var group in new[]{rig.contents,rig.brood})
