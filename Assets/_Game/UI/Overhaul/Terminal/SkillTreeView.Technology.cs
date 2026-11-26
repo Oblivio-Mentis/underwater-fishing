@@ -23,6 +23,7 @@ namespace Raid.UI
         TeamProgress shownTechView;
         int category, rigIndex, selectedRobot;
         float techRequestUntil;
+        internal bool TechnologyOpen => technologyPage && technologyPage.gameObject.activeInHierarchy;
 
         void BuildTechnologyPage(Transform surface)
         {

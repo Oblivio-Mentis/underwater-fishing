@@ -52,6 +52,7 @@ namespace Raid.UI
         TerminalView terminal;
         CargoView cargo;
         SkillTreeView skills;
+        internal bool TechnologyOpen => skills?.TechnologyOpen==true;
         CanvasGroup[] modalGroups;
         GameObject cancelConfirmationButton;
         UiPage settingsBack=UiPage.Main;
