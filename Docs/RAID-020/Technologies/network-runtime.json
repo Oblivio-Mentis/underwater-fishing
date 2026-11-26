@@ -101,7 +101,7 @@
   },
   "followupBuild": {
     "build": "RAID020-Technology-QA",
-    "assemblyCSharpSha256": "c9210f755ca0bde07c84e3b9171cdcbb9648e143a4a162d6ac3bc83842c9ba22",
+    "assemblyCSharpSha256": "ef8ba2f819ce89531396218372f2de438cd84eb1d063d4c7506d41de3eb2b521",
     "sessions": [
       {
         "players": 2,
