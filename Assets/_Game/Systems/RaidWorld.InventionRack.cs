@@ -104,10 +104,10 @@ namespace Raid
             }
             return Vector3.zero;
         }
-        bool InventoryRequest(DiverMotor diver,out PlayerProgress profile)
+        bool InventoryRequest(DiverMotor diver,out PlayerProgress profile,bool throttle=true)
         {
             profile=null;
-            if(!RigRequest(diver) || diver.IsTrapped)return false;
+            if(!RigRequest(diver,throttle) || diver.IsTrapped)return false;
             profile=team.Player(ProgressKey(diver));
             return profile!=null;
         }
@@ -139,7 +139,7 @@ namespace Raid
 
         internal void TakeRackItem(DiverMotor diver,string kind,Vector3 direction)
         {
-            if(!InventoryRequest(diver,out var profile))return;
+            if(!InventoryRequest(diver,out var profile,false))return;
             // The server supplies origin, reach, occlusion and cell geometry. Ignore stale backwards clicks.
             float length=direction.sqrMagnitude;
             Physics.SyncTransforms();
@@ -151,6 +151,8 @@ namespace Raid
             if(TechRig.HasTeamLimit(kind) && team.TechRank(kind,"unlock")>0 && VendorIssuedCount(kind)>=TechRig.TotalLimit(team,product))
             {InventoryReceipt(diver,profile,false,VendorTeamLimitReason);return;}
             if(!FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out _,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
+            if(!HasRoomForRackOrder(diver,team,kind))
+            {InventoryReceipt(diver,profile,false,"Свободное место занято заказами в пути");return;}
             LaunchRackParcel(diver,kind);
         }
         internal void EquipRackItem(DiverMotor diver,int slot)

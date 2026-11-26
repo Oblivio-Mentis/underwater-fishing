@@ -198,7 +198,7 @@ namespace Raid
             }
         }
 
-        static Vector3 VacuumInlet(TechRig rig) => rig.position+Vector3.up*.42f;
+        static Vector3 VacuumInlet(TechRig rig) => rig.position+Vector3.up*TechRigShell.VacuumInletHeight;
 
         void TickAutonomousVacuum(TechRig rig,float dt)
         {

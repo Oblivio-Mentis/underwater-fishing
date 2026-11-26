@@ -1,6 +1,6 @@
 namespace Raid
 {
-    internal enum VendorAction { Idle, Locked, Full, Ready, Dispensing, CollectParcel, TeamLimit }
+    internal enum VendorAction { Idle, Locked, Full, Ready, TeamLimit }
 
     public sealed partial class RaidWorld
     {
@@ -33,12 +33,8 @@ namespace Raid
         {
             if(product==null || view==null || LocalProgress==null || TravelRemaining>0)return VendorAction.Idle;
             if(view.TechRank(product.id,"unlock")==0)return VendorAction.Locked;
-            if(TryGetRackParcel(diver.OwnerId,out _,out _,out bool resting))
-                return resting?VendorAction.CollectParcel:VendorAction.Dispensing;
             if(TechRig.HasTeamLimit(product.id) && VendorIssuedCount(product.id)>=TechRig.TotalLimit(view,product))return VendorAction.TeamLimit;
-            var pockets=diver.GetComponent<HarpoonTool>();
-            return pockets && pockets.FindInventionPocket(product.id,view.TechStackLimit(product.id))>=0 ?
-                VendorAction.Ready:VendorAction.Full;
+            return HasRoomForRackOrder(diver,view,product.id)?VendorAction.Ready:VendorAction.Full;
         }
     }
 }

@@ -30,6 +30,7 @@ namespace Raid
         readonly RaycastHit[] parcelHits=new RaycastHit[12];
         readonly Dictionary<int,Transform> parcelModels=new();
         readonly List<int> obsoleteParcels=new();
+        readonly TechSlot[] plannedRackPockets=new TechSlot[TechSlot.PocketCount];
         int vendingSequence;
         public int RackParcelCount => vendingParcels.Count;
         internal int VendorIssuedCount(string kind) => issuedInventions.TryGetValue(kind,out int count)?count:0;
@@ -80,15 +81,50 @@ namespace Raid
         {
             for(int i=orders.Count-1;i>=0;i--)if(orders[i].parcel.owner==owner)RemoveOrder(i);
         }
+
+        bool HasRoomForRackOrder(DiverMotor diver,TeamProgress state,string kind)
+        {
+            var tool=diver.GetComponent<HarpoonTool>();
+            int limit=state.TechStackLimit(kind);
+            if(!tool || tool.FindInventionPocket(kind,limit)<FirstCargoSlot)return false;
+            int slots=tool.SlotCount-FirstCargoSlot;
+            for(int pocket=0;pocket<slots;pocket++)
+            {
+                int slot=FirstCargoSlot+pocket;
+                var item=tool.InventionInSlot(slot);
+                if(item.count==0 && !tool.CanFitInvention(slot,kind,limit))item.count=-1;
+                plannedRackPockets[pocket]=item;
+            }
+
+            // Account for orders from this diver before accepting one more click. A pending
+            // stack occupies the same pockets as collected stock, even for mixed purchases.
+            foreach(var parcel in vendingParcels)
+            {
+                if(parcel.owner!=diver.OwnerId)continue;
+                int reserved=FindPlannedRackPocket(slots,parcel.kind,state.TechStackLimit(parcel.kind));
+                if(reserved>=0)
+                    plannedRackPockets[reserved]=new TechSlot{kind=parcel.kind,count=plannedRackPockets[reserved].count+1};
+            }
+            return FindPlannedRackPocket(slots,kind,limit)>=0;
+        }
+
+        int FindPlannedRackPocket(int slots,string kind,int limit)
+        {
+            int empty=-1;
+            for(int pocket=0;pocket<slots;pocket++)
+            {
+                var stack=plannedRackPockets[pocket];
+                if(stack.count>0 && stack.kind==kind && stack.count<limit)return pocket;
+                if(stack.count==0 && empty<0)empty=pocket;
+            }
+            return empty;
+        }
+
         void LaunchRackParcel(DiverMotor diver,string kind)
         {
-            foreach(var previous in orders)if(previous.parcel.owner==diver.OwnerId)
-            {
-                if(previous.parcel.resting)SkillReply(diver.Owner,false,"Заберите предмет с пола или дождитесь его возврата");
-                return;
-            }
-            var start=inventionRack.TransformPoint(new Vector3(-.12f,-.55f,.34f));
-            var target=diver.transform.position+Vector3.up*.79f-diver.transform.right*.18f;
+            float lane=(vendingSequence%3-1)*.055f;
+            var start=inventionRack.TransformPoint(new Vector3(-.12f+lane,-.55f,.34f));
+            var target=diver.transform.position+Vector3.up*.79f+diver.transform.right*(-.18f+lane);
             float flight=Mathf.Max(.45f,tuning.dispenserFlightSeconds);
             var order=new RackOrder
             {
@@ -182,7 +218,17 @@ namespace Raid
         internal bool LookAtOwnParcel(DiverMotor diver,out int id)
         {
             id=0;
-            return diver && TryGetRackParcel(diver.OwnerId,out id,out var position,out bool resting) && resting && AimAtParcel(diver,position,true);
+            if(!diver)return false;
+            float best=float.PositiveInfinity;
+            foreach(var parcel in vendingParcels)
+            {
+                if(parcel.owner!=diver.OwnerId || !parcel.resting || !AimAtParcel(diver,parcel.position,true))continue;
+                float distance=(diver.transform.position-parcel.position).sqrMagnitude;
+                if(distance>=best)continue;
+                best=distance;
+                id=parcel.serial;
+            }
+            return id!=0;
         }
         internal void CollectRackParcel(DiverMotor diver,int serial)
         {

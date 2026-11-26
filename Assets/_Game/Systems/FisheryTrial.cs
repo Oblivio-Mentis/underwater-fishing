@@ -436,7 +436,7 @@ namespace Raid
             report.netCatch=id;
             var vacuum=Stage("vacuum",ground);
             host.Teleport(ground+Vector3.back*6);peer.Teleport(ground+Vector3.right*6);
-            id=FishAt(vacuum.position+Vector3.up*.22f+Vector3.left*.1f);
+            id=FishAt(vacuum.position+Vector3.up*TechRigShell.VacuumInletHeight+Vector3.left*.1f);
             for(int i=0;i<30 && vacuum.contents.Count==0;i++)world.TrialTickIndustry(vacuum,.1f);
             Check(vacuum.contents.Any(c=>c.id==id) && !sample.IsFreeSwimming && vacuum.operatorId<0 && vacuum.helperId<0,
                 "the installed vacuum captures a real fish at its intake with no operators nearby");

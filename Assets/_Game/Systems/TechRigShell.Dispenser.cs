@@ -22,7 +22,7 @@ namespace Raid
                 {
                     var m=parts[i];int first=vertices.Count;
                     Vector3 offset=i==1 && kind=="cage"?new Vector3(0,.48f,-.65f):i==2?
-                        (kind=="charge"?new Vector3(0,.135f,0):kind=="cage"?new Vector3(.6f,.53f,-.62f):new Vector3(0,.29f,0)):Vector3.zero;
+                        BeaconOrigin(kind):Vector3.zero;
                     foreach(var v in m.vertices)vertices.Add(v+offset);
                     uv.AddRange(m.uv);
                     for(int sub=0;sub<m.subMeshCount;sub++)foreach(int n in m.GetTriangles(sub))indices[sub].Add(first+n);
@@ -253,17 +253,15 @@ namespace Raid
                 VendorAction.Locked => "Нужен чертёж",
                 VendorAction.Full => "Нет места",
                 VendorAction.TeamLimit => RaidWorld.VendorTeamLimitReason,
-                VendorAction.Dispensing => "Идёт выдача",
-                VendorAction.CollectParcel => "Заберите предмет с палубы",
                 _ => product==null?ReadyHint:"Ожидание"
             };
             status.color=receipt?Available:ActionColor();
             code.text=product!=null && codes.TryGetValue(product.id,out var cell)?cell:"ГОТОВ";
         }
         Color ActionColor() => action switch {
-            VendorAction.Ready or VendorAction.Dispensing => Available,
+            VendorAction.Ready => Available,
             VendorAction.Full or VendorAction.TeamLimit => Full,
-            VendorAction.Locked or VendorAction.CollectParcel => Locked,
+            VendorAction.Locked => Locked,
             _ => Color.white
         };
 

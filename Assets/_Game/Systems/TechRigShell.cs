@@ -247,20 +247,7 @@ namespace Raid
                     foreach(int s in new[]{-1,1}){p.Box(new(s*.17f,0,.19f),new(.13f,.14f,.5f),5);p.Box(new(s*.17f,0,.44f),new(.13f,.14f,.09f),1);}
                     break;
                 case "vacuum":
-                    Skids(p,.33f,.37f);
-                    p.Tube(new(0,-.24f,0),new(0,-.02f,0),.27f,.31f,3,18);
-                    p.Tube(new(0,-.03f,0),new(0,.09f,0),.26f,.23f,0,18);
-                    p.Ring(new(0,.03f,0),.309f,.309f,.028f,2,24);
-                    p.Ring(new(0,.24f,0),.314f,.314f,.037f,1,24);
-                    p.Ring(new(0,.18f,0),.225f,.225f,.021f,4,20);
-                    for(int i=0;i<12;i++)
-                    {
-                        float a=i*Mathf.PI/6;
-                        var rim=new Vector3(Mathf.Cos(a)*.31f,0,Mathf.Sin(a)*.31f);
-                        p.Rod(rim*.90f+Vector3.up*.04f,rim+Vector3.up*.24f,.024f,i%3==0?2:1);
-                        p.Rod(rim*.76f+Vector3.up*.19f,rim*.21f+Vector3.up*.095f,.018f,3);
-                    }
-                    p.Box(new(0,-.16f,-.32f),new(.28f,.23f,.13f),2);
+                    VacuumHousing(p);
                     break;
                 case "mail":
                     Skids(p,.32f,.39f);Drum(p,.04f,-.12f,.24f,.27f);
@@ -316,7 +303,7 @@ namespace Raid
                 if(i==3){occupant=child.transform;captiveMesh=child.GetComponent<MeshFilter>();occupant.gameObject.SetActive(false);}
             }
             if(kind=="cage")drive.localPosition=new Vector3(0,.48f,-.65f);
-            lamp.localPosition=kind=="charge"?new(0,.135f,0):kind=="cage"?new(.6f,.53f,-.62f):new(0,.29f,0);
+            lamp.localPosition=BeaconOrigin(kind);
             sound=gameObject.AddComponent<AudioSource>();sound.spatialBlend=1;sound.minDistance=2;sound.maxDistance=18;sound.playOnAwake=false;
             if(!click)click=Tone("Защёлка",160,.08f);if(!chirp)chirp=Tone("Сигнал",740,.15f);
         }
@@ -360,8 +347,17 @@ namespace Raid
                 occupant.localRotation=Quaternion.Euler(0,Mathf.Sin(Time.time*4)*14,0);
             }
             else if(busy)drive.Rotate(Vector3.right,Time.deltaTime*100,Space.Self);
+            if(model=="vacuum")DisplayVacuumSchool(rig);
             lamp.gameObject.SetActive(snap || (!busy && light<3) || Mathf.Sin(Time.time*(light==3?9:rig.mode=="fuse"?17:4)+rig.serial)>-.5f);
         }
+
+        static Vector3 BeaconOrigin(string kind) => kind switch
+        {
+            "cage"=>new(.6f,.53f,-.62f),
+            "charge"=>new(0,.135f,0),
+            "vacuum"=>new(.48f,.92f,0),
+            _=>new(0,.29f,0)
+        };
 
         public void FollowCharge(Vector3 point,Vector3 velocity,bool snap)
         {

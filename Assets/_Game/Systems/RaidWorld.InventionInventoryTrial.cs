@@ -122,9 +122,11 @@ namespace Raid
             var balance=team.Treasury;
             async Awaitable Aim(string kind)
             {
-                host.LookAtConsole(RackProductPosition(kind));
-                await WaitRackUi(()=>RackAimForTrial(host,true)==kind && RackAimForTrial(host,false)==kind,
-                    "camera and authoritative crosshair both point at "+kind);
+                await WaitRackUi(()=>
+                {
+                    host.LookAtConsole(RackProductPosition(kind));
+                    return RackAimForTrial(host,true)==kind && RackAimForTrial(host,false)==kind;
+                },"camera and authoritative crosshair both point at "+kind);
                 await Awaitable.WaitForSecondsAsync(.12f);
             }
             async Awaitable ReadProduct(string kind,string expectedStatus)
@@ -165,11 +167,6 @@ namespace Raid
                     await Awaitable.WaitForSecondsAsync(.08f);
                 }
                 finally{InputSystem.QueueStateEvent(pointer,new MouseState{position=pos});}
-                if(!RackParcelInFlight(kind) && Application.isBatchMode)
-                {
-                    if(!UiRoot.Instance.QaClickReticle())throw new InvalidOperationException("Physical pointer did not accept "+kind);
-                    report.backgroundInputRoutes.Add("Rack click via the physical reticle handler: "+kind);
-                }
                 await WaitRackUi(()=>RackParcelInFlight(kind),"actual "+kind+" case left the vendor chute");
             }
             report.phase="distance, cabinet and product checks";
@@ -484,6 +481,26 @@ namespace Raid
             int capacity=team.TechUnitCapacity("vacuum");
             await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
                 "the physical counter shows the replicated catch and capacity");
+            var counters=shell.GetComponentsInChildren<TMP_Text>();
+            foreach(var counter in counters)
+            {
+                var sampleCounter=Instantiate(counter);
+                sampleCounter.transform.position=Vector3.up*1000;
+                try
+                {
+                    sampleCounter.text=capacity+" / "+capacity;
+                    sampleCounter.ForceMeshUpdate();
+                    report.Check(sampleCounter.textInfo.characterCount==sampleCounter.text.Length &&
+                        sampleCounter.GetRenderedValues(true).x<=sampleCounter.rectTransform.rect.width+.005f,
+                        "Both digits of a full counter fit inside its physical display.");
+                }
+                finally{Destroy(sampleCounter.gameObject);}
+            }
+            var inCage=shell.GetComponentsInChildren<CatchFishModel>().Single(model=>model.CargoId==idAtIntake);
+            var swimStart=inCage.transform.localPosition;
+            await Awaitable.WaitForSecondsAsync(.22f);
+            report.Check((swimStart-inCage.transform.localPosition).magnitude>.025f,
+                "The captured specimen swims visibly inside the collector cage.");
             vacuum.timer=20;
             var releasedCatch=vacuum.contents[0].id;
             int beforePickup=vacuum.contents.Count;
@@ -500,7 +517,34 @@ namespace Raid
                 "ordinary LMB delivers exactly one catch into the owned inventory");
             await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
                 "counter decremented after the claim");
+            await WaitRackUi(()=>shell.GetComponentsInChildren<CatchFishModel>().All(model=>model.CargoId!=releasedCatch),
+                "the claimed fish left the collector cage on the same snapshot as the changed count");
             report.Check(true,"One click transfers one actual fish from the shared machine into the ordinary hotbar.");
+
+            report.phase="rapid vending clicks before the first parcel arrives";
+            profile.pocketStacks[ballSlot-2]=default;
+            SendProfile(host.Owner,profile);
+            Publish();
+            host.Teleport(rack.position+rack.forward*1.77f+rack.right*.23f-Vector3.up*.65f);
+            await WaitRackUi(()=>host.IsInside && gear.InventionInSlot(ballSlot).count==0,"only one free pocket at the cabinet");
+            await Aim("charge");
+            await ReadProduct("charge","ЛКМ · Получить");
+            int firstSerial=vendingSequence, peakOrders=0;
+            for(int click=0;click<5;click++)
+            {
+                InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mouse.position.ReadValue()});
+                await Awaitable.WaitForSecondsAsync(.052f);
+                peakOrders=Mathf.Max(peakOrders,vendingParcels.Count(parcel=>parcel.owner==host.OwnerId));
+                InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});
+                await Awaitable.WaitForSecondsAsync(.048f);
+            }
+            report.Check(peakOrders>=2,"Repeated clicks launched multiple real parcels before the previous one arrived.");
+            if(RackParcelInFlight("charge"))await CaptureRackUi(folder,"15-vendor-burst.png",.02f);
+            int chargeStack=team.TechStackLimit("charge");
+            await WaitRackUi(()=>RackParcelCount==0 && gear.InventionInSlot(ballSlot).kind=="charge" &&
+                gear.InventionInSlot(ballSlot).count==chargeStack,"all reserved orders were collected");
+            report.Check(vendingSequence==firstSerial+chargeStack && gear.CatchIdInSlot(trapSlot)==releasedCatch &&
+                gear.InventionInSlot(otherSlot).kind==other,"Fast clicks filled exactly one stack without overselling space or disturbing other pockets.");
         }
 
         async Awaitable CaptureRackUi(string folder,string name,float settle=.25f)

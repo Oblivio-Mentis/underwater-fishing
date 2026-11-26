@@ -15,10 +15,11 @@ namespace Raid
     public sealed partial class RaidWorld
     {
         readonly Dictionary<int,float> rigRequests=new();
-        bool RigRequest(DiverMotor diver)
+        bool RigRequest(DiverMotor diver,bool throttle=true)
         {
             if(!IsServerInitialized || team==null || saveFailed || transitionRemaining>0 || !diver || diver.IsHelpless ||
                diver.Owner?.IsAuthenticated!=true || diver.Owner.FirstObject!=diver.NetworkObject) return false;
+            if(!throttle)return true;
             if(rigRequests.TryGetValue(diver.OwnerId,out float previous) && Time.unscaledTime-previous<.18f)return false;
             rigRequests[diver.OwnerId]=Time.unscaledTime;
             return true;
@@ -67,7 +68,7 @@ namespace Raid
             return null;
         }
         static bool Heavy(TechRig rig) => rig.kind is "cage" or "net" or "winch" or "vacuum" || rig.contents.Count>2;
-        static float Footprint(string kind) => kind=="cage"?.82f:kind is "farm" or "robot"?.55f:kind=="charge"?.14f:.38f;
+        static float Footprint(string kind) => kind is "cage" or "vacuum"?.82f:kind is "farm" or "robot"?.55f:kind=="charge"?.14f:.38f;
         internal void UseTechnology(DiverMotor diver,int serial,string action)
         {
             if(!RigRequest(diver))return;
