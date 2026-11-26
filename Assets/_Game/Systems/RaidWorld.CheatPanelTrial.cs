@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Raid.UI;
 using TMPro;
 using UnityEngine;
@@ -19,7 +18,7 @@ namespace Raid
         [Serializable] sealed class CheatUiReport
         {
             public string status="running",phase,error,resource,fish;
-            public int granted,stocked,inputSystemEdits,nativeGuiEdits;
+            public int granted,stocked,inputSystemEdits,focusedTmpEdits;
             public float focusedTravel;
             public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
             public float embeddedDepth,observedClearOffset,restoredClearOffset,reverseTravel;
@@ -115,17 +114,6 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.13f);
         }
 
-        // TMP's desktop input field consumes native GUI events in OnUpdateSelected.
-        // Headless Input System keyboards can update gameplay while producing no legacy GUI events.
-        static readonly MethodInfo queueCheatGuiEvent=typeof(Event).GetMethod("QueueEvent",
-            BindingFlags.Static|BindingFlags.NonPublic,null,new[]{typeof(Event)},null);
-
-        static void QueueCheatGuiKey(KeyCode key,char character,EventModifiers modifiers=EventModifiers.None)
-        {
-            if(queueCheatGuiEvent==null)throw new MissingMethodException("UnityEngine.Event.QueueEvent");
-            queueCheatGuiEvent.Invoke(null,new object[]{new Event{type=EventType.KeyDown,keyCode=key,character=character,modifiers=modifiers}});
-        }
-
         static bool CheatFieldFocused(TMP_InputField field) =>
             field && field.isFocused && EventSystem.current && EventSystem.current.currentSelectedGameObject==field.gameObject;
 
@@ -144,9 +132,12 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.10f);
             if(!expected())
             {
-                QueueCheatGuiKey(keyCode,character,control?EventModifiers.Control:EventModifiers.None);
+                // Batch players can process movement without receiving a desktop text event.
+                if(!CheatFieldFocused(field))throw new InvalidOperationException("Lost keyboard focus on "+key);
+                field.ProcessEvent(new Event{type=EventType.KeyDown,keyCode=keyCode,character=character,
+                    modifiers=control?EventModifiers.Control:EventModifiers.None});
                 await AwaitCheatUi(expected,"TMP handles "+keyCode+" (current amount '"+field.text+"')",2);
-                report.nativeGuiEdits++;
+                report.focusedTmpEdits++;
             }
             else if(!already)report.inputSystemEdits++;
             if(!CheatFieldFocused(field))throw new InvalidOperationException("Quantity lost keyboard focus on "+key);
@@ -210,7 +201,6 @@ namespace Raid
             {
                 InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState(Key.W));
                 InputSystem.QueueTextEvent(TrialKeyboard,'w');
-                QueueCheatGuiKey(KeyCode.W,'w');
                 await Awaitable.WaitForSecondsAsync(.6f);
             }
             finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
