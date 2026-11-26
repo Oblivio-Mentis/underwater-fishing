@@ -50,6 +50,7 @@ namespace Raid
 
         void OpenInventionInventory(bool rack)
         {
+            UiRoot.Instance?.CloseCheats();
             SkillResponded+=InventoryResponse;
             inventoryNotice=null;
             inventoryPanel=rack?InventoryPanel.Rack:InventoryPanel.Backpack;

@@ -52,6 +52,9 @@ namespace Raid.UI
         TerminalView terminal;
         CargoView cargo;
         SkillTreeView skills;
+        CheatPanel cheats;
+        int ignoreWorldPointerThroughFrame = -1;
+        internal bool CheatsOpen => cheats?.IsOpen == true;
         internal bool TechnologyOpen => skills?.TechnologyOpen==true;
         CanvasGroup[] modalGroups;
         GameObject cancelConfirmationButton;
@@ -150,6 +153,7 @@ namespace Raid.UI
         void CancelConfirmation() { confirmAction=null;confirmation.gameObject.SetActive(false);foreach(var group in modalGroups)group.interactable=true;if(Page==UiPage.None)Context.SelectedConsole=null;UiInputGate.ResumeAt=Time.unscaledTime+.15f;SetCursor(); }
         public void ShowPage(UiPage value)
         {
+            if (value != UiPage.None && CheatsOpen) CloseCheats();
             if(value==UiPage.Settings && Page!=UiPage.Settings)settingsBack=Page;
             if(value==UiPage.Crew && Page!=UiPage.Crew)crewBack=Page==UiPage.None?UiPage.Pause:Page;
             if(!Context.Connected && value==UiPage.None)value=UiPage.Main;
@@ -215,10 +219,10 @@ namespace Raid.UI
                 inputModule.cursorLockBehavior=computerSurface?InputSystemUIInputModule.CursorLockBehavior.ScreenCenter:InputSystemUIInputModule.CursorLockBehavior.OutsideScreen;
                 inputModule.enabled=Application.isFocused&&!overlay&&!computerSurface;
             }
-            if(EventSystem.current!=null)EventSystem.current.sendNavigationEvents=!computerSurface;
+            if(EventSystem.current!=null)EventSystem.current.sendNavigationEvents=!computerSurface && !CheatsOpen;
             UiInputGate.MonitorLook=computerSurface && !overlay;
             UiInputGate.Modal=(!computerSurface && Page!=UiPage.None) || confirmation.gameObject.activeSelf || overlay;
-            bool locked=Context.Connected && (!UiInputGate.Modal || UiInputGate.MonitorLook) && Application.isFocused;
+            bool locked=Context.Connected && !CheatsOpen && (!UiInputGate.Modal || UiInputGate.MonitorLook) && Application.isFocused;
             Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;
         }
         void Update()
@@ -226,6 +230,23 @@ namespace Raid.UI
             if(menu==null)return;
             bool overlay=Context.Session!=null&&Context.Session.lobby!=null&&Context.Session.lobby.OverlayActive;
             if(overlay!=overlayBefore){overlayBefore=overlay;if(Context.Connected && Page==UiPage.None)ShowPage(UiPage.Pause);SetCursor();}
+            if (CheatsOpen && (!Context.Connected || Context.Player.IsHelpless)) CloseCheats();
+            if (Application.isFocused && !overlay && Keyboard.current?.xKey.wasPressedThisFrame == true &&
+                Context.Connected && Context.World != null && !Context.Player.IsHelpless && (Page == UiPage.None || computerSurface) &&
+                !confirmation.gameObject.activeSelf)
+            {
+                if (CheatsOpen) CloseCheats();
+                else
+                {
+                    if (Context.World.InventionPanelOpen) Context.World.CloseInventionInventory();
+                    if (computerSurface) ClosePanel();
+                    CancelBallGesture();
+                    cheats ??= new CheatPanel(this);
+                    cheats.Open(Context.Player);
+                    EventSystem.current?.SetSelectedGameObject(null);
+                    SetCursor();
+                }
+            }
             if(Application.isFocused && !overlayBefore && Context.World?.InventionPanelOpen!=true && Time.unscaledTime>=UiInputGate.ResumeAt && Keyboard.current!=null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 if(confirmation.gameObject.activeSelf)CancelConfirmation();
@@ -239,8 +260,18 @@ namespace Raid.UI
             bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true &&
                 Context.World?.InventionPanelOpen!=true && Context.World?.InventionRackTargeted(Context.Player)!=true &&
                 Context.World?.LookAtOwnParcel(Context.Player,out _)!=true;
-            bool consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
-                mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
+            bool consumed=false;
+            if (CheatsOpen || Time.frameCount <= ignoreWorldPointerThroughFrame)
+            {
+                UiInputGate.PointerReserved = true;
+                aimedPad = null;
+                AimedCargoDispatch = false;
+            }
+            else
+            {
+                consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
+                    mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
+            }
             skills.Animate(Time.unscaledDeltaTime);
             if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None)Interact();
             if(Time.unscaledTime>=nextRefresh)
@@ -265,6 +296,7 @@ namespace Raid.UI
                 UiInputGate.AllowAssist=Context.Interaction==UiInteraction.Assist;
                 if(connected)
                 {
+                    if (CheatsOpen) cheats.Refresh();
                     if(((Page==UiPage.Terminal || Page==UiPage.SkillTree) && !Context.NearTerminal)||(Page==UiPage.Cargo && !Context.NearCargo))ShowPage(UiPage.None);
                     bool pulled=Context.Harpoon!=null&&Context.Harpoon.IsPulled;
                     if(pulled&&!wasPulled&&Page!=UiPage.None)Toast("Напарник тянет вас к себе. R — отцепиться");
@@ -284,6 +316,14 @@ namespace Raid.UI
             if(saveSettingsAt>=0 && Time.unscaledTime>=saveSettingsAt){saveSettingsAt=-1;Settings.Save();}
         }
         public Nereid.AirlockPad AimedPad => aimedPad;
+        internal void CloseCheats()
+        {
+            if (!CheatsOpen) return;
+            cheats.Close();
+            ignoreWorldPointerThroughFrame = Time.frameCount + 1;
+            EventSystem.current?.SetSelectedGameObject(null);
+            SetCursor();
+        }
         public bool AimedCargoDispatch { get; private set; }
 
         void CancelBallGesture()
@@ -547,6 +587,7 @@ namespace Raid.UI
         void OnDestroy()
         {
             if(Instance!=this)return;if(subscribedWorld!=null)subscribedWorld.CommandResponded-=OnCommandReply;
+            if(CheatsOpen)cheats.Close();
             if(hudOverlay!=null)Destroy(hudOverlay);
             processingReceipt?.Dispose();skills?.Close();Settings?.Save();UiInputGate.Reset();Instance=null;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;
         }

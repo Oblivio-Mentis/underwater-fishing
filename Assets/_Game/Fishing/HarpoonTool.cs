@@ -260,22 +260,23 @@ namespace Raid
             bool primaryPressed=controlling && _fire.WasPressedThisFrame();
             bool cargoConsumed=primaryPressed && ConsumeCargoPrimaryInput();
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
-            bool maySelect=gameplay && (!UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
+            bool cheatPointer = UI.CheatPanel.PointerActive;
+            bool maySelect=gameplay && (cheatPointer || !UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
             if (maySelect && !Motor.IsHelpless)
             {
                 for (int i = 0; i < _select.Length; i++)
                     if (_select[i].WasPressedThisFrame()) SelectSlot(i);
-                float wheel = _wheel.ReadValue<float>();
+                float wheel = cheatPointer ? 0 : _wheel.ReadValue<float>();
                 if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? SlotCount-1 : 1)) % SlotCount);
             }
             if (primaryPressed && !cargoConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !TetherActive) FireServer();
-            if (Application.isFocused && _release.WasPressedThisFrame() && (controlling || IsPulled)) ReleaseServer();
+            bool keyboardControls = controlling || (gameplay && cheatPointer);
+            if (Application.isFocused && _release.WasPressedThisFrame() && (keyboardControls || IsPulled)) ReleaseServer();
             if (Time.unscaledTime < _nextHeartbeat) return;
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
-            bool gripInput = _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist || AssistTarget != null)
-                || ActiveSlot == 1 && _fire.IsPressed();
             bool reel = controlling && !_primaryConsumedUntilRelease && ActiveSlot == 0 && _fire.IsPressed();
-            bool assist = controlling && gripInput;
+            bool assist = keyboardControls && _assist.IsPressed() && (!UI.UiInputGate.Active || UI.UiInputGate.AllowAssist || AssistTarget != null)
+                || controlling && ActiveSlot == 1 && _fire.IsPressed();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             if (!UI.UiInputGate.Blocked && !UI.UiInputGate.PointerReserved)
             {

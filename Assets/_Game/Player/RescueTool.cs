@@ -32,7 +32,8 @@ namespace Raid
         {
             if(!IsOwner || rescue==null || Time.unscaledTime<nextSend) return;
             nextSend=Time.unscaledTime+.1f;
-            bool held = Application.isFocused && Cursor.lockState==CursorLockMode.Locked && !UI.UiInputGate.Blocked && rescue.IsPressed();
+            bool held = Application.isFocused && (Cursor.lockState==CursorLockMode.Locked || UI.CheatPanel.PointerActive)
+                && !UI.UiInputGate.Blocked && rescue.IsPressed();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // In batch mode Unity cannot lock a desktop cursor. The probe supplies the duration of its F press.
             held |= Time.unscaledTime < qaKeyUntil && !UI.UiInputGate.Modal;
