@@ -31,13 +31,21 @@ namespace Raid
             IsClientInitialized && player && player.IsOwner && !player.IsHelpless && !player.IsTrapped &&
             RackFocused(player,true);
 
+        bool InventoryFocusAllowed()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if(rackUiFixture)return true;
+#endif
+            return Application.isFocused;
+        }
+
         bool InventoryContextAllowed()
         {
             var ui=UiRoot.Instance;
             return IsClientInitialized && localDiver && !localDiver.IsHelpless && !localDiver.IsTrapped &&
                 LocalProgress?.techSlots?.Length==4 && view!=null && TravelRemaining<=0 &&
                 (!ui || ui.Page==UiPage.None) && !UiInputGate.Modal && !UiInputGate.MonitorLook &&
-                Time.unscaledTime>=UiInputGate.ResumeAt && Application.isFocused;
+                Time.unscaledTime>=UiInputGate.ResumeAt && InventoryFocusAllowed();
         }
 
         void OpenInventionInventory(bool rack)
@@ -95,7 +103,7 @@ namespace Raid
             lastInventoryInputFrame=Time.frameCount;
             if(!InventionPanelOpen)
             {
-                if(UiInputGate.Blocked)return;
+                if(UiInputGate.Blocked && Application.isFocused)return;
                 if(keys.eKey.wasPressedThisFrame && !LookAtOwnParcel(localDiver,out _) && InventionRackTargeted(localDiver))OpenInventionInventory(true);
                 else if(keys.tabKey.wasPressedThisFrame)OpenInventionInventory(false);
                 return;
@@ -325,7 +333,7 @@ namespace Raid
             bool allowed=InventoryAction(out string label,out string reason);
             float buttonWidth=rack?138:206;
             var action=InventoryBox(panel,"Transfer",new Rect(16,height-53,buttonWidth,37),allowed?InventorySelected:InventoryRow);
-            InventoryText(action,label+"   ↵",new Rect(9,0,buttonWidth-14,37),15,allowed?UiTheme.Text:UiTheme.Muted);
+            InventoryText(action,label+"  Enter",new Rect(9,0,buttonWidth-14,37),15,allowed?UiTheme.Text:UiTheme.Muted);
             if(allowed)InventoryClick(action,InventoryAction);
             string note=notice??(!allowed?reason:rack?"Бесплатно  ·  удерживайте Enter":"←  →   выбрать слот");
             InventoryText(panel,note,new Rect(26+buttonWidth,height-60,width-buttonWidth-42,52),13,allowed?UiTheme.Muted:UiTheme.Amber,true);
