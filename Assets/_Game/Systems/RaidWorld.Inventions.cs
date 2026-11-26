@@ -46,18 +46,14 @@ namespace Raid
             bool replace=existing.Count>=TechRig.TotalLimit(team,def);
             var old=replace?existing.Find(r=>r.CanRecall):null;
             if(replace && old==null){SkillReply(diver.Owner,false,"Все экземпляры используются. Проверьте список установок.");return;}
-            var wallet=team.Treasury;
+            MaterialCost cost=default;
             if(id=="charge")
             {
-                var cost=new MaterialCost(tuning.chargeBiomass,0,tuning.chargeScrap,0);
-                if(!wallet.Covers(cost)){SkillReply(diver.Owner,false,"Для снаряжения заряда не хватает материалов");return;}
-                team.Treasury=wallet.Subtract(cost);
+                cost=new MaterialCost(tuning.chargeBiomass,0,tuning.chargeScrap,0);
+                if(!team.Treasury.Covers(cost)){SkillReply(diver.Owner,false,"Для снаряжения заряда не хватает материалов");return;}
             }
-            if(old!=null)team.rigs.Remove(old);
-            var issued=team.AddRig(id,diver.transform.position,diver.OwnerId);
-            if(!SaveTransaction())
+            if(!team.IssueRig(id,diver.transform.position,diver.OwnerId,old,cost,SaveTransaction))
             {
-                team.rigs.Remove(issued); if(old!=null)team.rigs.Add(old);team.Treasury=wallet;
                 SkillReply(diver.Owner,false,"Не удалось записать выдачу");return;
             }
             Publish();SkillReply(diver.Owner,true,"Выдано: "+def.title+" • под водой [T] установить");
@@ -158,21 +154,24 @@ namespace Raid
                 bool onboard=Vector3.Distance(r.position,CargoLoadingPosition)<=tuning.interactionRange;
                 if(onboard)
                 {
-                    while(r.contents.Count>0 && team.LoadCargo(r.contents[0],progression))r.contents.RemoveAt(0);
+                    int moved=team.SettleRigCargo(r,progression,false,SaveTransaction);
+                    if(moved==0){SkillReply(diver.Owner,false,"Разгрузка не завершена. Проверьте грузовую клеть и сохранение");return;}
                     if(r.contents.Count>0){SkillReply(diver.Owner,false,"Клеть занята или заполнена");}
-                    if(r.contents.Count==0 && r.kind=="basket")team.rigs.Remove(r);
-                    if(r.contents.Count==0 && r.mode=="captured")r.mode="placed";
                 }
                 else if(r.kind!="cage" && r.kind!="basket" && !Engaged(who) && diver.GetComponent<HarpoonTool>()?.HandsFull!=true &&
                     team.rigs.FindAll(x=>x.kind=="basket").Count<tuning.maxSampleBaskets)
                 {
-                    var basket=team.AddRig("basket",diver.transform.position,who);
-                    int count=Mathf.Min(tuning.sampleBasketCapacity,r.contents.Count);
-                    basket.contents.AddRange(r.contents.GetRange(0,count));r.contents.RemoveRange(0,count);
+                    if(!team.PackRigBasket(r,tuning.sampleBasketCapacity,diver.transform.position,who,SaveTransaction))
+                    {SkillReply(diver.Owner,false,"Не удалось записать передачу улова");return;}
                 }else return;
+                Publish();return;
             }
-            else if(action=="repair" && r.health<1 && team.scrap>=tuning.rigRepairScrap)
-            {team.scrap-=tuning.rigRepairScrap;r.health=1;if(r.mode=="damaged")r.mode="placed";}
+            else if(action=="repair")
+            {
+                if(!team.RepairRig(r,tuning.rigRepairScrap,SaveTransaction))
+                {SkillReply(diver.Owner,false,"Ремонт не завершён. Проверьте состояние, материалы и сохранение");return;}
+                Publish();return;
+            }
             else if(action is "use" or "alternate")
             {
                 if(diver.IsInside || r.health<=0 || (r.mode=="carried" && !carried) || (!bound && Engaged(who)))return;

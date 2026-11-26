@@ -319,7 +319,7 @@ namespace Raid
             {
                 rig.timer=Mathf.Max(0,rig.timer-dt);
                 if(rig.timer>0)return;
-                IndustryManifest.Arrive(team,rig,progression);
+                IndustryManifest.Arrive(team,rig,progression,SaveTransaction);
                 if(rig.contents.Count==0)rig.flight="";
                 return;
             }

@@ -108,7 +108,7 @@ namespace Raid
 
         bool RobotUnload(TechRig rig)
         {
-            return IndustryManifest.Arrive(team,rig,progression)>0;
+            return IndustryManifest.Arrive(team,rig,progression,SaveTransaction)>0;
         }
 
         void TickWorkRobot(TechRig rig,float dt)
