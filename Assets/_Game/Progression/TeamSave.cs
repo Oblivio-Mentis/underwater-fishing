@@ -43,6 +43,12 @@ namespace Raid
                     throw new InvalidDataException("Save format or checksum mismatch.");
                 TeamProgress progress = JsonUtility.FromJson<TeamProgress>(envelope.payload);
                 if (progress == null) throw new InvalidDataException("Missing team progress.");
+                if(progress.schemaVersion==4)
+                {
+                    progress.techPurchases=new System.Collections.Generic.List<TechPurchase>();
+                    progress.rigs=new System.Collections.Generic.List<TechRig>();
+                    progress.schemaVersion=TeamProgress.CurrentSchema;
+                }
                 progress.Validate();
                 return progress;
             }

@@ -254,7 +254,7 @@ namespace Raid.UI
             yield return new WaitForSecondsRealtime(.25f);
             yield return Send("reticle_hover");
             yield return Wait("Both clients show the physical dial",()=>Remote()?.page=="SkillTree" &&
-                Ui.GetComponentsInChildren<SkillSectorButton>().Count(v=>v.IsActive())==8);
+                Ui.GetComponentsInChildren<SkillSectorButton>().Count(v=>v.IsActive())==SkillSectorGraphic.Sectors);
             var hostCamera=host.GetComponentInChildren<Camera>();
             Check("Monitor has no animation toggle",Ui.GetComponentsInChildren<UnityEngine.UI.Button>()
                 .All(button=>button.name!="ProgressionMotion"));

@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 namespace Raid.UI
 {
-    internal sealed class SkillTreeView
+    internal sealed partial class SkillTreeView
     {
         const float Width=1180, Height=810, GraphWidth=754, GraphHeight=564;
         const float TransitionSeconds=.48f, PurchaseSeconds=.38f;
@@ -44,7 +44,7 @@ namespace Raid.UI
         readonly CanvasGroup overviewGroup, detailGroup;
         readonly TMP_Text section, stageTitle, title, scope, description, before, after, note, response;
         readonly TMP_Text[] treasury, costs, requirements=new TMP_Text[3];
-        readonly Sector[] sectors=new Sector[SkillTreeDefinition.BranchCount];
+        readonly Sector[] sectors=new Sector[SkillSectorGraphic.Sectors];
         readonly Sprite[] sprites=new Sprite[SkillTreeDefinition.BranchCount];
         readonly Card[] cards=new Card[SkillTreeDefinition.NodesPerBranch];
         readonly Button buy;
@@ -81,7 +81,7 @@ namespace Raid.UI
             Place(overview,0,94,1176,662);
             overview.gameObject.AddComponent<RectMask2D>();
             overviewGroup=overview.gameObject.AddComponent<CanvasGroup>();
-            dial=UiKit.Node(overview,"Eight directions");
+            dial=UiKit.Node(overview,"Progression dial");
             UiKit.Place(dial,Center,Center,Vector2.zero,new(622,622));
             sectorAtlas=Resources.Load<Texture2D>("NereidProgression/Sectors");
             DrawOverview();
@@ -148,6 +148,7 @@ namespace Raid.UI
 
             Label(detail,"Graph controls",20,628,750,29,"ЛКМ — выбор   ·   ПКМ — покупка   ·   Колесо — масштаб   ·   ЛКМ на поле — сдвиг",18,Muted);
             response=Label(surface,"Purchase reply",24,762,1128,35,"",20,Ink,true);
+            BuildTechnologyPage(surface);
             ResetMode();
             Root.gameObject.SetActive(false);
         }
@@ -156,10 +157,10 @@ namespace Raid.UI
         {
             for(int i=0;i<sectors.Length;i++)
             {
-                var info=SkillTreeDefinition.Branches[i];
-                int index=info.Index;
-                Vector2 axis=SkillBoardMesh.At(index*45);
-                Color accent=index>=3 && index<=6?Amber:Cyan;
+                int index=i;
+                bool workshop=index==SkillTreeDefinition.BranchCount;
+                Vector2 axis=SkillBoardMesh.At(index*SkillSectorGraphic.Spacing);
+                Color accent=workshop?TechGreen:index>=3 && index<=6?Amber:Cyan;
                 var container=UiKit.Node(dial,"Sector"+index);
                 UiKit.Place(container,Center,Center,Vector2.zero,new(622,622));
                 var face=container.gameObject.AddComponent<SkillSectorGraphic>();
@@ -168,18 +169,18 @@ namespace Raid.UI
                 click.Face=face;
                 click.targetGraphic=face;
                 click.transition=Selectable.Transition.None;
-                click.onClick.AddListener(()=>ChangeBranch(index));
-                var icon=CenterIcon(container,"Direction icon",68);
-                icon.sprite=SectorArt(index);
+                click.onClick.AddListener(()=>{if(workshop)OpenTechnology();else ChangeBranch(index);});
+                var icon=CenterIcon(container,"Direction icon",58);
+                icon.sprite=workshop?DiveInstruments.Art(DiveInstruments.Mark.Wrench):SectorArt(index);
                 icon.color=Color.white;
-                UiKit.Place(icon.rectTransform,Center,Center,axis*216+Vector2.up*28,new(68,68));
+                UiKit.Place(icon.rectTransform,Center,Center,axis*222+Vector2.up*26,new(58,58));
                 TMP_Text Centered(string name,Vector2 point,Vector2 size,string caption,int font,Color tint)
                 {
                     var label=Label(container,name,0,0,size.x,size.y,caption,font,tint,true);
                     UiKit.Place(label.rectTransform,Center,Center,point,size);
                     return label;
                 }
-                Centered("Direction",axis*216-Vector2.up*16,new(150,30),info.ShortName,23,Ink);
+                Centered("Direction",axis*222-Vector2.up*14,new(144,30),workshop?"Технологии":SkillTreeDefinition.Branches[i].ShortName,22,Ink);
                 var count=Centered("Owned direction ranks",axis*216-Vector2.up*46,new(80,24),"",19,accent);
                 sectors[index]=new Sector { Face=face, Count=count };
             }
@@ -242,6 +243,7 @@ namespace Raid.UI
 
         internal bool Back()
         {
+            if(technologyPage.gameObject.activeSelf){ResetMode();return true;}
             if(transition<1)return true;
             if(branch<0)return false;
             ChangeBranch(-1);
@@ -253,6 +255,7 @@ namespace Raid.UI
             branch=targetBranch=-1;
             transition=1;
             selected=SkillId.None;
+            technologyPage.gameObject.SetActive(false);
             overview.gameObject.SetActive(true);
             detail.gameObject.SetActive(false);
             overviewGroup.alpha=1;
@@ -268,7 +271,7 @@ namespace Raid.UI
             if(transition<1 || branch==index)return;
             targetBranch=index;
             transition=0;
-            overviewFocus=SkillBoardMesh.At(45*(index>=0?index:branch))*216;
+            overviewFocus=SkillBoardMesh.At(SkillSectorGraphic.Spacing*(index>=0?index:branch))*216;
             overviewGroup.blocksRaycasts=false;
             detailGroup.blocksRaycasts=false;
             if(index>=0)
@@ -536,6 +539,7 @@ namespace Raid.UI
             Subscribe(app.Context.World);
             var profile=subscribed?.LocalProgress;
             var team=app.Context.View;
+            if(technologyPage.gameObject.activeSelf && team!=null)RefreshTechnology(team);
             int p=profile?.revision??-1, t=team?.teamRevision??-1;
             var money=team?.Treasury??default;
             if(pending!=SkillId.None)
@@ -586,11 +590,17 @@ namespace Raid.UI
                 var item=SkillTreeDefinition.Get(id);
                 if(item!=null)count[item.Branch]++;
             }
-            for(int i=0;i<sectors.Length;i++)
+            for(int i=0;i<count.Length;i++)
             {
                 sectors[i].Face.SetProgress(count[i]/(float)SkillTreeDefinition.NodesPerBranch);
                 UiKit.Set(sectors[i].Count,count[i]+" / "+SkillTreeDefinition.NodesPerBranch);
             }
+            var team=app.Context.View;
+            int opened=0;
+            foreach(var item in TechCatalog.Items)if((team?.TechRank(item.id,"unlock")??0)>0)opened++;
+            var inventions=sectors[SkillTreeDefinition.BranchCount];
+            inventions.Face.SetProgress(opened/(float)TechCatalog.Items.Length);
+            UiKit.Set(inventions.Count,opened+" / "+TechCatalog.Items.Length);
         }
 
         void DisplayCard(Card card,MaterialCost money)
@@ -688,6 +698,14 @@ namespace Raid.UI
 
         void OnReply(bool success,string explanation)
         {
+            if(technologyPage.gameObject.activeSelf)
+            {
+                techRequestUntil=0;
+                shownTechView=null;
+                ShowResponse(explanation,success);
+                Refresh();
+                return;
+            }
             if(pending==SkillId.None)return;
             approved=success;
             if(!success)pending=SkillId.None;
