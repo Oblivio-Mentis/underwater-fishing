@@ -232,7 +232,12 @@ namespace Raid
             if (pair==null)
             {
                 rig.timer-=dt;
-                if (rig.timer<=0) {ThreatDirector.ReportStruggle(center);rig.timer=IndustryPeriod(rig)/Mathf.Max(.1f,IndustryValue(rig,"select"));}
+                if (rig.timer<=0)
+                {
+                    ThreatDirector.ReportStruggle(center);
+                    AnnounceRigPulse(center,2);
+                    rig.timer=IndustryPeriod(rig)/Mathf.Max(.1f,IndustryValue(rig,"select"));
+                }
             }
         }
 
@@ -247,7 +252,7 @@ namespace Raid
             float capacity=IndustryCapacity(rig);
             if(rig.air<0)rig.air=capacity;
             float r=IndustryRadius(rig);
-            if(IndustryUnlocked(rig,"quality") && rig.position.y> -IndustrialSettings.regenerationDepth)
+            if(IndustryUnlocked(rig,"quality") && rig.depth==1 && rig.position.y> -IndustrialSettings.regenerationDepth)
                 rig.air=Mathf.Min(capacity, rig.air + dt*IndustrialSettings.airRegeneration);
             bool automatic=IndustryUnlocked(rig,"auto");
             var pump=IndustryDiver(rig.operatorId);
