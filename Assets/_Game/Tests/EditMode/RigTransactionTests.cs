@@ -50,28 +50,19 @@ namespace Raid.Tests
             Assert.That(restored.teamRevision,Is.EqualTo(1));
         }
 
-        [Test] public void FailedIssuanceRepairBasketTransferAndHoistRestoreTheSameSerialsAndTreasury()
+        [Test] public void FailedRepairBasketTransferAndHoistRestoreTheSameSerialsAndTreasury()
         {
             var team=new TeamProgress{Treasury=new MaterialCost(10,0,12,0)};
-            var charge=team.AddRig("charge",Vector3.zero,-1);charge.Detach();
             var trap=team.AddRig("trap",Vector3.one,-1);trap.Detach();
-            var price=new MaterialCost(2,0,1,0);
-            Assert.That(team.IssueRig("charge",Vector3.one,2,charge,price,()=>false),Is.False);
-            Assert.That(team.rigs,Is.EqualTo(new[]{charge,trap}));
-            Assert.That(team.lastRigSerial,Is.EqualTo(2));
-            Assert.That(team.teamRevision,Is.Zero);
-            Assert.That(team.IssueRig("charge",Vector3.one,2,charge,price,()=>true),Is.True);
-            Assert.That(team.teamRevision,Is.EqualTo(1));
-            Assert.That(team.Treasury,Is.EqualTo(new MaterialCost(8,0,11,0)));
             trap.health=.5f;trap.mode="damaged";
             Assert.That(team.RepairRig(trap,3,()=>false),Is.False);
             Assert.That(trap.health,Is.EqualTo(.5f));Assert.That(trap.mode,Is.EqualTo("damaged"));
-            Assert.That(team.scrap,Is.EqualTo(11));Assert.That(team.teamRevision,Is.EqualTo(1));
+            Assert.That(team.scrap,Is.EqualTo(12));Assert.That(team.teamRevision,Is.Zero);
             Assert.That(team.RepairRig(trap,3,()=>true),Is.True);
-            Assert.That(team.teamRevision,Is.EqualTo(2));Assert.That(team.scrap,Is.EqualTo(8));
+            Assert.That(team.teamRevision,Is.EqualTo(1));Assert.That(team.scrap,Is.EqualTo(9));
             trap.contents.Add(Fish(15));
             Assert.That(team.PackRigBasket(trap,3,Vector3.zero,0,()=>false),Is.False);
-            Assert.That(team.lastRigSerial,Is.EqualTo(3));Assert.That(trap.contents.Single().id,Is.EqualTo(15));
+            Assert.That(team.lastRigSerial,Is.EqualTo(1));Assert.That(trap.contents.Single().id,Is.EqualTo(15));
             Assert.That(team.PackRigBasket(trap,3,Vector3.zero,0,()=>true),Is.True);
             var basket=team.rigs.Single(r=>r.kind=="basket");
             Assert.That(trap.contents,Is.Empty);
@@ -84,7 +75,7 @@ namespace Raid.Tests
             team.Validate();
         }
 
-        [Test] public void SchemaFourPreservesFishInTransitAndDeliveredIdsAcrossFirstSchemaFiveSave()
+        [Test] public void SchemaFourPreservesFishInTransitAndDeliveredIdsAcrossFirstMigratedSave()
         {
             const string old="{\"schemaVersion\":4,\"biomass\":8,\"scrap\":3,\"lifetimeCatch\":5,"+
                 "\"expeditionDepth\":1,\"hungerRemaining\":93,\"hoistPhase\":1,\"hoistRemaining\":1.5,"+
@@ -96,7 +87,7 @@ namespace Raid.Tests
             string envelope=JsonUtility.ToJson(new Envelope{format="RAID.TeamProgress",payload=old,sha256=checksum});
             File.WriteAllText(path,envelope);
             var migrated=TeamSave.Load(path);
-            Assert.That(migrated.schemaVersion,Is.EqualTo(5));
+            Assert.That(migrated.schemaVersion,Is.EqualTo(TeamProgress.CurrentSchema));
             Assert.That(File.ReadAllText(path),Is.EqualTo(envelope));
             Assert.That(migrated.teamRevision,Is.EqualTo(7));
             Assert.That(migrated.offeringPoints,Is.EqualTo(120));

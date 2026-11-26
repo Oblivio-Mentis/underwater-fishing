@@ -10,6 +10,7 @@ namespace Raid
         public string key;
         public List<SkillId> skills = new();
         public int revision;
+        public TechSlot[] techSlots=new TechSlot[TechSlot.Slots];
     }
 
     public sealed partial class TeamProgress

@@ -48,7 +48,7 @@ namespace Raid
     [Serializable]
     public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 5;
+        public const int CurrentSchema = 6;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
@@ -234,6 +234,7 @@ namespace Raid
                 throw new InvalidOperationException("Invalid team progress data.");
             ValidateSkills();
             ValidateTechnologies();
+            ValidateTechInventory();
             ValidateTechRigs();
             HashSet<long> delivered = new HashSet<long>();
             foreach (long id in deliveredIds) if (id <= 0 || !delivered.Add(id)) throw new InvalidOperationException("Invalid delivery ledger.");

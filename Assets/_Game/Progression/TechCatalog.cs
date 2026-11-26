@@ -23,6 +23,7 @@ namespace Raid
     {
         public string id, title, description;
         public int category, stage, limit, capacity;
+        public int stackBase=1;
         public float interval, radius, range;
         public TechUpgrade[] upgrades;
         public TechUpgrade Upgrade(string key)

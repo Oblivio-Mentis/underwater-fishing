@@ -47,6 +47,12 @@ namespace Raid
                 {
                     progress.techPurchases=new System.Collections.Generic.List<TechPurchase>();
                     progress.rigs=new System.Collections.Generic.List<TechRig>();
+                    progress.schemaVersion=5;
+                }
+                if(progress.schemaVersion==5)
+                {
+                    if(progress.players!=null)
+                        foreach(var crew in progress.players)if(crew!=null)crew.techSlots=new TechSlot[TechSlot.Slots];
                     progress.schemaVersion=TeamProgress.CurrentSchema;
                 }
                 progress.Validate();
