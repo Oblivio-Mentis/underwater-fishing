@@ -192,8 +192,7 @@ namespace Raid
             Assert(world.View.rigs.Count==0,"new blueprint requires explicit issuance");
             Mark("blueprint-"+report.seat);
             yield return Wait("everyone received the blueprint",()=>All("blueprint-"));
-            yield return new WaitForSecondsRealtime(.6f);
-            if(report.seat==1)local.CmdTechIssue("cage");
+            yield return VerifyDispenser();
             yield return Wait("issued cage replicated",()=>world.View.rigs.Any(r=>r.kind=="cage" && r.operatorId==PeerId));
             int serial=world.View.rigs.Single(r=>r.kind=="cage").serial;
             Assert(serial>0,"one issued heavy cage has the same carrier on this peer");
@@ -247,6 +246,8 @@ namespace Raid
                     Assert(saved.TechRank("cage","unlock")==1 && saved.rigs.Count==report.fleetCount &&
                         saved.rigs.Single(r=>r.serial==serial).CanRecall && FleetDigest(saved)==report.fleetHash,
                         "disk reload retains the released cage, fleet and complete catch manifest");
+                    Assert(InventoryDigest(saved.Player(peerProfile))==File.ReadAllText(FileFor("private-stacks")),
+                        "disk reload retains the private slot types, counts and inventory revision");
                     Mark("finished");
                 }
             }
