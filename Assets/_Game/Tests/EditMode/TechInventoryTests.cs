@@ -28,6 +28,16 @@ namespace Raid.Tests
                 var observer=team.RegisterPlayer("two");
                 int limit=TechCatalog.Find(id).stackBase;
                 Assert.That(limit,Is.Positive,id);
+                var step=TechCatalog.Find(id).Upgrade("stack");
+                Assert.That(step,Is.Not.Null,id);
+                int previous=limit;
+                foreach(float value in step.values)
+                {
+                    int next=Mathf.RoundToInt(value);
+                    Assert.That(value,Is.EqualTo((float)next),id);
+                    Assert.That(next,Is.GreaterThan(previous),id);
+                    previous=next;
+                }
                 for(int i=0;i<limit;i++)Assert.That(team.TakeTechFromRack(owner,id,2,()=>true,out _),Is.True,id);
                 Assert.That(team.TakeTechFromRack(owner,id,2,()=>true,out _),Is.False,id);
                 Assert.That(team.TakeTechFromRack(owner,id,1,()=>true,out _),Is.True,id);

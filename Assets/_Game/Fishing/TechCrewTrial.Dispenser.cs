@@ -14,6 +14,19 @@ namespace Raid
         static string InventoryDigest(PlayerProgress profile) =>
             profile.revision+"|"+string.Join("|",profile.techSlots.Select(s=>(s.kind??"")+"/"+s.count));
 
+        IEnumerator RejectRackRequest(string kind,int slot,string description)
+        {
+            bool? accepted=null;
+            string explanation=null;
+            void Receipt(bool success,string message){accepted=success;explanation=message;}
+            world.SkillResponded+=Receipt;
+            local.CmdRackTake(kind,slot);
+            yield return Wait("server replied to rejected dispenser request",()=>accepted.HasValue);
+            world.SkillResponded-=Receipt;
+            Assert(accepted==false && !string.IsNullOrEmpty(explanation),description+" ("+explanation+")");
+            yield return new WaitForSecondsRealtime(.4f);
+        }
+
         IEnumerator FaceStation(Transform target,Vector3 expected,string phase)
         {
             yield return Wait(phase,()=>Vector3.Distance(local.transform.position,expected)<1 && local.IsInside);
@@ -38,6 +51,11 @@ namespace Raid
             yield return Wait("charge blueprint for the second independent slot",()=>world.View.TechRank("charge","unlock")==1);
             var before=world.View.Treasury;
             int revision=world.View.teamRevision;
+            if(report.seat==1)
+            {
+                yield return new WaitForSecondsRealtime(.4f);
+                yield return RejectRackRequest("cage",0,"research terminal cannot issue equipment remotely");
+            }
             Mark("dispenser-ready-"+report.seat);
             if(Host)
             {
@@ -68,8 +86,7 @@ namespace Raid
                 }
                 if(SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)UiQaProbe.CapturePeerCamera(FileFor("dispenser.png"));
                 int inventoryRevision=world.LocalProgress.revision;
-                local.CmdRackTake("cage",0);
-                yield return new WaitForSecondsRealtime(.55f);
+                yield return RejectRackRequest("cage",0,"dispenser rejected a full stack");
                 Assert(world.LocalProgress.techSlots[0].count==initial && world.LocalProgress.revision==inventoryRevision,
                     "attempting to take another cage into the full selected slot leaves its stack unchanged");
                 local.CmdRackTake("charge",1);
