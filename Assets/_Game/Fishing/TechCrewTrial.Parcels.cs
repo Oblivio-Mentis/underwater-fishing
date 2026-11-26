@@ -33,7 +33,7 @@ namespace Raid
             if(!renderedParcelIds.Contains(serial))
             {
                 string kind=cageParcelIds.Contains(serial)?"cage":chargeParcelIds.Contains(serial)?"charge":null;
-                var sample=kind==null?null:world.transform.Find($"Р’С‹РґР°С‡Р° В· {kind} в„–{serial}/РћР±СЂР°Р·РµС† В· {kind}");
+                var sample=kind==null?null:world.transform.Find($"Выдача · {kind} №{serial}/Образец · {kind}");
                 if(sample && sample.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh && filter.sharedMesh.vertexCount>0 &&
                     sample.TryGetComponent<MeshRenderer>(out var renderer) && renderer.enabled && renderer.gameObject.activeInHierarchy)
                     renderedParcelIds.Add(serial);
