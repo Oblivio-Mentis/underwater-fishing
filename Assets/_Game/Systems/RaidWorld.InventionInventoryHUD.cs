@@ -208,6 +208,9 @@ namespace Raid
         {
             if(!InventoryContextAllowed())return;
             InventoryStyles();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            BeginRackCapture();
+#endif
             var old=GUI.matrix;
             int previousDepth=GUI.depth;
             GUI.depth=-40;
@@ -219,6 +222,9 @@ namespace Raid
             if(InventionPanelOpen)DrawInventoryPanel(width,height);
             else DrawInventoryStrip(width,height);
             GUI.matrix=old;GUI.depth=previousDepth;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            EndRackCapture();
+#endif
         }
 
         void DrawInventoryStrip(float width,float height)
