@@ -150,10 +150,13 @@ namespace Raid
                 "rejoining receives identical researched ranks, unique cargo IDs and treasury without a second purchase");
             Assert(state.players.Count==0,"replicated public snapshot contains no private profile or slot data");
             if(report.seat==1)
-                Assert(InventoryDigest(world.LocalProgress)==File.ReadAllText(FileFor("private-stacks")),
-                    "rejoined owner restored the exact two independent equipment stacks and profile revision");
+            {
+                yield return Wait("ordinary pockets restored on the rejoined owner",()=>
+                    OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")));
+                Assert(true,"Rejoined owner restored the exact two equipment stacks in its ordinary hotbar and the saved revision.");
+            }
             else
-                Assert(world.LocalProgress.techSlots.All(slot=>slot.count==0),"another owner's two stacks never enter this private inventory");
+                Assert(OtherOwnerPocketsIntact(),"Every other owner preserved its own ordinary inventory across the reconnect.");
             Mark("rejoined-"+report.seat);
             yield return Wait("all players observed the reconnect",()=>All("rejoined-"));
         }

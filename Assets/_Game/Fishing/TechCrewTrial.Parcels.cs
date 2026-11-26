@@ -33,7 +33,7 @@ namespace Raid
             if(!renderedParcelIds.Contains(serial))
             {
                 string kind=cageParcelIds.Contains(serial)?"cage":chargeParcelIds.Contains(serial)?"charge":null;
-                var sample=kind==null?null:world.transform.Find($"Выдача · {kind} №{serial}/Образец · {kind}");
+                var sample=kind==null?null:world.transform.Find($"Р’С‹РґР°С‡Р° В· {kind} в„–{serial}/РћР±СЂР°Р·РµС† В· {kind}");
                 if(sample && sample.TryGetComponent<MeshFilter>(out var filter) && filter.sharedMesh && filter.sharedMesh.vertexCount>0 &&
                     sample.TryGetComponent<MeshRenderer>(out var renderer) && renderer.enabled && renderer.gameObject.activeInHierarchy)
                     renderedParcelIds.Add(serial);
@@ -67,9 +67,9 @@ namespace Raid
         IEnumerator CollectMissedParcel()
         {
             Mark("stage-charge-miss");
-            local.CmdRackTake("charge",1);
+            local.CmdRackTake("charge");
             yield return Wait("replicated charge case landed without a receiver",()=>world.TryGetRackParcel(local.OwnerId,out _,out _,out bool resting) && resting);
-            Assert(world.LocalProgress.techSlots[1].count==0,"missed charge remains physical and has not entered the owner's slot");
+            Assert(Gear.InventionInSlot(ChargePocket).count==0,"missed charge remains physical and has not entered the owner's slot");
             Mark("charge-on-deck");
             yield return Wait("owner approaches the resting case",()=>Has("deck-pickup") &&
                 world.TryGetRackParcel(local.OwnerId,out _,out var at,out bool resting) && resting && local.IsInside &&
@@ -82,12 +82,12 @@ namespace Raid
             if(SystemInfo.graphicsDeviceType!=GraphicsDeviceType.Null)
                 UiQaProbe.CapturePeerCamera(FileFor("charge-on-deck.png"));
             local.CmdCollectRackParcel(serial);
-            yield return Wait("E pickup transfers the resting charge exactly once",()=>world.LocalProgress.techSlots[1].kind=="charge" &&
-                world.LocalProgress.techSlots[1].count==1 && world.RackParcelCount==0 && world.View.rigs.Count==0);
+            yield return Wait("E pickup transfers the resting charge exactly once",()=>Gear.InventionInSlot(ChargePocket).kind=="charge" &&
+                Gear.InventionInSlot(ChargePocket).count==1 && world.RackParcelCount==0 && world.View.rigs.Count==0);
             yield return new WaitForSecondsRealtime(.35f);
             local.CmdCollectRackParcel(serial);
             yield return new WaitForSecondsRealtime(.35f);
-            Assert(world.LocalProgress.techSlots[1].count==1,"repeating E for the removed case cannot generate another charge");
+            Assert(Gear.InventionInSlot(ChargePocket).count==1,"repeating E for the removed case cannot generate another charge");
         }
 
         IEnumerator VerifyInterruptedParcel(string firstProfile)
@@ -107,12 +107,12 @@ namespace Raid
             if(report.seat==1)
             {
                 yield return FaceStation(rack,approach,"returned player faces cabinet for an interrupted catch");
-                local.CmdRackTake("charge",2);
+                local.CmdRackTake("charge");
                 yield return Wait("owner sees the returning character's charge leave the tray",()=>
                     world.RackParcelInFlight("charge") && world.TryGetRackParcel(sender,out _,out _,out bool still) && !still);
                 world.TryGetRackParcel(sender,out int serial,out _,out _);
-                Assert(InventoryDigest(world.LocalProgress)==File.ReadAllText(FileFor("private-stacks")),
-                    "launching a charge into another selected slot has not changed inventory before contact");
+                Assert(OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")),
+                    "launching a charge has not changed the ordinary inventory before contact");
                 Mark("cancel-serial",serial.ToString());
                 yield return new WaitForSecondsRealtime(.12f);
                 var session=FindAnyObjectByType<RaidSession>();
@@ -143,9 +143,10 @@ namespace Raid
                     world=RaidWorld.Instance;
                     local=UiRoot.Instance?.Context?.Player;
                     return local && local.IsOwner && world && world.NetworkObject && world.IsClientInitialized &&
-                        world.View?.rigs.Count==report.fleetCount && world.LocalProgress?.techSlots?.Length==TechSlot.Slots;
+                        world.View?.rigs.Count==report.fleetCount && world.LocalProgress!=null && Gear &&
+                        OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks"));
                 },60);
-                Assert(InventoryDigest(world.LocalProgress)==File.ReadAllText(FileFor("private-stacks")) && world.RackParcelCount==0,
+                Assert(OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")) && world.RackParcelCount==0,
                     "second reconnect recovered no case, no new charge and no extra stored copy");
                 Mark("cancel-restored");
             }
