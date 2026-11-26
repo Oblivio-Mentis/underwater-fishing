@@ -34,14 +34,14 @@ namespace Raid
             reason=null;return true;
         }
 
-        bool CanPack(PlayerProgress profile,int index,string kind,out string reason)
+        public bool CanTakeTechFromRack(PlayerProgress profile,string kind,int slot,out string reason)
         {
-            if(!InventorySlot(profile,index,out reason))return false;
+            if(!InventorySlot(profile,slot,out reason))return false;
             int limit=TechStackLimit(kind);
             if(limit==0 || TechRank(kind,"unlock")==0){reason="Сначала откройте чертёж";return false;}
-            var slot=profile.techSlots[index];
-            if(slot.count>0 && slot.kind!=kind){reason="Выбранный слот занят другим оборудованием";return false;}
-            if(slot.count>=limit){reason="Стак заполнен";return false;}
+            var current=profile.techSlots[slot];
+            if(current.count>0 && current.kind!=kind){reason="Выбранный слот занят другим оборудованием";return false;}
+            if(current.count>=limit){reason="Стак заполнен";return false;}
             return true;
         }
 
@@ -63,7 +63,7 @@ namespace Raid
 
         public bool TakeTechFromRack(PlayerProgress profile,string kind,int preferredSlot,Func<bool> persist,out string reason)
         {
-            if(!CanPack(profile,preferredSlot,kind,out reason))return false;
+            if(!CanTakeTechFromRack(profile,kind,preferredSlot,out reason))return false;
             bool ok=ChangeTechSlot(profile,preferredSlot,kind,1,persist);
             reason=ok?"Оборудование в слоте":"Не удалось записать выдачу";
             return ok;
@@ -99,7 +99,7 @@ namespace Raid
             int row=rigs.FindIndex(r=>r.serial==serial);
             if(row<0 || owner<0){reason="Оборудование недоступно";return false;}
             var rig=rigs[row];
-            if(!CanPack(profile,preferredSlot,rig.kind,out reason))return false;
+            if(!CanTakeTechFromRack(profile,rig.kind,preferredSlot,out reason))return false;
             if(rig.kind=="oxygen" && rig.air>=0 && rig.air<TechUnitCapacity(rig.kind))
             {reason="Перед упаковкой заправьте кислородную станцию у корабля";return false;}
             bool ownCarry=rig.mode=="carried" && rig.operatorId==owner;
