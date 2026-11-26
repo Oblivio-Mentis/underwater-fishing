@@ -16,6 +16,8 @@ namespace Raid
             scrap>=cost.scrap && electronics>=cost.electronics;
         public MaterialCost Add(MaterialCost other) => new(checked(biomass+other.biomass),checked(chitin+other.chitin),
             checked(scrap+other.scrap),checked(electronics+other.electronics));
+        public bool CanAdd(MaterialCost other) => other.IsValid && other.biomass<=int.MaxValue-biomass &&
+            other.chitin<=int.MaxValue-chitin && other.scrap<=int.MaxValue-scrap && other.electronics<=int.MaxValue-electronics;
         public MaterialCost Subtract(MaterialCost other) => new(biomass-other.biomass,chitin-other.chitin,
             scrap-other.scrap,electronics-other.electronics);
         public bool IsEmpty => biomass==0 && chitin==0 && scrap==0 && electronics==0;

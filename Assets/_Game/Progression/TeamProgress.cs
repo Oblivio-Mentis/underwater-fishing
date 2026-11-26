@@ -99,7 +99,7 @@ namespace Raid
 
         public bool BeginHoist(ProgressionTuning tuning)
         {
-            if (hoistPhase != HoistPhase.Loading || cargo.Count == 0 || !FitsReservoir(tuning)) return false;
+            if (hoistPhase != HoistPhase.Loading || cargo.Count == 0 || !FitsReservoir(tuning) || !CanCreditCargo()) return false;
             hoistPhase = HoistPhase.Raising;
             hoistRemaining = HoistDuration(HoistPhase.Raising,tuning);
             return true;
@@ -131,7 +131,14 @@ namespace Raid
                 }
                 else if (hoistPhase == HoistPhase.Unloading)
                 {
-                    recovered=Deliver(cargo);
+                    if(!TryDeliver(cargo,out recovered))
+                    {
+                        // A treasury grant may have filled the wallet after the lift departed.
+                        // Keep the manifest on the lift and allow a fresh hoist after spending.
+                        hoistPhase=HoistPhase.Loading;
+                        hoistRemaining=0;
+                        return default;
+                    }
                     cargo.Clear();
                     hoistPhase = HoistPhase.Returning;
                     hoistRemaining = HoistDuration(HoistPhase.Returning,tuning);
@@ -145,22 +152,33 @@ namespace Raid
         /// <summary>Direct delivery for a server-authorized delivery point; cargo uses the timed hoist.</summary>
         public bool Deposit(CatchItem item, ProgressionTuning tuning=null)
         {
-            int reserved=hoistPhase==HoistPhase.Loading ? 0 : CargoFishCount;
             if (item == null || !item.IsValid || deliveredIds.Contains(item.id) || cargo.Exists(f => f.id == item.id) ||
-                (!item.IsSalvage && (long)tank.Count+reserved>=ReservoirCapacity(tuning))) return false;
-            Deliver(new[]{item});
-            return true;
+                (!item.IsSalvage && ReservoirRoom(tuning)==0)) return false;
+            return TryDeliver(new[]{item},out _);
         }
 
-        private MaterialCost Deliver(IReadOnlyList<CatchItem> stock)
+        public bool CanCreditCargo() => QuoteDelivery(cargo,out _,out _);
+
+        bool QuoteDelivery(IReadOnlyList<CatchItem> stock,out long total,out MaterialCost salvage)
         {
-            long total=lifetimeCatch;
-            MaterialCost salvage=default;
+            total=lifetimeCatch;
+            salvage=default;
             foreach(var item in stock)
             {
-                total=checked(total+item.biomass+item.chitin+item.scrap+item.electronics);
-                if(item.IsSalvage)salvage=salvage.Add(item.SalvageYield);
+                long value=(long)item.biomass+item.chitin+item.scrap+item.electronics;
+                if(value>long.MaxValue-total)return false;
+                total+=value;
+                if(!item.IsSalvage)continue;
+                if(!salvage.CanAdd(item.SalvageYield))return false;
+                salvage=salvage.Add(item.SalvageYield);
             }
+            return (salvage.IsEmpty || teamRevision<int.MaxValue) && Treasury.CanAdd(salvage);
+        }
+
+        bool TryDeliver(IReadOnlyList<CatchItem> stock,out MaterialCost credited)
+        {
+            credited=default;
+            if(!QuoteDelivery(stock,out long total,out var salvage))return false;
             var balance=Treasury.Add(salvage);
             int revision=salvage.IsEmpty?teamRevision:checked(teamRevision+1);
             foreach(var item in stock)
@@ -171,7 +189,8 @@ namespace Raid
             lifetimeCatch=total;
             Treasury=balance;
             teamRevision=revision;
-            return salvage;
+            credited=salvage;
+            return true;
         }
 
         public bool Process(long id) => CreditProcessedCatch(id,null,out _);
@@ -180,7 +199,9 @@ namespace Raid
         {
             int index = tank.FindIndex(item => item.id == id);
             if (index < 0 || tank[index].offering<=0) return false;
-            int next = checked(offeringPoints + FoodValue(tank[index],tuning));
+            int food=FoodValue(tank[index],tuning);
+            if(food>int.MaxValue-offeringPoints)return false;
+            int next=offeringPoints+food;
             tank.RemoveAt(index);
             offeringPoints = next;
             return true;

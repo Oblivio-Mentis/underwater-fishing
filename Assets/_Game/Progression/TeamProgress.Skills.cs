@@ -128,6 +128,7 @@ namespace Raid
             int s=checked(points.scrap+processingRemainder.scrap);
             int e=checked(points.electronics+processingRemainder.electronics);
             var total=new MaterialCost(b/100,c/100,s/100,e/100);
+            if(teamRevision==int.MaxValue || !Treasury.CanAdd(total))return false;
             int revision=checked(teamRevision+1);
             Treasury=Treasury.Add(total);
             teamRevision=revision;
