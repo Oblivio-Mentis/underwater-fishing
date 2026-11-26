@@ -101,6 +101,22 @@ namespace Raid.Tests
             Assert.That(team.teamRevision,Is.Zero);Assert.That(team.Treasury,Is.EqualTo(default(MaterialCost)));
         }
 
+        [Test] public void RackPreflightValidatesTheLiveOwnerSlotAndCapacityWithoutIssuingOrWriting()
+        {
+            var team=Team("charge");
+            var owner=team.RegisterPlayer("one");
+            Assert.That(team.CanTakeTechFromRack(null,"charge",0,out _),Is.False);
+            Assert.That(team.CanTakeTechFromRack(new PlayerProgress{key="one"},"charge",0,out _),Is.False);
+            Assert.That(team.CanTakeTechFromRack(owner,"charge",4,out _),Is.False);
+            Assert.That(team.CanTakeTechFromRack(owner,"cage",0,out _),Is.False);
+            Assert.That(team.CanTakeTechFromRack(owner,"charge",0,out _),Is.True);
+            Assert.That(owner.revision,Is.Zero);Assert.That(owner.techSlots.All(s=>s.count==0));
+            owner.techSlots[0]=new TechSlot{kind="charge",count=team.TechStackLimit("charge")};
+            Assert.That(team.CanTakeTechFromRack(owner,"charge",0,out _),Is.False);
+            Assert.That(owner.revision,Is.Zero);Assert.That(team.teamRevision,Is.Zero);
+            Assert.That(team.rigs,Is.Empty);Assert.That(team.Treasury,Is.EqualTo(default(MaterialCost)));
+        }
+
         [Test] public void SchemaFiveMigratesProfilesWithoutManufacturingOrErasingExistingEquipment()
         {
             string path=Path.Combine(Path.GetTempPath(),"nereid-slots-"+Guid.NewGuid().ToString("N")+".json");
