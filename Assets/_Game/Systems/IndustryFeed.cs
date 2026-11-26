@@ -9,7 +9,8 @@ namespace Raid
         readonly Dictionary<int,ParticleSystem> bubbleWalls=new();
         readonly HashSet<int> active=new();
         readonly List<int> stale=new();
-        Material lineMaterial;
+        Material lineMaterial, bubbleMaterial;
+        Mesh bubbleMesh;
         Camera feedCamera;
         RenderTexture output;
         TechRig pilot,cable;
@@ -62,8 +63,8 @@ namespace Raid
                 else if(mail)
                 {
                     float interval=Mathf.Max(.5f,TechCatalog.Find("mail").interval/view.TechValue("mail","speed",1));
-                    Vector3 outbound=(RaidWorld.Instance.CargoLoadingPosition-rig.position).normalized;
-                    end=rig.position+Vector3.up+outbound*Mathf.Lerp(.1f,4,1-Mathf.Clamp01(rig.timer/interval));
+                    float progress=1-Mathf.Clamp01(rig.timer/interval);
+                    end=Vector3.Lerp(rig.position,RaidWorld.Instance.CargoLoadingPosition,progress)+Vector3.up*(.45f+Mathf.Sin(Mathf.PI*progress)*1.5f);
                 }
                 else continue;
                 active.Add(rig.serial);
@@ -78,9 +79,23 @@ namespace Raid
                         if(shader)lineMaterial=new Material(shader);
                     }
                     if(lineMaterial)line.sharedMaterial=lineMaterial;
+                    if(mail)
+                    {
+                        var pod=GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                        pod.name="Pneumatic cargo capsule";
+                        var col=pod.GetComponent<Collider>();col.enabled=false;Destroy(col);
+                        pod.transform.SetParent(go.transform,false);
+                        pod.transform.localScale=new Vector3(.22f,.34f,.22f);
+                    }
                     rigLines.Add(rig.serial,line);
                 }
                 Vector3 start=rig.position+Vector3.up*.35f;
+                if(mail)
+                {
+                    var heading=(RaidWorld.Instance.CargoLoadingPosition-rig.position).normalized;
+                    start=end-heading*.8f;
+                    line.transform.GetChild(0).SetPositionAndRotation(end,Quaternion.FromToRotation(Vector3.up,heading));
+                }
                 line.startWidth=line.endWidth=bubbles?.18f:mail?.12f:.035f;
                 line.startColor=line.endColor=bubbles?new Color(.4f,.9f,1,.8f):mail?new Color(1,.69f,.18f):new Color(.8f,.6f,.22f);
                 for(int i=0;i<linePoints.Length;i++)
@@ -118,7 +133,14 @@ namespace Raid
                 velocity.space=ParticleSystemSimulationSpace.World;velocity.y=1.35f;
                 var shape=bubbles.shape;shape.shapeType=ParticleSystemShapeType.Box;
                 var renderer=bubbles.GetComponent<ParticleSystemRenderer>();
-                if(lineMaterial)renderer.sharedMaterial=lineMaterial;
+                if(!bubbleMaterial)bubbleMaterial=Resources.Load<Material>("NereidBubbles");
+                if(!bubbleMesh)
+                {
+                    var factory=FindAnyObjectByType<Factory.FactoryVisuals>();
+                    if(factory)bubbleMesh=factory.bubbleMesh;
+                }
+                if(bubbleMaterial)renderer.sharedMaterial=bubbleMaterial;
+                if(bubbleMesh){renderer.renderMode=ParticleSystemRenderMode.Mesh;renderer.mesh=bubbleMesh;}
                 bubbles.Play();
                 bubbleWalls.Add(serial,bubbles);
             }
