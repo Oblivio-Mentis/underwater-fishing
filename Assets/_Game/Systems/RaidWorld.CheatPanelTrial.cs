@@ -136,6 +136,8 @@ namespace Raid
                 if(!CheatFieldFocused(field))throw new InvalidOperationException("Lost keyboard focus on "+key);
                 field.ProcessEvent(new Event{type=EventType.KeyDown,keyCode=keyCode,character=character,
                     modifiers=control?EventModifiers.Control:EventModifiers.None});
+                // Mirror the label update TMP normally performs immediately after KeyPressed.
+                field.ForceLabelUpdate();
                 await AwaitCheatUi(expected,"TMP handles "+keyCode+" (current amount '"+field.text+"')",2);
                 report.focusedTmpEdits++;
             }
@@ -236,6 +238,8 @@ namespace Raid
             report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) && selectedFish==ReelReadout.Species(team.tank[0].species) &&
                 CheatWallet().Sum()==40,"Mouse stocked three distinct catches of a single species without changing the materials.");
             report.fish=team.tank[0].species;report.stocked=3;
+            report.Check(field.text=="3" && field.textComponent.text.TrimEnd('\u200b')=="3",
+                "The number displayed in the panel matches the last amount the host accepted.");
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-panel.png"));
 
             report.phase="movement and collision from real input";
