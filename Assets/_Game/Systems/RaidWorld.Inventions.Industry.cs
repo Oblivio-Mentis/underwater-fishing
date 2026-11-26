@@ -28,7 +28,7 @@ namespace Raid
         float IndustryRange(TechRig rig) => Mathf.Max(1,TechCatalog.Find(rig.kind).range * IndustryValue(rig,"range"));
         float IndustryRadius(TechRig rig) => Mathf.Max(.5f,TechCatalog.Find(rig.kind).radius * IndustryValue(rig,"range"));
         float IndustryPeriod(TechRig rig) => Mathf.Max(.5f,TechCatalog.Find(rig.kind).interval / Mathf.Max(.1f,IndustryValue(rig,"speed")));
-        int IndustryCapacity(TechRig rig) => Mathf.Max(1, Mathf.RoundToInt(TechCatalog.Find(rig.kind).capacity * IndustryValue(rig,"capacity")));
+        int IndustryCapacity(TechRig rig) => team.TechUnitCapacity(rig.kind);
         int IndustryFree(TechRig rig)
         {
             int space=IndustryCapacity(rig) - rig.brood.Count;

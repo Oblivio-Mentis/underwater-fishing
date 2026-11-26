@@ -46,6 +46,7 @@ namespace Raid
         {
             if(team?.rigs==null || owner<0)return;
             rigRequests.Remove(owner);
+            CancelRackOrder(owner);
             foreach(var r in team.rigs)
             {
                 if(r.mode=="netting" && (r.operatorId==owner || r.helperId==owner)){DropNet(r);continue;}

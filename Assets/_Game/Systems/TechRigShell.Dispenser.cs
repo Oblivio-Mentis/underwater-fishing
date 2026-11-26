@@ -1,52 +1,179 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Raid
 {
     public sealed partial class TechRigShell
     {
-        static Mesh dispenserMesh;
+        static Mesh dispenserMesh,trayMesh,windowMesh;
+        static Material displayGlass;
+        static readonly Dictionary<string,Mesh> samples=new();
+
+        internal static void BuildSaleSample(GameObject target,string kind,float width)
+        {
+            Materials();
+            if(!samples.TryGetValue(kind,out var sample) || !sample)
+            {
+                if(!library.TryGetValue(kind,out var parts) || !parts[0])library[kind]=parts=Design(kind);
+                var vertices=new List<Vector3>();var uv=new List<Vector2>();
+                var indices=new List<int>[palette.Length];for(int i=0;i<indices.Length;i++)indices[i]=new();
+                for(int i=0;i<3;i++)
+                {
+                    var m=parts[i];int first=vertices.Count;
+                    Vector3 offset=i==1 && kind=="cage"?new Vector3(0,.48f,-.65f):i==2?
+                        (kind=="charge"?new Vector3(0,.135f,0):kind=="cage"?new Vector3(.6f,.53f,-.62f):new Vector3(0,.29f,0)):Vector3.zero;
+                    foreach(var v in m.vertices)vertices.Add(v+offset);
+                    uv.AddRange(m.uv);
+                    for(int sub=0;sub<m.subMeshCount;sub++)foreach(int n in m.GetTriangles(sub))indices[sub].Add(first+n);
+                }
+                sample=new Mesh{name="Товар · "+kind};sample.SetVertices(vertices);sample.SetUVs(0,uv);sample.subMeshCount=palette.Length;
+                for(int i=0;i<indices.Length;i++)sample.SetTriangles(indices[i],i,false);
+                sample.RecalculateNormals();sample.RecalculateBounds();samples[kind]=sample;
+            }
+            var item=new GameObject("Образец · "+kind);item.transform.SetParent(target.transform,false);
+            var size=sample.bounds.size;float scale=width/Mathf.Max(.01f,size.x,size.y,size.z);
+            item.transform.localScale=Vector3.one*scale;item.transform.localPosition=-sample.bounds.center*scale;
+            item.AddComponent<MeshFilter>().sharedMesh=sample;item.AddComponent<MeshRenderer>().sharedMaterials=palette;
+        }
+
+        static TMP_Text VendorLegend(Transform parent,string text,Vector3 at,float size,float width,Color tint)
+        {
+            var go=new GameObject(text);go.transform.SetParent(parent,false);
+            go.transform.SetLocalPositionAndRotation(at,Quaternion.Euler(0,180,0));
+            var label=go.AddComponent<TextMeshPro>();if(UI.UiRoot.Instance && UI.UiRoot.Instance.font)label.font=UI.UiRoot.Instance.font;
+            label.text=text;label.fontSize=size;label.rectTransform.sizeDelta=new Vector2(width,.16f);
+            label.alignment=TextAlignmentOptions.Center;label.textWrappingMode=TextWrappingModes.NoWrap;label.color=tint;label.raycastTarget=false;
+            return label;
+        }
+
+        static Vector3 Cell(int row,int column) => new(.255f-column*.235f,.465f-row*.253f,-.017f);
         internal static void BuildDispenser(GameObject housing)
         {
             Materials();
             if(!dispenserMesh)
             {
                 var p=new Press();
-                p.Box(new(0,-.24f,-.27f),new(1.08f,1.86f,.40f),0);
-                p.Box(new(0,-1.11f,-.21f),new(1.16f,.14f,.58f),1);
-                p.Box(new(0,.60f,-.21f),new(1.11f,.18f,.56f),2);
-                p.Box(new(0,.42f,-.01f),new(.95f,.23f,.06f),0);
-                p.Box(new(0,.25f,.002f),new(.79f,.013f,.028f),4);
-                for(int row=0;row<3;row++)
+                p.Box(new(0,-.13f,-.34f),new(1.32f,2.10f,.48f),3);
+                p.Box(new(0,-1.13f,-.22f),new(1.37f,.10f,.62f),0);
+                p.Box(new(0,.80f,-.20f),new(1.34f,.26f,.61f),2);
+                p.Box(new(0,.795f,.077f),new(1.19f,.184f,.074f),0);
+                p.Box(new(0,.682f,.088f),new(1.16f,.015f,.036f),4);
+                // Shop window, shelf rails and individual spiral feeds.
+                p.Box(new(-.11f,.074f,-.170f),new(1.00f,1.17f,.095f),0);
+                foreach(float x in new[]{-.625f,.401f,.642f})
+                    p.Box(new(x,.04f,.019f),new(.038f,1.225f,.17f),1);
+                p.Box(new(-.11f,.628f,.02f),new(1.03f,.038f,.15f),1);
+                p.Box(new(-.11f,-.413f,.02f),new(1.03f,.044f,.17f),1);
+                for(int row=0;row<4;row++)
                 {
-                    float y=.06f-.25f*row;
-                    p.Box(new(0,y,-.035f),new(.88f,.214f,.12f),3);
-                    p.Box(new(.33f,y+.02f,.036f),new(.075f,.036f,.022f),4);
-                    p.Rod(new(-.23f,y+.024f,.05f),new(-.23f,y+.026f,.095f),.018f,1);
-                    p.Rod(new(.09f,y+.024f,.05f),new(.09f,y+.026f,.095f),.018f,1);
-                    p.Rod(new(-.23f,y+.026f,.095f),new(.09f,y+.026f,.095f),.018f,1);
+                    var c=Cell(row,0);
+                    p.Box(new(-.099f,c.y-.10f,-.014f),new(.96f,.026f,.20f),1);
+                    p.Box(new(-.099f,c.y-.10f,.091f),new(.93f,.011f,.012f),2);
+                    p.Box(new(-.099f,c.y-.083f,-.077f),new(.88f,.006f,.009f),4);
+                    for(int col=0;col<4;col++)
+                    {
+                        if(row*4+col>=TechCatalog.Items.Length)continue;
+                        var at=Cell(row,col)+new Vector3(0,-.045f,0);
+                        Vector3 last=at+new Vector3(.052f,0,-.04f);
+                        for(int i=1;i<=36;i++)
+                        {
+                            float t=i/36f,angle=t*6*Mathf.PI;
+                            var next=at+new Vector3(.052f*Mathf.Cos(angle),.052f*Mathf.Sin(angle),-.04f+.128f*t);
+                            p.Rod(last,next,.0045f,1);last=next;
+                        }
+                    }
                 }
-                p.Box(new(0,-.76f,.0f),new(.87f,.24f,.075f),1);
-                p.Box(new(0,-.74f,.047f),new(.68f,.125f,.036f),0);
-                p.Box(new(0,-.88f,.095f),new(.86f,.04f,.21f),2);
-                foreach(int side in new[]{-1,1})
-                {
-                    float x=side*.5f;
-                    p.Rod(new(x,-.9f,-.019f),new(x,.52f,-.019f),.035f,1);
-                    foreach(float y in new[]{-.90f,.14f,.53f})p.Tube(new(x,y,-.04f),new(x,y,.031f),.042f,.038f,2,8);
-                }
-                dispenserMesh=p.Bake("NEREID · ship equipment dispenser");
+                // A separate illuminated selector column, keypad and delivery pocket.
+                p.Box(new(.521f,.04f,-.001f),new(.207f,1.16f,.17f),0);
+                p.Box(new(.521f,.48f,.100f),new(.172f,.185f,.027f),3);
+                p.Box(new(.521f,.268f,.098f),new(.127f,.019f,.02f),4);
+                for(int row=0;row<4;row++)for(int col=0;col<3;col++)
+                    p.Box(new(.466f+col*.055f,.14f-row*.069f,.096f),new(.04f,.043f,.025f),row==3 && col==2?2:1);
+                p.Box(new(.523f,-.285f,.094f),new(.132f,.052f,.018f),2);
+                p.Box(new(-.073f,-.67f,-.023f),new(1.05f,.37f,.16f),1);
+                p.Box(new(-.073f,-.64f,.066f),new(.87f,.253f,.062f),0);
+                p.Box(new(-.073f,-.459f,.096f),new(.88f,.017f,.020f),4);
+                p.Box(new(-.073f,-.832f,.12f),new(.97f,.057f,.39f),2);
+                for(int i=0;i<8;i++)p.Box(new(-.46f+i*.10f,-1.015f,-.084f),new(.066f,.055f,.040f),0);
+                dispenserMesh=p.Bake("NEREID · торговый автомат");
+                var flap=new Press();flap.Box(new(0,-.082f,0),new(.83f,.164f,.027f),3);
+                flap.Box(new(0,-.12f,.020f),new(.62f,.014f,.012f),1);trayMesh=flap.Bake("Шторка лотка");
             }
-            housing.AddComponent<MeshFilter>().sharedMesh=dispenserMesh;
-            housing.AddComponent<MeshRenderer>().sharedMaterials=palette;
-            var sign=new GameObject("Выдача снаряжения");sign.transform.SetParent(housing.transform,false);
-            sign.transform.SetLocalPositionAndRotation(new(0,.42f,.034f),Quaternion.Euler(0,180,0));
-            var label=sign.AddComponent<TextMeshPro>();
-            if(UI.UiRoot.Instance && UI.UiRoot.Instance.font)label.font=UI.UiRoot.Instance.font;
-            label.text="ВЫДАЧА СНАРЯЖЕНИЯ";
-            label.fontSize=.67f;label.rectTransform.sizeDelta=new(.90f,.18f);
-            label.alignment=TextAlignmentOptions.Center;label.textWrappingMode=TextWrappingModes.NoWrap;
-            label.color=new Color(.72f,.94f,.88f);label.raycastTarget=false;
+            housing.AddComponent<MeshFilter>().sharedMesh=dispenserMesh;housing.AddComponent<MeshRenderer>().sharedMaterials=palette;
+            var glass=new GameObject("Стекло витрины");glass.transform.SetParent(housing.transform,false);
+            if(!windowMesh)
+            {
+                windowMesh=new Mesh{name="Закалённое стекло"};
+                windowMesh.vertices=new[]{new Vector3(-.60f,-.395f,.125f),new Vector3(.38f,-.395f,.125f),new Vector3(.38f,.605f,.125f),new Vector3(-.60f,.605f,.125f)};
+                windowMesh.colors=new[]{new Color(.46f,.84f,.93f,.10f),new Color(.38f,.74f,.85f,.045f),new Color(.63f,.90f,.96f,.17f),new Color(.43f,.79f,.87f,.075f)};
+                windowMesh.triangles=new[]{0,1,2,0,2,3};windowMesh.RecalculateNormals();windowMesh.RecalculateBounds();
+                displayGlass=new Material(Shader.Find("Sprites/Default")){name="Стекло · торговый автомат"};
+            }
+            glass.AddComponent<MeshFilter>().sharedMesh=windowMesh;
+            var glazing=glass.AddComponent<MeshRenderer>();glazing.sharedMaterial=displayGlass;glazing.shadowCastingMode=ShadowCastingMode.Off;glazing.receiveShadows=false;
+            var flapGo=new GameObject("Заслонка выдачи");flapGo.transform.SetParent(housing.transform,false);
+            flapGo.transform.localPosition=new(-.073f,-.485f,.131f);
+            flapGo.AddComponent<MeshFilter>().sharedMesh=trayMesh;flapGo.AddComponent<MeshRenderer>().sharedMaterials=palette;
+            var display=housing.AddComponent<InventionVendorDisplay>();display.flap=flapGo.transform;
+            var strip=new GameObject("Освещение витрины");strip.transform.SetParent(housing.transform,false);
+            strip.transform.localPosition=new(-.10f,.32f,.18f);
+            var light=strip.AddComponent<Light>();light.type=LightType.Point;light.range=1.18f;light.intensity=1.45f;
+            light.color=new Color(.78f,.92f,1);light.shadows=LightShadows.None;
+            display.audioCue=housing.AddComponent<AudioSource>();display.audioCue.spatialBlend=1;display.audioCue.minDistance=1.2f;display.audioCue.maxDistance=12;display.audioCue.playOnAwake=false;
+            if(!click)click=Tone("Выдача · привод",190,.12f);display.sound=click;
+            var tint=new Color(.70f,.98f,.92f);
+            VendorLegend(housing.transform,"N E R E I D   /   С Н А Б Ж Е Н И Е",new(0,.80f,.123f),.61f,1.16f,tint);
+            VendorLegend(housing.transform,"ВЫДАЧА",new(-.075f,-.926f,.003f),.48f,.75f,new Color(.92f,.84f,.62f));
+            display.code=VendorLegend(housing.transform,"ГОТОВ",new(.52f,.485f,.123f),.34f,.163f,tint);
+            for(int row=0;row<4;row++)for(int col=0;col<3;col++)
+            {
+                var key=row==3?(col==0?"×":col==1?"0":"•"):(row*3+col+1).ToString();
+                VendorLegend(housing.transform,key,new(.576f-col*.055f,.14f-row*.069f,.112f),.225f,.05f,tint);
+            }
+            for(int i=0;i<TechCatalog.Items.Length;i++)
+            {
+                var item=TechCatalog.Items[i];int row=i/4,col=i%4;
+                var anchor=new GameObject(item.title);anchor.transform.SetParent(housing.transform,false);
+                anchor.transform.localPosition=Cell(row,col);anchor.transform.localRotation=Quaternion.Euler(6,-24,0);
+                BuildSaleSample(anchor,item.id,.178f);display.products[item.id]=anchor.transform;
+                string code=((char)('A'+row)).ToString()+(col+1);
+                display.codes[item.id]=code;
+                var pos=Cell(row,col);VendorLegend(housing.transform,code,new Vector3(pos.x,pos.y-.095f,.108f),.23f,.15f,tint);
+            }
+        }
+    }
+
+    internal sealed class InventionVendorDisplay : MonoBehaviour
+    {
+        internal readonly Dictionary<string,Transform> products=new();
+        internal readonly Dictionary<string,string> codes=new();
+        internal Transform flap;
+        internal TMP_Text code;
+        internal AudioSource audioCue;
+        internal AudioClip sound;
+        Transform moving;
+        Vector3 origin;
+        float until;
+
+        internal void Dispense(string item)
+        {
+            if(moving)moving.localPosition=origin;
+            moving=products.TryGetValue(item,out var value)?value:null;
+            if(moving)origin=moving.localPosition;
+            if(code && codes.TryGetValue(item,out var label))code.text=label;
+            until=Time.unscaledTime+.8f;
+            if(audioCue && sound)audioCue.PlayOneShot(sound,.55f);
+        }
+        void Update()
+        {
+            float phase=Mathf.Clamp01((until-Time.unscaledTime)/.8f);
+            if(phase==0 && !moving)return;
+            float travel=Mathf.Sin(Mathf.PI*phase);
+            flap.localRotation=Quaternion.Euler(-63*travel,0,0);
+            if(moving)moving.localPosition=origin+Vector3.forward*(travel*.048f);
+            if(phase==0){moving=null;if(code)code.text="ГОТОВ";}
         }
     }
 }

@@ -6,6 +6,7 @@ namespace Raid
     public sealed partial class DiverMotor
     {
         [ServerRpc] public void CmdRackTake(string kind,int slot) => RaidWorld.Instance?.TakeRackItem(this,kind,slot);
+        [ServerRpc] public void CmdCollectRackParcel(int serial) => RaidWorld.Instance?.CollectRackParcel(this,serial);
         [ServerRpc] public void CmdTechEquipSlot(int slot) => RaidWorld.Instance?.EquipRackItem(this,slot);
         [ServerRpc] public void CmdTechStore(int serial,int slot) => RaidWorld.Instance?.StowRackItem(this,serial,slot);
     }
@@ -34,7 +35,7 @@ namespace Raid
                 go.transform.SetParent(station.transform.parent,true);
                 inventionRack=go.transform;
                 rackContact=go.AddComponent<BoxCollider>();
-                rackContact.center=new Vector3(0,-.24f,-.21f);rackContact.size=new Vector3(1.08f,1.86f,.43f);
+                rackContact.center=new Vector3(0,-.13f,-.24f);rackContact.size=new Vector3(1.32f,2.10f,.49f);
                 if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)TechRigShell.BuildDispenser(go);
                 break;
             }
@@ -69,8 +70,8 @@ namespace Raid
         {
             if(!InventoryRequest(diver,out var profile))return;
             if(!RackFocused(diver)){InventoryReceipt(diver,profile,false,"Подойдите к раздатчику и посмотрите на его дверцу");return;}
-            bool ok=team.TakeTechFromRack(profile,kind,slot,SaveTransaction,out var reason);
-            InventoryReceipt(diver,profile,ok,reason);
+            if(!team.CanTakeTechFromRack(profile,kind,slot,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
+            LaunchRackParcel(diver,kind,slot);
         }
         internal void EquipRackItem(DiverMotor diver,int slot)
         {

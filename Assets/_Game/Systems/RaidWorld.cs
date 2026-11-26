@@ -84,6 +84,7 @@ namespace Raid
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="Сохранение несовместимо или повреждено. Запустите новую кампанию из Start-New-Campaign.cmd"; Debug.LogError("[RAID Save] "+e.Message); }
             pendingDepth=team.expeditionDepth;
             StartTech();
+            ClearRackOrders();
             StartGosha();
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
             Publish();
@@ -103,7 +104,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { CloseInventionInventory();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
+        public override void OnStopClient() { CloseInventionInventory();ClearRackParcelViews();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -126,6 +127,7 @@ namespace Raid
             }
             ApplyLocalTuning();
             EnsureInventionRack();
+            PresentRackParcels();
             PresentInventionInventory();
             if(!UI.UiInputGate.Active && !InventionPanelOpen && localDiver!=null && !InventionRackTargeted(localDiver) && interact!=null && interact.WasPressedThisFrame())
             {
@@ -141,6 +143,7 @@ namespace Raid
         {
             if(!IsServerInitialized || team==null) return;
             EnsureInventionRack();
+            TickRackOrders(Time.fixedDeltaTime);
             TickAirlock();
             TickTech(Time.fixedDeltaTime);
             TickGosha();

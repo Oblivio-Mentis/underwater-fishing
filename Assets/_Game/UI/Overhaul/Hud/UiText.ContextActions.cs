@@ -19,6 +19,9 @@ namespace Raid.UI
                 return new(Mark.Helmet,player.CanRespawn?new(Key.E,"Вернуться на борт"):watch,player.CanRespawn?watch:default);
             }
             if(player.IsHelpless)return default;
+            if(world.InventionPanelOpen)return default;
+            if(world.LookAtOwnParcel(player,out _))return new HudHint(Mark.Glove,new(Key.E,"Забрать выданный предмет"));
+            if(world.InventionRackTargeted(player))return new HudHint(Mark.Glove,new(Key.E,"Открыть торговый автомат"));
             if(c.Interaction==UiInteraction.Rescue && c.RescueTarget!=null)
             {
                 float progress=c.Rescue?.DisplayProgress??0;

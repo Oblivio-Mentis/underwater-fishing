@@ -17,6 +17,10 @@ namespace Raid
         [Min(0)] public int rigRepairScrap=1;
         [Min(1)] public int sampleBasketCapacity=3;
         [Min(1)] public int maxSampleBaskets=8;
+        [Min(.45f)] public float dispenserFlightSeconds=.68f;
+        [Min(.05f)] public float dispenserParcelRadius=.09f;
+        [Min(.1f)] public float dispenserCatchRadius=.56f;
+        [Min(2)] public float dispenserReturnSeconds=18f;
         [Range(.05f,1)] public float soloTowSpeed=.38f,teamTowSpeed=.82f;
 
         [Header("Gosha and the deck ball")]

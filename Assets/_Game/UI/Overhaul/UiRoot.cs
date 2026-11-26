@@ -237,7 +237,8 @@ namespace Raid.UI
             bool skillPurchase=Page==UiPage.SkillTree && mouse!=null && mouse.rightButton.wasPressedThisFrame;
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
             bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true &&
-                Context.World?.InventionPanelOpen!=true && Context.World?.InventionRackTargeted(Context.Player)!=true;
+                Context.World?.InventionPanelOpen!=true && Context.World?.InventionRackTargeted(Context.Player)!=true &&
+                Context.World?.LookAtOwnParcel(Context.Player,out _)!=true;
             bool consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
                 mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
             skills.Animate(Time.unscaledDeltaTime);

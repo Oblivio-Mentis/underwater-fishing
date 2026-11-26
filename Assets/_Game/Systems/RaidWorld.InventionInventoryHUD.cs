@@ -83,7 +83,7 @@ namespace Raid
             if(!InventionPanelOpen)
             {
                 if(UiInputGate.Blocked)return;
-                if(keys.eKey.wasPressedThisFrame && InventionRackTargeted(localDiver))OpenInventionInventory(true);
+                if(keys.eKey.wasPressedThisFrame && !LookAtOwnParcel(localDiver,out _) && InventionRackTargeted(localDiver))OpenInventionInventory(true);
                 else if(keys.tabKey.wasPressedThisFrame)OpenInventionInventory(false);
                 return;
             }
@@ -230,7 +230,7 @@ namespace Raid
         void DrawInventoryStrip(float width,float height)
         {
             bool rack=InventionRackTargeted(localDiver);
-            if(rack)
+            if(rack && !UiRoot.Instance)
             {
                 var focus=new Rect((width-230)/2,height*.56f,230,31);
                 InventoryFill(focus,InventoryInk);
