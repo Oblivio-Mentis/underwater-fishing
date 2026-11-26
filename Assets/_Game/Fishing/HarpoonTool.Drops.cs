@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Raid
 {
-    public enum DroppedKind : byte { None, Harpoon, Catch, Ball, Salvage }
+    public enum DroppedKind : byte { None, Harpoon, Catch, Ball, Salvage, Invention }
 
     public sealed partial class HarpoonTool
     {
@@ -32,13 +32,16 @@ namespace Raid
         {
             id = 0;
             if (Motor == null) return DroppedKind.None;
-            if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true || CarriedInvention!=null) return DroppedKind.None;
+            if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true) return DroppedKind.None;
+            var carried=CarriedInvention;
+            if(carried!=null){id=-(long)carried.serial;return DroppedKind.Invention;}
             var salvage = CarriedSalvage;
             if (salvage != null) { id = salvage.CargoId; return DroppedKind.Salvage; }
             if (HoldingHeavyCatch) { id = HeavyId; return DroppedKind.Catch; }
             if (RaidWorld.Instance?.GoshaBallInHands(Motor) == true) { id = 1; return DroppedKind.Ball; }
             if (ActiveSlot == 0 && HarpoonId > 0) { id = HarpoonId; return DroppedKind.Harpoon; }
             if (ActiveSlot >= 2 && (id = CatchIdInSlot(ActiveSlot)) > 0) return DroppedKind.Catch;
+            if (InventionInSlot(ActiveSlot).count>0){id=ActiveSlot;return DroppedKind.Invention;}
             return DroppedKind.None;
         }
 
@@ -48,35 +51,25 @@ namespace Raid
         public bool RequestDropSelected()
         {
             if (!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked) return false;
-            var carried=CarriedInvention;
-            if(carried!=null)
-            {
-                Motor.CmdTechUse(carried.serial,"release");
-                return true;
-            }
             var kind = SelectedItem(out var id);
             if (kind == DroppedKind.None) return false;
-            DropSelectedServer(kind, id);
+            var invention=kind==DroppedKind.Invention ? CarriedInvention?.kind ?? InventionInSlot(ActiveSlot).kind : null;
+            DropSelectedServer(kind,id,invention);
             return true;
         }
 
         [ServerRpc(RequireOwnership = true)]
-        void DropSelectedServer(DroppedKind expectedKind, long expectedId)
+        void DropSelectedServer(DroppedKind expectedKind,long expectedId,string expectedInvention)
         {
             if (!MayHandleItems || SelectedItem(out long id) != expectedKind || id != expectedId) return;
             var world = RaidWorld.Instance;
             var at = expectedKind==DroppedKind.Salvage ? default : world.PlaceItem(Motor);
-            // A catch or salvage released over the open cage belongs to the manifest, not to the seabed.
-            var releasePoint = expectedKind==DroppedKind.Salvage ? world.PlaceItem(Motor) : at;
-            if(Nereid.NereidVessel.Active!=null && expectedKind is DroppedKind.Catch or DroppedKind.Salvage &&
-                CargoDispatch.ContainsDrop(world,releasePoint) && world.LoadSelectedCargo(this,expectedKind,expectedId))
-            {
-                Motor.ConfirmInteraction();
-                return;
-            }
             bool placed = false;
             switch (expectedKind)
             {
+                case DroppedKind.Invention:
+                    world.DropOwnedInvention(this,id,expectedInvention,at);
+                    return;
                 case DroppedKind.Ball:
                     placed = world.PutDownHeldBall(Motor, at);
                     break;
@@ -95,7 +88,7 @@ namespace Raid
                     var fish = HoldingHeavyCatch ? HeavySpecies : FishInSlot(ActiveSlot);
                     if (fish == null || !world.CanRegisterDrop(id)) break;
                     var item = new DroppedItem { id = id, kind = DroppedKind.Catch, species = fish.NetworkObject,
-                        position = at, yaw = transform.eulerAngles.y };
+                        position = at, yaw = transform.eulerAngles.y, handDropped = true };
                     if (HoldingHeavyCatch ? !RemoveHeavy() : !EmptyPocket(ActiveSlot, false)) break;
                     world.RegisterDrop(item);
                     placed = true;
@@ -134,6 +127,12 @@ namespace Raid
         {
             var world = RaidWorld.Instance;
             if (!MayHandleItems || !world.TryAimDrop(Motor, out var item) || item.id != id) return;
+            if(item.kind==DroppedKind.Invention)
+            {
+                int pocket=world.TakeLooseInvention(this,item);
+                if(pocket>=2)EquipSlot(pocket);
+                return;
+            }
             if (item.kind == DroppedKind.Harpoon)
             {
                 // Exchange in place when both divers already received a starting gun.
@@ -164,6 +163,12 @@ namespace Raid
         {
             if (!MayHandleItems || HandsFull || _fish != null || TetherActive || AssistTarget != null
                 || HasBallLine || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
+            if(item.kind==DroppedKind.Invention)
+            {
+                var world=RaidWorld.Instance;
+                var state=IsServerInitialized?world.Team:world.View;
+                return state!=null && FindInventionPocket(item.invention,state.TechStackLimit(item.invention))>=0;
+            }
             return item.kind == DroppedKind.Harpoon || item.Fish != null && (item.Fish.RequiresPartner || FreePocket() >= 0);
         }
 

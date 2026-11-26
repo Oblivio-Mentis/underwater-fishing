@@ -10,12 +10,18 @@ namespace Raid
         public long id;
         public DroppedKind kind;
         public NetworkObject species;
+        public string invention;
+        public bool handDropped;
         public Vector3 position;
         public float yaw;
         public FishActor Fish => species == null ? null : species.GetComponent<FishActor>();
-        public string Label => kind == DroppedKind.Harpoon ? "гарпун" : UI.ReelReadout.Species(Fish?.SpeciesId);
+        public string Label => kind==DroppedKind.Invention ? TechCatalog.Find(invention)?.title ?? invention :
+            kind==DroppedKind.Harpoon ? "гарпун" : UI.ReelReadout.Species(Fish?.SpeciesId);
         public static DroppedItem Gun(long id, Vector3 position, float yaw) =>
             new DroppedItem { kind = DroppedKind.Harpoon, id = id, position = position, yaw = yaw };
+        // Normal gear and catches have positive instance IDs. A packed invention retains its unique rig serial.
+        internal static DroppedItem Packed(TechRig rig) => new DroppedItem
+            {kind=DroppedKind.Invention,id=-(long)rig.serial,invention=rig.kind,position=rig.position,yaw=rig.yaw};
     }
 
     public sealed partial class RaidWorld
@@ -24,8 +30,68 @@ namespace Raid
         readonly Dictionary<long, DroppedItemView> dropViews = new();
         readonly List<long> vanished = new();
         bool dropsDirty;
-        public int DroppedCount => dropped.Count;
-        public DroppedItem DroppedAt(int index) => dropped[index];
+        TeamProgress lastDropView;
+        TeamProgress DropState => NetworkObject && IsServerInitialized?team:view;
+        bool VisiblePackedItem(TechRig rig) => rig.mode=="dropped" && rig.depth==CurrentDepth;
+        public int DroppedCount
+        {
+            get
+            {
+                int count=dropped.Count;
+                if(DropState?.rigs!=null)foreach(var rig in DropState.rigs)if(VisiblePackedItem(rig))count++;
+                return count;
+            }
+        }
+        public DroppedItem DroppedAt(int index)
+        {
+            if(index<dropped.Count)return dropped[index];
+            index-=dropped.Count;
+            if(DropState?.rigs!=null)
+                foreach(var rig in DropState.rigs)
+                    if(VisiblePackedItem(rig) && index--==0)return DroppedItem.Packed(rig);
+            throw new System.ArgumentOutOfRangeException(nameof(index));
+        }
+
+        internal bool DropOwnedInvention(HarpoonTool tool,long itemId,string kind,Vector3 at)
+        {
+            if(!IsServerInitialized || saveFailed || transitionRemaining>0 || !tool)return false;
+            var diver=tool.Motor;
+            var profile=team?.Player(ProgressKey(diver));
+            if(profile==null)return false;
+            float yaw=diver.transform.eulerAngles.y;
+            string reason;
+            bool ok;
+            if(itemId<0)
+            {
+                var rig=tool.CarriedInvention;
+                if(rig==null || rig.depth!=CurrentDepth || itemId!=-(long)rig.serial || rig.kind!=kind)return false;
+                ok=team.DropCarriedInvention(rig,diver.OwnerId,at,yaw,SaveTransaction,out reason);
+            }
+            else
+            {
+                if(itemId!=tool.ActiveSlot)return false;
+                ok=team.DropPocketInvention(profile,tool.ActiveSlot-FirstCargoSlot,kind,at,yaw,SaveTransaction,out reason);
+            }
+            if(ok){dropsDirty=true;Publish();}
+            InventoryReceipt(diver,profile,ok,reason);
+            return ok;
+        }
+
+        internal int TakeLooseInvention(HarpoonTool tool,DroppedItem item)
+        {
+            if(!IsServerInitialized || saveFailed || transitionRemaining>0 || item.kind!=DroppedKind.Invention || !tool)return -1;
+            var diver=tool.Motor;
+            var profile=team?.Player(ProgressKey(diver));
+            if(profile==null)return -1;
+            var rig=team.rigs.Find(r=>-(long)r.serial==item.id && r.kind==item.invention && VisiblePackedItem(r));
+            if(rig==null)return -1;
+            int slot=tool.FindInventionPocket(rig.kind,team.TechStackLimit(rig.kind));
+            if(slot<FirstCargoSlot)return -1;
+            bool ok=team.StoreTechInSlot(profile,rig.serial,slot-FirstCargoSlot,diver.OwnerId,SaveTransaction,out var reason);
+            if(ok){dropsDirty=true;Publish();}
+            InventoryReceipt(diver,profile,ok,reason);
+            return ok?slot:-1;
+        }
 
         int DropIndex(long id)
         {
@@ -57,26 +123,30 @@ namespace Raid
         public bool TryAimDrop(DiverMotor diver, out DroppedItem item)
         {
             item = default;
-            if (diver == null || dropped.Count == 0 || !diver.TryGetComponent<HarpoonTool>(out var tool)) return false;
+            if (diver == null || !diver.TryGetComponent<HarpoonTool>(out var tool)) return false;
             var eye = diver.transform.position + Vector3.up * .6f;
             var aim = diver.AimDirection;
             if (!IsServerInitialized && diver.IsOwner && diver.GetComponentInChildren<Camera>() is Camera camera)
                 aim = camera.transform.forward;
             float best = float.PositiveInfinity;
-            foreach (var candidate in dropped)
+            DroppedItem closest=default;
+            void Consider(DroppedItem candidate)
             {
                 Vector3 offset = candidate.position - eye;
                 float distance = offset.magnitude;
-                if (distance > 3 || distance < .02f || !tool.CanPickUp(candidate)) continue;
+                if (distance > 3 || distance < .02f || !tool.CanPickUp(candidate)) return;
                 float along = Vector3.Dot(offset, aim);
                 float radius = candidate.Fish != null && candidate.Fish.RequiresPartner ? .62f : .39f;
                 float cross = (offset - aim * along).magnitude;
-                if (along <= 0 || cross > radius) continue;
+                if (along <= 0 || cross > radius) return;
                 float score = cross + distance * .1f;
-                if (score >= best || Physics.Raycast(eye, offset / distance, Mathf.Max(0,distance - .08f), ~0, QueryTriggerInteraction.Ignore)) continue;
+                if (score >= best || Physics.Raycast(eye, offset / distance, Mathf.Max(0,distance - .08f), ~0, QueryTriggerInteraction.Ignore)) return;
                 best = score;
-                item = candidate;
+                closest = candidate;
             }
+            foreach(var candidate in dropped)Consider(candidate);
+            if(DropState?.rigs!=null)foreach(var rig in DropState.rigs)if(VisiblePackedItem(rig))Consider(DroppedItem.Packed(rig));
+            item=closest;
             return item.id != 0;
         }
 
@@ -105,30 +175,35 @@ namespace Raid
             dropped.OnChange -= OnDropsChanged;
             foreach (var view in dropViews.Values) if (view != null) Destroy(view.gameObject);
             dropViews.Clear();
+            lastDropView=null;
         }
 
         void PresentDrops()
         {
-            if (!IsClientInitialized || !dropsDirty) return;
+            if (!IsClientInitialized || (!dropsDirty && ReferenceEquals(lastDropView,view))) return;
+            lastDropView=view;
             dropsDirty = false;
             vanished.Clear();
-            foreach (var id in dropViews.Keys) if (DropIndex(id) < 0) vanished.Add(id);
+            vanished.AddRange(dropViews.Keys);
+            foreach(var item in dropped)ShowDrop(item);
+            if(DropState?.rigs!=null)foreach(var rig in DropState.rigs)if(VisiblePackedItem(rig))ShowDrop(DroppedItem.Packed(rig));
             foreach (var id in vanished)
             {
                 var old = dropViews[id];
                 if (old != null) { old.gameObject.SetActive(false); Destroy(old.gameObject); }
                 dropViews.Remove(id);
             }
-            foreach (var item in dropped)
+        }
+        void ShowDrop(DroppedItem item)
+        {
+            vanished.Remove(item.id);
+            if (!dropViews.TryGetValue(item.id, out var model))
             {
-                if (!dropViews.TryGetValue(item.id, out var view))
-                {
-                    view = new GameObject("Dropped " + item.kind).AddComponent<DroppedItemView>();
-                    view.transform.SetParent(transform, true);
-                    dropViews.Add(item.id, view);
-                }
-                if (!view.Show(item)) dropsDirty = true;
+                model=new GameObject("Dropped "+item.kind).AddComponent<DroppedItemView>();
+                model.transform.SetParent(transform,true);
+                dropViews.Add(item.id,model);
             }
+            if(!model.Show(item))dropsDirty=true;
         }
     }
 
@@ -146,6 +221,11 @@ namespace Raid
                 var source = HarpoonPresentation.ActiveModel;
                 if (source == null || !source.MakeWorldModel(transform, ownedMeshes, out _, out _, out _, out _)) return false;
                 transform.localScale = Vector3.one * 1.48f;
+            }
+            else if(item.kind==DroppedKind.Invention)
+            {
+                if(SystemInfo.graphicsDeviceType!=UnityEngine.Rendering.GraphicsDeviceType.Null)
+                    TechRigShell.BuildSaleSample(gameObject,item.invention,.39f);
             }
             else
             {

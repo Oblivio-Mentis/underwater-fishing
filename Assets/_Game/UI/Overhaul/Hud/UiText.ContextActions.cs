@@ -76,25 +76,27 @@ namespace Raid.UI
                 if(pad.CanRequest)return new(Mark.Submarine,new(Key.Left,pad.Sea?"Затопить шлюз":"Осушить шлюз"));
                 return new HudHint(Mark.Submarine,note:world.Airlock.Caption){caution=true};
             }
+            if(c.Interaction==UiInteraction.DroppedItem && tool.CanPickUp(c.AimedDrop))
+            {
+                var item=c.AimedDrop;
+                return item.kind==DroppedKind.Harpoon && tool.OwnsHarpoon?new(Mark.Spear,new(Key.E,"Обменять гарпун")):
+                    new(Icon(item.kind),new(Key.E,"Поднять"),note:item.Label);
+            }
             var stack=tool.InventionInSlot(tool.ActiveSlot);
-            if(stack.count>0 && tool.CanDrawPocketInvention && !UiInputGate.PointerReserved)
+            if(stack.count>0 && tool.CanDrawPocketInvention && (!UiInputGate.PointerReserved || tool.WindingCharge))
             {
                 string note=(TechCatalog.Find(stack.kind)?.title ?? stack.kind)+"  ×"+stack.count;
                 if(stack.kind=="charge")
                     return new(Mark.Wrench,new(tool.WindingCharge?Key.LiftLeft:Key.Left,
-                        tool.WindingCharge?"Отпустите для броска":"Бросить · удерживайте для замаха"),note:note);
+                        tool.WindingCharge?"Отпустите для броска":"Бросить · удерживайте для замаха"),new(Key.Q,"Выложить 1 шт."),note:note);
                 bool available=world.PlacementHint==null;
-                return new(Mark.Wrench,new(available?Key.Left:Key.None,world.PlacementHint??"Установить"),note:note){caution=!available};
+                return new(Mark.Wrench,new(available?Key.Left:Key.None,world.PlacementHint??"Установить"),new(Key.Q,"Выложить 1 шт."),note:note){caution=!available};
             }
             if(world.AimedInvention!=null && !UiInputGate.PointerReserved)return InstalledEquipment(c,world.AimedInvention);
             switch(c.Interaction)
             {
                 case UiInteraction.PetGosha:return new(Mark.Glove,new(Key.E,"Взять и погладить Гошу"));
                 case UiInteraction.PickUpBall:return new(Mark.Ball,new(Key.E,"Поднять мяч"));
-                case UiInteraction.DroppedItem when tool.CanPickUp(c.AimedDrop):
-                    var item=c.AimedDrop;
-                    return item.kind==DroppedKind.Harpoon && tool.OwnsHarpoon?new(Mark.Spear,new(Key.E,"Обменять гарпун")):
-                        new(Icon(item.kind),new(Key.E,"Поднять"),note:item.Label);
                 case UiInteraction.Loot when !tool.HandsFull:
                     return new(Mark.Crate,new(Key.E,"Взять обеими руками"),note:c.AimedLoot.DisplayName);
                 case UiInteraction.Assist:
@@ -164,7 +166,7 @@ namespace Raid.UI
             return new(Mark.Wrench,primary,unload,move,note:name+" · "+state+" · "+RaidWorld.EquipmentReadout(rig,c.View));
         }
 
-        static Mark Icon(DroppedKind kind)=>kind switch {DroppedKind.Harpoon=>Mark.Spear,DroppedKind.Ball=>Mark.Ball,DroppedKind.Catch=>Mark.Lantern,_=>Mark.Crate};
+        static Mark Icon(DroppedKind kind)=>kind switch {DroppedKind.Harpoon=>Mark.Spear,DroppedKind.Ball=>Mark.Ball,DroppedKind.Catch=>Mark.Lantern,DroppedKind.Invention=>Mark.Wrench,_=>Mark.Crate};
         static HudHint Training(RaidWorld world,string orders)
         {
             if(world.Gosha.Mode is GoshaMode.Coming or GoshaMode.Fishing or GoshaMode.BringingFish or GoshaMode.GoingHome)
@@ -198,8 +200,6 @@ namespace Raid.UI
             if(!station)return default;
             return station.kind switch
             {
-                ShipConsoleKind.SkillTree when UiRoot.Instance && UiRoot.Instance.TechnologyOpen
-                    =>new HudHint(Mark.Wrench,new(Key.Left,"Выбрать на экране"),new(Key.Wheel,"Прокрутить список")){idle=true},
                 ShipConsoleKind.SkillTree=>new HudHint(Mark.Wrench,new(Key.Left,"Выбрать навык"),new(Key.Right,"Купить доступный навык"),new(Key.Wheel,"Масштаб дерева")){idle=true},
                 ShipConsoleKind.Reservoir=>new HudHint(Mark.Lantern,new(Key.Left,"Выбрать назначение"),new(Key.Wheel,"Прокрутить список")){idle=true},
                 _=>new HudHint(Mark.Bathymetry,new(Key.Left,"Выбрать на экране")){idle=true}

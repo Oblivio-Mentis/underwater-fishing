@@ -72,6 +72,60 @@ namespace Raid
         public bool DeployTechFromSlot(PlayerProgress profile,int index,Vector3 position,int owner,Func<bool> persist,out string reason)
             => DeployTechFromSlot(profile,index,position,owner,null,persist,out reason);
 
+        public bool DropPocketInvention(PlayerProgress profile,int index,string kind,Vector3 position,float yaw,
+            Func<bool> persist,out string reason)
+        {
+            if(!InventoryPocket(profile,index,out reason))return false;
+            var stack=profile.pocketStacks[index];
+            if(stack.count<=0 || stack.kind!=kind || TechCatalog.Find(kind)==null || !FiniteRig(position) || !float.IsFinite(yaw))
+            {reason="Предмет уже перемещён";return false;}
+            if(lastRigSerial==int.MaxValue || rigs.Count>=400){reason="Нет места для предмета в мире";return false;}
+            int previous=lastRigSerial;
+            var loose=AddRig(kind,position,-1);
+            loose.mode="dropped";
+            loose.yaw=yaw;
+            bool committed=false;
+            try
+            {
+                committed=ChangePocketStack(profile,index,kind,-1,persist);
+                reason=committed?"Предмет выложен":"Не удалось сохранить предмет";
+                return committed;
+            }
+            finally{if(!committed){rigs.Remove(loose);lastRigSerial=previous;}}
+        }
+
+        public bool DropCarriedInvention(TechRig rig,int owner,Vector3 position,float yaw,Func<bool> persist,out string reason)
+        {
+            if(owner<0 || rig==null || !rigs.Contains(rig) || !rig.Carrying(owner) || !FiniteRig(position) || !float.IsFinite(yaw))
+            {reason="Предмет уже перемещён";return false;}
+            var before=(rig.operatorId,rig.helperId,rig.mode,rig.position,rig.anchor,rig.yaw);
+            if(rig.helperId>=0)
+            {
+                if(rig.operatorId==owner)rig.operatorId=rig.helperId;
+                rig.helperId=-1;
+            }
+            else
+            {
+                // Loaded or damaged equipment stays assembled, retaining its catch, repairs, and remaining air.
+                bool pack=CanPackInvention(rig,owner,out _);
+                rig.operatorId=-1;
+                rig.mode=pack?"dropped":rig.kind=="cage" && rig.contents.Count>0?"captured":"placed";
+                rig.position=rig.anchor=position;
+                rig.yaw=yaw;
+            }
+            bool committed=false;
+            try
+            {
+                committed=persist==null || persist();
+                reason=committed?"Оборудование отпущено":"Не удалось сохранить предмет";
+                return committed;
+            }
+            finally
+            {
+                if(!committed)(rig.operatorId,rig.helperId,rig.mode,rig.position,rig.anchor,rig.yaw)=before;
+            }
+        }
+
         public bool DeployTechFromSlot(PlayerProgress profile,int index,Vector3 position,int owner,
             Action<TechRig> configure,Func<bool> persist,out string reason)
         {
@@ -83,7 +137,7 @@ namespace Raid
             {reason="Сначала освободите руки";return false;}
             if(slot.kind=="vacuum" && !CanPlaceVacuum(0,out reason))return false;
             if(lastRigSerial==int.MaxValue || slot.kind!="vacuum" &&
-                rigs.FindAll(r=>r.kind==slot.kind).Count>=TechRig.TotalLimit(this,definition))
+                rigs.FindAll(r=>r.kind==slot.kind && r.mode!="dropped").Count>=TechRig.TotalLimit(this,definition))
             {reason="Достигнут лимит одновременно выставленного оборудования";return false;}
             int serial=lastRigSerial;
             var rig=AddRig(slot.kind,position,owner);
@@ -108,7 +162,7 @@ namespace Raid
             if(rig.kind=="oxygen" && rig.air>=0 && rig.air<TechUnitCapacity(rig.kind))
             {reason="Перед упаковкой заправьте кислородную станцию у корабля";return false;}
             bool ownCarry=rig.mode=="carried" && rig.operatorId==owner;
-            bool parked=rig.mode=="placed" && rig.operatorId<0;
+            bool parked=(rig.mode=="placed" || rig.mode=="dropped") && rig.operatorId<0;
             if(!(ownCarry || parked) || rig.helperId>=0 || rig.baitId>=0 || rig.towDiver>=0 || rig.towCargo!=0 ||
                 rig.targetSerial!=0 || !string.IsNullOrEmpty(rig.flight) || rig.health<1 ||
                 rig.contents.Count>0 || rig.brood.Count>0 || rigs.Exists(other=>other.targetSerial==rig.serial))
