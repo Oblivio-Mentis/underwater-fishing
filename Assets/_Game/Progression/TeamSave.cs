@@ -11,6 +11,11 @@ namespace Raid
         [Serializable]
         private sealed class Envelope { public string format, payload, sha256; }
 
+        [Serializable]
+        sealed class LegacyTeamV6 { public LegacyPlayerV6[] players; }
+        [Serializable]
+        sealed class LegacyPlayerV6 { public string key; public TechSlot[] techSlots; }
+
         public static void Save(string path, TeamProgress progress)
         {
             if (progress == null) throw new ArgumentNullException(nameof(progress));
@@ -52,7 +57,12 @@ namespace Raid
                 if(progress.schemaVersion==5)
                 {
                     if(progress.players!=null)
-                        foreach(var crew in progress.players)if(crew!=null)crew.techSlots=new TechSlot[TechSlot.Slots];
+                        foreach(var crew in progress.players)if(crew!=null)crew.pocketStacks=new TechSlot[TechSlot.PocketCount];
+                    progress.schemaVersion=TeamProgress.CurrentSchema;
+                }
+                else if(progress.schemaVersion==6)
+                {
+                    MigrateV6Pockets(progress,envelope.payload);
                     progress.schemaVersion=TeamProgress.CurrentSchema;
                 }
                 progress.Validate();
@@ -60,6 +70,22 @@ namespace Raid
             }
             catch (Exception error) when (error is ArgumentException || error is InvalidOperationException || error is InvalidDataException || error is OverflowException)
             { throw new InvalidDataException("Team save is corrupt or unsupported; original preserved: " + path, error); }
+        }
+
+        static void MigrateV6Pockets(TeamProgress progress,string payload)
+        {
+            var legacy=JsonUtility.FromJson<LegacyTeamV6>(payload);
+            if(progress.players==null || legacy?.players?.Length!=progress.players.Count)
+                throw new InvalidDataException("Missing crew inventory in schema 6.");
+            for(int i=0;i<progress.players.Count;i++)
+            {
+                var player=progress.players[i];
+                var previous=legacy.players[i];
+                if(player==null || previous==null || previous.key!=player.key || previous.techSlots?.Length!=4)
+                    throw new InvalidDataException("Invalid schema 6 equipment slots.");
+                player.pocketStacks=new TechSlot[TechSlot.PocketCount];
+                Array.Copy(previous.techSlots,player.pocketStacks,previous.techSlots.Length);
+            }
         }
 
         private static string Hash(string payload)
