@@ -306,6 +306,7 @@ namespace Raid
         }
         static AudioClip Tone(string name,float hz,float seconds)
         {
+            if(Application.isBatchMode || AudioSettings.outputSampleRate<=0)return null;
             const int rate=16000;var samples=new float[(int)(seconds*rate)];
             for(int i=0;i<samples.Length;i++){float t=i/(float)rate;samples[i]=.42f*Mathf.Exp(-6*t/seconds)*Mathf.Sin(2*Mathf.PI*hz*t*(1-.3f*t/seconds));}
             var c=AudioClip.Create(name,samples.Length,1,rate,false);c.SetData(samples,0);return c;
@@ -313,7 +314,11 @@ namespace Raid
         public void Display(TechRig rig,bool snap)
         {
             transform.position=snap?rig.position:Vector3.Lerp(transform.position,rig.position,1-Mathf.Exp(-Time.deltaTime*14));
-            if(rig.mode!=lastMode && lastMode!=null)sound.PlayOneShot(rig.mode is "armed" or "captured" or "fuse"?chirp:click);
+            if(rig.mode!=lastMode && lastMode!=null)
+            {
+                var cue=rig.mode is "armed" or "captured" or "fuse"?chirp:click;
+                if(cue)sound.PlayOneShot(cue);
+            }
             lastMode=rig.mode;
             bool busy=rig.mode is not ("placed" or "carried" or "damaged");
             int light=rig.health<.36f?3:rig.mode is "armed" or "closing" or "fuse"?2:rig.contents.Count>0?1:0;

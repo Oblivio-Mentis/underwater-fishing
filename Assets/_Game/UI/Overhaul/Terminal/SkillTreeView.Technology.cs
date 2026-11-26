@@ -151,13 +151,13 @@ namespace Raid.UI
                 var row=TechCatalog.Items[i];
                 if(row.category!=category)continue;
                 techItems[i].targetGraphic.color=row==item?Color.Lerp(Steel,TechGreen,.26f):Night;
-                UiKit.Caption(techItems[i],(team.TechRank(row.id,"unlock")>0?"✓  ":"")+row.title);
+                UiKit.Caption(techItems[i],(team.TechRank(row.id,"unlock")>0?"[+]  ":"")+row.title);
             }
             for(int i=0;i<item.upgrades.Length;i++)
             {
                 var row=item.upgrades[i];
                 int owned=team.TechRank(item.id,row.id);
-                string state=owned==row.values.Length?"✓":team.TechRequirement(item,row)!=null?"—":
+                string state=owned==row.values.Length?"[+]":team.TechRequirement(item,row)!=null?"—":
                     team.Treasury.Covers(row.NextCost(owned))?"+":"·";
                 UiKit.Caption(techNodes[i],$"{state}   {row.title}   {owned}/{row.values.Length}");
                 techNodes[i].targetGraphic.color=row==node?Color.Lerp(Steel,KindColor(row.kind),.32f):Night;
