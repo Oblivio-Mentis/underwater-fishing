@@ -18,6 +18,64 @@ namespace Raid.Tests
             return state;
         }
 
+        [Test] public void DroppedUnitMovesBetweenOwnersAtTheTeamLimitAndRollsBackFailedWrites()
+        {
+            string path=Path.Combine(Path.GetTempPath(),"nereid-loose-invention-"+Guid.NewGuid().ToString("N")+".json");
+            try
+            {
+                var team=Team("charge");
+                var owner=team.RegisterPlayer("sender");
+                var receiver=team.RegisterPlayer("receiver");
+                int limit=TechRig.TotalLimit(team,TechCatalog.Find("charge"));
+                for(int i=0;i<limit;i++)
+                    Assert.That(team.TakeTechFromRack(owner,"charge",i/team.TechStackLimit("charge"),()=>true,out _));
+                int originalCount=owner.pocketStacks[0].count;
+                int revision=owner.revision;
+                var at=new Vector3(1,2,3);
+                Assert.That(team.DropPocketInvention(owner,0,"charge",at,32,()=>false,out _),Is.False);
+                Assert.That(owner.pocketStacks[0].count,Is.EqualTo(originalCount));
+                Assert.That(owner.revision,Is.EqualTo(revision));
+                Assert.That(team.lastRigSerial,Is.Zero);
+                Assert.That(team.rigs,Is.Empty);
+                bool Save(){TeamSave.Save(path,team);return true;}
+                Assert.That(team.DropPocketInvention(owner,0,"charge",at,32,Save,out _));
+                team=TeamSave.Load(path);
+                owner=team.Player("sender");receiver=team.Player("receiver");
+                var loose=team.rigs.Single();
+                Assert.That(loose.mode,Is.EqualTo("dropped"));
+                Assert.That(loose.position,Is.EqualTo(at));Assert.That(loose.yaw,Is.EqualTo(32f));
+                Assert.That(owner.pocketStacks.Sum(s=>s.count)+team.rigs.Count,Is.EqualTo(limit));
+                Assert.Throws<IOException>(()=>team.StoreTechInSlot(receiver,loose.serial,1,19,
+                    ()=>throw new IOException("test write"),out _));
+                Assert.That(team.rigs.Single(),Is.SameAs(loose));Assert.That(receiver.pocketStacks[1].count,Is.Zero);
+                Assert.That(team.StoreTechInSlot(receiver,loose.serial,1,19,Save,out _));
+                Assert.That(team.StoreTechInSlot(owner,loose.serial,0,18,Save,out _),Is.False);
+                var loaded=TeamSave.Load(path);
+                Assert.That(loaded.rigs,Is.Empty);
+                Assert.That(loaded.Player("receiver").pocketStacks[1].kind,Is.EqualTo("charge"));
+                Assert.That(loaded.Player("receiver").pocketStacks[1].count,Is.EqualTo(1));
+                Assert.That(loaded.Player("sender").pocketStacks.Sum(s=>s.count),Is.EqualTo(limit-1));
+            }
+            finally{File.Delete(path);File.Delete(path+".bak");}
+        }
+
+        [Test] public void ReleasingALoadedOrSharedRigKeepsItsSpecimensAndSerial()
+        {
+            var team=Team("cage");
+            var rig=team.AddRig("cage",Vector3.zero,12);
+            rig.helperId=17;
+            var catchItem=new CatchItem(43,1,0,2,1,1,species:"Bristlefish");
+            rig.contents.Add(catchItem);
+            Assert.That(team.DropCarriedInvention(rig,12,Vector3.right,30,()=>true,out _));
+            Assert.That(rig.operatorId,Is.EqualTo(17));Assert.That(rig.mode,Is.EqualTo("carried"));
+            Assert.That(team.DropCarriedInvention(rig,17,Vector3.up,30,()=>false,out _),Is.False);
+            Assert.That(rig.position,Is.EqualTo(Vector3.zero));Assert.That(rig.operatorId,Is.EqualTo(17));
+            Assert.That(team.DropCarriedInvention(rig,17,Vector3.up,30,()=>true,out _));
+            Assert.That(rig.mode,Is.EqualTo("captured"));Assert.That(rig.operatorId,Is.EqualTo(-1));
+            Assert.That(rig.contents.Single(),Is.SameAs(catchItem));
+            Assert.That(team.rigs.Single().serial,Is.EqualTo(1));
+        }
+
         [Test] public void EachUnlockedInventionIsFreeAndOnlyTheChosenOwnersSlotChanges()
         {
             var ids=TechCatalog.Items.Select(r=>r.id).ToArray();
