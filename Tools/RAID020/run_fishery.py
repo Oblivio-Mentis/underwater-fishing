@@ -10,7 +10,7 @@ import time
 import uuid
 
 
-def run(player, output, bow_only=False):
+def run(player, output, scenario=None):
     executable = player.resolve(strict=True)
     folder = output.resolve() / ("fishery-" + time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
     folder.mkdir(parents=True)
@@ -31,9 +31,9 @@ def run(player, output, bow_only=False):
         children.append(subprocess.Popen(args, cwd=executable.parent, startupinfo=startup))
 
     try:
-        scenario = ["-raid-bow-only"] if bow_only else []
+        flags = [scenario] if scenario else []
         launch("host", "-raid-fishery-trial", str(folder), "-raid-fishery-duo",
-               "-raid-save", str(folder / "campaign.json"), *scenario)
+               "-raid-save", str(folder / "campaign.json"), *flags)
         deadline = time.monotonic() + 120
         while time.monotonic() < deadline:
             log = folder / "host.log"
@@ -98,10 +98,16 @@ def run(player, output, bow_only=False):
                 with image.open("rb") as shot:
                     if shot.read(8) != bytes.fromhex("89504e470d0a1a0a"):
                         raise ValueError("Invalid screenshot")
-                if bow_only:
+                if scenario:
                     if not report["twoDivers"]:
-                        raise ValueError("The bow trial requires an independent client")
-                    print(f"{len(report['checks'])} bow and pipe checks passed, frames and report in {folder}")
+                        raise ValueError("The scenario requires an independent client")
+                    if scenario == "-raid-gosha-den-only":
+                        _, shared = guest_state()
+                        if len(shared.get("goshaDen", [])) != 9:
+                            time.sleep(.25)
+                            continue
+                        print("Independent client received all the saved den pieces.")
+                    print(f"{len(report['checks'])} checks passed, frames and report in {folder}")
                     return
                 if not report["twoDivers"] or not report["netCatch"] or not report["vacuumCatch"]:
                     raise ValueError("Two-owner field checks missing")
@@ -131,6 +137,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("player", type=Path, help="Path to the development UnderwaterFishing.exe")
     parser.add_argument("output", type=Path, help="Parent directory for per-run PNG, JSON, save and logs")
-    parser.add_argument("--bow-only", action="store_true", help="Run the kraken and pipe presentation scenario")
+    scenarios = parser.add_mutually_exclusive_group()
+    scenarios.add_argument("--bow-only", dest="scenario", action="store_const", const="-raid-bow-only",
+                           help="Run the kraken and pipe presentation scenario")
+    scenarios.add_argument("--gosha-den", dest="scenario", action="store_const", const="-raid-gosha-den-only",
+                           help="Run the companion junk collection and den scenario")
     options = parser.parse_args()
-    run(options.player, options.output, options.bow_only)
+    run(options.player, options.output, options.scenario)

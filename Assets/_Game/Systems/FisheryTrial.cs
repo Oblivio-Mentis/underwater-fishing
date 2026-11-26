@@ -116,6 +116,11 @@ namespace Raid
                 yield return BowAndPipeTrial();
                 yield break;
             }
+            if(Environment.GetCommandLineArgs().Contains("-raid-gosha-den-only"))
+            {
+                yield return GoshaDenTrial();
+                yield break;
+            }
             yield return Wait("a live school in open water",()=>
             {
                 foreach(var candidate in FishActor.ServerSchool)

@@ -389,6 +389,7 @@ namespace Raid
             ResetKrakenBreath();
             ResetCrabs();
             ResetGosha();
+            ResetGoshaJunk();
             depth.Value=pendingDepth;
             team.expeditionDepth=pendingDepth;
             for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(Nereid.NereidDeckNavigation.CrewSpawn(i,new Vector3((i-2)*1.5f,1.2f,1)));

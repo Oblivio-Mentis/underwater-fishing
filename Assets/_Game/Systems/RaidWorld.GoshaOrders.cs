@@ -14,6 +14,8 @@ namespace Raid
         public FishActor Fish;
         public LootActor Loot;
         public long Id;
+        public int JunkSlot=-1;
+        public bool IsJunk => JunkSlot>=0;
         public bool IsFish => Fish != null;
     }
 
@@ -40,7 +42,7 @@ namespace Raid
 
         bool CanUseFishHatch => Autonomy>=5 || DeliveryRank>=5;
         bool KnowsServiceHatch => DeliveryRank>=5;
-        bool HasCarriedLoot => carried.Exists(item=>!item.IsFish);
+        bool HasCarriedLoot => carried.Exists(item=>item.Loot!=null);
         float nextHatchDelivery;
 
         int Autonomy => team?.TeamRank(SkillLine.GoshaAutonomy) ?? 0;
@@ -59,7 +61,8 @@ namespace Raid
             if (!Training(pet.Mode)) return GoshaTask.Idle;
             if (pet.Mode == GoshaMode.GoingHome) return GoshaTask.Returning;
             if (huntFish != null) return hunt.Lunging ? GoshaTask.Grabbing : GoshaTask.Chasing;
-            if (huntLoot != null) return grabWait > 0 ? GoshaTask.Grabbing : GoshaTask.Chasing;
+            if (pet.DenPlacement>0) return GoshaTask.Building;
+            if (huntLoot != null || huntJunk>=0) return grabWait > 0 ? GoshaTask.Grabbing : GoshaTask.Chasing;
             if (carried.Count > 0) return deliverWait > 2f ? GoshaTask.Waiting : GoshaTask.Delivering;
             if (work != GoshaWork.None) return GoshaTask.Searching;
             return GoshaTask.Idle;
@@ -70,13 +73,14 @@ namespace Raid
         {
             string task = (GoshaTask)s.Task switch
             {
-                GoshaTask.Searching => (GoshaWork)s.Work == GoshaWork.Materials ? "ищет материалы" : "ищет рыбу",
+                GoshaTask.Searching => (GoshaWork)s.Work == GoshaWork.Materials ? "ищет находки" : "ищет рыбу",
                 GoshaTask.Chasing => (GoshaWork)s.Work == GoshaWork.Materials && s.Load == 0 ? "плывёт к находке" : "гонится",
                 GoshaTask.Grabbing => "хватает",
                 GoshaTask.Carrying => "несёт",
                 GoshaTask.Delivering => "доставляет",
                 GoshaTask.Waiting => "ждёт место для добычи",
                 GoshaTask.Returning => "возвращается",
+                GoshaTask.Building => "обустраивает домик",
                 _ => "отдыхает"
             };
             string load = s.Load > 0 ? " · груз " + s.Load : "";
@@ -95,7 +99,7 @@ namespace Raid
             string hint = "G — ко мне";
             int autonomy = View?.TeamRank(SkillLine.GoshaAutonomy) ?? 0;
             if (autonomy > 0) hint += autonomy >= 5 ? "  ·  H — на промысел" : "  ·  H — принеси рыбку";
-            if ((View?.TeamRank(SkillLine.GoshaScent) ?? 0) > 0) hint += "  ·  K — за материалами";
+            if ((View?.TeamRank(SkillLine.GoshaScent) ?? 0) > 0) hint += "  ·  K — за находками";
             hint += "  ·  J — сопровождение";
             return hint;
         }
@@ -151,7 +155,7 @@ namespace Raid
             SetMode(GoshaMode.Fishing);
             OrderReply(sender, mode switch
             {
-                GoshaWork.Materials => "Гоша пошёл за материалами",
+                GoshaWork.Materials => "Гоша пошёл за находками",
                 GoshaWork.Balanced => "Гоша вышел на промысел",
                 _ => "Гоша отправился на охоту"
             });
@@ -163,13 +167,13 @@ namespace Raid
             if (work == GoshaWork.None && !finishing) return;
             work = GoshaWork.None;
             if (carried.Count > 0) { finishing = true; return; }
-            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; hunt.Reset();
+            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; huntJunk=-1; hunt.Reset();
             finishing = false;
         }
 
         void FinishWork(string reason)
         {
-            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; work = GoshaWork.None; finishing = false;
+            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; huntJunk=-1; work = GoshaWork.None; finishing = false;
             hunt.Reset();
             EndOrder(reason);
         }
@@ -186,7 +190,8 @@ namespace Raid
         void ReleaseOrder()
         {
             DropCarried();
-            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; hunt.Reset();
+            huntFish = null; huntFishId = 0; huntLoot = null; huntLootId = 0; huntJunk=-1; hunt.Reset();
+            denBuildTime=0;pet.DenPlacement=0;
             orderDiver = null; orderProfile = null;
             followingOrder = false; work = GoshaWork.None; finishing = false; continuous = false; caution = 0;
             pet.OrderOwner = -1;
@@ -202,6 +207,7 @@ namespace Raid
                 var at = pet.Position + dir * (.5f + i * -.22f) - Vector3.up * (.1f + i * .05f);
                 if (c.Fish != null) c.Fish.ReleaseGoshaCatch(at, Quaternion.LookRotation(dir));
                 else if (c.Loot != null) c.Loot.PutDownByGosha(at);
+                else if(c.IsJunk) PutJunkDown(c.JunkSlot,at);
             }
             carried.Clear();
         }
@@ -248,6 +254,13 @@ namespace Raid
         void TickWork(float dt)
         {
             if (team == null || !team.goshaTamed) { FinishWork("Гоша вернулся на палубу"); return; }
+            int junk=carried.FindIndex(item=>item.IsJunk);
+            if(junk>=0)
+            {
+                if(Time.time>orderEnds){continuous=false;finishing=true;work=GoshaWork.None;}
+                DeliverJunk(junk,dt);
+                return;
+            }
             if(HasCarriedLoot)
             {
                 if(Time.time>orderEnds){continuous=false;finishing=true;work=GoshaWork.None;}
@@ -264,9 +277,9 @@ namespace Raid
             bool canHandOver = AnyDiverAtSea() || (DeliveryRank >= 3 && CageLoadingOpen()) ||
                 (CanUseFishHatch && GoshaReceiver.Active != null && GoshaReceiver.Active.Ready) || work is GoshaWork.Materials or GoshaWork.Balanced;
             if (carried.Count == 0 && !canHandOver) { FinishWork("Экипаж на борту · Гоша возвращается"); return; }
-            PlaceCarried();
             if (huntFish != null) { HuntFishTick(dt); return; }
             if (huntLoot != null) { HuntLootTick(dt); return; }
+            if (huntJunk>=0) { HuntJunkTick(dt); return; }
             bool mustDeliver = CarriedWeight>=HuntStats.Capacity ||
                 (carried.Count>0 && (finishing || CanUseFishHatch));
             if (mustDeliver) { DeliverTick(dt); return; }
@@ -277,6 +290,7 @@ namespace Raid
             }
             if (huntFish != null) { HuntFishTick(dt); return; }
             if (huntLoot != null) { HuntLootTick(dt); return; }
+            if (huntJunk>=0) { HuntJunkTick(dt); return; }
             // Nothing available: keep station near the crew instead of spamming scans.
             var near = NearestSeaDiver(pet.Position, 6.5f);
             if (near != null && !finishing) TravelTo(near.transform.position, dt);
@@ -293,12 +307,14 @@ namespace Raid
                 hunt.Begin(hunt.Velocity);
                 return;
             }
-            if (ScentRank > 0 && work is GoshaWork.Materials or GoshaWork.Balanced) huntLoot = SelectLoot();
-            if (huntLoot != null)
-            {
-                huntLootId = huntLoot.CargoId; huntStartedAt = Time.time; grabWait = 0;
-                hunt.Begin(hunt.Velocity);
-            }
+            if(ScentRank==0 || work is not (GoshaWork.Materials or GoshaWork.Balanced))return;
+            huntLoot=SelectLoot();
+            if(carried.Count==0 && (huntLoot==null || usefulBeforeJunk==0))huntJunk=SelectJunk();
+            if(huntJunk>=0)huntLoot=null;
+            if(huntLoot==null && huntJunk<0)return;
+            huntLootId=huntLoot?huntLoot.CargoId:0;
+            huntStartedAt=Time.time;grabWait=0;
+            hunt.Begin(hunt.Velocity);
         }
 
         FishActor SelectFish()
@@ -543,7 +559,15 @@ namespace Raid
             return true;
         }
 
-        void Tally(GoshaCatch c) { if (c.IsFish) pet.FishDelivered++; else pet.MaterialsDelivered++; }
+        void Tally(GoshaCatch c)
+        {
+            if(c.IsFish)pet.FishDelivered++;
+            else if(c.Loot!=null)
+            {
+                pet.MaterialsDelivered++;
+                if(usefulBeforeJunk>0)usefulBeforeJunk--;
+            }
+        }
 
         string[] Owners(string receiverKey) => string.IsNullOrEmpty(receiverKey) ? null : new[] { receiverKey };
 
@@ -667,7 +691,14 @@ namespace Raid
         internal void StageWorkForTrial(GoshaWork mode, int speed, int autonomy, int claws, int scent, int delivery)
         {
             team.goshaMet = team.goshaTamed = true; ResetGosha();
-            void Grant(SkillLine line, int rank) { for (int i = 1; i <= rank; i++) team.teamSkills.Add(SkillTreeDefinition.Id(line, i)); }
+            void Grant(SkillLine line,int rank)
+            {
+                for(int i=1;i<=rank;i++)
+                {
+                    var id=SkillTreeDefinition.Id(line,i);
+                    if(!team.teamSkills.Contains(id))team.teamSkills.Add(id);
+                }
+            }
             Grant(SkillLine.GoshaAutonomy, autonomy); Grant(SkillLine.GoshaSpeed, speed);
             Grant(SkillLine.GoshaClaws, claws); Grant(SkillLine.GoshaScent, scent); Grant(SkillLine.GoshaDelivery, delivery);
             lastOrderAt = float.NegativeInfinity;

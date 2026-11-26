@@ -284,6 +284,7 @@ namespace Raid
             ValidateTechnologies();
             ValidateTechInventory();
             ValidateTechRigs();
+            ValidateGoshaDen();
             HashSet<long> delivered = new HashSet<long>();
             foreach (long id in deliveredIds) if (id <= 0 || !delivered.Add(id)) throw new InvalidOperationException("Invalid delivery ledger.");
             HashSet<long> stock = new HashSet<long>();

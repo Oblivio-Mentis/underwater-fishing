@@ -32,10 +32,11 @@ namespace Raid
         public long HatchCargoId;
         // Expedition tally for the ship status: resets with the expedition.
         public ushort FishDelivered, MaterialsDelivered, ChasesWon, ChasesLost;
+        public byte DenPlacement;
         public byte Task;
     }
 
-    public enum GoshaTask : byte { Idle, Searching, Chasing, Grabbing, Carrying, Delivering, Waiting, Returning }
+    public enum GoshaTask : byte { Idle, Searching, Chasing, Grabbing, Carrying, Delivering, Waiting, Returning, Building }
 
     public sealed partial class RaidWorld
     {
@@ -132,6 +133,7 @@ namespace Raid
             TickBall(dt);
             if(!team.goshaTamed)TickMeeting(dt);
             else if(!TickServiceTransit(dt) && !TickOrder(dt))TickPetDeck(dt);
+            PlaceCarried();
             if(pet.Ball==GoshaBallMode.Carried)
                 pet.BallPosition=pet.Position+pet.Heading*(GoshaView.JawSocket.z*tuning.petScale)+Vector3.up*(GoshaView.JawSocket.y*tuning.petScale-GoshaView.DeckOffset);
             pet.Load=(byte)Mathf.Min(255,carried.Count);

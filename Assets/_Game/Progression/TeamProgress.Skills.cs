@@ -82,6 +82,7 @@ namespace Raid
             var projection=(TeamProgress)MemberwiseClone();
             projection.players=new List<PlayerProgress>();
             projection.rigs=rigs.ConvertAll(r=>r.PublicCopy());
+            projection.goshaDen=new List<GoshaJunkKind>(goshaDen);
             projection.tank=tank.ConvertAll(item=>item.PublicCopy());
             projection.cargo=cargo.ConvertAll(item=>item.PublicCopy());
             return projection;

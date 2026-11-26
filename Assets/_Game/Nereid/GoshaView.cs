@@ -86,6 +86,7 @@ namespace Raid.Nereid
             var world=RaidWorld.Instance;
             if(world==null || !world.IsClientInitialized || !world.Gosha.Active)return;
             Show(world.Gosha);
+            PresentDen(world,world.Gosha);
             var ui=UI.UiRoot.Instance;
             var keyboard=UnityEngine.InputSystem.Keyboard.current;
             if(keyboard==null || ui==null || ui.Page!=UI.UiPage.None || UI.UiInputGate.Modal || Time.unscaledTime<UI.UiInputGate.ResumeAt || (!Application.isFocused&&!Application.isBatchMode) ||
@@ -163,7 +164,8 @@ namespace Raid.Nereid
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
             float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;
             body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
-            body.localRotation=Quaternion.Euler(happy?-12:swim?5*Mathf.Sin(phase*.6f):0,0,bank+(happy?10:2)*Mathf.Sin(phase));
+            float placing=Mathf.Sin(s.DenPlacement/255f*Mathf.PI);
+            body.localRotation=Quaternion.Euler((happy?-12:swim?5*Mathf.Sin(phase*.6f):0)+placing*19,0,bank+(happy?10:2)*Mathf.Sin(phase));
             for(int i=0;i<legs.Length;i++)
             {
                 float cycle=Mathf.Sin(phase+i*1.72f);int sign=i<4?-1:1;
