@@ -94,7 +94,7 @@ namespace Raid
             await WaitRackUi(()=>host.IsInside && UiRoot.Instance.Page==UiPage.None,"clear cabin overview of the vending machine");
             await Awaitable.WaitForSecondsAsync(.35f);
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"00-vending-machine.png"));
-            host.Teleport(rack.position+rack.forward*1.15f-Vector3.up*.65f);
+            host.Teleport(rack.position+rack.forward*1.77f+rack.right*.23f-Vector3.up*.65f);
             host.LookAtConsole(rack.position);
             await WaitRackUi(()=>InventionRackTargeted(host) && InventoryContextAllowed(),"owned camera aiming at the real rack");
             report.phase="open rack from physical E";
@@ -116,7 +116,9 @@ namespace Raid
             {
                 InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.Enter));
                 await WaitRackUi(()=>RackParcelInFlight(trap.id),"visible trap cargo ejected from the chute",7);
-                await CaptureRackUi(folder,"03-ejected-trap.png",.10f);
+                await CaptureRackUi(folder,"03-ejected-trap.png",.11f);
+                if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"04-trap-in-flight.png",.10f);
+                if(RackParcelInFlight(trap.id))await CaptureRackUi(folder,"05-trap-in-flight.png",.09f);
                 report.Check(RackParcelCount>0 || LocalProgress.techSlots[slot].count>0,"The actual server-issued trap was observed leaving the vending chute.");
                 await WaitRackUi(()=>LocalProgress.techSlots[slot].count==limit,"hold Enter to fill selected slot",12);
                 await Awaitable.WaitForSecondsAsync(.4f);
@@ -148,53 +150,12 @@ namespace Raid
             report.Check(stored!=null && stored.techSlots[slot].count==limit && stored.techSlots[slot].kind=="trap","The selected full stack persisted in the player's private campaign profile.");
         }
 
-        string rackFramePath;
-        Texture2D rackBackdrop;
-        RenderTexture rackFrame,previousRackFrame;
         async Awaitable CaptureRackUi(string folder,string name,float settle=.25f)
         {
             await Awaitable.WaitForSecondsAsync(settle);
-            string path=Path.Combine(folder,name);
-            // The player's hidden swapchain can be black. Capture the local camera and its actual HUD,
-            // then paint this inventory's ordinary GUI repaint into the same offscreen surface.
-            UiQaProbe.CapturePeerCamera(path);
-            rackBackdrop=new Texture2D(2,2,TextureFormat.RGB24,false);
-            try
-            {
-                if(!rackBackdrop.LoadImage(File.ReadAllBytes(path)))throw new InvalidDataException("Camera capture invalid.");
-                rackFramePath=path;
-                await WaitRackUi(()=>rackFramePath==null,"inventory GUI repaint "+name,8);
-            }
-            finally{Destroy(rackBackdrop);rackBackdrop=null;rackFramePath=null;}
-        }
-        void BeginRackCapture()
-        {
-            if(rackFramePath==null || Event.current.type!=EventType.Repaint || !rackBackdrop)return;
-            previousRackFrame=RenderTexture.active;
-            rackFrame=RenderTexture.GetTemporary(Screen.width,Screen.height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
-            Graphics.Blit(rackBackdrop,rackFrame);
-            RenderTexture.active=rackFrame;
-            GL.PushMatrix();
-            GL.LoadPixelMatrix(0,Screen.width,Screen.height,0);
-        }
-        void EndRackCapture()
-        {
-            if(!rackFrame)return;
-            var photo=new Texture2D(rackFrame.width,rackFrame.height,TextureFormat.RGB24,false);
-            try
-            {
-                RenderTexture.active=rackFrame;
-                photo.ReadPixels(new Rect(0,0,rackFrame.width,rackFrame.height),0,0);
-                photo.Apply(false);
-                File.WriteAllBytes(rackFramePath,photo.EncodeToPNG());
-                rackFramePath=null;
-            }
-            finally
-            {
-                Destroy(photo);
-                GL.PopMatrix();RenderTexture.active=previousRackFrame;
-                RenderTexture.ReleaseTemporary(rackFrame);rackFrame=null;
-            }
+            RefreshInventoryCanvas();
+            Canvas.ForceUpdateCanvases();
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,name));
         }
     }
 }
