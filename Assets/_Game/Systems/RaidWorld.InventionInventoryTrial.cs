@@ -19,7 +19,7 @@ namespace Raid
         {
             public string status="running",phase,error;
             public int stackLimit,fieldSlot;
-            public List<string> checks=new();
+            public List<string> checks=new(),backgroundInputRoutes=new();
             public void Check(bool condition,string description)
             {
                 if(!condition)throw new InvalidOperationException(description);
@@ -46,7 +46,8 @@ namespace Raid
                     throw new InvalidOperationException("Rack UI trial needs a new rack-ui-campaign.json in its own folder, -raid-host and a fixture -raid-profile GUID.");
                 rackUiFixture=true;
                 await WaitRackUi(()=>Instance && Instance.LocalProgress!=null && Instance.localDiver && Instance.NetworkObject &&
-                    Instance.IsServerInitialized && Instance.InventionRackTransform && UiRoot.Instance && UiRoot.Instance.Context.Connected,"private inventory and physical rack",95);
+                    Instance.IsServerInitialized && Instance.InventionRackTransform && UiRoot.Instance && UiRoot.Instance.Context.Connected &&
+                    UiRoot.Instance.Page==UiPage.None && !UiInputGate.Modal && Time.unscaledTime>=UiInputGate.ResumeAt,"private inventory and physical rack",95);
                 await Instance.RunRackUiTrial(report,folder);
                 report.status="passed";
             }
@@ -105,7 +106,8 @@ namespace Raid
             const int ballSlot=2,trapSlot=3,otherSlot=4;
             report.fieldSlot=trapSlot+1;
             report.Check(gear.StoreBall() && gear.HasBallInSlot(ballSlot),"The actual ball occupies the first ordinary pocket.");
-            gear.SelectSlot(1);
+            if(!gear.SelectSlot(1) && gear.QaBackgroundPocketSelect(1))
+                report.backgroundInputRoutes.Add("Select the ordinary free-hands slot");
             await WaitRackUi(()=>gear.ActiveSlot==1,"ordinary free-hands slot for the rack camera");
             var rack=InventionRackTransform;
             var wideView=rack.position+rack.forward*2.3f+rack.right*.16f-Vector3.up*.63f;
@@ -188,9 +190,12 @@ namespace Raid
             host.Teleport(CargoLoadingPosition+new Vector3(10,2.5f,4));
             await WaitRackUi(()=>!NearInventionRack(host) && !host.IsInside && UiRoot.Instance.Page==UiPage.None,"diver outside");
             await RackKey(Key.Tab);
-            report.Check(!InventionPanelOpen && UiRoot.Instance.Page==UiPage.None && !UiInputGate.Blocked,
+            report.Check(!InventionPanelOpen && UiRoot.Instance.Page==UiPage.None && !UiInputGate.Modal &&
+                Time.unscaledTime>=UiInputGate.ResumeAt && (Application.isFocused?!UiInputGate.Blocked:Application.isBatchMode),
                 "Tab underwater opened no separate technology inventory.");
             await RackKey(Key.Digit4);
+            if(gear.ActiveSlot!=trapSlot && gear.QaBackgroundPocketSelect(trapSlot))
+                report.backgroundInputRoutes.Add("Digit 4: ordinary slot selector");
             await WaitRackUi(()=>gear.ActiveSlot==trapSlot,"number 4 selects the full trap stack on the ordinary HUD");
             var bar=GameObject.Find("HUD Equipment");
             bool HudStack(int slot,string kind,int count)
@@ -211,12 +216,17 @@ namespace Raid
             try
             {
                 InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mouse.position.ReadValue()});
+                await Awaitable.WaitForSecondsAsync(.45f);
+                if(gear.CarriedInvention==null && gear.QaBackgroundPocketDraw())
+                    report.backgroundInputRoutes.Add("Left mouse: ordinary equipped-item primary action");
                 await WaitRackUi(()=>view.rigs.Exists(r=>r.kind=="trap" && r.operatorId==host.OwnerId) &&
                     gear.InventionInSlot(trapSlot).count==limit-1,"left click extracts a single trap from the selected ordinary pocket");
             }
             finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});}
             await Awaitable.WaitForSecondsAsync(.35f);
             await RackKey(Key.R);
+            if(gear.CarriedInvention!=null && gear.QaBackgroundPocketStow())
+                report.backgroundInputRoutes.Add("R: ordinary clean-installation storage action");
             await WaitRackUi(()=>view.rigs.Count==0 && gear.InventionInSlot(trapSlot).count==limit,"R returns the clean rig to its source stack");
             report.Check(gear.InventionInSlot(ballSlot).count==1 && gear.InventionInSlot(otherSlot).kind==other,
                 "Repacking restored the selected stack while preserving the other two ordinary pockets.");
@@ -237,5 +247,33 @@ namespace Raid
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,name));
         }
     }
+    // Opt-in player fixtures still use the production key/mouse path first. A hidden
+    // batch player can lack desktop focus (or cursor capture) even with the gameplay UI open.
+    public sealed partial class HarpoonTool
+    {
+        bool QaBackgroundPocketAction(Func<bool> action,bool mouse=false)
+        {
+            if(!Application.isBatchMode || (Application.isFocused && (!mouse || Cursor.lockState==CursorLockMode.Locked)) ||
+                !IsClientInitialized || !IsOwner || !UiRoot.Instance || UiRoot.Instance.Page!=UiPage.None ||
+                UiInputGate.Modal || Time.unscaledTime<UiInputGate.ResumeAt || UiInputGate.MonitorLook ||
+                mouse && UiInputGate.PointerReserved || RaidWorld.Instance.InventionPanelOpen || CheatPanel.PointerActive)
+                return false;
+            // Blocked combines menu state and desktop focus. The menu conditions were checked above.
+            // Restore it on the same call stack, before an Update or another input handler can run.
+            bool previous=UiInputGate.Active;
+            try{UiInputGate.Active=false;return action();}
+            finally{UiInputGate.Active=previous;}
+        }
+        internal bool QaBackgroundPocketSelect(int slot) => QaBackgroundPocketAction(()=>SelectSlot(slot));
+        internal bool QaBackgroundPocketDraw() => QaBackgroundPocketAction(()=>TryDrawPocketInvention(),true);
+        internal bool QaBackgroundPocketStow() => QaBackgroundPocketAction(()=>
+        {
+            var carried=CarriedInvention;
+            if(!CanStowCarriedInvention(carried,out _))return false;
+            TryStowCarriedInvention(carried);
+            return true;
+        });
+    }
+
 }
 #endif
