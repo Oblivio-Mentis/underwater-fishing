@@ -113,5 +113,18 @@ namespace Raid.Tests
         }
 
         [Serializable] sealed class Envelope {public string format,payload,sha256;}
+
+        [Test] public void LoadingOldCatchIdsInTheIndustrialRangeNeverReissuesDeliveredOrStoredFish()
+        {
+            const long prefix=1L<<60;
+            var team=new TeamProgress();
+            Assert.That(team.Deposit(Fish(prefix+1),tuning),Is.True);
+            Assert.That(team.LoadCargo(Fish(prefix+3),tuning),Is.True);
+            Assert.That(team.Deposit(Fish(prefix*2-1),tuning),Is.True);
+            TeamSave.Save(path,team);
+            var restored=TeamSave.Load(path);
+            Assert.That(restored.NewTechCatchId(),Is.EqualTo(prefix+2));
+            Assert.That(restored.NewTechCatchId(),Is.EqualTo(prefix+4));
+        }
     }
 }

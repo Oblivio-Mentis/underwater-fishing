@@ -42,7 +42,19 @@ namespace Raid
         public List<TechRig> rigs=new();
         public long techCatchSequence;
         public int lastRigSerial;
-        public long NewTechCatchId() => checked((1L<<60) + ++techCatchSequence);
+        const long TechIdPrefix=1L<<60;
+        [NonSerialized] HashSet<long> occupiedFutureIds;
+        public long NewTechCatchId()
+        {
+            long next=techCatchSequence;
+            do
+            {
+                if(next>=TechIdPrefix-1)throw new InvalidOperationException("No remaining industrial catch IDs.");
+                next++;
+            }while(occupiedFutureIds!=null && occupiedFutureIds.Contains(TechIdPrefix+next));
+            techCatchSequence=next;
+            return TechIdPrefix+next;
+        }
         public TechRig AddRig(string kind,Vector3 position,int owner)
         {
             var rig=new TechRig{ serial=checked(++lastRigSerial),kind=kind,depth=expeditionDepth,
@@ -54,7 +66,8 @@ namespace Raid
         void ValidateTechRigs()
         {
             rigs??=new List<TechRig>();
-            if(rigs.Count>400 || techCatchSequence<0 || lastRigSerial<0)throw new InvalidOperationException("Invalid equipment ledger.");
+            if(rigs.Count>400 || techCatchSequence<0 || techCatchSequence>=TechIdPrefix || lastRigSerial<0)
+                throw new InvalidOperationException("Invalid equipment ledger.");
             var serials=new HashSet<int>();
             var used=new HashSet<long>(deliveredIds);
             foreach(var item in cargo) if(item!=null)used.Add(item.id);
@@ -71,6 +84,12 @@ namespace Raid
                     foreach(var fish in group)
                         if(fish==null || !fish.IsValid || !used.Add(fish.id))throw new InvalidOperationException("Invalid equipment cargo.");
             }
+            // Legacy manifests accepted arbitrary positive IDs. Preserve any that fall ahead of
+            // the industrial allocator without letting one large imported ID exhaust the sequence.
+            occupiedFutureIds?.Clear();
+            foreach(long id in used)
+                if(id>TechIdPrefix+techCatchSequence && id<TechIdPrefix*2)
+                    (occupiedFutureIds??=new HashSet<long>()).Add(id);
         }
         static bool FiniteRig(Vector3 p) => float.IsFinite(p.x)&&float.IsFinite(p.y)&&float.IsFinite(p.z);
     }
