@@ -21,7 +21,7 @@ Shader "Raid/Fish Proximity Outline"
 
             float4 Vert(float3 position : POSITION,float3 normal : NORMAL) : SV_POSITION
             {
-                return TransformObjectToHClip(position+normal*.018);
+                return TransformObjectToHClip(position+normal*.046);
             }
 
             half4 Frag() : SV_Target

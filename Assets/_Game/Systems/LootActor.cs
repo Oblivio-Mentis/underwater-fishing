@@ -30,6 +30,7 @@ namespace Raid
         private Renderer body;
         private Collider shape;
         private Vector3 spawn;
+        bool inGoshaBerth;
 
         private void OnEnable() => spawned.Add(this);
         private void OnDisable() => spawned.Remove(this);
@@ -44,7 +45,9 @@ namespace Raid
 
         internal void SetReefBerth(Vector3 positionOnBed)
         {
-            transform.position=spawn=positionOnBed;
+            spawn=positionOnBed;
+            if(inGoshaBerth)return;
+            transform.position=spawn;
             if(NetworkObject?.IsServerInitialized==true)position.Value=spawn;
         }
 
@@ -62,11 +65,12 @@ namespace Raid
 
         public void SetDepth(int depth)
         {
-            if(IsServerInitialized && carrier.Value==null)ResetStock(depth==tier);
+            if(IsServerInitialized && carrier.Value==null && (!inGoshaBerth || !IsVisible))ResetStock(depth==tier);
         }
 
         private void ResetStock(bool available)
         {
+            inGoshaBerth=false;
             transform.position=position.Value=spawn;
             cargoId.Value=NewId();
             Collector=null;
@@ -93,12 +97,13 @@ namespace Raid
         }
 
         /// <summary>The pet leaves the item where it is; it stays a real pickup.</summary>
-        internal bool PutDownByGosha(Vector3 at)
+        internal bool PutDownByGosha(Vector3 at,bool berth=false)
         {
             if(!IsServerInitialized || !goshaCarried.Value)return false;
             float clearance=-MeshBounds.min.y*transform.lossyScale.y;
             if(Physics.Raycast(at+Vector3.up*.5f,Vector3.down,out var hit,6f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                 at=hit.point+Vector3.up*clearance;
+            inGoshaBerth=berth;
             transform.position=position.Value=at;
             transform.rotation=Quaternion.Euler(0,transform.eulerAngles.y,0);
             goshaCarried.Value=false;
@@ -182,6 +187,7 @@ namespace Raid
         {
             if(!IsServerInitialized || diver==null || !diver.TryGetComponent<HarpoonTool>(out var tool) || !CanPickUp(tool))return false;
             tool.EquipSalvageHands();
+            inGoshaBerth=false;
             Collector??=RaidWorld.Instance?.ProgressKey(diver);
             position.Value=transform.position;
             carrier.Value=diver.NetworkObject;

@@ -266,6 +266,15 @@ namespace Raid.UI
             bool pointerAllowed=!UiInputGate.Blocked || UiInputGate.MonitorLook && mouse!=null && !overlayBefore;
             bool interact=Application.isFocused && Keyboard.current?.eKey.wasPressedThisFrame==true &&
                 Context.World?.LookAtOwnParcel(Context.Player,out _)!=true;
+            bool held=mouse?.leftButton.isPressed==true;
+            bool pressed=mouse?.leftButton.wasPressedThisFrame==true;
+            bool released=mouse?.leftButton.wasReleasedThisFrame==true;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if(qaCargoUntil>Time.unscaledTime)
+            {
+                held=true;pressed=false;released=false;pointerAllowed=true;
+            }
+#endif
             bool consumed=false;
             if (CheatsOpen || Time.frameCount <= ignoreWorldPointerThroughFrame)
             {
@@ -276,9 +285,18 @@ namespace Raid.UI
             }
             else
             {
-                consumed=UpdatePhysicalPointer(mouse!=null&&mouse.leftButton.wasPressedThisFrame,mouse!=null&&mouse.leftButton.wasReleasedThisFrame,
-                    mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),pointerAllowed,skillPurchase);
+                consumed=UpdatePhysicalPointer(pressed,released,mouse==null?0:Mathf.Clamp(mouse.scroll.ReadValue().y,-1,1),
+                    pointerAllowed,skillPurchase,held);
             }
+            if(!pointerAllowed || CheatsOpen || !held)ClearCargoHold();
+            else if(cargoHoldMode!=0 && !cargoHoldSeen)
+            {
+                if(cargoSightLostAt<0)cargoSightLostAt=Time.unscaledTime;
+                if(Time.unscaledTime-cargoSightLostAt>.20f)ClearCargoHold();
+            }
+            else cargoSightLostAt=-1;
+            cargoHoldSeen=false;
+            hud.ShowCargoHold(CargoHoldProgress);
             skills.Animate(Time.unscaledDeltaTime);
             if(interact && !consumed && !UiInputGate.Blocked && Context.Connected && Page==UiPage.None &&
                (Context.Interaction==UiInteraction.DroppedItem || Context.World?.AimingAtVendingMachine!=true))Interact();
@@ -333,6 +351,45 @@ namespace Raid.UI
             SetCursor();
         }
         public bool AimedCargoDispatch { get; private set; }
+        const float CargoHoldSeconds=.76f;
+        internal float CargoDispatchHold => cargoHoldMode==1?CargoHoldProgress:0;
+        internal float CargoHoldProgress => cargoHoldMode==0?0:Mathf.Clamp01((Time.unscaledTime-cargoHoldStart)/CargoHoldSeconds);
+        int cargoHoldMode;
+        float cargoHoldStart,cargoSightLostAt=-1;
+        Vector3 cargoLoadDirection;
+        bool cargoHoldSeen,cargoHoldSent;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        float qaCargoUntil;
+        internal void QaHoldCargo(float seconds)
+        {
+            qaCargoUntil=Time.unscaledTime+seconds;
+            UpdatePhysicalPointer(true,false,0,true,held:true);
+        }
+#endif
+
+        void ClearCargoHold()
+        {
+            cargoHoldMode=0;
+            cargoHoldSent=false;
+            cargoSightLostAt=-1;
+        }
+
+        void WatchCargoHold(int mode,bool pressed,bool released,bool held,bool allowed,Action finish)
+        {
+            cargoHoldSeen=true;
+            if(!allowed || released){ClearCargoHold();return;}
+            if(pressed)
+            {
+                cargoHoldMode=mode;
+                cargoHoldStart=Time.unscaledTime;
+                cargoHoldSent=false;
+            }
+            if(cargoHoldMode!=mode || !held)
+            {ClearCargoHold();return;}
+            if(cargoHoldSent || Time.unscaledTime-cargoHoldStart<CargoHoldSeconds)return;
+            cargoHoldSent=true;
+            finish();
+        }
 
         void CancelBallGesture()
         {
@@ -366,7 +423,7 @@ namespace Raid.UI
             }
         }
 
-        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed,bool skillPurchase=false)
+        bool UpdatePhysicalPointer(bool clicked,bool released,float scroll,bool allowed,bool skillPurchase=false,bool held=false)
         {
             UiInputGate.PointerReserved=false;
             aimedPad=null;
@@ -417,17 +474,32 @@ namespace Raid.UI
                 return false;
             }
             aimedPad=Nereid.AirlockPad.Aimed(player,cam);
-            if(clicked && allowed && Page==UiPage.None && tool && tool.ConsumeCargoPrimaryInput())
-            {
-                UiInputGate.PointerReserved=true;
-                return true;
-            }
             if(Page==UiPage.None && CargoDispatch.Aimed(player,cam)!=null)
             {
                 AimedCargoDispatch=true;
                 UiInputGate.PointerReserved=true;
-                if(clicked && allowed)Send(WorldAction.Hoist);
-                return clicked;
+                bool ready=Context.View?.cargo.Count>0 && !CommandPending;
+                WatchCargoHold(1,clicked,released,held,allowed && ready,()=>Send(WorldAction.Hoist));
+                return clicked || released;
+            }
+            if(Page==UiPage.None && tool)
+            {
+                bool beginLoad=clicked && held && allowed && tool.FishLoadTarget(out _,out _) &&
+                    CargoDispatch.TryLoadAim(Context.World,player,out cargoLoadDirection);
+                if(beginLoad || cargoHoldMode==2)
+                {
+                    bool opening=allowed && Context.View?.hoistPhase==HoistPhase.Loading &&
+                        CargoDispatch.ServerSeesOpening(Context.World,player,cargoLoadDirection);
+                    if(released && opening && !cargoHoldSent)tool.RequestLoadSelected();
+                    WatchCargoHold(2,clicked,released,held,opening,()=>tool.RequestCargoBatch(cargoLoadDirection));
+                    UiInputGate.PointerReserved=true;
+                    return clicked || released;
+                }
+            }
+            if(clicked && allowed && Page==UiPage.None && tool && tool.ConsumeCargoPrimaryInput())
+            {
+                UiInputGate.PointerReserved=true;
+                return true;
             }
             if(Page==UiPage.None && allowed && station==null && aimedPad==null &&
                Context.World?.PointAtCatchOutlet(player,cam,clicked)==true)

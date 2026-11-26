@@ -9,12 +9,23 @@ namespace Raid
         struct LooseFishMotion
         {
             public Vector3 Position, Velocity;
-            public float Age, NextSample, Yaw, Turn, Side;
+            public float Age, NextSample, Yaw, Turn, Side, Away;
+            public bool Settled;
         }
 
         readonly Dictionary<long,LooseFishMotion> looseFishMotion=new();
         readonly HashSet<long> blastCatches=new();
-        const float FishDriftDuration=2.15f, SpoiledFishLifetime=14f;
+        const float CorpseRadius=.082f, CorpseNoticeDistance=28f, CorpseCleanUpDelay=12f;
+        readonly RaycastHit[] corpseHits=new RaycastHit[8];
+
+        void TrackDeadFish(DroppedItem item)
+        {
+            if(item.dead && !looseFishMotion.ContainsKey(item.id))
+                looseFishMotion[item.id]=new LooseFishMotion
+                {
+                    Position=item.position,Yaw=item.yaw,Side=Mathf.Sign(item.roll),Age=.5f
+                };
+        }
 
         void RegisterBlastedFish(long id,FishActor fish,Vector3 position,float yaw,Vector3 origin,float radius,bool spoiled)
         {
@@ -32,7 +43,7 @@ namespace Raid
             for(int i=0;i<dropped.Count;i++)
             {
                 var item=dropped[i];
-                if(item.kind!=DroppedKind.Catch || item.spoiled || !item.Fish ||
+                if(item.kind!=DroppedKind.Catch || item.spoiled || item.crabCarried || item.depth!=CurrentDepth || !item.Fish ||
                     Vector3.Distance(item.position,origin)>radius || !ClearGearPath(origin,item.position))continue;
                 StartFishDrift(ref item,origin,radius);
                 dropped[i]=item;
@@ -64,41 +75,56 @@ namespace Raid
             {
                 var item=dropped[i];
                 if(!looseFishMotion.TryGetValue(item.id,out var motion))continue;
-                float previousAge=motion.Age;
                 motion.Age+=dt;
-                if(item.spoiled && motion.Age>=SpoiledFishLifetime)
+                bool nearby=false;
+                foreach(var diver in DiverMotor.ServerDivers)
+                    if(diver && !diver.IsDead && (diver.transform.position-motion.Position).sqrMagnitude<CorpseNoticeDistance*CorpseNoticeDistance)
+                    {nearby=true;break;}
+                motion.Away=nearby?0:motion.Away+dt;
+                if(motion.Away>=CorpseCleanUpDelay)
                 {
                     RemoveDrop(item.id);
                     continue;
                 }
-                if(previousAge<FishDriftDuration)
+                if(!motion.Settled)
                 {
                     motion.Velocity*=Mathf.Exp(-2.12f*dt);
-                    motion.Velocity.y-=.53f*dt;
+                    motion.Velocity.y-=.94f*dt;
                     Vector3 step=motion.Velocity*dt;
-                    if(step.sqrMagnitude>.000001f && Physics.SphereCast(motion.Position,.082f,step.normalized,out var hit,
-                        step.magnitude,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                    float distance=step.magnitude;
+                    if(distance>=.0001f)
                     {
-                        if(!hit.collider.GetComponentInParent<DiverMotor>() && !hit.collider.GetComponentInParent<FishActor>())
+                        var direction=step/distance;
+                        int hits=Physics.SphereCastNonAlloc(motion.Position,CorpseRadius,direction,corpseHits,distance,
+                            Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
+                        float nearest=distance;
+                        Vector3 normal=Vector3.zero;
+                        for(int h=0;h<hits;h++)
                         {
-                            motion.Position+=step.normalized*Mathf.Max(0,hit.distance-.012f);
-                            motion.Velocity=Vector3.ProjectOnPlane(motion.Velocity,hit.normal)*.48f;
+                            var hit=corpseHits[h];
+                            if(hit.distance>nearest || hit.collider.GetComponentInParent<DiverMotor>() ||
+                                hit.collider.GetComponentInParent<FishActor>())continue;
+                            nearest=hit.distance;
+                            normal=hit.normal;
                         }
-                        else motion.Position+=step;
+                        motion.Position+=direction*Mathf.Max(0,nearest-(normal==Vector3.zero?0:.003f));
+                        if(normal!=Vector3.zero)
+                        {
+                            motion.Velocity=Vector3.ProjectOnPlane(motion.Velocity,normal)*.53f;
+                            motion.Settled=normal.y>.55f && motion.Age>.5f && motion.Velocity.sqrMagnitude<.04f;
+                        }
                     }
-                    else motion.Position+=step;
-                    if(motion.Age>=motion.NextSample || motion.Age>=FishDriftDuration)
+                    if(motion.Age>=motion.NextSample || motion.Settled)
                     {
                         item.position=motion.Position;
                         item.roll=motion.Side*Mathf.SmoothStep(55,91,Mathf.InverseLerp(0,.46f,motion.Age));
                         item.pitch=motion.Side*11*Mathf.Sin(motion.Age*5.5f)*Mathf.Exp(-2.2f*motion.Age);
                         item.yaw=motion.Yaw+motion.Turn*(1-Mathf.Exp(-2*motion.Age));
-                        motion.NextSample=motion.Age+.067f;
+                        motion.NextSample=motion.Age+.085f;
                         dropped[i]=item;
                     }
                 }
-                if(motion.Age>=FishDriftDuration && !item.spoiled)looseFishMotion.Remove(item.id);
-                else looseFishMotion[item.id]=motion;
+                looseFishMotion[item.id]=motion;
             }
         }
     }
@@ -157,15 +183,15 @@ namespace Raid
 
         void LateUpdate()
         {
-            if(!dead)return;
+            if(!dead && !beingCarried)return;
             float blend=1-Mathf.Exp(-Time.unscaledDeltaTime*24);
             transform.SetPositionAndRotation(Vector3.Lerp(transform.position,targetPosition,blend),
                 Quaternion.Slerp(transform.rotation,targetRotation,blend));
             if(corpseOutline==null)return;
             var diver=UI.UiRoot.Instance?.Context.Player;
             float distance=diver && !diver.IsDead?Vector3.Distance(diver.transform.position,transform.position):10;
-            float intensity=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(2.0f,4.0f,distance));
-            outlineParameters.SetFloat(OutlineOpacity,intensity*.94f);
+            float intensity=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(6.5f,12.5f,distance));
+            outlineParameters.SetFloat(OutlineOpacity,intensity);
             foreach(var outline in corpseOutline)
             {
                 outline.enabled=intensity>.01f;

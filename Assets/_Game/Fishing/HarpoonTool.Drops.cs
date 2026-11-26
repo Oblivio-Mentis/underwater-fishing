@@ -214,6 +214,47 @@ namespace Raid
             UI.UiRoot.Instance?.Toast("Этот предмет нельзя поместить в клеть");
         }
 
+        internal void RequestCargoBatch(Vector3 direction)
+        {
+            if(IsClientInitialized && IsOwner && MayHandleItems)LoadAllFishServer(direction);
+        }
+
+        [ServerRpc(RequireOwnership=true)]
+        void LoadAllFishServer(Vector3 direction)
+        {
+            var world=RaidWorld.Instance;
+            if(!world || !MayHandleItems || !CargoDispatch.ServerSeesOpening(world,Motor,direction))return;
+            int moved=world.LoadAllCargo(this);
+            if(moved>0)Motor.ConfirmInteraction();
+            CargoLoadRejected(Owner,moved>0?$"В клеть загружено: {moved}":"Клеть заполнена или улова в карманах нет");
+        }
+
+        internal int LoadAllFish(TeamProgress team,ProgressionTuning tuning,System.Func<bool> persist)
+        {
+            var world=RaidWorld.Instance;
+            var loaded=new System.Collections.Generic.List<(int slot,long id)>();
+            int originalCount=team.cargo.Count;
+            void Add(int slot,FishActor fish,long id)
+            {
+                if(fish && team.LoadCargo(world.AttributeCatch(fish.ToCargo(id)),tuning))loaded.Add((slot,id));
+            }
+            if(HoldingHeavyCatch)Add(1,HeavySpecies,HeavyId);
+            for(int slot=2;slot<SlotCount;slot++)Add(slot,FishInSlot(slot),CatchIdInSlot(slot));
+            if(loaded.Count==0)return 0;
+            if(!persist())
+            {
+                team.cargo.RemoveRange(originalCount,team.cargo.Count-originalCount);
+                return 0;
+            }
+            foreach(var item in loaded)
+            {
+                if(item.slot==1)RemoveHeavy();
+                else EmptyPocket(item.slot,false);
+                world.ReleaseLoadedCatchOwner(item.id);
+            }
+            return loaded.Count;
+        }
+
         public bool RequestLoadSelected()
         {
             if(!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked ||

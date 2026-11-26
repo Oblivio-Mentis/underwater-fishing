@@ -11,7 +11,8 @@ namespace Raid
         public DroppedKind kind;
         public NetworkObject species;
         public string invention;
-        public bool handDropped,dead,spoiled;
+        public bool handDropped,dead,spoiled,crabCarried;
+        public int depth;
         public Vector3 position;
         public float yaw,pitch,roll;
         public FishActor Fish => species == null ? null : species.GetComponent<FishActor>();
@@ -104,12 +105,14 @@ namespace Raid
         internal bool CanRegisterDrop(long id) => IsServerInitialized && id > 0 && DropIndex(id) < 0;
         internal void RegisterDrop(DroppedItem item)
         {
+            item.depth=CurrentDepth;
             if(item.kind==DroppedKind.Catch && blastCatches.Contains(item.id) && !item.dead)
             {
                 item.dead=true;
                 item.roll=90;
             }
             dropped.Add(item);
+            TrackDeadFish(item);
         }
         internal void RemoveDrop(long id)
         {
@@ -144,7 +147,7 @@ namespace Raid
             DroppedItem closest=default;
             void Consider(DroppedItem candidate)
             {
-                if(candidate.spoiled)return;
+                if(candidate.spoiled || candidate.crabCarried || candidate.depth!=0 && candidate.depth!=CurrentDepth)return;
                 Vector3 offset = candidate.position - eye;
                 float distance = offset.magnitude;
                 if (distance > 3 || distance < .02f || !tool.CanPickUp(candidate)) return;
@@ -198,7 +201,7 @@ namespace Raid
             dropsDirty = false;
             vanished.Clear();
             vanished.AddRange(dropViews.Keys);
-            foreach(var item in dropped)ShowDrop(item);
+            foreach(var item in dropped)if(item.depth==0 || item.depth==CurrentDepth)ShowDrop(item);
             if(DropState?.rigs!=null)foreach(var rig in DropState.rigs)if(VisiblePackedItem(rig))ShowDrop(DroppedItem.Packed(rig));
             foreach (var id in vanished)
             {
@@ -224,16 +227,17 @@ namespace Raid
     {
         readonly List<Mesh> ownedMeshes = new();
         CatchFishModel fishModel;
-        bool built,dead;
+        bool built,dead,beingCarried;
         Vector3 targetPosition;
         Quaternion targetRotation;
 
         internal bool Show(DroppedItem item)
         {
             targetPosition=item.position;
+            beingCarried=item.crabCarried;
             float roll=item.dead?item.roll:item.kind==DroppedKind.Harpoon?76:12;
             targetRotation=Quaternion.Euler(item.pitch,item.yaw,roll);
-            if(!built || !item.dead)transform.SetPositionAndRotation(targetPosition,targetRotation);
+            if(!built || !item.dead && !beingCarried)transform.SetPositionAndRotation(targetPosition,targetRotation);
             if(!built)
             {
                 if(item.kind==DroppedKind.Harpoon)

@@ -62,7 +62,7 @@ namespace Raid.Tests
             Assert.That(team.TryPurchase(second,target,revision,second.revision,tuning,()=>true,out _),Is.False);
             Assert.That(team.Treasury,Is.EqualTo(before.Subtract(SkillTreeDefinition.Get(target).Cost)));
             Assert.That(team.teamRevision,Is.EqualTo(revision+1));
-            Assert.That(team.PublicView().Capacity(tuning),Is.EqualTo(16));
+            Assert.That(team.PublicView().Capacity(tuning),Is.EqualTo(32));
             Assert.That(first.revision+second.revision,Is.Zero);
         }
 
@@ -127,10 +127,14 @@ namespace Raid.Tests
             Assert.That(team.Deposit(fish1,tuning),Is.True);
             Assert.That(team.LoadCargo(fish2,tuning),Is.True);
             Assert.That(team.LoadCargo(fish3,tuning),Is.True);
+            Assert.That(team.BeginHoist(tuning),Is.True);
+            Assert.That(team.Deposit(new CatchItem(4,1,0,1,1,1),tuning),Is.False);
+            team.TickHoist(75,tuning);
+            Assert.That(team.tank.ConvertAll(x=>x.id),Is.EqualTo(new long[]{1,2}));
+            Assert.That(team.cargo.ConvertAll(x=>x.id),Is.EqualTo(new long[]{3}));
             Assert.That(team.BeginHoist(tuning),Is.False);
             Assert.That(team.Feed(1,tuning),Is.True);
             Assert.That(team.BeginHoist(tuning),Is.True);
-            Assert.That(team.Deposit(new CatchItem(4,1,0,1,1,1),tuning),Is.False);
             team.TickHoist(75,tuning);
             Assert.That(team.tank.ConvertAll(x=>x.id),Is.EqualTo(new long[]{2,3}));
             Assert.That(team.cargo,Is.Empty);

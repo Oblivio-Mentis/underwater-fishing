@@ -97,12 +97,47 @@ namespace Raid
         public bool FitsReservoir(ProgressionTuning tuning) =>
             (long)tank.Count+CargoFishCount<=ReservoirCapacity(tuning);
 
+        public int HoistFishCount(ProgressionTuning tuning) =>
+            Math.Min(CargoFishCount,Math.Max(0,ReservoirCapacity(tuning)-tank.Count));
+
+        public bool HasHoistSalvage => cargo.Exists(item=>item.IsSalvage);
+
+        bool CanUnloadSalvage() => HasHoistSalvage && QuoteDelivery(cargo.FindAll(item=>item.IsSalvage),out _,out _);
+
         public bool BeginHoist(ProgressionTuning tuning)
         {
-            if (hoistPhase != HoistPhase.Loading || cargo.Count == 0 || !FitsReservoir(tuning) || !CanCreditCargo()) return false;
-            hoistPhase = HoistPhase.Raising;
-            hoistRemaining = HoistDuration(HoistPhase.Raising,tuning);
+            if(hoistPhase!=HoistPhase.Loading || (HoistFishCount(tuning)==0 && !CanUnloadSalvage()))return false;
+            hoistPhase=HoistPhase.Raising;
+            hoistRemaining=HoistDuration(HoistPhase.Raising,tuning);
             return true;
+        }
+
+        MaterialCost UnloadHoist(ProgressionTuning tuning)
+        {
+            int remaining=HoistFishCount(tuning);
+            bool salvage=CanUnloadSalvage();
+            var batch=new List<CatchItem>();
+            foreach(var item in cargo)
+            {
+                if(item.IsSalvage)
+                {
+                    if(salvage)batch.Add(item);
+                    continue;
+                }
+                if(remaining<=0)continue;
+                batch.Add(item);
+                remaining--;
+            }
+            if(batch.Count==0)return default;
+            if(!TryDeliver(batch,out var yield))
+            {
+                // Resource limits may change between departure and arrival. The fish still have reserved space.
+                batch.RemoveAll(item=>item.IsSalvage);
+                if(batch.Count==0 || !TryDeliver(batch,out yield))return default;
+            }
+            var moved=new HashSet<long>(batch.ConvertAll(item=>item.id));
+            cargo.RemoveAll(item=>moved.Contains(item.id));
+            return yield;
         }
 
         public float HoistDuration(HoistPhase phase,ProgressionTuning tuning)
@@ -131,15 +166,7 @@ namespace Raid
                 }
                 else if (hoistPhase == HoistPhase.Unloading)
                 {
-                    if(!TryDeliver(cargo,out recovered))
-                    {
-                        // A treasury grant may have filled the wallet after the lift departed.
-                        // Keep the manifest on the lift and allow a fresh hoist after spending.
-                        hoistPhase=HoistPhase.Loading;
-                        hoistRemaining=0;
-                        return default;
-                    }
-                    cargo.Clear();
+                    recovered=UnloadHoist(tuning);
                     hoistPhase = HoistPhase.Returning;
                     hoistRemaining = HoistDuration(HoistPhase.Returning,tuning);
                 }

@@ -90,19 +90,23 @@ namespace Raid
             deliveryProgress=unloading ? Mathf.Max(deliveryProgress,
                 vessel.PresentedHoistPhase==HoistPhase.Unloading ? vessel.HoistAnimation : 1f) : 0;
             PresentSalvage(deliveryProgress);
+            int unloadingCount=unloading?state.HoistFishCount(world.progression):0;
             var route=world.FishRoute;
             foreach(var entry in swimmers)
             {
                 var fish=entry.Value;
                 if(fish.InCage)
                 {
-                    if(unloading)FollowDelivery(fish,deliveryProgress);
+                    if(unloading && fish.DeliveryRank<unloadingCount)FollowDelivery(fish,deliveryProgress);
                     else SwimInCage(fish);
                 }
                 else if(fish.HatchStartedAt>=0 && FollowHatch(fish)) {}
                 else if(!FollowRoute(entry.Key,fish,route)) SwimInTank(fish);
             }
         }
+
+        // Dense schools keep the same manifest while limiting animated bodies on screen.
+        const int VisibleSchool=80;
 
         void Reconcile(TeamProgress state)
         {
@@ -120,16 +124,21 @@ namespace Raid
                         confirmed.Add(item.id);
                         continue;
                     }
-                    var staged=Slot(item);
-                    staged.InCage=true;
-                    staged.DeliveryRank=cageCount;
-                    confirmed.Add(item.id);
+                    if(cageCount<VisibleSchool)
+                    {
+                        var staged=Slot(item);
+                        staged.InCage=true;
+                        staged.DeliveryRank=cageCount;
+                        confirmed.Add(item.id);
+                    }
                     cageCount++;
                 }
+                int displayed=0;
                 if(reservoir!=null)
                     foreach(var item in state.tank)
                     {
                         if(item.IsSalvage)continue;
+                        if(displayed++>=VisibleSchool && item.id!=pendingHatchId && !world.IsInFishPipe(item.id))continue;
                         bool fresh=!swimmers.ContainsKey(item.id);
                         var fish=Slot(item);
                         bool arrivedFromCage=fish.InCage;

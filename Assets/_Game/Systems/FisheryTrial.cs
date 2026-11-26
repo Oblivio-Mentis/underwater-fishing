@@ -11,7 +11,7 @@ using UnityEngine.Rendering.Universal;
 namespace Raid
 {
     // Explicit disposable host scenario. Spawns/positions are staged, interactions and catches use the server simulation.
-    internal sealed class FisheryTrial : MonoBehaviour
+    internal sealed partial class FisheryTrial : MonoBehaviour
     {
         [Serializable]
         sealed class Report
@@ -134,6 +134,8 @@ namespace Raid
             yield return Cage();
             yield return CageDelivery();
             if(peer)yield return Nets();
+            yield return CrabHaulTrial();
+            yield return GoshaHatchTrial();
         }
 
         TechRig Stage(string kind,Vector3 point)

@@ -11,6 +11,7 @@ namespace Raid.UI
         readonly TMP_Text cargoCount,cargoPhase,scanMarker;
         readonly AimReticle reticle;
         readonly FishingPullEdges pullEdges;
+        readonly Image cageHold;
 
         public void HitMark(Color tint, float strength) => reticle.Hit(tint, strength);
         public void PullEdge(Vector2 direction, float strength) => pullEdges.Show(direction, strength);
@@ -56,6 +57,11 @@ namespace Raid.UI
 
             var reticleRoot=UiKit.Node(Root,"Harpoon Reticle");UiKit.Place(reticleRoot,new Vector2(.5f,.5f),new Vector2(.5f,.5f),Vector2.zero,new Vector2(64,64));
             reticle=reticleRoot.gameObject.AddComponent<AimReticle>();reticle.Initialize(app);
+            var holdTrack=UiKit.Panel(Root,"Cargo hold track",new Color(.025f,.07f,.09f,.94f));
+            UiKit.Place(holdTrack.rectTransform,new Vector2(.5f,.5f),new Vector2(.5f,.5f),new Vector2(0,-23),new Vector2(108,7));
+            cageHold=UiKit.Panel(holdTrack.transform,"Cargo hold progress",UiTheme.Amber);
+            UiKit.Fill(cageHold.rectTransform,1);
+            holdTrack.gameObject.SetActive(false);
             scanMarker=UiKit.Label(Root,"Detected signal","",20,UiTheme.Cyan);
             scanMarker.alignment=TextAlignmentOptions.Center;
             scanMarker.raycastTarget=false;
@@ -104,6 +110,12 @@ namespace Raid.UI
             bool full=view.CargoUsed>=capacity;SetColor(cargoBar,full?UiTheme.Red:busy?UiTheme.Cyan:UiTheme.Amber);
             UiKit.Set(cargoPhase,busy?UiText.HudHoistTime(view.hoistPhase,view.hoistRemaining):full?UiText.HudCargoFull:UiText.HudCargoReady);
             cargoPhase.color=full?UiTheme.Amber:UiTheme.Muted;
+        }
+
+        internal void ShowCargoHold(float progress)
+        {
+            cageHold.transform.parent.gameObject.SetActive(progress>0);
+            UiKit.Fraction(cageHold,progress);
         }
 
         internal void AnimateReeling() {reel.Animate();warnings.Animate();}

@@ -125,7 +125,8 @@ namespace Raid
                 host.LookAtConsole(control.transform.position);
                 await Until(()=>CargoDispatch.Aimed(host,camera)==control && CargoDispatch.CanUse(host),"Both authoritative and local rays hit the mechanical button");
                 ShootFrame("04-physical-button.png");
-                Check(UiRoot.Instance.QaClickReticle(),"The owned world pointer dispatches the button click.");
+                await HoldPrimary();
+                Check(true,"Holding LMB at the physical cage shows an input progress bar and starts the hoist.");
                 await Until(()=>world.Team.hoistPhase==HoistPhase.Raising,"Physical console starts hoist");
                 Check(!world.LoadSelectedCargo(tool,DroppedKind.Catch,overflowId) && tool.HeldCargoId==overflowId,
                     "Closing cage rejects an outstanding loading request.");
@@ -191,6 +192,38 @@ namespace Raid
                         "Cabin dispatch delivers the correct catch and returns to the berth",40);
                     Check(stock.All(item=>world.Team.tank.Count(x=>x.id==item.id)==1),"The cabin and cage controls each delivered their own manifest once.");
                 }
+                long firstBatch=15000901, secondBatch=15000902;
+                int fill=world.Team.ReservoirCapacity(world.progression)-world.Team.tank.Count-1;
+                for(int i=0;i<fill;i++)
+                    if(!world.Team.Deposit(species.ToCargo(15001000+i),world.progression))
+                        throw new InvalidOperationException("The aquarium fixture could not be filled.");
+                world.PublishFisheryTrial();
+                tool.StagePocketForTrial(species,firstBatch,2);
+                tool.StagePocketForTrial(species,secondBatch,3);
+                host.Teleport(center+new Vector3(2.14f,-.18f,-.40f));
+                host.LookAtConsole(center);
+                await Until(()=>CargoDispatch.CanLoad(world,host) && tool.CatchCount==2 &&
+                    world.View.hoistPhase==HoistPhase.Loading,"Two fish are in the diver's pockets");
+                UiRoot.Instance.QaHoldCargo(1.1f);
+                await Awaitable.WaitForSecondsAsync(.36f);
+                Check(UiRoot.Instance.CargoHoldProgress>.15f && tool.CatchCount==2,
+                    "The held load shows progress and waits before moving the batch.");
+                ShootFrame("10-hold-load-all.png");
+                await Until(()=>tool.CatchCount==0 && world.Team.cargo.Count==2,"The held action loads both pocket catches");
+                await Awaitable.WaitForSecondsAsync(.36f);
+                host.Teleport(center+new Vector3(3.33f,.19f,1.32f));
+                await Awaitable.WaitForSecondsAsync(.35f);
+                host.LookAtConsole(control.transform.position);
+                await Until(()=>CargoDispatch.Aimed(host,camera)==control && CargoDispatch.CanUse(host) &&
+                    !UiRoot.Instance.CommandPending && world.View.cargo.Count==2,"The valve shows the partial unloading hint");
+                await Awaitable.WaitForSecondsAsync(.32f);
+                await HoldPrimary();
+                await Until(()=>world.Team.hoistPhase==HoistPhase.Returning &&
+                    world.Team.tank.Any(item=>item.id==firstBatch) &&
+                    world.Team.cargo.Count==1 && world.Team.cargo[0].id==secondBatch,
+                    "One fish reaches the aquarium and the other returns in the same cage",40);
+                await Until(()=>world.Team.hoistPhase==HoistPhase.Loading,"The remaining fish returns to the cage berth",24);
+                Check(world.Team.cargo.Single().id==secondBatch,"The fish that did not fit remains in the returned cage.");
                 report.Status="passed";
             }
             catch(Exception ex)
@@ -210,6 +243,18 @@ namespace Raid
                 ShootFrame($"{stage}-{i:D2}.png");
                 await Awaitable.WaitForSecondsAsync(interval);
             }
+        }
+
+        async Awaitable HoldPrimary()
+        {
+            UiRoot.Instance.QaHoldCargo(.95f);
+            await Awaitable.WaitForSecondsAsync(.40f);
+            Check(RaidWorld.Instance.Team.hoistPhase==HoistPhase.Loading,"During the hold the cage has not departed early.");
+            Check(UiRoot.Instance.CargoDispatchHold>.20f,
+                $"The elapsed hold is visible before confirmation. Aimed={UiRoot.Instance.AimedCargoDispatch} " +
+                $"Page={UiRoot.Instance.Page} Cargo={RaidWorld.Instance.View?.cargo.Count} Pending={UiRoot.Instance.CommandPending}");
+            ShootFrame("04b-hold-progress.png");
+            await Awaitable.WaitForSecondsAsync(.61f);
         }
 
         static async Awaitable PrimaryPress()

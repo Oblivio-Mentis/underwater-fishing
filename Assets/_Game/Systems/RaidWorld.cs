@@ -65,6 +65,7 @@ namespace Raid
             catchOwners.Clear();
             looseFishMotion.Clear();
             blastCatches.Clear();
+            ResetCrabs();
             ResetFishRoute();
             ResetAirlock();
             message.Value="Depth 1: catch fish and deliver cargo";
@@ -106,7 +107,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { ClearVendingAim();ClearRackParcelViews();StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
+        public override void OnStopClient() { ClearVendingAim();ClearRackParcelViews();StopTechPresentation();StopCrabViews();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -131,6 +132,7 @@ namespace Raid
             ApplyLocalTuning();
             EnsureInventionRack();
             PresentRackParcels();
+            PresentCrabs();
             if(!UI.UiInputGate.Active && localDiver!=null)
                 PointAtVendingMachine(localDiver,Application.isFocused && Mouse.current?.leftButton.wasPressedThisFrame==true);
             if(!UI.UiInputGate.Active && localDiver!=null && !AimingAtVendingMachine && interact!=null && interact.WasPressedThisFrame())
@@ -149,6 +151,7 @@ namespace Raid
             EnsureInventionRack();
             TickRackOrders(Time.fixedDeltaTime);
             TickLooseFish(Time.fixedDeltaTime);
+            TickCrabs();
             TickAirlock();
             TickTech(Time.fixedDeltaTime);
             TickGosha();
@@ -157,17 +160,15 @@ namespace Raid
             var beforeHoist=team.Treasury;
             var previousHoist=team.hoistPhase;
             var salvageYield=team.TickHoist(Time.fixedDeltaTime,progression);
-            if(previousHoist!=HoistPhase.Loading && team.hoistPhase==HoistPhase.Loading && team.cargo.Count>0)
+            if(previousHoist!=team.hoistPhase)
             {
-                message.Value="Казна заполнена. Груз остался в контейнере.";
-                Publish();Save();
-            }
-            if(!salvageYield.IsEmpty)
-            {
-                SendProcessingReceipt(salvageYield,beforeHoist,team.Treasury,fromSalvage:true);
+                if(team.hoistPhase==HoistPhase.Returning && team.cargo.Count>0)
+                    message.Value=$"Клеть возвращает остаток груза: {team.cargo.Count} шт.";
                 Publish();
                 Save();
             }
+            if(!salvageYield.IsEmpty)
+                SendProcessingReceipt(salvageYield,beforeHoist,team.Treasury,fromSalvage:true);
             // A defense belongs to the deadline that just expired. The next feeding
             // interval stays full in the save and begins ticking when defense ends.
             if((threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
@@ -287,10 +288,11 @@ namespace Raid
             {Respond(sender,requestId,false,"changed");return;}
             if((action==WorldAction.ProcessAll || action==WorldAction.FeedAll) && id!=FishRouteQuote.Compute(team.tank,Mathf.Max(1,progression.foodRequired+(team.highestDepth-1)*progression.foodPerDepth)))
             {Respond(sender,requestId,false,"changed");return;}
-            if(action==WorldAction.Hoist && !team.FitsReservoir(progression))
-            {Respond(sender,requestId,false,"reservoir_full");return;}
-            if(action==WorldAction.Hoist && !team.CanCreditCargo())
-            {Respond(sender,requestId,false,"resource_full");return;}
+            if(action==WorldAction.Hoist && team.cargo.Count>0 && team.HoistFishCount(progression)==0)
+            {
+                if(!team.HasHoistSalvage){Respond(sender,requestId,false,"reservoir_full");return;}
+                if(!team.CanCreditCargo()){Respond(sender,requestId,false,"resource_full");return;}
+            }
             bool success=false;
             switch(action)
             {
@@ -348,7 +350,7 @@ namespace Raid
             for(int i=dropped.Count-1;i>=0;i--)
             {
                 var item=dropped[i];
-                if(item.handDropped || item.spoiled || item.kind!=DroppedKind.Catch || item.Fish==null) continue;
+                if(item.handDropped || item.spoiled || item.crabCarried || item.depth!=CurrentDepth || item.kind!=DroppedKind.Catch || item.Fish==null) continue;
                 if(!CargoDispatch.ContainsDrop(this,item.position)) continue;
                 if(!team.LoadCargo(AttributeCatch(item.Fish.ToCargo(item.id)),progression)) continue;
                 RemoveDrop(item.id);
@@ -356,6 +358,15 @@ namespace Raid
                 Save();
             }
         }
+        internal void ReleaseLoadedCatchOwner(long id)=>catchOwners.Remove(id);
+        internal int LoadAllCargo(HarpoonTool tool)
+        {
+            if(!IsServerInitialized || transitionRemaining>0 || team.hoistPhase!=HoistPhase.Loading)return 0;
+            int moved=tool.LoadAllFish(team,progression,SaveTransaction);
+            if(moved>0)Publish();
+            return moved;
+        }
+
         internal bool LoadSelectedCargo(HarpoonTool tool,DroppedKind kind,long id)
         {
             if(!IsServerInitialized || transitionRemaining>0 || team.hoistPhase!=HoistPhase.Loading)return false;
@@ -373,6 +384,7 @@ namespace Raid
         private bool AllInside() { foreach(var diver in DiverMotor.ServerDivers) if(!diver.IsInside) return false; return true; }
         private void CompleteTravel()
         {
+            ResetCrabs();
             ResetGosha();
             depth.Value=pendingDepth;
             team.expeditionDepth=pendingDepth;

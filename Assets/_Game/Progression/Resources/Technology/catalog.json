@@ -11,7 +11,7 @@
       "stackBase": 3,
       "capacity": 0,
       "interval": 3.0,
-      "radius": 6.0,
+      "radius": 10.5,
       "range": 14.0,
       "upgrades": [
         {

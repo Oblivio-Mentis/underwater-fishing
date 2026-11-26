@@ -200,7 +200,8 @@ namespace Raid.UI
             var drop=new HudBinding(Key.Q,dropText);
             if(v.hoistPhase!=HoistPhase.Loading || v.CargoUsed+size>capacity)
                 return new HudHint(Mark.Crate,drop,note:v.hoistPhase!=HoistPhase.Loading?"Клеть в пути":"В клети не хватает места"){caution=true};
-            return new(Mark.Crate,new(Key.Left,"Положить в клеть"),drop,note:itemName+" · "+UiText.HudCargoCount(v.CargoUsed,capacity));
+            string action=salvage?"Положить в клеть":"Положить · удерживать для всего улова";
+            return new(Mark.Crate,new(Key.Left,action),drop,note:itemName+" · "+UiText.HudCargoCount(v.CargoUsed,capacity));
         }
         internal static HudHint MonitorActions(ShipConsole station)
         {
@@ -212,19 +213,25 @@ namespace Raid.UI
                 _=>new HudHint(Mark.Bathymetry,new(Key.Left,"Выбрать на экране")){idle=true}
             };
         }
-        static HudHint Dispatch(UiContext c)
+        static HudHint Dispatch(UiContext c,bool hold=true)
         {
             var v=c.View;
             if(v==null||c.Tuning==null)return default;
             if(v.hoistPhase!=HoistPhase.Loading)return new(Mark.Crate,note:UiText.Phase(v.hoistPhase));
             if(v.CargoUsed==0)return new(Mark.Crate,note:"Клеть пуста");
-            return new(Mark.Crate,new(Key.Left,"Поднять клеть"),note:UiText.HudCargoCount(v.CargoUsed,v.Capacity(c.Tuning)));
+            if(v.HoistFishCount(c.Tuning)==0 && !v.HasHoistSalvage)
+                return new HudHint(Mark.Crate,note:"Резервуар полон"){caution=true};
+            int fish=v.cargo.FindAll(item=>!item.IsSalvage).Count;
+            int fitting=v.HoistFishCount(c.Tuning);
+            string note=fitting<fish?$"В резервуар {fitting} · обратно в клети {fish-fitting}":
+                UiText.HudCargoCount(v.CargoUsed,v.Capacity(c.Tuning));
+            return new(Mark.Crate,new(Key.Left,hold?"Удерживать · отправить улов":"Отправить улов"),note:note);
         }
         static HudHint Station(UiContext c)
         {
             var console=c.AimedConsole;
             if(!console)return new(Mark.Submarine,new(Key.E,"Открыть терминал"));
-            if(console.kind==ShipConsoleKind.CargoControl)return Dispatch(c);
+            if(console.kind==ShipConsoleKind.CargoControl)return Dispatch(c,false);
             if(console.IsMonitor)return new(Mark.Submarine,new(Key.Left,"Выбрать на экране"),note:console.Caption);
             bool feed=console.kind==ShipConsoleKind.Feed;
             if(!feed && console.kind!=ShipConsoleKind.Process)return new(Mark.Wrench,new(Key.Left,console.Caption));

@@ -22,6 +22,7 @@ namespace Raid.Nereid
         [SerializeField, Min(.1f)] float flapSeconds = 1.6f;
 
         public Vector3 MouthPosition => mouth != null ? mouth.position : transform.position;
+        public Vector3 TransferPosition => MouthPosition+transform.forward*.64f;
         public Vector3 DryPosition => dryTray != null ? dryTray.position : MouthPosition;
         public bool Ready => mouth != null;
         public bool DryReady => dryTray != null;
@@ -29,7 +30,43 @@ namespace Raid.Nereid
         public Transform PipeEnd => pipeEnd;
         public NereidPipeRoute Pipe => pipe != null ? pipe : pipe = GetComponentInChildren<NereidPipeRoute>();
 
-        NereidPipeRoute pipe;
+        NereidPipeRoute pipe, service;
+        Vector3 serviceAnchor;
+
+        internal NereidPipeRoute ServiceRoute(Vector3 deckEntrance)
+        {
+            if(service)return service;
+            var rail=NereidVessel.Active?.authoredRail;
+            var finish=Pipe?Pipe:rail?rail.inlet:null;
+            if(!Ready || !finish || !finish.metal || !finish.enamel || !finish.sightGlass)return null;
+            serviceAnchor=deckEntrance;
+            var housing=new GameObject("Гоша · обходной шлюз");
+            housing.transform.SetParent(transform,true);
+            var go=housing.transform;
+            var exterior=MouthPosition-transform.right*.93f+transform.forward*.87f+Vector3.up*.59f;
+            Vector3[] points={exterior,exterior-transform.forward*1.55f,
+                Vector3.Lerp(exterior,serviceAnchor,.65f)+Vector3.up*.42f,serviceAnchor};
+            service=housing.AddComponent<NereidPipeRoute>();
+            service.source=ServiceSocket(go,points[0],PipePort.Receiver);
+            service.destination=ServiceSocket(go,points[^1],PipePort.ReservoirInlet);
+            service.metal=finish.metal;service.enamel=finish.enamel;service.sightGlass=finish.sightGlass;
+            service.radius=.63f;service.smoothing=.51f;
+            for(int i=0;i<points.Length;i++)
+                service.knots.Add(new PipeKnot{position=go.InverseTransformPoint(points[i]),
+                    section=i==1?PipeSection.Glass:PipeSection.ElbowFlange});
+            service.Rebuild();
+            return service;
+        }
+
+        static PipeSocket ServiceSocket(Transform parent,Vector3 point,PipePort kind)
+        {
+            var endpoint=new GameObject("Service coupling").transform;
+            endpoint.SetParent(parent,false);endpoint.position=point;
+            var port=endpoint.gameObject.AddComponent<PipeSocket>();
+            port.port=kind;port.fitting=parent;
+            port.connectionVolume=new Bounds(endpoint.localPosition,Vector3.one*.8f);
+            return port;
+        }
         float openUntil, flapAngle;
         MaterialPropertyBlock lampBlock;
         static readonly int BaseColor = Shader.PropertyToID("_BaseColor"), Emission = Shader.PropertyToID("_EmissionColor");
@@ -47,7 +84,17 @@ namespace Raid.Nereid
             if (flapHinge != null) flapHinge.localRotation = Quaternion.Euler(-flapAngle, 0, 0);
             if (Pipe != null) Pipe.SetFlow(open ? 1 : 0);
             var world = RaidWorld.Instance;
-            bool unlocked = world != null && (world.View?.TeamRank(SkillLine.GoshaDelivery) ?? 0) >= 5;
+            int delivery=world?.View?.TeamRank(SkillLine.GoshaDelivery)??0;
+            int autonomy=world?.View?.TeamRank(SkillLine.GoshaAutonomy)??0;
+            bool unlocked=autonomy>=5 || delivery>=5;
+            if(delivery>=5 && !service && NereidVessel.Active)
+            {
+                var waypoints=NereidDeckNavigation.Active?.companionWaypoints;
+                Vector3 entrance=waypoints!=null && waypoints.Length>5 && waypoints[5]
+                    ?waypoints[5].position:NereidVessel.Active.transform.TransformPoint(GoshaDeck.DefaultMarks[5]);
+                ServiceRoute(entrance);
+            }
+            if(service)service.SetFlow(world!=null && world.Gosha.ServiceHatchActive?1:0);
             if (readyLamp != null)
             {
                 lampBlock ??= new MaterialPropertyBlock();

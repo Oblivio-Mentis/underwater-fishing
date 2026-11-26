@@ -28,6 +28,7 @@ namespace Raid
         public uint Lunge;
         // Steps once per catch that entered the pet hatch; the id lets the aquarium start it in the pipe.
         public uint HatchDeliveries;
+        public bool ServiceHatchActive;
         public long HatchCargoId;
         // Expedition tally for the ship status: resets with the expedition.
         public ushort FishDelivered, MaterialsDelivered, ChasesWon, ChasesLost;
@@ -76,6 +77,7 @@ namespace Raid
         {
             if(ballBody==null)return;
             ReleaseOrder();clearingSeaDoor=false;
+            pet.ServiceHatchActive=false;
             ClearBallLine();
             ClearBallInventory();
             ResetMeeting();
@@ -129,7 +131,7 @@ namespace Raid
             if(pet.Knocked>=0 && !OnDeck(CrewMember(pet.Knocked))){pet.Knocked=-1;knockTime=0;}
             TickBall(dt);
             if(!team.goshaTamed)TickMeeting(dt);
-            else if(!TickOrder(dt))TickPetDeck(dt);
+            else if(!TickServiceTransit(dt) && !TickOrder(dt))TickPetDeck(dt);
             if(pet.Ball==GoshaBallMode.Carried)
                 pet.BallPosition=pet.Position+pet.Heading*(GoshaView.JawSocket.z*tuning.petScale)+Vector3.up*(GoshaView.JawSocket.y*tuning.petScale-GoshaView.DeckOffset);
             pet.Load=(byte)Mathf.Min(255,carried.Count);

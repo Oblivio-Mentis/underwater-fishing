@@ -604,25 +604,25 @@ MonoBehaviour:
     team: 1
     unit: 4
     ranks:
-    - magnitude: 4
-      note: ""
-    - magnitude: 8
-      note: ""
     - magnitude: 12
-      note: ""
-    - magnitude: 18
       note: ""
     - magnitude: 24
       note: ""
-    - magnitude: 30
+    - magnitude: 42
       note: ""
-    - magnitude: 38
+    - magnitude: 64
       note: ""
-    - magnitude: 46
+    - magnitude: 90
       note: ""
-    - magnitude: 54
+    - magnitude: 120
       note: ""
-    - magnitude: 62
+    - magnitude: 150
+      note: ""
+    - magnitude: 182
+      note: ""
+    - magnitude: 218
+      note: ""
+    - magnitude: 252
       note: ""
     firstCost: {biomass: 10, chitin: 0, scrap: 4, electronics: 0}
     growthPercent: 40
@@ -658,15 +658,15 @@ MonoBehaviour:
     team: 1
     unit: 4
     ranks:
-    - magnitude: 4
+    - magnitude: 24
       note: ""
-    - magnitude: 8
+    - magnitude: 56
       note: ""
-    - magnitude: 12
+    - magnitude: 104
       note: ""
-    - magnitude: 16
+    - magnitude: 166
       note: ""
-    - magnitude: 20
+    - magnitude: 236
       note: ""
     firstCost: {biomass: 9, chitin: 1, scrap: 2, electronics: 0}
     growthPercent: 44
@@ -1051,7 +1051,7 @@ MonoBehaviour:
     - magnitude: 4
       note: "Настойчивый следопыт · после провала меняет цель до четырёх раз, дольше держит погоню, не уходит из зоны экспедиции."
     - magnitude: 5
-      note: "Рабочая смена · непрерывная добыча по H: поиск, погоня, доставка, снова поиск. Пауза при полном грузе или занятом адресате."
+      note: "Рабочая смена · по H Гоша рыбачит сам и носит рыбу в аквариум через бортовую трубу."
     - magnitude: 6
       note: "Дальние рейсы · ищет добычу в более далёких безопасных районах глубины и возвращается сам."
     - magnitude: 7
@@ -1128,7 +1128,7 @@ MonoBehaviour:
     unit: 6
     ranks:
     - magnitude: 1
-      note: "Замечает и поднимает со дна катушки и мелкий металлолом."
+      note: "Замечает катушки и мелкий металлолом. Находки складывает у своего домика."
     - magnitude: 2
       note: "Находит ящики приборов и электронику, когда они есть на этой глубине."
     - magnitude: 3
@@ -1161,7 +1161,7 @@ MonoBehaviour:
     - magnitude: 4
       note: "Грузовая очередь · ждёт возвращения клети, не теряет груз, продолжает работу при освобождении места."
     - magnitude: 5
-      note: "Личный шлюз Гоши · мелкая рыба идёт через трубу прямо в аквариум, материалы — в сухой лоток."
+      note: "Обходной шлюз · Гоша выходит в море и возвращается на борт по своей трубе без обычного шлюза."
     firstCost: {biomass: 9, chitin: 2, scrap: 1, electronics: 0}
     growthPercent: 43
     stageGrowthPercent: 9

@@ -38,6 +38,11 @@ namespace Raid
 
         enum DeliverMode { Hands, Cage, Receptor }
 
+        bool CanUseFishHatch => Autonomy>=5 || DeliveryRank>=5;
+        bool KnowsServiceHatch => DeliveryRank>=5;
+        bool HasCarriedLoot => carried.Exists(item=>!item.IsFish);
+        float nextHatchDelivery;
+
         int Autonomy => team?.TeamRank(SkillLine.GoshaAutonomy) ?? 0;
         int SpeedRank => team?.TeamRank(SkillLine.GoshaSpeed) ?? 0;
         int ClawsRank => team?.TeamRank(SkillLine.GoshaClaws) ?? 0;
@@ -216,6 +221,7 @@ namespace Raid
             PruneEscapes();
             if (pet.Mode == GoshaMode.GoingHome)
             {
+                if(TryEnterServiceHatch(false,dt))return true;
                 if (TravelTo(deck.Mark(0), dt)) ResumeDeck();
                 return true;
             }
@@ -242,21 +248,27 @@ namespace Raid
         void TickWork(float dt)
         {
             if (team == null || !team.goshaTamed) { FinishWork("Гоша вернулся на палубу"); return; }
+            if(HasCarriedLoot)
+            {
+                if(Time.time>orderEnds){continuous=false;finishing=true;work=GoshaWork.None;}
+                DeliverMaterialsHome(dt);
+                return;
+            }
             if (Time.time > orderEnds) { FinishWork("Рабочая смена окончена"); return; }
             if (SwimZone(pet.Position) != PetZone.Sea)
             {
-                // The helper leaves the hull through the real pressure lock; it never crosses a bulkhead.
-                TravelTo(LockPoint(12.2f), dt);
+                if(!TryEnterServiceHatch(true,dt))TravelTo(LockPoint(12.2f), dt);
                 return;
             }
             // With nobody in the water the pet can still work into the open cage or its own hatch.
             bool canHandOver = AnyDiverAtSea() || (DeliveryRank >= 3 && CageLoadingOpen()) ||
-                (DeliveryRank >= 5 && GoshaReceiver.Active != null && GoshaReceiver.Active.Ready);
+                (CanUseFishHatch && GoshaReceiver.Active != null && GoshaReceiver.Active.Ready) || work is GoshaWork.Materials or GoshaWork.Balanced;
             if (carried.Count == 0 && !canHandOver) { FinishWork("Экипаж на борту · Гоша возвращается"); return; }
             PlaceCarried();
             if (huntFish != null) { HuntFishTick(dt); return; }
             if (huntLoot != null) { HuntLootTick(dt); return; }
-            bool mustDeliver = CarriedWeight >= HuntStats.Capacity || (finishing && carried.Count > 0);
+            bool mustDeliver = CarriedWeight>=HuntStats.Capacity ||
+                (carried.Count>0 && (finishing || CanUseFishHatch));
             if (mustDeliver) { DeliverTick(dt); return; }
             if (Time.time >= scanAt)
             {
@@ -457,15 +469,12 @@ namespace Raid
 
         void DeliverTick(float dt)
         {
-            bool onlyFish = true, onlyLoot = true;
-            foreach (var c in carried) { if (c.IsFish) onlyLoot = false; else onlyFish = false; }
             if (carried.Count == 0) { finishing = false; hunt.Reset(); return; }
-
-            // Rank V: the pet's own wet hatch on NEREID feeds the real aquarium.
             var receiver = GoshaReceiver.Active;
-            if (DeliveryRank >= 5 && onlyFish && receiver != null && receiver.Ready && team.FitsReservoir(progression))
+            if(CanUseFishHatch && receiver && receiver.Ready && team.ReservoirRoom(progression)>0)
             {
-                if (DeliverAt(dt, receiver.MouthPosition, 1.6f, DeliverMode.Receptor)) return;
+                DeliverAt(dt,receiver.TransferPosition,.83f,DeliverMode.Receptor);
+                return;
             }
             // Rank III: the open recovery cage, through the team manifest only.
             if (DeliveryRank >= 3 && CageLoadingOpen() && CageMouth(out var cage) && CageHasRoom())
@@ -478,10 +487,6 @@ namespace Raid
             {
                 if (DeliverAt(dt, diver.transform.position + Vector3.up * .3f, 1.6f, DeliverMode.Hands, diver)) return;
                 if (ApproachBlocked) { skipReceiverUntil[diver.OwnerId] = Time.time + 8f; approachStall = 0; }
-            }
-            if (DeliveryRank >= 5 && onlyLoot && receiver != null && receiver.Ready && team != null && receiver.DryReady)
-            {
-                if (DeliverAt(dt, receiver.DryPosition, 1.6f, DeliverMode.Receptor)) return;
             }
             deliverWait += dt;
             if (deliverWait > HuntTuning.cageWait)
@@ -518,16 +523,19 @@ namespace Raid
                     if (any) { Publish(); Save(); }
                     break;
                 case DeliverMode.Receptor:
-                    for (int i = carried.Count - 1; i >= 0; i--)
+                    if(Time.time<nextHatchDelivery)return true;
+                    for(int i=carried.Count-1;i>=0;i--)
                     {
-                        var c = carried[i];
-                        long id = c.Id;
-                        bool stored = c.Fish != null ? c.Fish.DepositGoshaCatch(team)
-                            : c.Loot != null && c.Loot.DepositFromGosha(team, progression);
-                        if (!stored) continue;
-                        carried.RemoveAt(i); Tally(c);
-                        if (c.IsFish) { pet.HatchDeliveries++; pet.HatchCargoId = id; }
-                        Publish(); Save();
+                        var c=carried[i];
+                        if(!c.Fish || !c.Fish.DepositGoshaCatch(team,progression))continue;
+                        carried.RemoveAt(i);
+                        Tally(c);
+                        nextHatchDelivery=Time.time+.68f;
+                        pet.HatchDeliveries++;
+                        pet.HatchCargoId=c.Id;
+                        gosha.Value=pet;
+                        Publish();Save();
+                        break;
                     }
                     break;
             }

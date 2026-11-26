@@ -233,7 +233,7 @@ namespace Raid
             var contact=MoveSwimmer(blastVelocity*dt);
             if((contact&CollisionFlags.Above)!=0 && blastVelocity.y>0)blastVelocity.y=0;
             if((contact&CollisionFlags.Below)!=0 && blastVelocity.y<0)blastVelocity.y=0;
-            blastVelocity*=Mathf.Exp(-Mathf.Lerp(3.85f,4.65f,Mathf.InverseLerp(19,49,blastVelocity.magnitude))*dt);
+            blastVelocity*=Mathf.Exp(-Mathf.Lerp(3.65f,4.35f,Mathf.InverseLerp(22,74,blastVelocity.magnitude))*dt);
         }
 
         internal void TakeRigImpact(float amount)

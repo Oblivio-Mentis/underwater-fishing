@@ -37,6 +37,14 @@ namespace Raid.Nereid
             {
                 if(authored.dispatch) authored.dispatch.Initialize(world,authored.transform);
                 authored.lights??=new MaterialPropertyBlock();
+                foreach(var label in authored.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if(label.name!="Button engraving")continue;
+                    label.text="ДЕРЖАТЬ";
+                    label.fontSize=.064f;
+                    label.textWrappingMode=TextWrappingModes.NoWrap;
+                    break;
+                }
                 return authored;
             }
             var basket=world.container.Find("RAID010 cargo basket");
@@ -135,7 +143,7 @@ namespace Raid.Nereid
             {
                 meterText=Label(panel,font,"Capacity readout",new Vector3(.169f,.097f,-.20f),.155f,new Vector2(.74f,.16f));
                 var label=Label(panel,font,"Button engraving",new Vector3(.169f,.177f,.405f),.080f,new Vector2(.29f,.09f));
-                label.text="ПОДЪЁМ";
+                label.text="ДЕРЖАТЬ";
             }
 
             if(world)
@@ -271,10 +279,12 @@ namespace Raid.Nereid
             bool atField=state.hoistPhase==HoistPhase.Loading;
             PoseMechanism(state.hoistPhase,progress);
             foreach(var part in touching)if(part.enabled!=atField)part.enabled=atField;
+            float held=Raid.UI.UiRoot.Instance?.CargoDispatchHold??0;
             float pressDepth=state.hoistPhase==HoistPhase.Raising?.092f*(1-Ease(progress/.075f)):0;
             buttonDepth=Mathf.Lerp(buttonDepth,pressDepth,1-Mathf.Exp(-Time.deltaTime*18));
             buttonStem.localPosition=new Vector3(.215f-buttonDepth,-.02f,.43f);
-            Tint(buttonLens,atField?state.CargoUsed>0?Amber:Green:new Color(.14f,.28f,.33f),atField?.96f:.59f);
+            var ready=state.CargoUsed>0?Amber:Green;
+            Tint(buttonLens,atField?Color.Lerp(ready,Green,held):new Color(.14f,.28f,.33f),atField?.96f:.59f);
         }
 
         internal void Meter(int used,int limit)

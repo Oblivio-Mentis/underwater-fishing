@@ -86,10 +86,10 @@ namespace Raid
         }
 
         /// <summary>Sends the carried fish straight into the aquarium through the single delivery gate.</summary>
-        public bool DepositGoshaCatch(TeamProgress team)
+        public bool DepositGoshaCatch(TeamProgress team,ProgressionTuning tuning)
         {
             if(!IsServerInitialized || !goshaCarried || team==null)return false;
-            if(!team.Deposit(ToCargo(_cargoId)))return false;
+            if(!team.Deposit(ToCargo(_cargoId),tuning))return false;
             RetireGoshaCatch(null);
             return true;
         }
