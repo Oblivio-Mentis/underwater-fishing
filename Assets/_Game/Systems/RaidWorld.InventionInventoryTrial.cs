@@ -78,7 +78,8 @@ namespace Raid
             team.goshaMet=team.goshaTamed=true;
             if(threats)threats.enabled=false;
             var trap=TechCatalog.Find("trap");
-            team.techPurchases.Add(new TechPurchase{item="trap",upgrade="unlock",rank=1});
+            foreach(string product in new[]{"trap","magnet","oxygen","robot"})
+                team.techPurchases.Add(new TechPurchase{item=product,upgrade="unlock",rank=1});
             team.techPurchases.Add(new TechPurchase{item="trap",upgrade="stack",rank=1});
             Publish();
             await WaitRackUi(()=>view.TechRank("trap","stack")==1,"replicated stack upgrade");
@@ -92,24 +93,31 @@ namespace Raid
             await WaitRackUi(()=>InventionRackTargeted(host) && InventoryContextAllowed(),"owned camera aiming at the real rack");
             report.phase="open rack from physical E";
             await RackKey(Key.E);
-            report.Check(inventoryPanel==InventoryPanel.Rack && rackBlueprints.Count==1 && rackBlueprints[0].id==trap.id,
-                "E at the physical rack opened its panel with only the researched trap.");
+            report.Check(inventoryPanel==InventoryPanel.Rack && rackBlueprints.Count==4 && rackBlueprints.All(item=>view.TechRank(item.id,"unlock")>0),
+                "E at the physical vending machine opened product cards for its four researched items.");
+            await RackKey(Key.DownArrow);
+            report.Check(rackSelection==1,"Down arrow selected the next product card.");
+            await RackKey(Key.UpArrow);
+            report.Check(rackBlueprints[rackSelection].id==trap.id,"Selected the trap for physical dispensing.");
             await RackKey(Key.RightArrow);
             int slot=inventorySlot;
             report.fieldSlot=slot+1;
             report.Check(slot==1,"Right arrow selected the second real slot.");
+            await CaptureRackUi(folder,"01-open-rack.png");
             var balance=team.Treasury;
             var keyboard=Keyboard.current;
             try
             {
                 InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.Enter));
+                await WaitRackUi(()=>RackParcelInFlight(trap.id),"visible trap cargo ejected from the chute",7);
+                await CaptureRackUi(folder,"03-ejected-trap.png",.10f);
+                report.Check(RackParcelCount>0 || LocalProgress.techSlots[slot].count>0,"The actual server-issued trap was observed leaving the vending chute.");
                 await WaitRackUi(()=>LocalProgress.techSlots[slot].count==limit,"hold Enter to fill selected slot",12);
                 await Awaitable.WaitForSecondsAsync(.4f);
             }
             finally{InputSystem.QueueStateEvent(keyboard,new KeyboardState());}
             report.Check(LocalProgress.techSlots[slot].kind=="trap" && LocalProgress.techSlots[slot].count==limit && balance.Equals(team.Treasury) &&
                 LocalProgress.techSlots.Where((_,i)=>i!=slot).All(x=>x.count==0),"Free rack transfers filled exactly one selected slot and stopped at capacity.");
-            await CaptureRackUi(folder,"01-open-rack.png");
             await RackKey(Key.E);
             report.Check(!InventionPanelOpen,"E closed the rack.");
 
@@ -137,9 +145,9 @@ namespace Raid
         string rackFramePath;
         Texture2D rackBackdrop;
         RenderTexture rackFrame,previousRackFrame;
-        async Awaitable CaptureRackUi(string folder,string name)
+        async Awaitable CaptureRackUi(string folder,string name,float settle=.25f)
         {
-            await Awaitable.WaitForSecondsAsync(.25f);
+            await Awaitable.WaitForSecondsAsync(settle);
             string path=Path.Combine(folder,name);
             // The player's hidden swapchain can be black. Capture the local camera and its actual HUD,
             // then paint this inventory's ordinary GUI repaint into the same offscreen surface.
