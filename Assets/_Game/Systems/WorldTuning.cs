@@ -13,6 +13,12 @@ namespace Raid
         public float autoSaveInterval=15f;
         public float rescueRange=2.5f;
 
+        [Header("Expedition equipment")]
+        [Min(0)] public int chargeBiomass=1,chargeScrap=1,rigRepairScrap=1;
+        [Min(1)] public int sampleBasketCapacity=3;
+        [Min(1)] public int maxSampleBaskets=8;
+        [Range(.05f,1)] public float soloTowSpeed=.38f,teamTowSpeed=.82f;
+
         [Header("Gosha and the deck ball")]
         [Range(.28f,.48f)] public float petScale=.365f;
         [Min(.5f)] public float petReach=2.05f;

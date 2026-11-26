@@ -92,7 +92,7 @@ namespace Raid
         public DiverMotor AssistingDiver => MotorOf(_assistant.Value);
         public LootActor CarriedSalvage => LootActor.HeldBy(Motor);
         public bool HoldingHeavyCatch => _liftedHeavy.Value.id > 0 || _fish != null && _fish.RequiresPartner && _fish.Mode == FishMode.Captured;
-        public bool HandsFull => HoldingHeavyCatch || CarriedSalvage != null;
+        public bool HandsFull => HoldingHeavyCatch || CarriedSalvage != null || (RaidWorld.Instance?.HaulingEquipment(Motor)??false);
         public int CatchCount => PocketCount+(HoldingHeavyCatch?1:0);
         int PocketCount
         {

@@ -270,7 +270,8 @@ namespace Raid
             DiverState state = _state.Value;
             if(state.Dead){AdvanceDeath(state);return;}
             bool active = !(RaidWorld.Instance?.GoshaKnocked(this)??false) && Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
-            Vector3 axes = active && !IsHelpless && !IsTrapped ? _serverInput : Vector3.zero;
+            bool tetheredBait=RaidWorld.Instance?.IsCageBait(this)==true;
+            Vector3 axes = active && !IsHelpless && !IsTrapped && !tetheredBait ? _serverInput : Vector3.zero;
             float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
             bool walking=UsesIndoorWalking(transform.position);
             if(walking)
@@ -285,7 +286,7 @@ namespace Raid
                 _serverJumpQueued=false;
                 _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
                 Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
-                float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
+                float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*equipmentPace*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 if(state.Stress>=tuning.stressDanger)speed*=.5f;
                 var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
@@ -298,7 +299,7 @@ namespace Raid
                 // Previous scenes and open water retain their original pitch-driven swimming.
                 Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
                 direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-                float speed = Mathf.Max(0f,tuning.swimSpeed)*(SpeedMultiplier+Mathf.Clamp(Personal(SkillLine.Fins),0,.45f))*
+                float speed = Mathf.Max(0f,tuning.swimSpeed)*equipmentPace*(SpeedMultiplier+Mathf.Clamp(Personal(SkillLine.Fins),0,.45f))*
                     (_serverSprint?Mathf.Max(1f,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 bool inHatch=Nereid.NereidAirlock.Active?.Contains(transform.position)==true;
@@ -308,7 +309,7 @@ namespace Raid
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
                 var swimTuning=RaidWorld.Instance?.progression;
-                if(swimTuning!=null && !IsTrapped && !IsHelpless)
+                if(swimTuning!=null && !IsTrapped && !tetheredBait && !IsHelpless)
                 {
                     bool accelerating=velocity.sqrMagnitude>.002f && Vector3.Dot(swimVelocity,velocity)>=0;
                     float acceleration=swimTuning.swimStartAcceleration*(1+Mathf.Clamp(Personal(SkillLine.SwimStart),0,.60f));

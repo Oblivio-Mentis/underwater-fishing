@@ -17,7 +17,10 @@ namespace Raid
         void UnbindProfile(NetworkConnection sender,FishNet.Transporting.RemoteConnectionStateArgs state)
         {
             if(state.ConnectionState==FishNet.Transporting.RemoteConnectionState.Stopped)
+            {
+                ReleaseTechOwner(sender.ClientId);
                 crewProfiles.Remove(sender);
+            }
         }
 
         public string ProgressKey(DiverMotor diver)

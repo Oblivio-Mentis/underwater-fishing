@@ -83,6 +83,7 @@ namespace Raid
             try { team=File.Exists(savePath)?TeamSave.Load(savePath,progression):new TeamProgress(progression); }
             catch(Exception e) { saveFailed=true; team=new TeamProgress(progression); message.Value="Сохранение несовместимо или повреждено. Запустите новую кампанию из Start-New-Campaign.cmd"; Debug.LogError("[RAID Save] "+e.Message); }
             pendingDepth=team.expeditionDepth;
+            StartTech();
             StartGosha();
             if(threats!=null) threats.StockAttacked+=OnStockAttacked;
             Publish();
@@ -102,7 +103,7 @@ namespace Raid
             StopGosha();
             Save(); if(threats!=null) threats.StockAttacked-=OnStockAttacked;
         }
-        public override void OnStopClient() { StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
+        public override void OnStopClient() { StopTechPresentation();StopDroppedViews();HideGosha();snapshot.OnChange-=OnSnapshot; interact?.Dispose(); interact=null; localDiver=null; LocalProgress=null; }
         private void OnSnapshot(string oldValue,string newValue,bool server)
         {
             if(string.IsNullOrEmpty(newValue)) return;
@@ -138,6 +139,7 @@ namespace Raid
         {
             if(!IsServerInitialized || team==null) return;
             TickAirlock();
+            TickTech(Time.fixedDeltaTime);
             TickGosha();
             TickRouteClock();
             AbsorbCageDrops();
@@ -182,6 +184,7 @@ namespace Raid
         private void LateUpdate()
         {
             PresentDrops();
+            PresentTech();
             PresentGosha();
             var state=IsServerInitialized?team:view;
             if(container==null || state==null) return;
@@ -351,8 +354,15 @@ namespace Raid
             ResetGosha();
             depth.Value=pendingDepth;
             team.expeditionDepth=pendingDepth;
-            Save();
             for(int i=0;i<DiverMotor.ServerDivers.Count;i++) DiverMotor.ServerDivers[i].Teleport(Nereid.NereidDeckNavigation.CrewSpawn(i,new Vector3((i-2)*1.5f,1.2f,1)));
+            foreach(var rig in team.rigs)
+            {
+                var rider=rig.mode=="carried"?TechDiver(rig.operatorId):null;
+                if(!rider)continue;
+                rig.depth=pendingDepth;
+                rig.position=rig.anchor=rider.transform.position+Vector3.up*.45f;
+            }
+            Save();
             foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(fish.depthTier==pendingDepth);
             foreach(var loot in FindObjectsByType<LootActor>()) loot.SetDepth(pendingDepth);
             if(threats!=null) threats.SetDepth(pendingDepth);
@@ -382,6 +392,7 @@ namespace Raid
         private void OnDestroy() { interact?.Dispose(); if(Instance==this) Instance=null; }
         private void OnGUI()
         {
+            TechHUD();
             if(UI.UiInputGate.Active) return;
             if(!IsClientInitialized || view==null || localDiver==null) return;
             GUILayout.BeginArea(new Rect(Screen.width-420,16,400,Screen.height-160),GUI.skin.box);

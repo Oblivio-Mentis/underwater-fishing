@@ -41,7 +41,18 @@ namespace Raid.UI
             var itemScroll=UiKit.Scroll(items,"Inventions",out var itemList);
             Place((RectTransform)itemScroll.transform,4,53,276,440);
             foreach(var item in TechCatalog.Items)
-                techItems.Add(UiKit.Button(itemList,"TechItem-"+item.id,item.title,()=>SelectItem(item),false,57));
+            {
+                var key=UiKit.Button(itemList,"TechItem-"+item.id,item.title,()=>SelectItem(item),false,57);
+                techItems.Add(key);
+                var plate=Resources.Load<Texture2D>("Technology/Icons/"+item.id);
+                if(!plate)continue;
+                var icon=UiKit.Node(key.transform,"Equipment");
+                Place(icon,5,5,47,47);
+                var image=icon.gameObject.AddComponent<RawImage>();image.texture=plate;image.raycastTarget=false;
+                var caption=key.GetComponentInChildren<TMP_Text>();
+                caption.rectTransform.offsetMin=new Vector2(57,4);caption.rectTransform.offsetMax=new Vector2(-6,-4);
+                caption.enableAutoSizing=true;caption.fontSizeMin=15;caption.fontSizeMax=22;
+            }
 
             var modules=Box(technologyPage,"Module rack",311,67,387,503,Steel).rectTransform;
             itemTitle=Label(modules,"Item",16,10,347,38,"",29,Ink);
