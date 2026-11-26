@@ -20,6 +20,7 @@ namespace Raid
             public string status="running",phase,error,resource,fish;
             public int granted,stocked;
             public float baselineMetresPerSecond,fastMetresPerSecond,restoredMetresPerSecond,blockedTravel,throughWallTravel,restoredBlockedTravel;
+            public float embeddedDepth,observedClearOffset,restoredClearOffset,reverseTravel;
             public List<string> checks=new();
             public void Check(bool ok,string description)
             {
@@ -225,6 +226,53 @@ namespace Raid
                 await AwaitCheatUi(()=>!diver.CheatNoclip,"noclip disabled");
                 report.restoredBlockedTravel=(await Walk(duration))*duration;
                 report.Check(report.restoredBlockedTravel<2.1f && report.restoredBlockedTravel>.25f,"After noclip was turned off, the same bulkhead blocked the diver again.");
+
+                report.phase="disable noclip from inside the solid wall";
+                diver.Teleport(origin);
+                var collider=barrier.GetComponent<BoxCollider>();
+                collider.size=new Vector3(8,8,2.5f);
+                Physics.SyncTransforms();
+                var controller=diver.GetComponent<CharacterController>();
+                float nearFace=2.1f-collider.size.z*.5f;
+                float radius=controller.radius*diver.transform.lossyScale.x;
+                await ClickCheatButton("CheatNoclip");
+                await AwaitCheatUi(()=>diver.CheatNoclip && !controller.enabled,"noclip disabled the normal controller");
+                diver.LookAtConsole(origin+forward*20+Vector3.up*.65f);
+                await Awaitable.WaitForSecondsAsync(.22f);
+                float deadline=Time.realtimeSinceStartup+4;
+                try
+                {
+                    InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState(Key.W));
+                    while(true)
+                    {
+                        float offset=Vector3.Dot(diver.transform.position-origin,forward);
+                        if(offset+radius<nearFace)report.observedClearOffset=offset;
+                        if(offset>=1.94f)break;
+                        if(Time.realtimeSinceStartup>=deadline)throw new TimeoutException("Fly to the middle of the wall using W.");
+                        await Awaitable.NextFrameAsync();
+                    }
+                }
+                finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
+                await Awaitable.WaitForSecondsAsync(.18f);
+                var inside=diver.transform.position;
+                report.embeddedDepth=Vector3.Dot(inside-origin,forward);
+                report.Check(collider.bounds.Contains(inside+Vector3.up*.6f) && report.embeddedDepth>nearFace+radius &&
+                    report.embeddedDepth<nearFace+collider.size.z-radius,"The diver actually stopped inside the thicker solid while noclip was active.");
+                await ClickCheatButton("CheatNoclip");
+                await AwaitCheatUi(()=>!diver.CheatNoclip && controller.enabled,"exit from inside the bulkhead");
+                report.restoredClearOffset=Vector3.Dot(diver.transform.position-origin,forward);
+                report.Check(report.restoredClearOffset+radius<=nearFace+controller.skinWidth+.04f &&
+                    Mathf.Abs(report.restoredClearOffset-report.observedClearOffset)<.65f &&
+                    Vector3.Distance(diver.transform.position,inside)>radius,"Disabling noclip inside the solid restored the controller at the last clear side of the same wall.");
+                Vector3 escape=diver.transform.position;
+                try
+                {
+                    InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState(Key.S));
+                    await Awaitable.WaitForSecondsAsync(.55f);
+                    report.reverseTravel=Vector3.Dot(escape-diver.transform.position,forward);
+                }
+                finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
+                report.Check(report.reverseTravel>.3f && controller.enabled,"Normal reverse movement worked immediately after recovery from the wall.");
             }
             finally{Destroy(barrier);}
             await TapCheatKey(Key.X);
