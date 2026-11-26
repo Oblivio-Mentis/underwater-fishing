@@ -8,7 +8,7 @@ namespace Raid.UI
     [RequireComponent(typeof(CanvasRenderer))]
     internal sealed class HudInputGlyph : MaskableGraphic
     {
-        internal enum Control { None, Left, LiftLeft, Right, Wheel, E, F, Q, R, One, G, H, J }
+        internal enum Control { None, Left, LiftLeft, Right, Wheel, E, F, Q, R, One, G, H, J, T }
         Control control;
         TMP_Text legend;
         static readonly Color Face = new(.045f,.105f,.13f,.98f);

@@ -41,6 +41,14 @@ namespace Raid.UI
                 string distance=other?UiText.HudTetherDistance(Vector3.Distance(player.transform.position,other.transform.position),tool.TetherMaxRange):null;
                 return new(Mark.Spear,new(Key.Left,"Подтянуть напарника"),new(Key.R,"Отпустить трос"),note:distance);
             }
+            var rig=tool.CarriedInvention;
+            if(rig!=null)
+            {
+                var stow=tool.CanStowCarriedInvention(rig,out var reason)?new HudBinding(Key.R,"Убрать в карман"):default;
+                var place=rig.operatorId==player.OwnerId && !player.IsInside?new HudBinding(Key.T,"Установить"):default;
+                string label=TechCatalog.Find(rig.kind)?.title ?? "Корзина улова";
+                return new(Mark.Wrench,new(Key.Q,"Отпустить"),stow,place,note:string.IsNullOrEmpty(reason)?label:reason);
+            }
             var assist=tool.AssistTarget;
             var owner=assist?assist.GetComponent<HarpoonTool>():tool;
             var hooked=owner?owner.HookedFish:null;
@@ -67,6 +75,9 @@ namespace Raid.UI
                 if(pad.CanRequest)return new(Mark.Submarine,new(Key.Left,pad.Sea?"Затопить шлюз":"Осушить шлюз"));
                 return new HudHint(Mark.Submarine,note:world.Airlock.Caption){caution=true};
             }
+            var stack=tool.InventionInSlot(tool.ActiveSlot);
+            if(stack.count>0 && tool.CanDrawPocketInvention && !UiInputGate.PointerReserved)
+                return new(Mark.Wrench,new(Key.Left,"Взять в руки"),note:(TechCatalog.Find(stack.kind)?.title ?? stack.kind)+"  ×"+stack.count);
             switch(c.Interaction)
             {
                 case UiInteraction.PetGosha:return new(Mark.Glove,new(Key.E,"Взять и погладить Гошу"));

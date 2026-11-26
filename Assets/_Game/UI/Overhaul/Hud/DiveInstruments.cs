@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,8 +17,10 @@ namespace Raid.UI
         static readonly Color Gold=new Color(1f,.76f,.32f);
         static readonly Vector2 Center=new Vector2(.5f,.5f);
         static Sprite[] art;
+        static readonly Dictionary<string,Sprite> inventionIcons=new();
         readonly Image[] slotRim=new Image[HarpoonTool.MaximumSlots], slotArt=new Image[HarpoonTool.MaximumSlots], crewGauge=new Image[5], contacts=new Image[5];
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[HarpoonTool.MaximumSlots];
+        readonly TMP_Text[] pocketAmounts=new TMP_Text[HarpoonTool.MaximumSlots];
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
@@ -78,6 +81,9 @@ namespace Raid.UI
                 slotRim[i]=Icon(hotbar,"Slot "+(i+1),Mark.SlotOutline,x,0,66,66,Rim);
                 var face=Icon(slotRim[i].transform,"Slot well",Mark.Tile,3,-3,60,60,Ink);
                 slotArt[i]=Icon(face.transform,"Item",Mark.Spear,5,-5,50,50,Ivory);
+                pocketAmounts[i]=Caption(face.transform,"Stack count",1,-36,56,22,17,TextAlignmentOptions.MidlineRight);
+                pocketAmounts[i].fontStyle=FontStyles.Bold;
+                pocketAmounts[i].enabled=false;
                 keys[i]=Caption(hotbar,"Key "+(i+1),x,-66,66,23,18,TextAlignmentOptions.Center);
                 keys[i].fontStyle=FontStyles.Bold;UiKit.Set(keys[i],(i+1).ToString());
             }
@@ -149,6 +155,7 @@ namespace Raid.UI
             {
                 int slots=tool.SlotCount;
                 bool carryingSalvage=tool.CarriedSalvage!=null;
+                var carried=tool.CarriedInvention;
                 hotbar.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,slots*74-8);
                 for(int i=0;i<slotRim.Length;i++)
                 {
@@ -159,11 +166,17 @@ namespace Raid.UI
                     var fish=i>=2?tool.FishInSlot(i):null;
                     bool ball=tool.HasBallInSlot(i);
                     bool holdingSalvage=carryingSalvage && i==1;
-                    bool selected=holdingSalvage || i==tool.ActiveSlot&&!tool.HandsFull;
+                    bool holdingRig=carried!=null && i==1;
+                    var stack=tool.InventionInSlot(i);
+                    bool selected=holdingSalvage || holdingRig || i==tool.ActiveSlot&&!tool.HandsFull;
                     slotRim[i].color=selected?Gold:Rim;keys[i].color=selected?Gold:Ivory;
-                    slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null||ball;
-                    slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?(holdingSalvage?Mark.Crate:Mark.Glove):ball?Mark.Ball:CatchMark(fish?.SpeciesId))];
-                    slotArt[i].color=tool.HandsFull&&!holdingSalvage?new Color(.68f,.73f,.73f):Ivory;
+                    slotArt[i].enabled=i==0?tool.OwnsHarpoon:i==1||fish!=null||ball||stack.count>0;
+                    if(holdingRig || stack.count>0)
+                        slotArt[i].sprite=InventionIcon(holdingRig?carried.kind:stack.kind);
+                    else slotArt[i].sprite=art[(int)(i==0?Mark.Spear:i==1?(holdingSalvage?Mark.Crate:Mark.Glove):ball?Mark.Ball:CatchMark(fish?.SpeciesId))];
+                    slotArt[i].color=tool.HandsFull&&!holdingSalvage&&!holdingRig?new Color(.68f,.73f,.73f):Ivory;
+                    pocketAmounts[i].enabled=stack.count>0;
+                    if(stack.count>0)UiKit.Set(pocketAmounts[i],"×"+stack.count);
                 }
             }
             bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead;
@@ -204,6 +217,21 @@ namespace Raid.UI
         {
             if(art==null || art[0]==null)LoadArt();
             return art[(int)mark];
+        }
+
+        static Sprite InventionIcon(string kind)
+        {
+            if(inventionIcons.TryGetValue(kind,out var icon) && icon!=null)return icon;
+            var texture=Resources.Load<Texture2D>("Technology/Icons/"+kind);
+            if(texture)
+            {
+                icon=Sprite.Create(texture,new Rect(0,0,texture.width,texture.height),Center,100,0,SpriteMeshType.FullRect);
+                icon.name=kind;
+                icon.hideFlags=HideFlags.HideAndDontSave;
+            }
+            else icon=Art(kind=="basket"?Mark.Crate:Mark.Wrench);
+            inventionIcons[kind]=icon;
+            return icon;
         }
 
         static void LoadArt()
