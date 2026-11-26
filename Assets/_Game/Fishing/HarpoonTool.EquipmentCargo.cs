@@ -4,11 +4,10 @@ namespace Raid
 {
     public sealed partial class HarpoonTool
     {
-        internal bool TakeEquipmentCatch(CatchItem cargo)
+        internal bool TakeEquipmentCatch(CatchItem cargo,System.Func<bool> commit=null,bool allowHeavy=false)
         {
-            if (!MayHandleItems || HandsFull || cargo.IsSalvage || cargo.cargoSize>1) return false;
-            int slot=FreePocket();
-            if (slot<0)return false;
+            if(!MayHandleItems || HandsFull || Motor.IsTrapped || TetherActive || HasBallLine || HookedFish ||
+               AssistTarget || RaidWorld.Instance.IsHoldingGosha(Motor) || cargo.IsSalvage || !allowHeavy && cargo.cargoSize>1)return false;
             foreach(var fish in FishActor.ServerSchool)
             {
                 if(!fish || fish.SpeciesId!=cargo.species || fish.depthTier!=cargo.depthTier)continue;
@@ -17,7 +16,11 @@ namespace Raid
                 var plain=fish.ToCargo(cargo.id);
                 if(plain.biomass!=cargo.biomass || plain.chitin!=cargo.chitin || plain.offering!=cargo.offering ||
                     plain.scrap!=cargo.scrap || plain.electronics!=cargo.electronics || plain.cargoSize!=cargo.cargoSize)continue;
-                SetPocket(slot,new PocketItem{species=fish.NetworkObject,id=cargo.id});
+                int slot=fish.RequiresPartner?1:FreePocket();
+                if(slot<0 || fish.RequiresPartner && !allowHeavy || commit!=null && !commit())return false;
+                var received=new PocketItem{species=fish.NetworkObject,id=cargo.id};
+                if(fish.RequiresPartner)_liftedHeavy.Value=received;
+                else SetPocket(slot,received);
                 EquipSlot(slot);
                 return true;
             }

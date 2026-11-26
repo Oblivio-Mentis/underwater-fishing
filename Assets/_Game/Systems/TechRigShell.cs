@@ -329,8 +329,11 @@ namespace Raid
         }
         public void Display(TechRig rig,bool snap)
         {
-            transform.position=snap?rig.position:Vector3.Lerp(transform.position,rig.position,1-Mathf.Exp(-Time.deltaTime*14));
-            transform.rotation=Quaternion.Euler(0,rig.yaw,model=="cage" && rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
+            if(model!="charge" || rig.mode!="fuse")
+            {
+                transform.position=snap?rig.position:Vector3.Lerp(transform.position,rig.position,1-Mathf.Exp(-Time.deltaTime*14));
+                transform.rotation=Quaternion.Euler(0,rig.yaw,model=="cage" && rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
+            }
             if(rig.mode!=lastMode && lastMode!=null)
             {
                 var cue=rig.mode is "armed" or "captured" or "fuse"?chirp:click;
@@ -358,6 +361,13 @@ namespace Raid
             }
             else if(busy)drive.Rotate(Vector3.right,Time.deltaTime*100,Space.Self);
             lamp.gameObject.SetActive(snap || (!busy && light<3) || Mathf.Sin(Time.time*(light==3?9:rig.mode=="fuse"?17:4)+rig.serial)>-.5f);
+        }
+
+        public void FollowCharge(Vector3 point,Vector3 velocity,bool snap)
+        {
+            transform.position=snap?point:Vector3.Lerp(transform.position,point,1-Mathf.Exp(-Time.deltaTime*26));
+            float speed=velocity.magnitude;
+            if(speed>.15f)transform.Rotate(38f*speed*Time.deltaTime,13f*speed*Time.deltaTime,7f*speed*Time.deltaTime,Space.Self);
         }
     }
 }

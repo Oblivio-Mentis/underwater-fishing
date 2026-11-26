@@ -16,7 +16,7 @@ namespace Raid
     [Serializable]
     internal sealed class ActiveFisheryTuning
     {
-        public float chargeThrowSpeed, chargeDrag, chargeDrop, chargeDamage, chargeForce, chargeYield;
+        public float chargeThrowSpeed, chargeDrag, chargeDrop, chargeDamage, chargeForce, chargeYield, chargeImpactRadius;
         public int chargeCap;
         public float trapPredatorLoss, trapPredatorDistance, trapIdleYield, trapActiveDepthBonus;
         public float vacuumReachCone, vacuumInlet, vacuumPull, vacuumPush, vacuumJamTime;

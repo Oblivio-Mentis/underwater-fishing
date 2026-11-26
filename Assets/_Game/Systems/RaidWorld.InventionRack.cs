@@ -148,7 +148,7 @@ namespace Raid
                 product==null || product.id!=kind)
             {InventoryReceipt(diver,profile,false,"Наведитесь на товар за стеклом");return;}
             RefreshVendorStock();
-            if(team.TechRank(kind,"unlock")>0 && VendorIssuedCount(kind)>=TechRig.TotalLimit(team,product))
+            if(TechRig.HasTeamLimit(kind) && team.TechRank(kind,"unlock")>0 && VendorIssuedCount(kind)>=TechRig.TotalLimit(team,product))
             {InventoryReceipt(diver,profile,false,VendorTeamLimitReason);return;}
             if(!FindStoragePocket(diver.GetComponent<HarpoonTool>(),profile,kind,out _,out var reason)){InventoryReceipt(diver,profile,false,reason);return;}
             LaunchRackParcel(diver,kind);

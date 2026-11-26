@@ -434,6 +434,12 @@ namespace Raid.UI
                 if(clicked && allowed)Send(WorldAction.Hoist);
                 return clicked;
             }
+            if(Page==UiPage.None && allowed && station==null && aimedPad==null &&
+               Context.World?.PointAtCatchOutlet(player,cam,clicked)==true)
+            {
+                UiInputGate.PointerReserved=clicked;
+                return clicked;
+            }
             if(Page==UiPage.None && allowed && station==null && aimedPad==null && tool &&
                tool.HandleInventionPointer(clicked,released))
             {

@@ -55,16 +55,25 @@ namespace Raid
             if(!Application.isBatchMode)
             {
                 if(!cues[cue])cues[cue]=MakeSound(cue);
-                AudioSource.PlayClipAtPoint(cues[cue],at,cue==1?.85f:.6f);
+                if(cue==1)PlayBlastSound(at,cues[cue]);
+                else AudioSource.PlayClipAtPoint(cues[cue],at,.6f);
             }
             if((cue!=1 && cue!=3) || SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)return;
+            if(cue==1)
+            {
+                float reach=ActiveFisheryTuning.Get.chargeImpactRadius;
+                WaterPressureFx.Blast(at,reach*1.8f);
+                var diver=UI.UiRoot.Instance?.Context.Player;
+                if(diver)diver.CameraImpulse?.Blast(at,reach*1.8f);
+                BurstDebris(at);
+            }
             var go=new GameObject(cue==1?"Fishery · cavitation bloom":"Cage · displaced water");
             go.transform.position=at;
             var ps=go.AddComponent<ParticleSystem>();
             ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
             var main=ps.main;main.loop=false;main.duration=.3f;main.maxParticles=96;
             main.startSize=new ParticleSystem.MinMaxCurve(.04f,cue==1?.52f:.17f);
-            main.startSpeed=new ParticleSystem.MinMaxCurve(.6f,cue==1?3.8f:1.4f);
+            main.startSpeed=new ParticleSystem.MinMaxCurve(.6f,cue==1?8f:1.4f);
             main.startLifetime=new ParticleSystem.MinMaxCurve(.5f,cue==1?2.6f:1.1f);
             main.startColor=new ParticleSystem.MinMaxGradient(new Color(.46f,.66f,.61f,.7f),new Color(.85f,.97f,.95f,.85f));
             main.simulationSpace=ParticleSystemSimulationSpace.World;
@@ -85,17 +94,57 @@ namespace Raid
             {
                 var flash=go.AddComponent<ChargeBurstFlash>();
                 flash.source=go.AddComponent<Light>();
-                flash.source.range=7f;flash.source.intensity=5f;
+                flash.source.range=11f;flash.source.intensity=12f;
                 flash.source.color=new Color(1f,.82f,.52f);flash.source.shadows=LightShadows.None;
             }
             ps.Play();ps.Emit(cue==1?92:28);
             Object.Destroy(go,3f);
         }
 
+        static void PlayBlastSound(Vector3 point,AudioClip clip)
+        {
+            var go=new GameObject("Динамит · звук подводного импульса");
+            go.transform.position=point;
+            var source=go.AddComponent<AudioSource>();
+            source.spatialBlend=1;
+            source.rolloffMode=AudioRolloffMode.Linear;
+            source.minDistance=3.5f;
+            source.maxDistance=29f;
+            source.PlayOneShot(clip,.95f);
+            Object.Destroy(go,clip.length+.1f);
+        }
+
+        static void BurstDebris(Vector3 point)
+        {
+            var go=new GameObject("Динамит · выброс ила и искр");
+            go.transform.position=point;
+            var ps=go.AddComponent<ParticleSystem>();
+            ps.Stop(true,ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main=ps.main;
+            main.loop=false;main.duration=.2f;main.maxParticles=128;
+            main.startLifetime=new ParticleSystem.MinMaxCurve(.22f,1.15f);
+            main.startSpeed=new ParticleSystem.MinMaxCurve(2.5f,13f);
+            main.startSize=new ParticleSystem.MinMaxCurve(.026f,.38f);
+            main.startColor=new ParticleSystem.MinMaxGradient(new Color(.26f,.21f,.14f,.5f),new Color(1,.63f,.24f,.9f));
+            var shape=ps.shape;shape.shapeType=ParticleSystemShapeType.Sphere;shape.radius=.13f;
+            var emission=ps.emission;emission.rateOverTime=0;
+            var drag=ps.limitVelocityOverLifetime;drag.enabled=true;drag.limit=5.5f;drag.dampen=.55f;
+            var life=ps.colorOverLifetime;life.enabled=true;
+            var fade=new Gradient();
+            fade.SetKeys(new[]{new GradientColorKey(Color.white,0),new GradientColorKey(Color.white,1)},
+                new[]{new GradientAlphaKey(1,0),new GradientAlphaKey(.62f,.23f),new GradientAlphaKey(0,1)});
+            life.color=fade;
+            var renderer=ps.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial=SparkMaterial();
+            renderer.shadowCastingMode=ShadowCastingMode.Off;
+            ps.Play();ps.Emit(115);
+            Object.Destroy(go,1.7f);
+        }
+
         static AudioClip MakeSound(int cue)
         {
             const int rate=22050;
-            float seconds=cue==1?.9f:cue==0?.64f:.37f;
+            float seconds=cue==1?1.65f:cue==0?.64f:.37f;
             float[] data=new float[Mathf.CeilToInt(rate*seconds)];
             var random=new System.Random(6083+cue);
             float low=0;
@@ -106,9 +155,15 @@ namespace Raid
                 low=Mathf.Lerp(low,(float)random.NextDouble()*2-1,.12f);
                 float sample;
                 if(cue==0) sample=Mathf.Sin(2*Mathf.PI*680*t)*Mathf.Exp(-12*(t%.21f));
-                else if(cue==1) sample=Mathf.Sin(2*Mathf.PI*(81*t-26*t*t))*.64f+low*.8f;
+                else if(cue==1)
+                {
+                    float thump=1.15f*Mathf.Sin(2*Mathf.PI*(64*t-12*t*t)) * Mathf.Exp(-3.2f*t);
+                    float crack=(float)(random.NextDouble()*2-1)*Mathf.Exp(-38*t);
+                    float reflection=Mathf.Sin(2*Mathf.PI*39*t)*Mathf.Exp(-5.4f*Mathf.Max(0,t-.18f))*Mathf.Clamp01((t-.18f)*8);
+                    sample=.63f*thump+.60f*crack+.45f*low+.23f*reflection;
+                }
                 else sample=Mathf.Sin(2*Mathf.PI*(cue==2?430:127)*t)*.5f+low*(cue==2?.2f:.9f);
-                data[i]=sample*envelope*Mathf.Clamp01(t*500);
+                data[i]=Mathf.Clamp(sample*envelope*Mathf.Clamp01(t*650),-.98f,.98f);
             }
             var clip=AudioClip.Create("Fishery underwater cue "+cue,data.Length,1,rate,false);
             clip.SetData(data,0);return clip;

@@ -23,22 +23,22 @@ namespace Raid.Tests
             string path=Path.Combine(Path.GetTempPath(),"nereid-loose-invention-"+Guid.NewGuid().ToString("N")+".json");
             try
             {
-                var team=Team("charge");
+                var team=Team("trap");
                 var owner=team.RegisterPlayer("sender");
                 var receiver=team.RegisterPlayer("receiver");
-                int limit=TechRig.TotalLimit(team,TechCatalog.Find("charge"));
+                int limit=TechRig.TotalLimit(team,TechCatalog.Find("trap"));
                 for(int i=0;i<limit;i++)
-                    Assert.That(team.TakeTechFromRack(owner,"charge",i/team.TechStackLimit("charge"),()=>true,out _));
+                    Assert.That(team.TakeTechFromRack(owner,"trap",i/team.TechStackLimit("trap"),()=>true,out _));
                 int originalCount=owner.pocketStacks[0].count;
                 int revision=owner.revision;
                 var at=new Vector3(1,2,3);
-                Assert.That(team.DropPocketInvention(owner,0,"charge",at,32,()=>false,out _),Is.False);
+                Assert.That(team.DropPocketInvention(owner,0,"trap",at,32,()=>false,out _),Is.False);
                 Assert.That(owner.pocketStacks[0].count,Is.EqualTo(originalCount));
                 Assert.That(owner.revision,Is.EqualTo(revision));
                 Assert.That(team.lastRigSerial,Is.Zero);
                 Assert.That(team.rigs,Is.Empty);
                 bool Save(){TeamSave.Save(path,team);return true;}
-                Assert.That(team.DropPocketInvention(owner,0,"charge",at,32,Save,out _));
+                Assert.That(team.DropPocketInvention(owner,0,"trap",at,32,Save,out _));
                 team=TeamSave.Load(path);
                 owner=team.Player("sender");receiver=team.Player("receiver");
                 var loose=team.rigs.Single();
@@ -52,11 +52,25 @@ namespace Raid.Tests
                 Assert.That(team.StoreTechInSlot(owner,loose.serial,0,18,Save,out _),Is.False);
                 var loaded=TeamSave.Load(path);
                 Assert.That(loaded.rigs,Is.Empty);
-                Assert.That(loaded.Player("receiver").pocketStacks[1].kind,Is.EqualTo("charge"));
+                Assert.That(loaded.Player("receiver").pocketStacks[1].kind,Is.EqualTo("trap"));
                 Assert.That(loaded.Player("receiver").pocketStacks[1].count,Is.EqualTo(1));
                 Assert.That(loaded.Player("sender").pocketStacks.Sum(s=>s.count),Is.EqualTo(limit-1));
             }
             finally{File.Delete(path);File.Delete(path+".bak");}
+        }
+
+        [Test] public void ChargeLaunchDoesNotShareAnActiveTeamLimit()
+        {
+            var team=Team("charge");
+            var owner=team.RegisterPlayer("thrower");
+            Assert.That(TechRig.HasTeamLimit("charge"),Is.False);
+            for(int i=0;i<5;i++)
+            {
+                Assert.That(team.TakeTechFromRack(owner,"charge",0,()=>true,out _));
+                Assert.That(team.DeployTechFromSlot(owner,0,Vector3.forward,i,
+                    rig=>{rig.Detach();rig.mode="fuse";},()=>true,out _));
+            }
+            Assert.That(team.rigs.Count,Is.EqualTo(5));
         }
 
         [Test] public void ReleasingALoadedOrSharedRigKeepsItsSpecimensAndSerial()

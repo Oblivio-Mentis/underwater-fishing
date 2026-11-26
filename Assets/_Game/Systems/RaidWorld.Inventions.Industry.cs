@@ -31,6 +31,7 @@ namespace Raid
         int IndustryCapacity(TechRig rig) => team.TechUnitCapacity(rig.kind);
         int IndustryFree(TechRig rig)
         {
+            if(rig.kind=="vacuum")return IndustryCapacity(rig)-rig.contents.Count;
             int space=IndustryCapacity(rig) - rig.brood.Count;
             foreach (var item in rig.contents) space-=item.cargoSize;
             return space;
@@ -197,7 +198,7 @@ namespace Raid
             }
         }
 
-        static Vector3 VacuumInlet(TechRig rig) => rig.position+Vector3.up*.22f;
+        static Vector3 VacuumInlet(TechRig rig) => rig.position+Vector3.up*.42f;
 
         void TickAutonomousVacuum(TechRig rig,float dt)
         {
@@ -208,34 +209,33 @@ namespace Raid
                 rig.operatorId=rig.helperId=rig.baitId=-1;
                 rig.timer=0;
             }
-            if(rig.mode!="placed")return;
+            if(rig.mode!="placed"){rig.progress=0;return;}
             int remaining=IndustryFree(rig);
-            if(remaining<=0)return;
+            if(remaining<=0){rig.progress=0;return;}
             rig.timer=Mathf.Max(0,rig.timer-dt);
             var inlet=VacuumInlet(rig);
             float radius=IndustryRadius(rig);
             float catchRadius=Fishery.vacuumInlet*IndustryValue(rig,"compact");
-            float pull=Fishery.vacuumPull*IndustryValue(rig,"speed")*dt;
+            float pull=Fishery.vacuumPull*IndustryValue(rig,"speed");
             bool allowHeavy=IndustryUnlocked(rig,"range");
+            int drawing=0;
             foreach(var fish in FishActor.ServerSchool)
             {
-                if(!fish || fish.cargoSize>remaining || !fish.CanHarvestRig(allowHeavy))continue;
+                if(!fish || fish.depthTier!=rig.depth || !fish.CanHarvestRig(allowHeavy))continue;
                 var position=fish.transform.position;
                 float distance=(position-inlet).sqrMagnitude;
                 if(distance>radius*radius || !IndustryCanPull(position,inlet,.06f))continue;
-                if(distance>catchRadius*catchRadius)
-                {
-                    fish.DrawTowardRig(inlet,pull);
-                    continue;
-                }
-                if(rig.timer>0)continue;
+                drawing++;
+                fish.PullIntoVacuum(inlet,pull);
+                if(distance>catchRadius*catchRadius || rig.timer>0)continue;
                 var item=fish.HarvestRig(allowHeavy);
                 if(item==null)continue;
                 rig.contents.Add(item);
-                remaining-=item.cargoSize;
+                remaining--;
                 rig.timer=IndustryPeriod(rig)/IndustryValue(rig,"auto");
                 if(remaining<=0)break;
             }
+            rig.progress=Mathf.MoveTowards(rig.progress,Mathf.Clamp01(drawing*.38f),dt*3);
         }
 
         void SoundAndBubbles(TechRig rig, float dt)

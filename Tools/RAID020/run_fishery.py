@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 from pathlib import Path
 import socket
 import subprocess
@@ -42,9 +43,28 @@ def run(player, output):
             time.sleep(.25)
         else:
             raise TimeoutError("Host failed to start its transport")
-        launch("client")
+        guest = folder / "guest-probe"
+        guest.mkdir()
+        launch("client", "-batchmode", "-raid-ui-probe", str(guest))
         deadline = time.monotonic() + 240
         previous = None
+        aimed = False
+        clicked = False
+        guest_saw_catch = False
+
+        def guest_request(verb, **values):
+            request = {"id": f"vacuum-{verb}", "action": verb, **values}
+            staging = guest / "next.json"
+            staging.write_text(json.dumps(request), encoding="utf-8")
+            staging.replace(guest / "request.json")
+
+        def guest_state():
+            try:
+                data = json.loads((guest / "state.json").read_text(encoding="utf-8-sig"))
+                return data, json.loads(data.get("team") or "{}")
+            except (OSError, json.JSONDecodeError):
+                return {}, {}
+
         while time.monotonic() < deadline:
             try:
                 report = json.loads((folder / "fishery.json").read_text(encoding="utf-8-sig"))
@@ -57,6 +77,21 @@ def run(player, output):
                 previous = phase
             if status == "failed":
                 raise RuntimeError(report["error"])
+            if phase == "guest observes and takes one vacuum fish":
+                state, shared = guest_state()
+                rig = next((item for item in shared.get("rigs", [])
+                            if item["serial"] == report["vacuumSerial"]), None)
+                if rig and any(item["id"] == report["vacuumCatch"] for item in rig["contents"]):
+                    guest_saw_catch = True
+                    point = report["vacuumOutlet"]
+                    dx, dy, dz = point["x"]-state["x"], point["y"]-state["y"]-.6, point["z"]-state["z"]
+                    if not aimed and 1 < dx*dx+dy*dy+dz*dz < 12:
+                        guest_request("view", number=math.degrees(math.atan2(dx, dz)),
+                                      number2=-math.degrees(math.atan2(dy, math.hypot(dx, dz))))
+                        aimed = True
+                    elif aimed and not clicked and state.get("request") == "vacuum-view":
+                        guest_request("reticle_click")
+                        clicked = True
             if status == "passed":
                 image = folder / report["screenshot"]
                 with image.open("rb") as shot:
@@ -64,6 +99,15 @@ def run(player, output):
                         raise ValueError("Invalid screenshot")
                 if not report["twoDivers"] or not report["netCatch"] or not report["vacuumCatch"]:
                     raise ValueError("Two-owner field checks missing")
+                _, shared = guest_state()
+                rig = next((item for item in shared.get("rigs", [])
+                            if item["serial"] == report["vacuumSerial"]), None)
+                if not guest_saw_catch or not clicked or not rig:
+                    raise ValueError("Guest did not see the live and claimed catch")
+                if any(item["id"] == report["vacuumCatch"] for item in rig["contents"]):
+                    time.sleep(.25)
+                    continue
+                print("Independent client saw the same vacuum count update after picking up the specimen.")
                 print(f"{len(report['checks'])} passed checks, report and screenshot in {folder}")
                 return
             if any(p.poll() is not None for p in children):

@@ -18,6 +18,18 @@ namespace Raid.Nereid
         float swallowAt=-10,releaseAt=-10,chargeUntil=-10,chargeDuration=.44f,severity=1;
         // RAID-018 one-shot impacts: a single kick per server-confirmed hook, tug or bite.
         float hitAt=-10, hitMetres, hitDegrees, hitDirection;
+        float blastAt=-10,blastStrength,blastSide;
+
+        public void Blast(Vector3 point,float radius)
+        {
+            var delta=transform.position-point;
+            float distance=delta.magnitude;
+            float strength=Mathf.Pow(1-Mathf.Clamp01(distance/radius),1.15f)*shakeScale;
+            if(strength<=.01f || Time.unscaledTime-blastAt<.12f && strength<blastStrength)return;
+            blastAt=Time.unscaledTime+distance/39f;
+            blastStrength=strength;
+            blastSide=Vector3.Dot(transform.right,delta.normalized);
+        }
         /// <summary>One short directional shake. Called only for a locally observed confirmed event.</summary>
         public void Hit(float metres,float degrees,float direction)
         {
@@ -73,15 +85,19 @@ namespace Raid.Nereid
             float amplitude=(release*.055f*Mathf.Pow(severity,.78f)+gulp*.006f+charge*.008f)*distance*shakeScale+strain*strain*.0075f*shakeScale;
             float hitAge=Time.unscaledTime-hitAt;
             float hit=hitAge>=0 && hitAge<.42f ? Mathf.Exp(-hitAge*7.5f) : 0;
+            float blastAge=Time.unscaledTime-blastAt;
+            float shock=blastAge>=0 && blastAge<1f
+                ?blastStrength*Mathf.SmoothStep(0,1,blastAge/.036f)*Mathf.Exp(-5.1f*blastAge):0;
             if(hitAge>=.42f){hitMetres=hitDegrees=0;}
-            if(amplitude<.00001f && hit<=0)return;
+            if(amplitude<.00001f && hit<=0 && shock<=0)return;
             float t=Time.time;Vector3 noise=new Vector3(Mathf.Sin(t*47)+.35f*Mathf.Sin(t*79+.3f),Mathf.Sin(t*61+.7f)+.3f*Mathf.Sin(t*97),Mathf.Sin(t*37)*.35f)/1.35f;
             // DiverMotor has already written the live eye pose for this frame. Apply it once here.
             var eyeRotation=transform.localRotation;
-            CurrentOffset=noise*amplitude
+            CurrentOffset=noise*(amplitude+.077f*shock)
                 + eyeRotation * (Vector3.right*(hit*hitMetres*hitDirection) + Vector3.up*(hit*hitMetres*.35f));
-            Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*amplitude*17
-                + new Vector3(-hit*hitDegrees,hit*hitDegrees*hitDirection,hit*hitDegrees*.4f*hitDirection);
+            Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*(amplitude*17+shock*6.7f)
+                + new Vector3(-hit*hitDegrees,hit*hitDegrees*hitDirection,hit*hitDegrees*.4f*hitDirection)
+                + shock*new Vector3(-4.4f,blastSide*2.6f,blastSide*3.2f);
             var rotation=eyeRotation*Quaternion.Euler(angles);
             transform.SetLocalPositionAndRotation(transform.localPosition+CurrentOffset,rotation);
             AppliedThisFrame=true;

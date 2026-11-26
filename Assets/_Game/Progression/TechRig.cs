@@ -18,6 +18,7 @@ namespace Raid
         public CatchItem localStock;
         public List<CatchItem> contents=new(), brood=new();
         public bool Carrying(int player) => mode=="carried" && (operatorId==player || helperId==player);
+        public static bool HasTeamLimit(string kind) => kind!="charge";
         public static int TotalLimit(TeamProgress team,TechItem item)
         {
             if(item==null)return 0;

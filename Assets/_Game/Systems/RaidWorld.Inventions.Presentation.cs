@@ -20,6 +20,7 @@ namespace Raid
         {
             foreach(var shell in rigShells.Values)if(shell)Destroy(shell.gameObject);
             rigShells.Clear();
+            chargePoses.Clear();
             if(placementProjection)Destroy(placementProjection);
             if(projectionMaterial)Destroy(projectionMaterial);
             AimedInvention=null;
@@ -47,7 +48,12 @@ namespace Raid
                     rigShells[r.serial]=shell=go.AddComponent<TechRigShell>();shell.Build(r.kind);
                 }
                 shell.Display(r,fresh);
-                if(r.kind=="charge")FisheryEffects.ShowChargeFuse(shell,r);
+                shell.DisplayCatchMeter(r,view);
+                if(r.kind=="charge" && r.mode=="fuse")
+                {
+                    PresentCharge(r,shell,fresh);
+                    FisheryEffects.ShowChargeFuse(shell,r);
+                }
                 RigFishingLines.Present(shell.gameObject,r);
                 if(!camera)continue;
                 if(r.Carrying(localDiver.OwnerId))held=r;
@@ -62,7 +68,12 @@ namespace Raid
                 if(Physics.Linecast(camera.transform.position,r.position,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
                 best=error+.035f*along;target=r;
             }
-            foreach(var serial in oldShells){if(rigShells[serial])Destroy(rigShells[serial].gameObject);rigShells.Remove(serial);}
+            foreach(var serial in oldShells)
+            {
+                if(rigShells[serial])Destroy(rigShells[serial].gameObject);
+                rigShells.Remove(serial);
+                chargePoses.Remove(serial);
+            }
             PresentInstallation(localDiver,camera,tool,held);
             if(!tool || localDiver.IsHelpless || UI.UiInputGate.Blocked || UI.UiInputGate.PointerReserved)return;
             var selected=bait??held??target??handset;

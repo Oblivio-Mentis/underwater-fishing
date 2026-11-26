@@ -82,6 +82,8 @@ namespace Raid.UI
                 return item.kind==DroppedKind.Harpoon && tool.OwnsHarpoon?new(Mark.Spear,new(Key.E,"Обменять гарпун")):
                     new(Icon(item.kind),new(Key.E,"Поднять"),note:item.Label);
             }
+            if(world.AimedInvention is TechRig outlet && RaidWorld.HasCatchOutlet(outlet) &&
+               outlet.contents.Count>0 && !UiInputGate.PointerReserved)return InstalledEquipment(c,outlet);
             var stack=tool.InventionInSlot(tool.ActiveSlot);
             if(stack.count>0 && tool.CanDrawPocketInvention && (!UiInputGate.PointerReserved || tool.WindingCharge))
             {
@@ -157,6 +159,11 @@ namespace Raid.UI
                 _=>default
             };
             var unload=rig.contents.Count>0?new HudBinding(Key.I,"Разгрузить"):default;
+            if(RaidWorld.HasCatchOutlet(rig) && rig.contents.Count>0)
+            {
+                unload=primary;
+                primary=new HudBinding(Key.Left,"Забрать одну рыбу");
+            }
             var move=rig.health<.99f?new HudBinding(Key.O,"Ремонт"):
                 c.Harpoon.CanDrawPocketInvention && c.View.CanPackInvention(rig,c.Player.OwnerId,out _)
                     ?new HudBinding(Key.R,"Забрать в карман"):new HudBinding(Key.T,"Перенести");

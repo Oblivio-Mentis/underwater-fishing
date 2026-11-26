@@ -19,6 +19,8 @@ namespace Raid
             public string status="running", phase, error, screenshot;
             public bool twoDivers;
             public long chargeCatch, trapCatch, monsterCatch, netCatch, vacuumCatch;
+            public int vacuumSerial;
+            public Vector3 vacuumOutlet;
             public List<string> checks=new();
         }
 
@@ -439,6 +441,21 @@ namespace Raid
             Check(vacuum.contents.Any(c=>c.id==id) && !sample.IsFreeSwimming && vacuum.operatorId<0 && vacuum.helperId<0,
                 "the installed vacuum captures a real fish at its intake with no operators nearby");
             report.vacuumCatch=id;
+            if(Directory.Exists(Path.Combine(output,"guest-probe")))
+            {
+                net.position=ground+Vector3.back*7f;
+                vacuum.timer=30;
+                report.vacuumSerial=vacuum.serial;
+                report.vacuumOutlet=vacuum.position+Vector3.up*.17f;
+                peer.Teleport(vacuum.position+Vector3.right*2f);
+                world.PublishFisheryTrial();
+                var guest=peer.GetComponent<HarpoonTool>();
+                yield return Wait("guest observes and takes one vacuum fish",()=>!vacuum.contents.Any(item=>item.id==id) &&
+                    Enumerable.Range(2,guest.PocketCapacity).Any(slot=>guest.CatchIdInSlot(slot)==id),25);
+                Check(!Enumerable.Range(2,host.GetComponent<HarpoonTool>().PocketCapacity)
+                        .Any(slot=>host.GetComponent<HarpoonTool>().CatchIdInSlot(slot)==id),
+                    "The independent guest received the identified specimen exactly once; the host did not receive a copy.");
+            }
             yield break;
         }
     }

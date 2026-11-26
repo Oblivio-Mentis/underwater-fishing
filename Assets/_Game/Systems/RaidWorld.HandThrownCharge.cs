@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using FishNet.Object;
+using FishNet.Transporting;
 using UnityEngine;
 
 namespace Raid
@@ -46,6 +48,35 @@ namespace Raid
     public sealed partial class RaidWorld
     {
         const float ThrownChargeRadius=.13f;
+        readonly Dictionary<int,(Vector3 position,Vector3 velocity,float received)> chargePoses=new();
+        float nextChargeMotion;
+
+        [ObserversRpc]
+        void ChargeMotion(int serial,Vector3 position,Vector3 velocity,Channel channel=Channel.Unreliable)
+        {
+            chargePoses[serial]=(position,velocity,Time.unscaledTime);
+        }
+
+        void SendChargeMotion()
+        {
+            if(Time.unscaledTime<nextChargeMotion)return;
+            nextChargeMotion=Time.unscaledTime+.067f;
+            foreach(var rig in team.rigs)
+                if(rig.kind=="charge" && rig.depth==CurrentDepth && rig.mode=="fuse")
+                    ChargeMotion(rig.serial,rig.position,rig.anchor);
+        }
+
+        void PresentCharge(TechRig rig,TechRigShell shell,bool fresh)
+        {
+            Vector3 position=rig.position,velocity=rig.anchor;
+            if(chargePoses.TryGetValue(rig.serial,out var pose) && Time.unscaledTime-pose.received<.27f)
+            {
+                float advance=Mathf.Clamp(Time.unscaledTime-pose.received,0,.13f);
+                position=pose.position+pose.velocity*advance;
+                velocity=pose.velocity;
+            }
+            shell.FollowCharge(position,velocity,fresh);
+        }
 
         internal bool CanWindPocketCharge(DiverMotor diver,HarpoonTool tool,int serial)
         {
@@ -82,8 +113,10 @@ namespace Raid
             float fullSpeed=Mathf.Max(tuning.ballShortThrow,Fishery.chargeThrowSpeed*team.TechValue("charge","remote",1));
             float speed=Mathf.Lerp(tuning.ballShortThrow,fullSpeed,wind);
             var velocity=aim*speed+Vector3.up*tuning.ballThrowLift*Mathf.Lerp(.60f,1f,wind);
+            TechRig launched=null;
             void Launch(TechRig rig)
             {
+                launched=rig;
                 ClearGearHands(rig);
                 rig.position=hand;
                 rig.anchor=velocity;
@@ -112,6 +145,7 @@ namespace Raid
             {
                 AnnounceRigPulse(hand,0);
                 Publish();
+                ChargeMotion(launched.serial,launched.position,launched.anchor,Channel.Reliable);
             }
             InventoryReceipt(diver,profile,ok,ok?"Динамит брошен":reason);
         }

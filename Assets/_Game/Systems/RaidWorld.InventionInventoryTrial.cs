@@ -366,11 +366,40 @@ namespace Raid
                 gear.InventionInSlot(trapSlot).count==1,"releasing the mouse throws one live charge");
             var charge=team.rigs.Single(r=>r.kind=="charge");
             var release=charge.position;
-            await Awaitable.WaitForSecondsAsync(.45f);
+            await WaitRackUi(()=>chargePoses.ContainsKey(charge.serial) && rigShells.ContainsKey(charge.serial),"separate charge motion stream and client shell");
+            var chargeShell=rigShells[charge.serial];
+            int motionFrames=0;
+            Vector3 lastCharge=chargeShell.transform.position;
+            float end=Time.unscaledTime+.47f;
+            while(Time.unscaledTime<end)
+            {
+                await Awaitable.NextFrameAsync();
+                var now=chargeShell.transform.position;
+                if(Vector3.Distance(now,lastCharge)>.001f)motionFrames++;
+                lastCharge=now;
+            }
             report.Check(charge.mode=="fuse" && Vector3.Distance(charge.position,release)>.3f && charge.timer>0,
                 "The charge flies away from the hand while its fuse is burning.");
+            report.Check(motionFrames>=6,"The client charge model advanced across consecutive rendered frames.");
             await CaptureRackUi(folder,"10-dynamite-in-flight.png",.03f);
-            await WaitRackUi(()=>!team.rigs.Contains(charge),"the server consumes the charge after the fuse");
+            await WaitRackUi(()=>charge.timer<.36f,"charge is about to detonate");
+            var blastEye=charge.position+Vector3.back*3+Vector3.up*.55f;
+            foreach(var direction in new[]{Vector3.back,Vector3.right,Vector3.forward,Vector3.left})
+            {
+                var eye=charge.position+direction*3+Vector3.up*.52f;
+                if(!ClearGearPath(charge.position,eye))continue;
+                blastEye=eye;break;
+            }
+            host.Teleport(blastEye-Vector3.up*.38f);
+            host.LookAtConsole(charge.position+Vector3.up*.35f);
+            var beforeShock=host.transform.position;
+            var healthBefore=host.Health;
+            await WaitRackUi(()=>GameObject.Find("Динамит · фронт давления") && !team.rigs.Contains(charge),"the detonation produced the replicated pressure wave");
+            await CaptureRackUi(folder,"10b-dynamite-blast.png",.14f);
+            await Awaitable.WaitForSecondsAsync(.36f);
+            report.Check(healthBefore-host.Health>20 && Vector3.Distance(beforeShock,host.transform.position)>.85f &&
+                Vector3.Distance(beforeShock,host.transform.position)<3.3f,"Close-range blast damage and bounded knockback moved the local diver.");
+            report.Check(host.CameraImpulse.AppliedPeakDegrees>1.5f,"The blast visibly kicked the owned camera.");
             report.Check(charge.mode=="spent" && gear.InventionInSlot(trapSlot).count==1,
                 "The timed detonation consumed the thrown charge and preserved the second one.");
 
@@ -441,10 +470,37 @@ namespace Raid
             var vacuum=team.rigs.Single(r=>r.kind=="vacuum");
             var fish=FishActor.ServerSchool.First(f=>f && f.depthTier==CurrentDepth && f.CanHarvestRig(false));
             long idAtIntake=fish.CargoId;
-            fish.transform.position=vacuum.position+Vector3.up*.22f+Vector3.left*.15f;
-            host.Teleport(installationPosition+Vector3.up*7);
+            Vector3 inlet=VacuumInlet(vacuum);
+            var start=inlet+Vector3.up*2.7f+Vector3.left*1.25f;
+            fish.transform.position=start;
+            host.Teleport(installationPosition);
+            host.LookAtConsole(inlet+Vector3.up*.66f);
+            await WaitRackUi(()=>vacuum.progress>.1f &&
+                Vector3.Distance(fish.transform.position,start)>.3f,"the current noticeably moves a fish from several metres away");
+            await CaptureRackUi(folder,"13-vacuum-current.png",.09f);
             await WaitRackUi(()=>vacuum.contents.Any(c=>c.id==idAtIntake),"the vacuum collects a real fish while the player is away");
             report.Check(vacuum.operatorId<0 && vacuum.helperId<0,"Suction ran with no diver holding a hose or operating the machine.");
+            var shell=rigShells[vacuum.serial];
+            int capacity=team.TechUnitCapacity("vacuum");
+            await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
+                "the physical counter shows the replicated catch and capacity");
+            vacuum.timer=20;
+            var releasedCatch=vacuum.contents[0].id;
+            int beforePickup=vacuum.contents.Count;
+            host.LookAtConsole(vacuum.position+Vector3.up*.23f);
+            await WaitRackUi(()=>SightCatchOutlet(host,host.AimDirection,team)?.serial==vacuum.serial,"aim at the vacuum output");
+            await CaptureRackUi(folder,"14-vacuum-counter.png",.08f);
+            try
+            {
+                InputSystem.QueueStateEvent(mouse,new MouseState{buttons=1,position=mouse.position.ReadValue()});
+                await Awaitable.WaitForSecondsAsync(.23f);
+            }
+            finally{InputSystem.QueueStateEvent(mouse,new MouseState{position=mouse.position.ReadValue()});}
+            await WaitRackUi(()=>gear.CatchIdInSlot(trapSlot)==releasedCatch && vacuum.contents.Count==beforePickup-1,
+                "ordinary LMB delivers exactly one catch into the owned inventory");
+            await WaitRackUi(()=>shell.GetComponentsInChildren<TMP_Text>().Any(text=>text.text==vacuum.contents.Count+" / "+capacity),
+                "counter decremented after the claim");
+            report.Check(true,"One click transfers one actual fish from the shared machine into the ordinary hotbar.");
         }
 
         async Awaitable CaptureRackUi(string folder,string name,float settle=.25f)

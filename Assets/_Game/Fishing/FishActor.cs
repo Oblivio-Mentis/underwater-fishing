@@ -24,7 +24,7 @@ namespace Raid
             public Quaternion Rotation;
             public FishMode Mode;
             public FishBehaviour Behaviour;
-            public float Tension, Stamina, TugStrength;
+            public float Tension, Stamina, TugStrength, VacuumDraw;
             public bool Active, Stowed, Reserved, Startled, Coordinated, SurgeWarning, Surging, SoloTow;
             public int HookCount, HookSequence, TugSequence;
             public int Holder;
@@ -123,6 +123,7 @@ namespace Raid
                 foreach (var original in _renderers) original.enabled=false;
                 foreach (var hull in _colliders) hull.enabled=false;
                 _model=CatchFishModel.Create(transform,SpeciesId);
+                normalFishScale=_model.transform.localScale;
                 tailSurface=_model.GetComponent<CatchFishModel>().Tail;
                 _renderers=_model.GetComponentsInChildren<Renderer>();
                 _colliders=new Collider[] { SurfaceCollider(_model.transform),SurfaceCollider(tailSurface) };
@@ -299,7 +300,8 @@ namespace Raid
             _elapsed += dt;
             _clock += dt;
             var state = _snapshot.Value;
-            switch (mode)
+            if(mode is not (FishMode.Roam or FishMode.Escaped))state.VacuumDraw=0;
+            if(!(mode is FishMode.Roam or FishMode.Escaped) || !FollowSuction(dt,ref state))switch (mode)
             {
                 case FishMode.Roam:
                     if(Nereid.NereidVessel.Active!=null || fleeRemaining>0){SwimReef(dt,ref state);break;}
@@ -382,7 +384,12 @@ namespace Raid
             bool visible = visual.Active && Mode != FishMode.Transported && !visual.Stowed && !IsHeldByLocalPlayer;
             PresentWake(visual,visible && !visual.Reserved,snap);
             PresentFx(visual,visible && !visual.Reserved);
-            if(_model!=null && _model.TryGetComponent<CatchFishModel>(out var specimen) && specimen.CargoId!=CargoId)specimen.CargoId=CargoId;
+            if(_model!=null)
+            {
+                if(_model.TryGetComponent<CatchFishModel>(out var specimen) && specimen.CargoId!=CargoId)specimen.CargoId=CargoId;
+                var scale=normalFishScale*Mathf.Lerp(1,.36f,visual.VacuumDraw);
+                _model.transform.localScale=Vector3.Lerp(_model.transform.localScale,scale,1-Mathf.Exp(-Time.deltaTime*18));
+            }
             foreach (var body in _renderers) body.enabled = visible;
             if (!IsServerInitialized) foreach (var fishCollider in _colliders) fishCollider.enabled = collidable;
         }

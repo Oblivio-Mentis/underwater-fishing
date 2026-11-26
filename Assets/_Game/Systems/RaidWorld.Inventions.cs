@@ -197,6 +197,7 @@ namespace Raid
                 TickIndustrialRig(r,dt);
                 if(r.mode=="spent")team.rigs.RemoveAt(i);
             }
+            SendChargeMotion();
         }
     }
 }

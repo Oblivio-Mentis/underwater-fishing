@@ -354,7 +354,7 @@ namespace Raid.UI
             rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
             var rig=count==0?null:rigs[rigIndex];
             bool network=item.id=="trap" && team.TechRank("trap","group")>0;
-            string status=item.title+" · в работе "+count+"/"+TechRig.TotalLimit(team,item);
+            string status=item.title+" · в работе "+count+(TechRig.HasTeamLimit(item.id)?"/"+TechRig.TotalLimit(team,item):"");
             if(rig!=null)status+="\n№"+rig.serial+" · "+RigState(rig.mode)+" · "+rig.health.ToString("P0")+
                 " · глубина "+rig.depth+" · "+$"{rig.position.x:0} / {rig.position.y:0} / {rig.position.z:0}"+
                 "\n"+RaidWorld.EquipmentReadout(rig,team);

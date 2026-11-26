@@ -332,6 +332,7 @@ namespace Raid
                 if((swimVelocity.y>0 && (collision&CollisionFlags.Above)!=0) ||
                    (swimVelocity.y<0 && (collision&CollisionFlags.Below)!=0))swimVelocity.y=0;
             }
+            TickBlastImpulse(Time.fixedDeltaTime);
             _wasWalking=walking;
             transform.rotation = Quaternion.Euler(0f, _serverYaw, 0f);
 
@@ -411,7 +412,7 @@ namespace Raid
             _controller.enabled=false; transform.position=position; _controller.enabled=!CheatNoclip;
             if(CheatNoclip)RememberFlightOrigin(position);
             _previousPosition=position;
-            swimVelocity=Vector3.zero;dashUntil=0;
+            swimVelocity=Vector3.zero;blastVelocity=Vector3.zero;dashUntil=0;
             ResetIndoorMovement();_wasWalking=!CheatNoclip && UsesIndoorWalking(position);
             _serverInput=Vector3.zero;_lastInputTime=float.NegativeInfinity;
             var state=_state.Value; state.Position=position; state.Inside=IsSealedInterior(position); _state.Value=state;

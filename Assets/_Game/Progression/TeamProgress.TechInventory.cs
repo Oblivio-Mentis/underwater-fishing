@@ -136,7 +136,7 @@ namespace Raid
             if(owner<0 || !FiniteRig(position) || rigs.Exists(r=>r.operatorId==owner || r.helperId==owner || r.baitId==owner))
             {reason="Сначала освободите руки";return false;}
             if(slot.kind=="vacuum" && !CanPlaceVacuum(0,out reason))return false;
-            if(lastRigSerial==int.MaxValue || slot.kind!="vacuum" &&
+            if(lastRigSerial==int.MaxValue || slot.kind!="vacuum" && TechRig.HasTeamLimit(slot.kind) &&
                 rigs.FindAll(r=>r.kind==slot.kind && r.mode!="dropped").Count>=TechRig.TotalLimit(this,definition))
             {reason="Достигнут лимит одновременно выставленного оборудования";return false;}
             int serial=lastRigSerial;

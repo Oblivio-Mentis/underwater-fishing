@@ -92,8 +92,9 @@ namespace Raid
             if(!SaveTransaction()){rig.mode="fuse";rig.timer=1;return;}
             rig.anchor = Vector3.zero;
             if(rig.depth!=CurrentDepth)return;
-            float radius = GearRange(rig);
-            float impactRadius = TechCatalog.Find("charge").radius;
+            float radius = GearRange(rig)*team.TechValue("charge","group",1);
+            int fishLimit=Mathf.RoundToInt(Fishery.chargeCap*team.TechValue("charge","limit",1));
+            float impactRadius = Fishery.chargeImpactRadius;
             float keep = Mathf.Clamp01(Fishery.chargeYield * GearScale(rig,"quality"));
             int affected = 0;
             foreach (var fish in FishActor.ServerSchool)
@@ -107,16 +108,19 @@ namespace Raid
                 // Damaged catches are lost. Preserved fish retain their individual original cargo ID.
                 if (Random.value <= keep && CanRegisterDrop(item.id))
                     RegisterDrop(new DroppedItem {id=item.id,species=fish.NetworkObject,kind=DroppedKind.Catch,position=point,yaw=yaw});
-                if (++affected >= Fishery.chargeCap) break;
+                if (++affected >= fishLimit) break;
             }
             foreach (var diver in DiverMotor.ServerDivers)
             {
-                if (!diver || diver.IsInside || diver.IsDead) continue;
-                var offset = diver.transform.position-rig.position;
-                float intensity = 1-Mathf.Clamp01(offset.magnitude / impactRadius);
-                if (intensity <= 0 || !ClearGearPath(rig.position,diver.transform.position)) continue;
-                diver.ApplyExternalMotion((offset.normalized+Vector3.up*.25f)*Fishery.chargeForce*intensity);
-                diver.TakeRigImpact(Fishery.chargeDamage*intensity);
+                if (!diver || diver.IsDead) continue;
+                var target=diver.transform.position+Vector3.up*.35f;
+                var offset=target-rig.position;
+                float intensity=1-Mathf.Clamp01(offset.magnitude/impactRadius);
+                if(intensity<=0 || !ClearGearPath(rig.position,target))continue;
+                var away=Vector3.ProjectOnPlane(offset,Vector3.up);
+                if(away.sqrMagnitude<.01f)away=diver.transform.forward;
+                diver.BeginBlastImpulse((away.normalized+Vector3.up*.24f)*Fishery.chargeForce*Mathf.Sqrt(intensity));
+                diver.TakeRigImpact(Fishery.chargeDamage*Mathf.Pow(intensity,1.35f));
             }
             pulseBodies.Clear();
             int count = Physics.OverlapSphereNonAlloc(rig.position,impactRadius,pulseObjects,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
@@ -180,6 +184,20 @@ namespace Raid
 
     public sealed partial class DiverMotor
     {
+        Vector3 blastVelocity;
+
+        internal void BeginBlastImpulse(Vector3 velocity) =>
+            blastVelocity=Vector3.ClampMagnitude(blastVelocity+velocity,ActiveFisheryTuning.Get.chargeForce);
+
+        void TickBlastImpulse(float dt)
+        {
+            if(blastVelocity.sqrMagnitude<.01f){blastVelocity=Vector3.zero;return;}
+            var contact=MoveSwimmer(blastVelocity*dt);
+            if((contact&CollisionFlags.Above)!=0 && blastVelocity.y>0)blastVelocity.y=0;
+            if((contact&CollisionFlags.Below)!=0 && blastVelocity.y<0)blastVelocity.y=0;
+            blastVelocity*=Mathf.Exp(-3.8f*dt);
+        }
+
         internal void TakeRigImpact(float amount)
         {
             if (!IsServerInitialized || IsDead || !(amount > 0)) return;
