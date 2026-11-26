@@ -28,6 +28,39 @@ namespace Raid.Tests
             if (File.Exists(savePath + ".bak")) File.Delete(savePath + ".bak");
         }
 
+        [Test]
+        public void SharedVacuumLimitGrowsFromOneToFourAndPreservesExistingEquipment()
+        {
+            Assert.That(team.TryBuyTech("trap","unlock"),Is.True);
+            Assert.That(team.TryBuyTech("vacuum","unlock"),Is.True);
+            var item=TechCatalog.Find("vacuum");
+            var carried=team.AddRig("vacuum",Vector3.zero,1);
+            var stored=team.AddRig("vacuum",Vector3.zero,-1);
+            stored.mode="stored";
+            team.AddRig("trap",Vector3.zero,-1).Detach();
+            for(int rank=0;rank<=3;rank++)
+            {
+                Assert.That(TechRig.TotalLimit(team,item),Is.EqualTo(1+rank));
+                Assert.That(team.CanPlaceVacuum(carried.serial,out _),Is.True);
+                var placed=team.AddRig("vacuum",Vector3.zero,-1);
+                placed.Detach();
+                placed.depth=rank%2+1;
+                Assert.That(team.CanPlaceVacuum(0,out _),Is.False,"Placed vacuums share one limit across depths.");
+                Assert.That(team.CanPlaceVacuum(placed.serial,out _),Is.True,"Moving an existing unit does not double-count it.");
+                Assert.That(team.TryBuyTech("vacuum","vacuum_capacity"),Is.EqualTo(rank<3));
+            }
+            // A campaign with surplus legacy units can be loaded and only future placement is refused.
+            var extra=team.AddRig("vacuum",Vector3.forward,-1);
+            extra.mode="damaged";
+            Assert.That(team.CanPlaceVacuum(0,out _),Is.False);
+            TeamSave.Save(savePath,team);
+            var restored=TeamSave.Load(savePath);
+            Assert.That(restored.TechRank("vacuum","vacuum_capacity"),Is.EqualTo(3));
+            Assert.That(restored.rigs.Count,Is.EqualTo(team.rigs.Count));
+            Assert.That(restored.rigs.Find(r=>r.serial==extra.serial).mode,Is.EqualTo("damaged"));
+            Assert.That(restored.CanPlaceVacuum(0,out _),Is.False);
+        }
+
         [TestCase("charge")]
         [TestCase("trap")]
         public void EntryUnlockSpendsOnceAtRankOneWithoutCreatingARig(string id)
