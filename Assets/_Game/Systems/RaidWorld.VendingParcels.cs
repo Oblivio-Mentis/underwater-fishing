@@ -73,6 +73,24 @@ namespace Raid
             if(ok)RemoveOrder(index);
             InventoryReceipt(diver,profile,ok,reason);return ok;
         }
+        bool ReachesReceiver(Vector3 start,Vector3 end,DiverMotor diver)
+        {
+            Vector3 chest=diver.transform.position+Vector3.up*.65f;
+            Vector3 step=end-start;
+            float t=Mathf.Clamp01(Vector3.Dot(chest-start,step)/Mathf.Max(.00001f,step.sqrMagnitude));
+            Vector3 near=start+t*step;
+            var toHands=chest-near;
+            if(toHands.sqrMagnitude>tuning.dispenserCatchRadius*tuning.dispenserCatchRadius)return false;
+            float distance=toHands.magnitude;
+            if(distance<.001f)return true;
+            int n=Physics.RaycastNonAlloc(near,toHands/distance,parcelHits,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
+            for(int i=0;i<n;i++)
+            {
+                var collider=parcelHits[i].collider;
+                if(collider && collider.GetComponentInParent<DiverMotor>()!=diver)return false;
+            }
+            return true;
+        }
         void TickRackOrders(float dt)
         {
             for(int i=orders.Count-1;i>=0;i--)
@@ -105,9 +123,7 @@ namespace Raid
                     else order.velocity=Vector3.ProjectOnPlane(order.velocity,nearest.normal)*.45f;
                 }
                 order.parcel.position=destination;
-                if(order.age>=tuning.dispenserFlightSeconds*.78f && !order.parcel.resting &&
-                    Vector3.Distance(destination,diver.transform.position+Vector3.up*.53f)<=tuning.dispenserCatchRadius &&
-                    !Physics.Linecast(destination,diver.transform.position+Vector3.up*.53f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                if(order.age>=tuning.dispenserFlightSeconds*.78f && !order.parcel.resting && ReachesReceiver(from,destination,diver))
                 {
                     if(SettleOrder(i,diver))continue;
                     // The reservation has no value until the existing save transaction commits.

@@ -185,9 +185,6 @@ namespace Raid
             return plate;
         }
 
-        // The world camera and headless capture see the same Canvas hierarchy as the local player.
-        void InventionInventoryHUD() { }
-
         bool InventoryPermitted => InventoryContextAllowed();
         static Color InventoryInk => new Color32(13,29,35,247);
         static Color InventoryRow => new Color32(35,55,61,249);

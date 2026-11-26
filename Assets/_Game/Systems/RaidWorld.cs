@@ -399,7 +399,6 @@ namespace Raid
         private void OnGUI()
         {
             TechHUD();
-            InventionInventoryHUD();
             if(UI.UiInputGate.Active) return;
             if(!IsClientInitialized || view==null || localDiver==null) return;
             GUILayout.BeginArea(new Rect(Screen.width-420,16,400,Screen.height-160),GUI.skin.box);
