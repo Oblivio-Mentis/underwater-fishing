@@ -34,6 +34,9 @@ namespace Raid.UI
         sealed class Card
         {
             internal SkillNode Node;
+            internal TechUpgrade Upgrade;
+            internal int TechRank;
+            internal SkillId WireKey;
             internal SkillNodeBadge Face;
             internal Image Symbol;
             internal TMP_Text Rank, Name;
@@ -218,8 +221,12 @@ namespace Raid.UI
             var name=Label(rect,"Nearby node name",-49,-18,147,19,"",14,Ink,true);
             name.gameObject.SetActive(false);
             var result=new Card{Face=face,Symbol=icon,Rank=rank,Name=name};
-            button.onClick.AddListener(()=>Select(result.Node.Id));
-            button.Purchase=()=>Buy(result.Node.Id);
+            button.onClick.AddListener(()=>{if(result.Upgrade!=null)SelectTechRank(result);else Select(result.Node.Id);});
+            button.Purchase=()=>
+            {
+                if(result.Upgrade==null)Buy(result.Node.Id);
+                else{SelectTechRank(result);BuyTechnology();}
+            };
             return result;
         }
 
@@ -249,6 +256,11 @@ namespace Raid.UI
         internal bool Back()
         {
             if(transition<1)return true;
+            if(branch<0 && technologyIndex.gameObject.activeSelf)
+            {
+                if(category>=0)ShowTechnologyIndex(-1);else ResetMode();
+                return true;
+            }
             if(branch<0)return false;
             ChangeBranch(-1);
             return true;
@@ -259,7 +271,8 @@ namespace Raid.UI
             branch=targetBranch=-1;
             transition=1;
             selected=SkillId.None;
-            SetTechnologyMode(false);
+            technologyIndex.gameObject.SetActive(false);
+            dial.gameObject.SetActive(true);
             overview.gameObject.SetActive(true);
             detail.gameObject.SetActive(false);
             overviewGroup.alpha=1;
@@ -280,9 +293,7 @@ namespace Raid.UI
             detailGroup.blocksRaycasts=false;
             if(index>=0)
             {
-                bool technology=index==SkillTreeDefinition.BranchCount;
-                SetTechnologyMode(technology);
-                if(technology)SelectCategory(category);else BindBranch(index);
+                if(index==SkillTreeDefinition.BranchCount)BindTechBranch();else BindBranch(index);
                 detail.gameObject.SetActive(true);
                 detailGroup.alpha=0;
             }
@@ -306,14 +317,16 @@ namespace Raid.UI
             dial.localScale=Vector3.one;
             dial.anchoredPosition=Vector2.zero;
             detail.localScale=Vector3.one;
-            UiKit.Set(section,branch<0?"МОДУЛИ NEREID":TechnologyOpen?"ТЕХНОЛОГИИ":SkillTreeDefinition.Branches[branch].Name);
-            if(branch<0)SetTechnologyMode(false);
+            UiKit.Set(section,branch<0?(technologyIndex.gameObject.activeSelf?Categories[category]:"МОДУЛИ NEREID"):
+                branch==SkillTreeDefinition.BranchCount?selectedItem.title:SkillTreeDefinition.Branches[branch].Name);
+            shownTechView=null;
             Invalidate();
             Refresh();
         }
 
         void BindBranch(int index)
         {
+            ClearCards();
             positions.Clear();
             int used=0;
             rootSymbol.sprite=SectorArt(index);
@@ -322,22 +335,9 @@ namespace Raid.UI
                 if(node.Branch!=index)continue;
                 var card=cards[used++];
                 card.Node=node;
-                card.Face.Capstone=node.Capstone;
-                card.Face.Accent=Accent(node);
                 var point=NodePosition(node);
-                var rect=card.Face.rectTransform;
-                rect.name=node.Key;
-                rect.sizeDelta=Vector2.one*(node.Capstone?82:48);
-                rect.anchoredPosition=point;
-                card.Symbol.sprite=NodeArt(node);
-                UiKit.Place(card.Symbol.rectTransform,Center,Center,node.Capstone?Vector2.zero:new Vector2(0,9),
-                    Vector2.one*(node.Capstone?34:19));
-                UiKit.Place(card.Rank.rectTransform,Center,Center,new(0,-10),new(43,20));
-                UiKit.Set(card.Rank,node.Capstone?"":SkillTreeDefinition.Roman(node.Rank));
-                UiKit.Set(card.Name,node.LineName);
-                card.Name.gameObject.SetActive(false);
+                BindRankBadge(card,node.Key,point,node.Capstone,Accent(node),NodeArt(node),node.Rank,node.LineName);
                 positions.Add(node.Id,point);
-                rect.gameObject.SetActive(true);
             }
             for(int i=used;i<cards.Length;i++)cards[i].Face.gameObject.SetActive(false);
             wires.SetLinks(BranchLinks(used));
@@ -345,6 +345,30 @@ namespace Raid.UI
             ResetGraph();
             ApplyLod();
             Invalidate();
+        }
+
+        void ClearCards()
+        {
+            foreach(var card in cards)
+            {
+                card.Node=null;card.Upgrade=null;card.Face.gameObject.SetActive(false);
+            }
+            selectedTech=null;
+            wires.AnimateLink(SkillId.None,1);
+            buy.name="BuySkill";
+            UiKit.Caption(buy,"Купить  ·  ПКМ по узлу");
+        }
+
+        static void BindRankBadge(Card card,string key,Vector2 point,bool capstone,Color accent,Sprite icon,int level,string name)
+        {
+            card.Face.Capstone=capstone;card.Face.Accent=accent;card.Face.PurchaseFill=1;
+            var rect=card.Face.rectTransform;
+            rect.name=key;rect.sizeDelta=Vector2.one*(capstone?82:48);rect.anchoredPosition=point;
+            card.Symbol.sprite=icon;
+            UiKit.Place(card.Symbol.rectTransform,Center,Center,capstone?Vector2.zero:new Vector2(0,9),Vector2.one*(capstone?34:19));
+            UiKit.Place(card.Rank.rectTransform,Center,Center,new(0,-10),new(43,20));
+            UiKit.Set(card.Rank,capstone?"":SkillTreeDefinition.Roman(level));
+            UiKit.Set(card.Name,name);card.Name.gameObject.SetActive(false);rect.gameObject.SetActive(true);
         }
 
         List<SkillWires.Link> BranchLinks(int count)
@@ -410,9 +434,11 @@ namespace Raid.UI
             int lane=(int)node.Line%SkillTreeDefinition.LinesPerBranch;
             if(node.Capstone)return new(330,0);
             if(lane==0)return new(-248+(node.Rank-1)*54,0);
-            float row=lane switch { 1=>169,2=>84,3=>-85,_=>-170 };
-            return new(-221+(node.Rank-1)*108,row);
+            return SideRankPosition(lane-1,node.Rank-1);
         }
+
+        static Vector2 SideRankPosition(int lane,int column) =>
+            new(-221+column*108,lane switch {0=>169,1=>84,2=>-85,_=>-170});
 
         void ResetGraph()
         {
@@ -521,6 +547,11 @@ namespace Raid.UI
         {
             foreach(var card in cards)
             {
+                if(card.Upgrade!=null)
+                {
+                    card.Name.gameObject.SetActive(detailLabels && (card==selectedTech || card.TechRank==1 || card.Face.Capstone));
+                    continue;
+                }
                 if(card.Node==null)continue;
                 bool show=detailLabels&&(card.Node.Id==selected || card.Node.Rank==1 || card.Node.Capstone);
                 if(card.Node.Id==selected && !card.Node.Capstone)UiKit.Set(card.Name,card.Node.Name);
