@@ -58,7 +58,7 @@ namespace Raid
                 reefArrivalAt = Time.time + 1;
                 if (!reef.HasClam) reef.HasClam = TryBottomSite(tuning.clamAnchor, tuning.clamArrivalRadius, 1.15f, out reef.Clam);
                 if (reef.Deep && !reef.HasKraken) reef.HasKraken = TryBottomSite(tuning.krakenAnchor, tuning.krakenArrivalRadius, 1.8f, out reef.Kraken);
-                if (reef.Deep && !reef.HasEel) reef.HasEel = TryEelEntry(ref reef);
+                if (reef.Deep && !reef.HasEel && Time.time >= nextCagedEelArrival) reef.HasEel = TryEelEntry(ref reef);
             }
             bool winch=w.Team.hoistPhase==HoistPhase.Raising || w.Team.hoistPhase==HoistPhase.Returning;
             bool movingWinch=winch&&w.container!=null;
@@ -156,7 +156,7 @@ namespace Raid
             {
                 if (!CanPursue(eelTarget))
                     DistractEel(ref reef,EelPatrol[eelWaypoint],4);
-                else if (!CarriesFish(eelTarget))
+                else if (!CarriesFish(eelTarget) && !(RaidWorld.Instance && RaidWorld.Instance.IsCageBait(eelTarget)))
                     DistractEel(ref reef,eelTarget.transform.position,5);
             }
 
