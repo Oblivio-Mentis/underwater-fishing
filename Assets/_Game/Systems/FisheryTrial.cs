@@ -241,6 +241,14 @@ namespace Raid
             world.TrialTickFishery(cage,ActiveFisheryTuning.Get.cageLatchCooldown+1);
             Check(Use(cage,host) && Use(cage,host,"alternate") && cage.mode=="placed" && !world.IsCageBait(host),
                 "a volunteer can use the emergency release alone");
+            if(peer)
+            {
+                Check(Use(cage,host) && cage.operatorId==peer.OwnerId && !Use(cage,host),
+                    "the volunteer cannot trigger a remote held by another owner");
+                Check(Use(cage,peer,"alternate") && cage.operatorId==host.OwnerId && cage.mode=="armed" &&
+                    !Use(cage,peer) && Use(cage,host),"the operator hands the remote to the volunteer and loses trigger authority");
+                Check(Use(cage,host,"alternate") && cage.mode=="placed","the volunteer can abort even while the jaws are closing");
+            }
             Check(Use(cage,host),"volunteer re-arms after emergency release");
             world.threats.StageFisheryTrialAngler(local);
             Check(Use(cage,trigger),"operator signals closure while the creature is inside");

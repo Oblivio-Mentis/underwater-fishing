@@ -13,6 +13,24 @@ namespace Raid
             return false;
         }
 
+        int CageRemoteHolder(TechRig cage,DiverMotor volunteer)
+        {
+            int chosen=volunteer.OwnerId;
+            float closest=Mathf.Pow(Mathf.Max(4,TechCatalog.Find("cage").radius*3),2);
+            foreach(var candidate in DiverMotor.ServerDivers)
+            {
+                if(!candidate || candidate==volunteer || candidate.IsHelpless || candidate.IsTrapped || candidate.IsInside ||
+                    candidate.GetComponent<HarpoonTool>()?.HandsFull==true)continue;
+                bool busy=false;
+                foreach(var r in team.rigs)
+                    if(r!=cage && (r.operatorId==candidate.OwnerId || r.helperId==candidate.OwnerId || r.baitId==candidate.OwnerId)){busy=true;break;}
+                float distance=(candidate.transform.position-cage.position).sqrMagnitude;
+                if(busy || distance>closest || !ClearGearPath(candidate.transform.position,cage.position))continue;
+                closest=distance;chosen=candidate.OwnerId;
+            }
+            return chosen;
+        }
+
         bool UseMonsterCage(TechRig rig, DiverMotor diver,string action)
         {
             if (rig.mode == "carried" || rig.contents.Count > 0) return false;
@@ -20,6 +38,13 @@ namespace Raid
             {
                 if (rig.mode == "armed" || rig.mode == "closing")
                 {
+                    if(rig.mode=="armed" && rig.baitId>=0 && diver.OwnerId==rig.operatorId && diver.OwnerId!=rig.baitId)
+                    {
+                        rig.operatorId=rig.baitId;
+                        message.Value="Пульт передан водолазу на креплении клетки.";
+                        AnnounceRigPulse(rig.position,2);return true;
+                    }
+                    if(rig.baitId!=diver.OwnerId && rig.operatorId!=diver.OwnerId)return false;
                     ClearGearHands(rig); rig.mode = "placed"; rig.timer = rig.progress = 0;
                     AnnounceRigPulse(rig.position,2);
                     return true;
@@ -32,14 +57,15 @@ namespace Raid
             }
             if (rig.mode == "armed")
             {
-                // Anyone holding the local remote, including the volunteer, may close the jaws.
-                if (rig.operatorId >= 0 && rig.operatorId != diver.OwnerId && rig.baitId != diver.OwnerId) return false;
+                if (rig.operatorId >= 0 && rig.operatorId != diver.OwnerId) return false;
+                if (rig.baitId!=diver.OwnerId && (diver.transform.position-rig.position).sqrMagnitude >
+                    Mathf.Pow(Mathf.Max(4,TechCatalog.Find("cage").radius*3),2)) return false;
                 rig.operatorId = diver.OwnerId;
                 return BeginCageClose(rig);
             }
             if (rig.mode != "placed" || diver.IsTrapped || IsCageBait(diver) ||
                 (diver.transform.position-rig.position).magnitude > Fishery.cageSafeLeash) return false;
-            rig.baitId = diver.OwnerId; rig.operatorId = -1; rig.helperId = -1;
+            rig.baitId = diver.OwnerId; rig.operatorId = CageRemoteHolder(rig,diver); rig.helperId = -1;
             rig.progress = rig.timer = 0;
             rig.mode = "armed";
             AnnounceRigPulse(rig.position,2);
@@ -110,6 +136,12 @@ namespace Raid
                 (rig.baitId < 0 && !GearFeature(rig,"bait")))
             {
                 ClearGearHands(rig); rig.mode = "placed"; rig.progress = rig.timer = 0; return;
+            }
+            if(bait && rig.mode=="armed" && rig.operatorId!=rig.baitId)
+            {
+                var holder=RigUser(rig.operatorId);
+                if(!holder || (holder.transform.position-rig.position).sqrMagnitude >
+                    Mathf.Pow(Mathf.Max(4,TechCatalog.Find("cage").radius*3),2)) rig.operatorId=rig.baitId;
             }
             Vector3 point = rig.position + Vector3.up*Fishery.cageTetherHeight;
             if (bait) bait.ApplyTetherMotion(Vector3.ClampMagnitude(point-bait.transform.position,Fishery.cageTetherSpeed*dt));
