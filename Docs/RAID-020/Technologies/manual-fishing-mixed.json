@@ -1,0 +1,112 @@
+{
+  "mode": "D3D11 Windows host without -batchmode and independent client with -batchmode. Both use UiQaProbe, new local save, two private test profiles and -raid-verify-drops.",
+  "beforeReelClipAssignment": {
+    "assemblySHA256": "E291649EF1392160C11AF171A54075B2ADCCA28863353508E1DCDD651267E83B",
+    "trial": {
+      "phase": "Cooperative pull and heavy carry",
+      "status": "failed",
+      "error": "System.InvalidOperationException: The working reel has no audible loop while the coordinated pull is active.\r\n  at Raid.FishingTrial+<Reel>d__53.MoveNext () [0x0065e] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:843 \r\n  at Raid.FishingTrial+<Verify>d__38.MoveNext () [0x00060] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:83 ",
+      "host": 0,
+      "client": 1,
+      "checks": [
+        "Distinct connected owners 0 and 1",
+        "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+        "Salvage 4849057066613288337 moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.",
+        "LMB placed the original salvage inside the physical cage as technical cargo.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Approach with a slack line and no reel did not wind or collect the fish.",
+        "Needlefish fight phases: HookShock>SurgeWindup>Surge>Lateral>SurgeWindup>Surge>Lateral>Weakened",
+        "First fish reached the hand with 1,44 stamina remaining.",
+        "Needlefish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Inside the hand radius a confirmed shot alone did not collect the fish.",
+        "Lanternfish fight phases: HookShock>LastEscape>Lateral",
+        "Lanternfish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Needlefish fight phases: HookShock>Lateral",
+        "Needlefish captured and stowed by one diver.",
+        "Fight variety over 3 fights: 3 distinct sequences, phases HookShock,SurgeWindup,Surge,Lateral,Weakened,LastEscape.",
+        "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+        "Server accepted the shot on a visible fourth small fish and retained exactly three pockets.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Confirmed hook widened the owned camera; zero intensity restored base FOV.",
+        "Continuous solo tow without LMB: camera 115°; toward fish 1,210 m; away 0,000 m; sideways 0,000 m; fish escape 1,620 m.",
+        "Host hook 0/#5, remote measured hook 1/#1, host/peer frames 1704/720, attached travel 5,026/0,729 m, worst tip drift 0,000004/0,000004 m, worst nock drift 0,000000/0,000000 m.",
+        "Both rendered independent server-confirmed projectiles; two attached harpoons kept the heavy fish in crew tow even from opposite directions.",
+        "E grip reduced a tensioned single line's tug target from 3,600 to 1,980 m/s without replacing the second hook.",
+        "Friend tether reduced separation from 3,021 to 2,581 m; R released only the rescue line."
+      ]
+    },
+    "snapshots": [
+      {
+        "seat": "host",
+        "owner": 0,
+        "players": 2,
+        "connected": true,
+        "page": "None",
+        "inputBlocked": false
+      },
+      {
+        "seat": "peer",
+        "owner": 1,
+        "players": 2,
+        "connected": true,
+        "page": "None",
+        "inputBlocked": false
+      }
+    ]
+  },
+  "afterReelClipAssignment": {
+    "assemblySHA256": "EF8BA2F819CE89531396218372F2DE438CD84EB1D063D4C7506D41DE3EB2B521",
+    "trial": {
+      "phase": "Continuous solo tow without reel input",
+      "status": "failed",
+      "error": "System.InvalidOperationException: Continuous tow did not follow the expected pull axes: camera 115°; toward fish 0,000 m; away 0,000 m; sideways 0,000 m; fish escape -1,214 m.\r\n  at Raid.FishingTrial+<VerifySoloTow>d__47.MoveNext () [0x00698] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:598 \r\n  at Raid.FishingTrial+<Verify>d__38.MoveNext () [0x00060] in E:\\Development\\Projects\\RAID-Integrated\\Assets\\_Game\\Fishing\\FishingTrial.cs:83 ",
+      "host": 0,
+      "client": 1,
+      "checks": [
+        "Distinct connected owners 0 and 1",
+        "Isolated catch/hoist trial: reef hunter AI paused while the four catch identities are tracked.",
+        "Salvage 5495684871460676338 moved from host hands to the scene, to remote hands, and back via Q/E; source object and cargo ID persisted.",
+        "LMB placed the original salvage inside the physical cage as technical cargo.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Approach with a slack line and no reel did not wind or collect the fish.",
+        "Needlefish fight phases: LastEscape>Lateral",
+        "First fish reached the hand with 7,21 stamina remaining.",
+        "Needlefish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Inside the hand radius a confirmed shot alone did not collect the fish.",
+        "Lanternfish fight phases: HookShock>SurgeWindup",
+        "Lanternfish captured and stowed by one diver.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Needlefish fight phases: HookShock>SurgeWindup>Surge>Lateral>SurgeWindup>Surge>Lateral",
+        "Needlefish captured and stowed by one diver.",
+        "Fight variety over 3 fights: 3 distinct sequences, phases LastEscape,Lateral,HookShock,SurgeWindup,Surge.",
+        "Three loaded pockets include two distinct catches from one repopulating shoal; selecting a fish suppresses harpoon fire.",
+        "Server accepted the shot on a visible fourth small fish and retained exactly three pockets.",
+        "Both divers ready on the dry deck: host O2 240,0, peer O2 240,0.",
+        "Confirmed hook widened the owned camera; zero intensity restored base FOV."
+      ]
+    },
+    "snapshots": [
+      {
+        "seat": "host",
+        "owner": 0,
+        "players": 2,
+        "connected": true,
+        "page": "None",
+        "inputBlocked": false
+      },
+      {
+        "seat": "peer",
+        "owner": 1,
+        "players": 2,
+        "connected": true,
+        "page": "None",
+        "inputBlocked": false
+      }
+    ]
+  }
+}
