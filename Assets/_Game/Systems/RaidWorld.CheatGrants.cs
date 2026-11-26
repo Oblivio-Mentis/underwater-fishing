@@ -19,7 +19,7 @@ namespace Raid
                 return cheatFishSpecies;
             }
         }
-        public int CheatFishRoom => (IsServerInitialized?team:view)?.ReservoirRoom(progression)??0;
+        public int CheatFishRoom => (NetworkObject != null && IsServerInitialized ? team : view)?.ReservoirRoom(progression) ?? 0;
 
         internal bool GrantFromCheatPanel(string id,int amount,bool fish,out int granted,out string reason)
         {
