@@ -34,7 +34,7 @@ namespace Raid
             "placed"=>"Установлена","carried"=>"Переноска","captured"=>"Добыча в клетке","armed"=>"Взведена",
             "closed"=>"Закрыта","closing"=>"Закрывается","jammed"=>"Затор","damaged"=>"Повреждена",
             "working"=>"В работе","fuse"=>"Активация","remote"=>"Ожидает сигнала","pumping"=>"Всасывание",
-            "netting"=>"Ловля","running"=>"Работает","stored"=>"На складе","spent"=>"Израсходовано",_=>mode
+            "netting"=>"Ловля","running"=>"Работает","paused"=>"Приостановлена","stored"=>"На складе","spent"=>"Израсходовано",_=>mode
         };
         void StopTechPresentation()
         {
@@ -103,7 +103,7 @@ namespace Raid
             }
             else hint+="     T взять / помочь";
             string title=selected.kind=="basket"?"Корзина улова":TechCatalog.Find(selected.kind)?.title;
-            rigHint=title+"  ·  "+RigModeName(selected.mode)+"  ·  "+selected.contents.Count+" ед.    "+Mathf.RoundToInt(100*selected.health)+"%\n"+hint+
+            rigHint=title+"  ·  "+RigModeName(selected.mode)+"  ·  "+EquipmentReadout(selected,view)+"  ·  "+Mathf.RoundToInt(100*selected.health)+"%\n"+hint+
                 (selected.contents.Count>0?"     I разгрузить":"")+(selected.health<.99f?"     O ремонт":"");
             var k=Keyboard.current;
             string action=k.tKey.wasPressedThisFrame?(k.shiftKey.isPressed?"release":"carry"):k.yKey.wasPressedThisFrame?"use":

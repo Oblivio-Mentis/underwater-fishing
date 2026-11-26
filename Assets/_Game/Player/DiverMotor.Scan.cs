@@ -49,6 +49,14 @@ namespace Raid
                     label="Утиль · "+loot.scrap+" Л / "+loot.electronics+" Э";
                 }
             }
+            if(world.Team.TechRank("trap","beacon")>0)
+                foreach(var rig in world.Team.rigs)
+                {
+                    if(rig.depth!=world.CurrentDepth || !RaidWorld.TrapAlarm(world.Team,rig) ||
+                        !ScanSight(eye,aim,rig.position,radius,null,ref score))continue;
+                    point=rig.position;
+                    label="Маяк ловушки №"+rig.serial+" · "+RaidWorld.EquipmentReadout(rig,world.Team);
+                }
             float duration=world.progression.scanSeconds*(rank>=5?1.5f:1f);
             if(label==null){LocalMarker(Owner,eye,"Сканер · сигнала нет",1.5f);return;}
             if(rank>=4 && Time.time>=beaconReadyAt)
@@ -70,7 +78,7 @@ namespace Raid
             float score=distance+(1-facing)*radius;
             if(facing<.77f || score>=best)return false;
             if(Physics.Raycast(eye,offset/distance,out var hit,distance,~0,QueryTriggerInteraction.Ignore) &&
-               !hit.transform.IsChildOf(subject))return false;
+               (subject==null || !hit.transform.IsChildOf(subject)))return false;
             best=score;
             return true;
         }

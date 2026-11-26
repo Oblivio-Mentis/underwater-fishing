@@ -17,7 +17,7 @@ namespace Raid.UI
         readonly Button[] categoryKeys=new Button[4];
         TMP_Text itemTitle, itemPurpose, scopeCaption, effectCaption, tuningCaption, gateCaption, equipmentInfo;
         TMP_Text[] techCosts;
-        Button techPurchase, techIssue, previousRig, nextRig, robotCamera;
+        Button techPurchase, techIssue, previousRig, nextRig, robotCamera, trapDispatch;
         TechItem selectedItem;
         TechUpgrade selectedUpgrade;
         TeamProgress shownTechView;
@@ -81,6 +81,8 @@ namespace Raid.UI
                 app.Context.World.RequestRobotConsole(selectedRobot);
                 app.ClosePanel();
             });
+            trapDispatch=Key(technologyPage,"DispatchTrapNetwork","Отправить улов сети",912,590,235,45,()=>
+                app.Context.Player?.CmdDispatchTrapNetwork());
             technologyPage.gameObject.SetActive(false);
         }
 
@@ -192,8 +194,17 @@ namespace Raid.UI
             rigIndex=Mathf.Clamp(rigIndex,0,Math.Max(0,count-1));
             var rig=count==0?null:rigs[rigIndex];
             string status=rig==null?"Экземпляров в экспедиции нет":
-                $"№{rig.serial}   ·   {RigState(rig.mode)}   ·   прочность {rig.health:P0}   ·   груз {rig.contents?.Count??0}\n"+
+                $"№{rig.serial}   ·   {RigState(rig.mode)}   ·   {rig.health:P0}   ·   {RaidWorld.EquipmentReadout(rig,team)}\n"+
                 $"Глубина {rig.depth}   ·   координаты {rig.position.x:0} / {rig.position.y:0} / {rig.position.z:0}";
+            bool network=item.id=="trap" && team.TechRank("trap","group")>0;
+            if(network && count>0)
+            {
+                int alarms=0,stock=0;
+                foreach(var trap in rigs){stock+=trap.contents.Count;if(RaidWorld.TrapAlarm(team,trap))alarms++;}
+                status+="   ·   сеть: "+stock+" рыб, сигналов "+alarms;
+            }
+            trapDispatch.gameObject.SetActive(network);
+            trapDispatch.interactable=network && control && count>0;
             UiKit.Set(equipmentInfo,status);
             previousRig.interactable=rigIndex>0;
             nextRig.interactable=rigIndex+1<count;

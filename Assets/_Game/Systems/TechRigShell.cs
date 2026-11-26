@@ -82,6 +82,7 @@ namespace Raid
         static readonly Dictionary<string,Mesh[]> library=new();
         static Material[] palette;
         Transform drive,lamp,occupant;
+        MeshFilter captiveMesh;
         string lastMode,model;
         AudioSource sound;
         static AudioClip click,chirp;
@@ -270,7 +271,21 @@ namespace Raid
                 animal.Rod(spine[4],spine[4]+Vector3.up*.20f,.012f,3);
                 animal.Rod(spine[4]+Vector3.up*.20f,spine[4]+new Vector3(.10f,.18f,0),.012f,4);
             }
-            return new[]{p.Bake(kind+" корпус"),d.Bake(kind+" привод"),l.Bake("Маяк"),animal.Bake("Хищник")};
+            var main=p.Bake(kind+" корпус");var motor=d.Bake(kind+" привод");var light=l.Bake("Маяк");
+            if(kind!="cage")return new[]{main,motor,light};
+            var eel=new Press();
+            var tail=new Vector3(-.55f,0,.18f);
+            for(int i=1;i<=14;i++)
+            {
+                float f=i/14f;
+                var tip=new Vector3(-.55f+f*1.02f,.03f+.06f*Mathf.Sin(7*f),.20f*Mathf.Cos(6*f));
+                eel.Tube(tail,tip,.025f+.058f*(i-1)/14f,.025f+.058f*f,3);
+                eel.Rod(tail+Vector3.up*.04f,tip+Vector3.up*.065f,.014f,1);
+                tail=tip;
+            }
+            eel.Tube(tail,tail+Vector3.right*.13f,.1f,.021f,0);
+            foreach(int side in new[]{-1,1})eel.Rod(tail+new Vector3(.05f,.04f,side*.055f),tail+new Vector3(.058f,.04f,side*.072f),.014f,4);
+            return new[]{main,motor,light,animal.Bake("Рифовый удильщик"),eel.Bake("Сетевой угорь")};
         }
         public void Build(string kind)
         {
@@ -282,7 +297,7 @@ namespace Raid
                 child.AddComponent<MeshFilter>().sharedMesh=meshes[i];child.AddComponent<MeshRenderer>().sharedMaterials=palette;
                 if(i==1)drive=child.transform;
                 if(i==2){lamp=child.transform;beacon=child.GetComponent<MeshRenderer>();beaconInk=new MaterialPropertyBlock();}
-                if(i==3){occupant=child.transform;occupant.gameObject.SetActive(false);}
+                if(i==3){occupant=child.transform;captiveMesh=child.GetComponent<MeshFilter>();occupant.gameObject.SetActive(false);}
             }
             if(kind=="cage")drive.localPosition=new Vector3(0,.48f,-.65f);
             lamp.localPosition=kind=="charge"?new(0,.135f,0):kind=="cage"?new(.6f,.53f,-.62f):new(0,.29f,0);
@@ -316,6 +331,7 @@ namespace Raid
                 if(rig.health<.36f)pose*=Quaternion.Euler(0,0,12);
                 drive.localRotation=snap?pose:Quaternion.RotateTowards(drive.localRotation,pose,Time.deltaTime*220);
                 occupant.gameObject.SetActive(rig.contents.Count>0);
+                if(rig.contents.Count>0)captiveMesh.sharedMesh=library[model][rig.contents[0].species=="NetEel"?4:3];
                 occupant.localRotation=Quaternion.Euler(0,Mathf.Sin(Time.time*4)*14,0);
                 transform.localRotation=Quaternion.Euler(0,0,rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
             }

@@ -66,7 +66,7 @@ namespace Raid
         bool Engaged(int owner) => team.rigs.Exists(r=>r.operatorId==owner || r.helperId==owner || r.baitId==owner);
         internal bool HaulingEquipment(DiverMotor diver)
         {
-            if(!diver || diver.OwnerId<0)return false;
+            if(!diver || !NetworkObject || diver.OwnerId<0)return false;
             var state=IsServerInitialized?team:view;
             if(state?.rigs==null)return false;
             foreach(var r in state.rigs)if(r.Carrying(diver.OwnerId))return true;
@@ -79,12 +79,13 @@ namespace Raid
             rigRequests.Remove(owner);
             foreach(var r in team.rigs)
             {
+                if(r.mode=="netting" && (r.operatorId==owner || r.helperId==owner)){DropNet(r);continue;}
                 if(r.baitId==owner){r.Detach();r.mode="placed";r.progress=r.timer=0;}
                 if(r.helperId==owner)r.helperId=-1;
                 if(r.towDiver==owner)r.towDiver=-1;
                 if(r.operatorId!=owner)continue;
                 if(r.mode=="carried" && r.helperId>=0){r.operatorId=r.helperId;r.helperId=-1;continue;}
-                if(r.flight=="piloted")r.flight="";
+                if(r.flight=="piloted")LoseRobotSignal(r);
                 if(r.baitId>=0)r.operatorId=-1;
                 else r.Detach();
             }
@@ -185,7 +186,16 @@ namespace Raid
         void StartTech()
         {
             rigRequests.Clear();
-            foreach(var r in team.rigs){r.Detach(); if(r.flight=="piloted")r.flight=""; }
+            netSweeps.Clear();
+            foreach(var r in team.rigs)
+            {
+                bool lostBait=r.baitId>=0 && r.kind=="cage";
+                bool armedLure=r.baitId<0 && r.kind=="cage" && r.mode=="armed";
+                r.Detach();
+                if(lostBait){r.mode="placed";r.timer=r.progress=0;}
+                else if(armedLure)r.mode="armed";
+                if(r.flight=="piloted")LoseRobotSignal(r);
+            }
         }
         void TickTech(float dt)
         {
