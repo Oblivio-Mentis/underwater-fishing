@@ -121,9 +121,16 @@ namespace Raid
                 Vector3 dir = rig.anchor.normalized;
                 int hits = Physics.SphereCastNonAlloc(rig.position,.13f,dir,gearHits,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
                 float nearest = distance;
-                for (int i=0;i<hits;i++) nearest = Mathf.Min(nearest,Mathf.Max(0f,gearHits[i].distance-.01f));
+                bool blocked = false;
+                for (int i=0;i<hits;i++)
+                {
+                    var surface = gearHits[i].collider;
+                    if (surface.GetComponentInParent<DiverMotor>() || surface.GetComponentInParent<FishActor>()) continue;
+                    blocked = true;
+                    nearest = Mathf.Min(nearest,Mathf.Max(0f,gearHits[i].distance-.01f));
+                }
                 rig.position += dir * nearest;
-                rig.anchor = hits > 0 ? Vector3.zero : rig.anchor*Mathf.Exp(-Fishery.chargeDrag*dt)+Vector3.down*(Fishery.chargeDrop*dt);
+                rig.anchor = blocked ? Vector3.zero : rig.anchor*Mathf.Exp(-Fishery.chargeDrag*dt)+Vector3.down*(Fishery.chargeDrop*dt);
             }
             if (rig.mode == "remote") return;
             rig.timer -= dt;
@@ -131,6 +138,7 @@ namespace Raid
             rig.mode = "spent";
             rig.anchor = Vector3.zero;
             float radius = GearRange(rig);
+            float impactRadius = TechCatalog.Find("charge").radius;
             float keep = Mathf.Clamp01(Fishery.chargeYield * GearScale(rig,"quality"));
             int affected = 0;
             foreach (var fish in FishActor.ServerSchool)
@@ -150,21 +158,21 @@ namespace Raid
             {
                 if (!diver || diver.IsInside || diver.IsDead) continue;
                 var offset = diver.transform.position-rig.position;
-                float intensity = 1-Mathf.Clamp01(offset.magnitude / radius);
+                float intensity = 1-Mathf.Clamp01(offset.magnitude / impactRadius);
                 if (intensity <= 0 || !ClearGearPath(rig.position,diver.transform.position)) continue;
                 diver.ApplyExternalMotion((offset.normalized+Vector3.up*.25f)*Fishery.chargeForce*intensity);
                 diver.TakeRigImpact(Fishery.chargeDamage*intensity);
             }
             pulseBodies.Clear();
-            int count = Physics.OverlapSphereNonAlloc(rig.position,radius,pulseObjects,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
+            int count = Physics.OverlapSphereNonAlloc(rig.position,impactRadius,pulseObjects,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
             for (int i=0;i<count;i++)
             {
                 var body = pulseObjects[i].attachedRigidbody;
                 if (body && !body.isKinematic && pulseBodies.Add(body) && ClearGearPath(rig.position,body.worldCenterOfMass))
-                    body.AddExplosionForce(Fishery.chargeForce,rig.position,radius,.15f,ForceMode.VelocityChange);
+                    body.AddExplosionForce(Fishery.chargeForce,rig.position,impactRadius,.15f,ForceMode.VelocityChange);
             }
             foreach (var other in team.rigs)
-                if (other != rig && other.depth == rig.depth && (other.position-rig.position).sqrMagnitude < radius*radius &&
+                if (other != rig && other.depth == rig.depth && (other.position-rig.position).sqrMagnitude < impactRadius*impactRadius &&
                     ClearGearPath(rig.position,other.position))
                     other.health = Mathf.Clamp01(other.health - Fishery.cageNearbyDamage);
             ThreatDirector.ReportStruggle(rig.position);
@@ -173,7 +181,7 @@ namespace Raid
 
         void TickFishTrap(TechRig rig,float dt)
         {
-            if (rig.health <= 0 || (rig.mode != "placed" && rig.mode != "working") || rig.contents.Count >= GearSlots(rig)) return;
+            if (rig.health <= 0 || (rig.mode != "placed" && rig.mode != "working")) return;
             rig.timer += dt * (rig.depth > 1 ? Fishery.trapActiveDepthBonus : 1f) *
                 (rig.depth == CurrentDepth ? 1f : Fishery.trapIdleYield);
             if (rig.timer < GearPeriod(rig)) return;
@@ -181,7 +189,7 @@ namespace Raid
             if (rig.depth != CurrentDepth)
             {
                 // Only a previously productive site simulates the same common local species away from the crew.
-                if (rig.localStock == null || rig.localStock.cargoSize != 1) return;
+                if (rig.localStock == null || rig.localStock.cargoSize != 1 || rig.contents.Count >= GearSlots(rig)) return;
                 var sample = rig.localStock.Copy(); sample.id = team.NewTechCatchId();
                 rig.contents.Add(sample);
                 return;
@@ -190,8 +198,11 @@ namespace Raid
                 Random.value < Fishery.trapPredatorLoss/GearScale(rig,"reinforced"))
             {
                 rig.contents.RemoveAt(rig.contents.Count-1);
+                rig.health = Mathf.Max(0,rig.health-Fishery.cageNearbyDamage/GearScale(rig,"reinforced"));
+                if (rig.health <= 0) rig.mode = "damaged";
                 return;
             }
+            if (rig.contents.Count >= GearSlots(rig)) return;
             float radius = Mathf.Max(.3f,GearRange(rig));
             FishActor closest=null;
             foreach (var fish in FishActor.ServerSchool)

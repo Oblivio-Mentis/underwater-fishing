@@ -27,6 +27,7 @@ namespace Raid
         {
             if (!CanHarvestRig(allowHeavy)) return null;
             var item = ToCargo(CargoId);
+            foreach (var collider in _colliders) collider.enabled = false;
             RetireGoshaCatch(null);
             return item;
         }
