@@ -237,6 +237,7 @@ namespace Raid
             report.Check(ids.Distinct().Count()==3 && ids.All(id=>id>0 && team.deliveredIds.Contains(id)) && team.tank.All(x=>x.species==team.tank[0].species) && selectedFish==ReelReadout.Species(team.tank[0].species) &&
                 CheatWallet().Sum()==40,"Mouse stocked three distinct catches of a single species without changing the materials.");
             report.fish=team.tank[0].species;report.stocked=3;
+            report.Check(field.textComponent.text.TrimEnd('\u200b') == "3", "The visible quantity matches the three stocked fish.");
             UiQaProbe.CapturePeerCamera(Path.Combine(folder,"cheat-panel.png"));
 
             report.phase="movement and collision from real input";
