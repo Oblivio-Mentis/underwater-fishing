@@ -94,4 +94,3 @@ namespace Raid
         static bool FiniteRig(Vector3 p) => float.IsFinite(p.x)&&float.IsFinite(p.y)&&float.IsFinite(p.z);
     }
 }
-
