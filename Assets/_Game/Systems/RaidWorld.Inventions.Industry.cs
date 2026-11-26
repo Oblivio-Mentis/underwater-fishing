@@ -76,7 +76,16 @@ namespace Raid
                     {
                         if (rig.kind=="bubbles")
                         {
-                            var other=ClosestIndustryRig(rig,rig.position,IndustryRange(rig),r=>r.kind=="bubbles");
+                            float range=IndustryRange(rig);
+                            TechRig first=null,after=null;
+                            foreach(var candidate in team.rigs)
+                            {
+                                if(candidate==rig || candidate.kind!="bubbles" || candidate.depth!=rig.depth || !IndustryPresent(candidate) ||
+                                   (candidate.position-rig.position).sqrMagnitude>range*range)continue;
+                                if(first==null || candidate.serial<first.serial)first=candidate;
+                                if(candidate.serial>rig.targetSerial && (after==null || candidate.serial<after.serial))after=candidate;
+                            }
+                            var other=after??first;
                             if (other==null) return false;
                             rig.targetSerial=other.serial;
                             return true;
@@ -92,6 +101,7 @@ namespace Raid
                 case "farm":
                     if (action=="use" && rig.brood.Count<2) return IndustryStock(rig,diver,true);
                     if (rig.brood.Count==0) return false;
+                    if(action=="use")IndustryManifest.HarvestSurplus(rig);
                     rig.care=IndustryPeriod(rig)*IndustrialSettings.careCycles;
                     return true;
                 case "oxygen":
@@ -229,6 +239,7 @@ namespace Raid
         void TickNursery(TechRig rig, float dt)
         {
             IndustryManifest.AdvanceFarm(team,rig,dt,IndustryPeriod(rig),IndustryCapacity(rig),IndustryUnlocked(rig,"quality"));
+            if(IndustryUnlocked(rig,"auto"))IndustryManifest.HarvestSurplus(rig);
         }
 
         void TickCompressor(TechRig rig, float dt)

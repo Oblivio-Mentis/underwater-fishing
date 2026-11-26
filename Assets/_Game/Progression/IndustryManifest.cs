@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Raid
@@ -7,7 +6,7 @@ namespace Raid
     {
         public static bool AdvanceFarm(TeamProgress state,TechRig rig,float seconds,float interval,int capacity,bool unattended)
         {
-            if(rig.kind!="farm" || rig.brood.Count!=2 || seconds<=0 || interval<=0 || rig.brood[0].species!=rig.brood[1].species) return false;
+            if(rig.kind!="farm" || rig.brood.Count<2 || seconds<=0 || interval<=0 || rig.brood[0].species!=rig.brood[1].species) return false;
             if(rig.brood[0].depthTier!=rig.depth || rig.brood[1].depthTier!=rig.depth || rig.brood[0].cargoSize!=1 || rig.brood[1].cargoSize!=1)return false;
             if(rig.brood.Count+rig.contents.Count>=capacity)return false;
             if(!unattended)
@@ -23,10 +22,20 @@ namespace Raid
                 var fry=rig.brood[0].Copy();
                 fry.id=state.NewTechCatchId();fry.caughtBy=null;
                 fry.dispatchCommitted=false;fry.destination=CatchDestination.Hold;
-                rig.contents.Add(fry);produced=true;
+                rig.brood.Add(fry);produced=true;
             }
             if(rig.brood.Count+rig.contents.Count>=capacity)rig.progress=0;
             return produced;
+        }
+
+        // The first two IDs stay in the nursery. Both manual and automatic harvest use the same gate.
+        public static int HarvestSurplus(TechRig farm)
+        {
+            int surplus=farm.brood.Count-2;
+            if(surplus<=0)return 0;
+            farm.contents.AddRange(farm.brood.GetRange(2,surplus));
+            farm.brood.RemoveRange(2,surplus);
+            return surplus;
         }
 
         public static int Arrive(TeamProgress team,TechRig courier,ProgressionTuning tuning)

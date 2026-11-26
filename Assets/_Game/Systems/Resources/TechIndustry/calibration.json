@@ -10,13 +10,12 @@
     "bubbleHeight": 4.0,
     "bubblePush": 1.6,
     "manualDuration": 35.0,
-    "hoseDockDistance": 3.5,
+    "towUnitWeight": 18.0,
     "transferReach": 8.0,
     "careCycles": 3.0,
     "magnetSpeed": 1.6,
     "maxMagnetLoad": 65.0,
     "metalWeight": 30.0,
     "crateWeight": 75.0,
-    "airFillDistance": 5.0,
-    "robotBaseCapacity": 2
+    "airFillDistance": 5.0
 }
