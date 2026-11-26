@@ -22,6 +22,13 @@ namespace Raid
         bool OtherOwnerPocketsIntact() => Enumerable.Range(2,Gear.PocketCapacity).All(i=>
             Host && i==2?Gear.InventionInSlot(i).kind=="trap" && Gear.InventionInSlot(i).count==1:Gear.InventionInSlot(i).count==0);
 
+        IEnumerator SelectGuestPocket(int slot)
+        {
+            if(!Gear.SelectSlot(slot) && Gear.QaBackgroundPocketSelect(slot))
+                Assert(true,"Hidden batch client selected pocket "+(slot+1)+" through the normal owned slot handler.");
+            yield return Wait("guest selected ordinary pocket "+(slot+1),()=>Gear.ActiveSlot==slot);
+        }
+
         IEnumerator RejectRackRequest(string kind,string description)
         {
             bool? accepted=null;
@@ -127,8 +134,7 @@ namespace Raid
                 yield return Wait("ball was removed to make room for a different product",()=>Has("free-charge-pocket") && !Gear.HasBallInSlot(ChargePocket));
                 yield return CollectMissedParcel();
                 yield return new WaitForSecondsRealtime(.35f);
-                Gear.SelectSlot(ChargePocket);
-                yield return Wait("guest selected ordinary charge pocket",()=>Gear.ActiveSlot==ChargePocket);
+                yield return SelectGuestPocket(ChargePocket);
                 local.CmdTechEquipSlot(ChargePocket);
                 yield return Wait("owner equipped the charge from the selected ordinary pocket",()=>Gear.InventionInSlot(ChargePocket).count==0 &&
                     world.View.rigs.Exists(r=>r.kind=="charge" && r.operatorId==local.OwnerId));
@@ -154,8 +160,7 @@ namespace Raid
                 local.CmdRackTake("cage");
                 yield return Wait("same cage pocket now exceeds its old maximum",()=>Gear.InventionInSlot(CagePocket).count==initial+1);
                 yield return new WaitForSecondsRealtime(.35f);
-                Gear.SelectSlot(CagePocket);
-                yield return Wait("guest selected ordinary cage pocket",()=>Gear.ActiveSlot==CagePocket);
+                yield return SelectGuestPocket(CagePocket);
                 local.CmdTechEquipSlot(CagePocket);
                 yield return Wait("selected cage pocket deployed a cage and consumed exactly one",()=>Gear.InventionInSlot(CagePocket).count==initial &&
                     Gear.InventionInSlot(ChargePocket).count==1 && world.View.rigs.Exists(r=>r.kind=="cage" && r.operatorId==local.OwnerId));
