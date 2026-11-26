@@ -50,6 +50,12 @@ namespace Raid
             if(IsDead)return;
             var state=_state.Value;
             departureAir = default;
+            if (state.Noclip && !consumed && FindFlightExit(out var exit))
+            {
+                transform.position = state.Position = exit;
+                state.Inside = IsSealedInterior(exit);
+            }
+            state.Noclip = state.FastMovement = false;
             state.Dead=true;
             state.Consumed=consumed;
             state.MayReturn=false;

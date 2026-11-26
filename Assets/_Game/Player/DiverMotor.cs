@@ -32,6 +32,7 @@ namespace Raid
             public float Pitch;
             public Quaternion BodyRotation;
             public bool Dead, Consumed, Sprinting, MayReturn;
+            public bool Noclip, FastMovement;
         }
 
         private readonly SyncVar<DiverState> _state = new();
@@ -73,7 +74,7 @@ namespace Raid
 #endif
         public float PressureStress => _state.Value.Stress;
         public bool IsInside => _state.Value.Inside;
-        public bool IsWalking => UsesIndoorWalking(_state.Value.Position);
+        public bool IsWalking => !CheatNoclip && UsesIndoorWalking(_state.Value.Position);
         // Ground contacts are authoritative on the server; remote replicas do not run a CharacterController.
         public bool IsGrounded => NetworkObject!=null && IsServerInitialized && _controller!=null && _controller.enabled && _controller.isGrounded;
         public float Depth => Mathf.Max(0f, DepthOffset - _state.Value.Position.y);
@@ -200,16 +201,17 @@ namespace Raid
         {
             if (!IsClientInitialized || !IsOwner || _actions == null) return;
             if (!UI.UiInputGate.Active && _release.WasPressedThisFrame()) SetCursor(false);
-            if (!UI.UiInputGate.Active && _capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
-            bool controlling = Application.isFocused && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.Blocked;
+            bool pointer = UI.CheatPanel.PointerActive;
+            if (!pointer && !UI.UiInputGate.Active && _capture.WasPressedThisFrame() && Application.isFocused) SetCursor(true);
+            bool controlling = Application.isFocused && (pointer || Cursor.lockState == CursorLockMode.Locked) && !UI.UiInputGate.Blocked;
             if(IsDead)
             {
-                if(controlling && _capture.WasPressedThisFrame())CycleSpectator();
+                if(controlling && !pointer && _capture.WasPressedThisFrame())CycleSpectator();
                 if(controlling && CanRespawn && Keyboard.current!=null && Keyboard.current.eKey.wasPressedThisFrame)RequestRespawn();
                 return;
             }
             bool usingMonitor = UI.UiInputGate.MonitorLook && Application.isFocused && Cursor.lockState == CursorLockMode.Locked;
-            if (controlling || usingMonitor)
+            if (!pointer && (controlling || usingMonitor))
             {
                 Vector2 look = _look.ReadValue<Vector2>() * tuning.lookSensitivity * LocalLookMultiplier;
                 _yaw = Mathf.Repeat(_yaw + look.x, 360f);
@@ -217,7 +219,7 @@ namespace Raid
             }
             if(controlling && _hydro.WasPressedThisFrame())StartHydroDash();
             if(controlling && _scan.WasPressedThisFrame())ScanWater();
-            bool walking=UsesIndoorWalking(transform.position);
+            bool walking=!CheatNoclip && UsesIndoorWalking(transform.position);
             if(!controlling||!walking)_localJumpQueued=false;
             else if(_rise.WasPressedThisFrame())_localJumpQueued=true;
             if (Time.unscaledTime < _nextSend) return;
@@ -244,7 +246,7 @@ namespace Raid
         {
             if(IsDead)return;
             if (!Finite(axes.x) || !Finite(axes.y) || !Finite(axes.z) || !Finite(yaw) || !Finite(pitch)) return;
-            if(UsesIndoorWalking(transform.position))
+            if(!CheatNoclip && UsesIndoorWalking(transform.position))
             {
                 // A jump request must not normalize away forward/strafe speed.
                 Vector2 planar=Vector2.ClampMagnitude(new Vector2(axes.x,axes.z),1);
@@ -272,8 +274,9 @@ namespace Raid
             bool active = !(RaidWorld.Instance?.GoshaKnocked(this)??false) && Time.unscaledTime - _lastInputTime <= Mathf.Max(0.02f, tuning.inputTimeout);
             bool tetheredBait=RaidWorld.Instance?.IsCageBait(this)==true;
             Vector3 axes = active && !IsHelpless && !IsTrapped && !tetheredBait ? _serverInput : Vector3.zero;
-            float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed);
-            bool walking=UsesIndoorWalking(transform.position);
+            float speedScale = state.FastMovement ? FastMovementScale : 1f;
+            float verticalLimit = Mathf.Max(0f, tuning.verticalSpeed) * speedScale;
+            bool walking=!state.Noclip && UsesIndoorWalking(transform.position);
             if(walking)
             {
                 swimVelocity=Vector3.zero;
@@ -286,7 +289,7 @@ namespace Raid
                 _serverJumpQueued=false;
                 _indoorVerticalVelocity-=Mathf.Max(.1f,vessel.indoorGravity)*Time.fixedDeltaTime;
                 Vector3 direction=Quaternion.Euler(0,_serverYaw,0)*new Vector3(axes.x,0,axes.z);
-                float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*equipmentPace*SpeedMultiplier*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
+                float speed=Mathf.Max(0,vessel.indoorWalkSpeed)*equipmentPace*SpeedMultiplier*speedScale*(_serverSprint?Mathf.Max(1,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 if(state.Stress>=tuning.stressDanger)speed*=.5f;
                 var collision=_controller.Move((direction*speed+Vector3.up*_indoorVerticalVelocity)*Time.fixedDeltaTime);
@@ -299,7 +302,7 @@ namespace Raid
                 // Previous scenes and open water retain their original pitch-driven swimming.
                 Vector3 direction = Quaternion.Euler(_serverPitch, _serverYaw, 0f) * new Vector3(axes.x, 0f, axes.z);
                 direction = Vector3.ClampMagnitude(direction + Vector3.up * axes.y, 1f);
-                float speed = Mathf.Max(0f,tuning.swimSpeed)*equipmentPace*(SpeedMultiplier+Mathf.Clamp(Personal(SkillLine.Fins),0,.45f))*
+                float speed = Mathf.Max(0f,tuning.swimSpeed)*equipmentPace*speedScale*(SpeedMultiplier+Mathf.Clamp(Personal(SkillLine.Fins),0,.45f))*
                     (_serverSprint?Mathf.Max(1f,tuning.sprintMultiplier):1);
                 if(skillEquipment?.HandsFull==true)speed*=Mathf.Lerp(.68f,1,Mathf.Clamp(Personal(SkillLine.CargoCarry),0,.65f));
                 bool inHatch=Nereid.NereidAirlock.Active?.Contains(transform.position)==true;
@@ -309,12 +312,13 @@ namespace Raid
                 Vector3 velocity = direction * speed;
                 velocity.y = Mathf.Clamp(velocity.y, -verticalLimit, verticalLimit);
                 var swimTuning=RaidWorld.Instance?.progression;
-                if(swimTuning!=null && !IsTrapped && !tetheredBait && !IsHelpless)
+                if(!state.Noclip && swimTuning!=null && !IsTrapped && !tetheredBait && !IsHelpless)
                 {
                     bool accelerating=velocity.sqrMagnitude>.002f && Vector3.Dot(swimVelocity,velocity)>=0;
                     float acceleration=swimTuning.swimStartAcceleration*(1+Mathf.Clamp(Personal(SkillLine.SwimStart),0,.60f));
                     float rate=accelerating?acceleration:swimTuning.swimBrakingAcceleration;
                     if(inHatch)rate=Mathf.Max(rate,accelerating?34f:46f);
+                    rate*=speedScale;
                     if(velocity.sqrMagnitude>.002f && swimVelocity.sqrMagnitude>.002f)
                     {
                         float turnRate=Mathf.Clamp(Personal(SkillLine.SwimmingTurn),0,.50f)*rate/Mathf.Max(.5f,swimVelocity.magnitude);
@@ -324,7 +328,7 @@ namespace Raid
                 }
                 else swimVelocity=velocity;
                 swimVelocity.y=Mathf.Clamp(swimVelocity.y,-verticalLimit,verticalLimit);
-                var collision=_controller.Move(swimVelocity*Time.fixedDeltaTime);
+                var collision=MoveSwimmer(swimVelocity*Time.fixedDeltaTime);
                 if((swimVelocity.y>0 && (collision&CollisionFlags.Above)!=0) ||
                    (swimVelocity.y<0 && (collision&CollisionFlags.Below)!=0))swimVelocity.y=0;
             }
@@ -389,7 +393,7 @@ namespace Raid
         public void ApplyExternalMotion(Vector3 displacement)
         {
             if (!IsServerInitialized || IsDead || !Finite(displacement.x) || !Finite(displacement.y) || !Finite(displacement.z)) return;
-            _controller.Move(Vector3.ClampMagnitude(displacement, 2f));
+            MoveSwimmer(Vector3.ClampMagnitude(displacement, 2f));
         }
         public void ApplyTetherMotion(Vector3 displacement)
         {
@@ -404,10 +408,11 @@ namespace Raid
         public void Teleport(Vector3 position)
         {
             if (!IsServerInitialized || IsDead) return;
-            _controller.enabled=false; transform.position=position; _controller.enabled=true;
+            _controller.enabled=false; transform.position=position; _controller.enabled=!CheatNoclip;
+            if(CheatNoclip)RememberFlightOrigin(position);
             _previousPosition=position;
             swimVelocity=Vector3.zero;dashUntil=0;
-            ResetIndoorMovement();_wasWalking=UsesIndoorWalking(position);
+            ResetIndoorMovement();_wasWalking=!CheatNoclip && UsesIndoorWalking(position);
             _serverInput=Vector3.zero;_lastInputTime=float.NegativeInfinity;
             var state=_state.Value; state.Position=position; state.Inside=IsSealedInterior(position); _state.Value=state;
         }
