@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 namespace Raid
 {
@@ -260,16 +262,51 @@ namespace Raid
             yield return new WaitForSecondsRealtime(.6f);
             host.LookAtConsole(cage.position+Vector3.up*.5f);
             yield return new WaitForSecondsRealtime(.2f);
-            string image=Path.Combine(output,"captured-angler.png");
-            ScreenCapture.CaptureScreenshot(image);
-            yield return Wait("in-game cage screenshot",()=>File.Exists(image) && new FileInfo(image).Length>512,20);
-            report.screenshot=Path.GetFileName(image);
+            yield return Wait("replicated cage rendered at the fishing ground",()=>world.VisibleFisheryTrialRig(cage.serial),10);
+            CaptureCage(cage);
             float before=cage.health;
             world.TrialTickFishery(cage,5);
             Check(cage.health<before && cage.contents.Count==1,"a live captive strains its cage");
             world.TrialTickFishery(cage,ActiveFisheryTuning.Get.cageEscapeSeconds*2);
             Check(cage.mode=="damaged" && cage.contents.Count==0 && world.threats.CageAnimalNear(ActiveFisheryTuning.Get.monsters[0],local,5),
                 "a failed cage releases its captive back into the real predator director");
+        }
+
+        void CaptureCage(TechRig cage)
+        {
+            var original=host.GetComponentInChildren<Camera>();
+            var observer=new GameObject("Underwater fishery trial camera").AddComponent<Camera>();
+            var target=RenderTexture.GetTemporary(1152,648,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
+            var image=new Texture2D(target.width,target.height,TextureFormat.RGB24,false);
+            var active=RenderTexture.active;
+            try
+            {
+                observer.CopyFrom(original);
+                observer.GetUniversalAdditionalCameraData().renderPostProcessing=original.GetUniversalAdditionalCameraData().renderPostProcessing;
+                observer.enabled=false;observer.fieldOfView=49;
+                observer.transform.position=cage.position+new Vector3(1.75f,1.15f,-2.35f);
+                observer.transform.LookAt(cage.position+Vector3.up*.17f);
+                observer.targetTexture=target;
+                RenderPipeline.SubmitRenderRequest(observer,new RenderPipeline.StandardRequest{destination=target});
+                RenderTexture.active=target;
+                image.ReadPixels(new Rect(0,0,target.width,target.height),0,0);image.Apply();
+                int low=765,high=0;
+                var pixels=image.GetPixels32();
+                for(int i=0;i<pixels.Length;i+=13)
+                {
+                    var pixel=pixels[i];int light=pixel.r+pixel.g+pixel.b;
+                    low=Math.Min(low,light);high=Math.Max(high,light);
+                }
+                Check(high-low>45,"underwater camera renders actual scene detail into the captured frame");
+                report.screenshot="captured-angler.png";
+                File.WriteAllBytes(Path.Combine(output,report.screenshot),image.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active=active;
+                observer.targetTexture=null;
+                RenderTexture.ReleaseTemporary(target);Destroy(image);Destroy(observer.gameObject);
+            }
         }
 
         void GrantModule(string kind,string module,int rank=1)
@@ -407,6 +444,7 @@ namespace Raid
         internal bool TrialUseFishery(TechRig rig,DiverMotor player,string action) => UseActiveRig(rig,player,action,player.AimDirection);
         internal void TrialTickFishery(TechRig rig,float elapsed) => TickActiveRig(rig,elapsed);
         internal void PublishFisheryTrial() => Publish();
+        internal bool VisibleFisheryTrialRig(int serial) => rigShells.TryGetValue(serial,out var shell) && shell && shell.gameObject.activeInHierarchy;
         internal bool TrialUseIndustry(TechRig rig,DiverMotor player,string action) => UseIndustrialRig(rig,player,action,player.AimDirection);
         internal void TrialTickIndustry(TechRig rig,float elapsed) => TickIndustrialRig(rig,elapsed);
     }
