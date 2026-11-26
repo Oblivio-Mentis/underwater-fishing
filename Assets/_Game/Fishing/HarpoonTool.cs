@@ -36,16 +36,23 @@ namespace Raid
             public NetworkObject species;
             public long id;
             public bool ball;
+            public TechSlot invention;
         }
         private readonly SyncList<PocketItem> pockets = new();
         private readonly SyncVar<int> pocketCapacity = new(3);
         public int PocketCapacity => pocketCapacity.Value;
         public int SlotCount => PocketCapacity+2;
         internal const int MaximumSlots=9;
+        int requestedPocketCapacity=3;
+        bool inventionPocketsRestored;
         internal void SetPocketCapacity(int value)
         {
-            value=Mathf.Clamp(value,3,MaximumSlots-2);
+            requestedPocketCapacity=Mathf.Clamp(value,3,MaximumSlots-2);
+            value=requestedPocketCapacity;
+            for(int slot=MaximumSlots-1;slot>=value+2;slot--)
+                if(PocketOccupied(slot)){value=slot-1;break;}
             if(pocketCapacity.Value!=value)pocketCapacity.Value=value;
+            if(ActiveSlot>=value+2)EquipSlot(1);
         }
         private readonly SyncVar<int> _slot = new(), _shotSequence = new();
         private InputAction[] _select;
@@ -114,7 +121,11 @@ namespace Raid
         public FishActor FishInSlot(int slot) { var species = Pocket(slot).species; return species != null ? species.GetComponent<FishActor>() : null; }
         public long CatchIdInSlot(int slot) => Pocket(slot).id;
         public bool HasBallInSlot(int slot) => Pocket(slot).ball;
-        bool PocketOccupied(int slot) => HasBallInSlot(slot) || CatchIdInSlot(slot)>0;
+        bool PocketOccupied(int slot)
+        {
+            var item=Pocket(slot);
+            return item.ball || item.id>0 || item.invention.count>0;
+        }
 
         internal int BallSlot
         {
@@ -198,6 +209,7 @@ namespace Raid
         public override void OnStartServer()
         {
             pockets.Clear();
+            inventionPocketsRestored=false;
             for(int slot=2;slot<MaximumSlots;slot++)pockets.Add(default);
             SetPocketCapacity(3);
             pocketTheftShieldUsed=false;
@@ -258,7 +270,7 @@ namespace Raid
             bool controlling = gameplay && Cursor.lockState == CursorLockMode.Locked && !UI.UiInputGate.PointerReserved;
             if(!_fire.IsPressed())_primaryConsumedUntilRelease=false;
             bool primaryPressed=controlling && _fire.WasPressedThisFrame();
-            bool cargoConsumed=primaryPressed && ConsumeCargoPrimaryInput();
+            bool itemConsumed=primaryPressed && (TryDrawPocketInvention() || ConsumeCargoPrimaryInput());
             // The ball owns LMB for throwing. Number keys and the wheel can still stow it.
             bool cheatPointer = UI.CheatPanel.PointerActive;
             bool maySelect=gameplay && (cheatPointer || !UI.UiInputGate.PointerReserved || RaidWorld.Instance?.GoshaBallInHands(Motor)==true);
@@ -269,9 +281,14 @@ namespace Raid
                 float wheel = cheatPointer ? 0 : _wheel.ReadValue<float>();
                 if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? SlotCount-1 : 1)) % SlotCount);
             }
-            if (primaryPressed && !cargoConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !TetherActive) FireServer();
+            if (primaryPressed && !itemConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !TetherActive) FireServer();
             bool keyboardControls = controlling || (gameplay && cheatPointer);
-            if (Application.isFocused && _release.WasPressedThisFrame() && (keyboardControls || IsPulled)) ReleaseServer();
+            if (Application.isFocused && _release.WasPressedThisFrame())
+            {
+                var carried=CarriedInvention;
+                if(carried!=null && gameplay)TryStowCarriedInvention(carried);
+                else if(keyboardControls || IsPulled)ReleaseServer();
+            }
             if (Time.unscaledTime < _nextHeartbeat) return;
             _nextHeartbeat = Time.unscaledTime + Mathf.Max(0.02f, tuning.heartbeatInterval);
             bool reel = controlling && !_primaryConsumedUntilRelease && ActiveSlot == 0 && _fire.IsPressed();
@@ -347,6 +364,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void ReleaseServer()
         {
+            if(CarriedInvention!=null && !TetherActive)return;
             // Refusal is owned by the target's RPC; the shooter cannot shorten or bypass this period.
             _friendRefuseUntil = Time.unscaledTime + Safe(friendTetherTuning.optOutSeconds, 3, 3, 10);
             _optOutRemaining.Value = _friendRefuseUntil - Time.unscaledTime;
@@ -387,7 +405,7 @@ namespace Raid
         internal bool QaPrimaryOwned()
         {
             if(!IsClientInitialized || !IsOwner || QaMenuBlocked)return false;
-            return ConsumeCargoPrimaryInput() || QaFireOwned();
+            return TryDrawPocketInvention() || ConsumeCargoPrimaryInput() || QaFireOwned();
         }
 
         // Explicit QA only: still dispatches the normal owned RPC and leaves hit/cooldown validation on the server.
@@ -488,17 +506,14 @@ namespace Raid
         internal bool StowCapture(FishActor fish)
         {
             if (!IsServerInitialized || _fish != fish || fish.RequiresPartner) return false;
-            for (int slot = 2; slot < SlotCount; slot++)
-            {
-                if (PocketOccupied(slot)) continue;
-                // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
-                SetPocket(slot,new PocketItem { species = fish.NetworkObject, id = fish.CargoId });
-                _fish = null;
-                _fishObject.Value = null;
-                FinishFishingLine();
-                return true;
-            }
-            return false;
+            int slot=FreePocket();
+            if(slot<0)return false;
+            // The scene actor repopulates the shoal; the immutable captured ID travels with its owner.
+            SetPocket(slot,new PocketItem { species = fish.NetworkObject, id = fish.CargoId });
+            _fish = null;
+            _fishObject.Value = null;
+            FinishFishingLine();
+            return true;
         }
 
         public void NotifyFishLost(FishActor fish)

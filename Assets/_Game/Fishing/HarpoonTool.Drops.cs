@@ -32,7 +32,7 @@ namespace Raid
         {
             id = 0;
             if (Motor == null) return DroppedKind.None;
-            if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true) return DroppedKind.None;
+            if (RaidWorld.Instance?.IsHoldingGosha(Motor) == true || CarriedInvention!=null) return DroppedKind.None;
             var salvage = CarriedSalvage;
             if (salvage != null) { id = salvage.CargoId; return DroppedKind.Salvage; }
             if (HoldingHeavyCatch) { id = HeavyId; return DroppedKind.Catch; }
@@ -48,6 +48,12 @@ namespace Raid
         public bool RequestDropSelected()
         {
             if (!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked) return false;
+            var carried=CarriedInvention;
+            if(carried!=null)
+            {
+                Motor.CmdTechUse(carried.serial,"release");
+                return true;
+            }
             var kind = SelectedItem(out var id);
             if (kind == DroppedKind.None) return false;
             DropSelectedServer(kind, id);
@@ -164,7 +170,8 @@ namespace Raid
         public bool FishLoadTarget(out FishActor fish,out long cargoId)
         {
             fish=null;cargoId=0;
-            if(!MayHandleItems || Motor.IsTrapped || CarriedSalvage || TetherActive || HasBallLine || AssistTarget ||
+            if(!MayHandleItems || Motor.IsTrapped || CarriedSalvage || TetherActive || HasBallLine || AssistTarget || CarriedInvention!=null ||
+               (!HoldingHeavyCatch && InventionInSlot(ActiveSlot).count>0) ||
                RaidWorld.Instance.IsHoldingGosha(Motor) || HasBallInSlot(ActiveSlot))return false;
             if(HoldingHeavyCatch){fish=HeavySpecies;cargoId=HeavyId;}
             else
@@ -186,6 +193,7 @@ namespace Raid
             if(cargoInputFrame==Time.frameCount && cargoInputTool==this)return cargoInputConsumed;
             cargoInputFrame=Time.frameCount;cargoInputTool=this;cargoInputConsumed=false;
             if(!IsClientInitialized || !IsOwner || !MayHandleItems || UI.UiInputGate.Blocked)return false;
+            if(CarriedInvention!=null || (!HandsFull && InventionInSlot(ActiveSlot).count>0))return false;
             if(!CargoDispatch.TryLoadAim(RaidWorld.Instance,Motor,out var direction))return false;
             cargoInputConsumed=true;
             _primaryConsumedUntilRelease=true;
@@ -272,6 +280,7 @@ namespace Raid
 
         int FreePocket()
         {
+            if(IsServerInitialized && RaidWorld.Instance!=null && !inventionPocketsRestored)return -1;
             for (int slot = 2; slot < SlotCount; slot++) if (!PocketOccupied(slot)) return slot;
             return -1;
         }
