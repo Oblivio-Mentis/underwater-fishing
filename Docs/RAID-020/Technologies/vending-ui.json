@@ -1,0 +1,23 @@
+{
+    "status": "passed",
+    "phase": "inventory underwater",
+    "error": "",
+    "stackLimit": 3,
+    "fieldSlot": 2,
+    "checks": [
+        "Fresh campaign exposes four empty private equipment slots.",
+        "The researched trap has an upgraded, multi-item slot capacity.",
+        "E at the physical vending machine opened product cards for its four researched items.",
+        "Down arrow selected the next product card.",
+        "Selected the trap for physical dispensing.",
+        "Right arrow selected the second real slot.",
+        "The actual server-issued trap was observed leaving the vending chute.",
+        "Free rack transfers filled exactly one selected slot and stopped at capacity.",
+        "E closed the rack.",
+        "Tab underwater opened the separate technology inventory.",
+        "Enter deployed and repacked one physical trap, conserving the stack.",
+        "Esc closed the personal inventory without opening pause.",
+        "Tab during pause left the existing dialog in control.",
+        "The selected full stack persisted in the player's private campaign profile."
+    ]
+}
