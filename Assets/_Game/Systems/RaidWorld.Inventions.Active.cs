@@ -29,14 +29,11 @@ namespace Raid
         {
             if (!IsServerInitialized || !diver || diver.IsHelpless || diver.IsInside || rig.depth != CurrentDepth ||
                 (action != "use" && action != "alternate")) return false;
-            if (rig.kind != "charge" && rig.kind != "trap" && rig.kind != "cage" && rig.kind != "net" && rig.kind != "vacuum") return false;
             if (rig.health <= 0 || rig.mode == "damaged") return false;
             switch (rig.kind)
             {
-                case "charge": return ThrowOrFire(rig, diver, action, aim);
                 case "cage": return UseMonsterCage(rig, diver, action);
                 case "net": return UseFishingNet(rig, diver, action);
-                case "vacuum": return UseVacuum(rig, diver, action);
                 case "trap":
                     if (rig.mode != "placed" && rig.mode != "working" && rig.mode != "paused") return false;
                     rig.mode = rig.mode == "paused" ? "working" : "paused";
@@ -49,13 +46,12 @@ namespace Raid
         {
             if (!(dt > 0) || TechCatalog.Find(rig.kind) == null) return;
             if (rig.kind == "trap") { TickFishTrap(rig,dt); return; }
+            if (rig.kind == "charge") { TickCharge(rig,dt); return; }
             if (rig.depth != CurrentDepth) return;
             switch (rig.kind)
             {
-                case "charge": TickCharge(rig, dt); break;
                 case "cage": TickMonsterCage(rig, dt); break;
                 case "net": TickFishingNet(rig, dt); break;
-                case "vacuum": TickVacuum(rig, dt); break;
             }
         }
 
@@ -78,65 +74,24 @@ namespace Raid
             rig.operatorId = rig.helperId = rig.baitId = -1;
         }
 
-        bool ThrowOrFire(TechRig rig, DiverMotor diver, string action, Vector3 aim)
-        {
-            if (rig.mode == "remote")
-            {
-                if (!GearFeature(rig,"remote")) return false;
-                if (action == "alternate" && !GearFeature(rig,"group")) return false;
-                float reach = Mathf.Max(1, TechCatalog.Find("charge").range);
-                foreach (var charge in team.rigs)
-                {
-                    if (charge.kind != "charge" || charge.depth != rig.depth || charge.mode != "remote") continue;
-                    if (charge != rig && (action != "alternate" || (charge.position-diver.transform.position).sqrMagnitude > reach*reach)) continue;
-                    charge.mode = "fuse"; charge.timer = Mathf.Min(TechCatalog.Find("charge").interval,.55f);
-                    AnnounceRigPulse(charge.position,0);
-                }
-                return true;
-            }
-            if (rig.mode != "carried" && rig.mode != "placed") return false;
-            if (rig.mode == "carried" && rig.operatorId != diver.OwnerId) return false;
-            if (action == "alternate" && !GearFeature(rig,"remote")) return false;
-            Vector3 dir = aim.sqrMagnitude > .01f ? aim.normalized : diver.AimDirection;
-            if (rig.mode == "carried")
-            {
-                var eye = diver.transform.position + Vector3.up * .35f;
-                rig.position = eye;
-                rig.anchor = dir * Fishery.chargeThrowSpeed;
-            }
-            else rig.anchor = Vector3.zero;
-            ClearGearHands(rig);
-            rig.mode = action == "alternate" ? "remote" : "fuse";
-            rig.timer = TechCatalog.Find("charge").interval;
-            AnnounceRigPulse(rig.position,0);
-            return true;
-        }
-
         void TickCharge(TechRig rig,float dt)
         {
-            if (rig.mode != "fuse" && rig.mode != "remote") return;
-            float distance = rig.anchor.magnitude * dt;
-            if (distance > .0001f)
+            if(rig.mode=="remote")
             {
-                Vector3 dir = rig.anchor.normalized;
-                int hits = Physics.SphereCastNonAlloc(rig.position,.13f,dir,gearHits,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
-                float nearest = distance;
-                bool blocked = false;
-                for (int i=0;i<hits;i++)
-                {
-                    var surface = gearHits[i].collider;
-                    if (surface.GetComponentInParent<DiverMotor>() || surface.GetComponentInParent<FishActor>()) continue;
-                    blocked = true;
-                    nearest = Mathf.Min(nearest,Mathf.Max(0f,gearHits[i].distance-.01f));
-                }
-                rig.position += dir * nearest;
-                rig.anchor = blocked ? Vector3.zero : rig.anchor*Mathf.Exp(-Fishery.chargeDrag*dt)+Vector3.down*(Fishery.chargeDrop*dt);
+                // Preserve already-deployed remote charges from older expeditions.
+                rig.mode="fuse";
+                rig.timer=TechCatalog.Find("charge").interval;
             }
-            if (rig.mode == "remote") return;
+            if(rig.mode!="fuse")return;
+            if(rig.depth==CurrentDepth && rig.anchor.sqrMagnitude>0)
+                FlyCharge(rig,Mathf.Min(dt,Mathf.Max(0,rig.timer)));
             rig.timer -= dt;
             if (rig.timer > 0) return;
             rig.mode = "spent";
+            // Persist consumption before applying a non-repeatable pulse. A restart cannot fire it again.
+            if(!SaveTransaction()){rig.mode="fuse";rig.timer=1;return;}
             rig.anchor = Vector3.zero;
+            if(rig.depth!=CurrentDepth)return;
             float radius = GearRange(rig);
             float impactRadius = TechCatalog.Find("charge").radius;
             float keep = Mathf.Clamp01(Fishery.chargeYield * GearScale(rig,"quality"));
