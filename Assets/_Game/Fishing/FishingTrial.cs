@@ -205,7 +205,7 @@ namespace Raid
                 yield return Hook(fish,closeShot);
                 if(closeShot)
                 {
-                    Require(host.LineLength<=host.tuning.captureRange,"Fixture failed to place the impact inside landing radius.");
+                    Require(host.LineLength<=host.tuning.captureRange,$"Close-shot setup measured {host.LineLength:F3} m, landing radius {host.tuning.captureRange:F3} m.");
                     yield return Pause(host.tuning.hookSettleSeconds+host.tuning.minimumWindingSeconds);
                     Require(host.HookedFish==fish && host.CatchCount==occupied,
                         "Close shot auto-collected without any reel input.");
@@ -538,7 +538,8 @@ namespace Raid
                 direction = host.Motor.AimDirection;
                 eye = fish.transform.position - direction * 3.8f;
                 if (!ClearSight(eye, direction, out var impact)) continue;
-                if (closeShot) eye = impact.point - direction * .65f;
+                // The real server handles the shot a tick later while the target continues to swim.
+                if (closeShot) eye = impact.point - direction * (host.tuning.captureRange*.5f);
                 host.Motor.Teleport(eye - lift);
                 Physics.SyncTransforms();
                 if (ClearSight(eye, direction, out _)) yield break;
