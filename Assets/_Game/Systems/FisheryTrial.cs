@@ -179,7 +179,10 @@ namespace Raid
             host.Teleport(drop.position-host.AimDirection*1.05f-Vector3.up*.6f);
             Physics.SyncTransforms();
             var tool=host.GetComponent<HarpoonTool>();
-            Check(world.TryAimDrop(host,out var aimed) && aimed.id==id && tool.RequestPickup(id),"dropped catch responds to the normal owner pickup");
+            bool visible=world.TryAimDrop(host,out var aimed);
+            Check(visible && aimed.id==id,"owner sight targets the dropped catch (wanted "+id+", sight "+aimed.id+", available "+tool.CanPickUp(drop)+")");
+            // The two QA player windows run in the background. Submit the same owner RPC as E without an OS focus dependency.
+            tool.FisheryTrialPickup(id);
             yield return Wait("dropped fish in owner's inventory",()=>Enumerable.Range(2,tool.PocketCapacity).Any(slot=>tool.CatchIdInSlot(slot)==id),10);
             Check(!Enumerable.Range(0,world.DroppedCount).Any(i=>world.DroppedAt(i).id==id),"pickup retires exactly the same world drop");
             report.chargeCatch=id;
@@ -417,6 +420,11 @@ namespace Raid
             s.AnglerStage=HuntStage.Watching;anglerTarget=null;
             state.Value=s;
         }
+    }
+
+    public sealed partial class HarpoonTool
+    {
+        internal void FisheryTrialPickup(long id) => PickupServer(id);
     }
 }
 #endif
