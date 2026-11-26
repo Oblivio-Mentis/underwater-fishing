@@ -45,7 +45,7 @@ namespace Raid
                    !Guid.TryParse(args[profile+1],out _) || !string.Equals(Path.GetFullPath(args[save+1]),
                    Path.Combine(folder,"cheat-ui-campaign.json"),StringComparison.OrdinalIgnoreCase) || File.Exists(args[save+1]))
                     throw new InvalidOperationException("Cheat UI trial requires a new cheat-ui-campaign.json in its output folder, a GUID fixture profile and a local host.");
-                await AwaitCheatUi(()=>Instance && Instance.IsServerInitialized && Instance.localDiver && Instance.LocalProgress!=null &&
+                await AwaitCheatUi(()=>Instance && Instance.team!=null && Instance.localDiver && Instance.LocalProgress!=null && Instance.NetworkObject && Instance.IsServerInitialized &&
                     UiRoot.Instance && UiRoot.Instance.Context.Connected && UiRoot.Instance.Page==UiPage.None &&
                     Instance.transitionRemaining<=0 && !UiInputGate.Blocked,"host, private profile and unblocked player input",85);
                 await Instance.RunCheatUiTrial(report,folder);
