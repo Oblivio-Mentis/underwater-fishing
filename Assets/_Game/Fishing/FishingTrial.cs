@@ -607,12 +607,15 @@ namespace Raid
             for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
             float unassisted = Vector3.Distance(before, host.transform.position);
 
-            Require(helper.QaHoldOwned(true, 2), "Helper could not hold the active fisherman.");
-            yield return Wait(() => helper.AssistTarget == host && host.IsAssisted, 3, "E grip did not attach to the active fisherman.");
+            helper.Motor.Teleport(host.transform.position-host.Motor.AimDirection*1.1f);
+            Physics.SyncTransforms();
+            string grab=Send("fish_grip",3);
+            yield return Wait(() => ReadClient()?.request==grab && helper.AssistTarget == host.Motor && host.IsAssisted,
+                3, "Remote owner's E grip did not attach to the active fisherman.");
             before = host.transform.position;
             for (int i = 0; i < 12; i++) yield return new WaitForFixedUpdate();
             float assisted = Vector3.Distance(before, host.transform.position);
-            helper.QaHoldOwned(true, 0);
+            Send("fish_grip",0);
             yield return Wait(() => helper.AssistTarget == null && !host.IsAssisted, 3, "E grip did not detach.");
             Require(unassisted > .03f && assisted < unassisted * .85f,
                 $"E grip did not reduce towing: unassisted={unassisted:F3}, assisted={assisted:F3}.");
@@ -620,15 +623,20 @@ namespace Raid
                 "E grip incorrectly replaced the second harpoon or advanced the heavy catch.");
             Check($"E grip reduced towing from {unassisted:F3} m to {assisted:F3} m without replacing the second hook.");
 
-            helper.Motor.LookAtConsole(host.FishingAnchor);
-            yield return Wait(() => Vector3.Dot(helper.Motor.AimDirection,
-                (host.FishingAnchor - helper.FishingAnchor).normalized) > .999f, 3, "Helper could not aim at the towed fisherman.");
-            Require(helper.QaFireOwned(), "Friend tether shot was rejected.");
-            yield return Wait(() => helper.OwnsFriendTether && host.IsPulled && host.HookedFish == fish, 3,
-                "Friend tether did not attach without breaking the fishing line.");
+            // Just as for HookPeer, stage the lane but send the ordinary input through the independent owner.
+            float deadline=Time.unscaledTime+5, nextShot=0;
+            while(!helper.OwnsFriendTether)
+            {
+                Require(Time.unscaledTime<deadline,"Independent owner could not hook its teammate: "+ReadClient()?.error);
+                helper.Motor.Teleport(host.FishingAnchor-helper.Motor.AimDirection*3f-Vector3.up*.6f);
+                Physics.SyncTransforms();
+                if(Time.unscaledTime>=nextShot){Send("fire",0);nextShot=Time.unscaledTime+.8f;}
+                yield return null;
+            }
+            Require(host.IsPulled && host.HookedFish==fish,"Friend tether broke the original fishing line.");
             Require(!host.IsAssisted, "Grip and friend tether remained stacked.");
             float separation = Vector3.Distance(host.transform.position, helper.transform.position);
-            helper.QaHoldOwned(false, 1.2f);
+            Send("fish_reel",1.2f);
             yield return Pause(.65f);
             float rescuedSeparation = Vector3.Distance(host.transform.position, helper.transform.position);
             Require(rescuedSeparation < separation && fish.HookCount == 1 && host.HookedFish == fish,
@@ -636,7 +644,7 @@ namespace Raid
             Require(host.QaReleaseOwned(), "The towed fisherman could not opt out with R.");
             yield return Wait(() => !host.IsPulled && !helper.OwnsFriendTether && host.HookedFish == fish, 3,
                 "Opt-out released the fishing line or left a stale friend tether.");
-            helper.QaHoldOwned(false, 0);
+            Send("fish_reel",0);
             Check($"Friend tether reduced separation from {separation:F3} to {rescuedSeparation:F3} m; R released only the rescue line.");
         }
 
