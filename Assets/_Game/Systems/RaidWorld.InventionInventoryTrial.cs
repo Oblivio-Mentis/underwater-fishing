@@ -88,6 +88,12 @@ namespace Raid
             report.Check(limit>1,"The researched trap has an upgraded, multi-item slot capacity.");
             var host=localDiver;
             var rack=InventionRackTransform;
+            var wideView=rack.position+rack.forward*2.3f+rack.right*.16f-Vector3.up*.63f;
+            host.Teleport(wideView);
+            host.LookAtConsole(rack.position-Vector3.up*.12f);
+            await WaitRackUi(()=>host.IsInside && UiRoot.Instance.Page==UiPage.None,"clear cabin overview of the vending machine");
+            await Awaitable.WaitForSecondsAsync(.35f);
+            UiQaProbe.CapturePeerCamera(Path.Combine(folder,"00-vending-machine.png"));
             host.Teleport(rack.position+rack.forward*1.15f-Vector3.up*.65f);
             host.LookAtConsole(rack.position);
             await WaitRackUi(()=>InventionRackTargeted(host) && InventoryContextAllowed(),"owned camera aiming at the real rack");
