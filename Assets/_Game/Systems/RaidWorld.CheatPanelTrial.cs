@@ -139,7 +139,7 @@ namespace Raid
             try
             {
                 InputSystem.QueueStateEvent(TrialKeyboard,control?new KeyboardState(Key.LeftCtrl,key):new KeyboardState(key));
-                if(character!='\\0')InputSystem.QueueTextEvent(TrialKeyboard,character);
+                if(character!='\0')InputSystem.QueueTextEvent(TrialKeyboard,character);
                 await Awaitable.WaitForSecondsAsync(.10f);
             }
             finally{InputSystem.QueueStateEvent(TrialKeyboard,new KeyboardState());}
@@ -155,7 +155,7 @@ namespace Raid
         }
 
         static Awaitable SelectCheatAmount(CheatUiReport report,TMP_InputField field) =>
-            EditCheatField(report,field,Key.A,KeyCode.A,'\\0',
+            EditCheatField(report,field,Key.A,KeyCode.A,'\0',
                 ()=>Math.Abs(field.selectionAnchorPosition-field.selectionFocusPosition)==field.text.Length,true);
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR_WIN
@@ -176,7 +176,7 @@ namespace Raid
                 uint version=GetClipboardSequenceNumber();
                 try
                 {
-                    await EditCheatField(report,field,Key.V,KeyCode.V,'\\0',()=>field.text=="23",true);
+                    await EditCheatField(report,field,Key.V,KeyCode.V,'\0',()=>field.text=="23",true);
                     report.clipboardPaste=true;
                 }
                 finally
@@ -239,7 +239,7 @@ namespace Raid
             await SelectCheatAmount(report,field);
             await EditCheatField(report,field,Key.Digit1,KeyCode.Alpha1,'1',()=>field.text=="1" && field.selectionFocusPosition==field.selectionAnchorPosition);
             await EditCheatField(report,field,Key.Digit8,KeyCode.Alpha8,'8',()=>field.text=="18");
-            await EditCheatField(report,field,Key.Backspace,KeyCode.Backspace,'\\0',()=>field.text=="1");
+            await EditCheatField(report,field,Key.Backspace,KeyCode.Backspace,'\0',()=>field.text=="1");
             await EditCheatField(report,field,Key.Digit7,KeyCode.Alpha7,'7',()=>field.text=="17");
             report.Check(tool.ActiveSlot==1 && field.text=="17","Physical digit presses edited 18 to 17 with Backspace and kept the second equipment slot selected.");
             diver.LookAtConsole(origin+forward*20+Vector3.up*.65f);
