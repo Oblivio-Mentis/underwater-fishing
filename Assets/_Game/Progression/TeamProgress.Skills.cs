@@ -10,7 +10,17 @@ namespace Raid
         public string key;
         public List<SkillId> skills = new();
         public int revision;
-        public TechSlot[] techSlots=new TechSlot[TechSlot.Slots];
+        public TechSlot[] pocketStacks=new TechSlot[TechSlot.PocketCount];
+        public int OccupiedPocketExtent
+        {
+            get
+            {
+                if(pocketStacks==null)return 0;
+                for(int i=pocketStacks.Length-1;i>=0;i--)
+                    if(pocketStacks[i].count>0)return i+1;
+                return 0;
+            }
+        }
     }
 
     public sealed partial class TeamProgress

@@ -48,7 +48,7 @@ namespace Raid
     [Serializable]
     public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 6;
+        public const int CurrentSchema = 7;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
