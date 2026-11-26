@@ -12,7 +12,7 @@ namespace Raid
     internal sealed partial class TechCrewTrial
     {
         int observedParcelOwner=-1;
-        readonly HashSet<int> cageParcelIds=new(), chargeParcelIds=new(), restingParcelIds=new();
+        readonly HashSet<int> cageParcelIds=new(), chargeParcelIds=new(), vacuumParcelIds=new(), restingParcelIds=new();
         readonly HashSet<int> renderedParcelIds=new();
         readonly Dictionary<int,Vector3> firstParcelPosition=new();
         bool capturedFlight;
@@ -31,6 +31,7 @@ namespace Raid
             }
             if(world.RackParcelInFlight("cage"))cageParcelIds.Add(serial);
             if(world.RackParcelInFlight("charge"))chargeParcelIds.Add(serial);
+            if(world.RackParcelInFlight("vacuum"))vacuumParcelIds.Add(serial);
             if(!renderedParcelIds.Contains(serial))
             {
                 string kind=cageParcelIds.Contains(serial)?"cage":chargeParcelIds.Contains(serial)?"charge":null;
@@ -94,10 +95,32 @@ namespace Raid
 
         IEnumerator VerifyInterruptedParcel(string firstProfile)
         {
+            const string product="vacuum", upgrade="vacuum_capacity";
             int sender=int.Parse(File.ReadAllText(FileFor("returned-owner")));
             observedParcelOwner=sender;
             var rack=world.InventionRackTransform;
             var approach=rack.position+rack.forward*1.15f-Vector3.up*.65f;
+            var screen=ShipConsole.Stations.Single(s=>s.kind==ShipConsoleKind.SkillTree).screenAnchor;
+            var research=screen.position-screen.forward*1.66f-screen.right*.72f-Vector3.up*.39f;
+            int rank=world.View.TechRank(product,upgrade);
+            int issuedBefore=TechRig.TotalLimit(world.View,TechCatalog.Find(product));
+            yield return Wait("the loaded fleet occupies every available vacuum allocation",()=>world.VendorIssuedCount(product)==issuedBefore);
+            Mark("cancel-previous-cap-"+report.seat);
+            if(Host)
+            {
+                yield return Wait("everyone observed the original full allowance",()=>All("cancel-previous-cap-"));
+                DiverMotor.ServerDivers.Single(d=>d && d.OwnerId==sender).Teleport(research);
+                Mark("cancel-monitor");
+            }
+            if(report.seat==1)
+            {
+                yield return Wait("owner can reach the research monitor",()=>Has("cancel-monitor"));
+                yield return FaceStation(screen,research,"returned player aims at research to free one team allocation");
+                local.CmdTechBuy(product,upgrade,rank,world.View.teamRevision);
+            }
+            yield return Wait("a paid vacuum capacity rank opens exactly one team allocation",()=>
+                world.View.TechRank(product,upgrade)==rank+1 && TechRig.TotalLimit(world.View,TechCatalog.Find(product))==issuedBefore+1);
+            string beforeOrder=FleetDigest(world.View);
             Mark("cancel-ready-"+report.seat);
             if(Host)
             {
@@ -109,10 +132,17 @@ namespace Raid
             if(report.seat==1)
             {
                 yield return FaceStation(rack,approach,"returned player faces cabinet for an interrupted catch");
-                yield return AimAtRackProduct("charge");
-                local.CmdRackTake("charge");
-                yield return Wait("owner sees the returning character's charge leave the tray",()=>
-                    world.RackParcelInFlight("charge") && world.TryGetRackParcel(sender,out _,out _,out bool still) && !still);
+                int trapLimit=TechRig.TotalLimit(world.View,TechCatalog.Find("trap"));
+                yield return Wait("legacy fleet and another player's saved trap remain above the limit",()=>
+                    world.VendorIssuedCount("trap")==trapLimit+1);
+                yield return AimAtRackProduct("trap");
+                yield return RejectRackRequest("trap","A legacy fleet above capacity remains intact and cannot order an extra trap",
+                    RaidWorld.VendorTeamLimitReason);
+                yield return AimAtRackProduct(product);
+                local.CmdRackTake(product);
+                yield return Wait("owner sees the last available vacuum leave the tray with its allocation reserved",()=>
+                    world.RackParcelInFlight(product) && world.VendorIssuedCount(product)==issuedBefore+1 &&
+                    world.TryGetRackParcel(sender,out _,out _,out bool still) && !still);
                 world.TryGetRackParcel(sender,out int serial,out _,out _);
                 Assert(OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")),
                     "launching a charge has not changed the ordinary inventory before contact");
@@ -126,9 +156,9 @@ namespace Raid
             else
             {
                 yield return Wait("world discarded the disconnected receiver's in-flight parcel",()=>Has("cancel-left") &&
-                    !world.TryGetRackParcel(sender,out _,out _,out _) && world.RackParcelCount==0);
+                    !world.TryGetRackParcel(sender,out _,out _,out _) && world.RackParcelCount==0 && world.VendorIssuedCount(product)==issuedBefore);
                 int serial=int.Parse(File.ReadAllText(FileFor("cancel-serial")));
-                Assert(chargeParcelIds.Contains(serial),"this observer saw the individual airborne charge before disconnect removed it");
+                Assert(vacuumParcelIds.Contains(serial),"this observer saw the airborne vacuum reservation before disconnect released it");
                 if(Host)
                 {
                     Assert(InventoryDigest(world.Team.Player(firstProfile))==File.ReadAllText(FileFor("private-stacks")),
@@ -149,12 +179,12 @@ namespace Raid
                         world.View?.rigs.Count==report.fleetCount && world.LocalProgress!=null && Gear &&
                         OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks"));
                 },60);
-                Assert(OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")) && world.RackParcelCount==0,
-                    "second reconnect recovered no case, no new charge and no extra stored copy");
+                Assert(OwnerInventoryDigest()==File.ReadAllText(FileFor("private-stacks")) && world.RackParcelCount==0 &&
+                    world.VendorIssuedCount(product)==issuedBefore,"second reconnect retained the pre-order inventory and team allocation");
                 Mark("cancel-restored");
             }
             yield return Wait("owner checked restored inventory after canceled ejection",()=>Has("cancel-restored"));
-            Assert(FleetDigest(world.View)==report.fleetHash,"canceling issuance preserved the entire fleet, stock and shared treasury");
+            Assert(FleetDigest(world.View)==beforeOrder,"canceling issuance preserved the fleet, stock, shared treasury and paid capacity rank");
             Mark("cancel-done-"+report.seat);
             yield return Wait("every seat finished the canceled-flight check",()=>All("cancel-done-"));
         }
