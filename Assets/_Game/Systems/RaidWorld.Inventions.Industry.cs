@@ -178,6 +178,7 @@ namespace Raid
             bool here=rig.depth==CurrentDepth;
             switch(rig.kind)
             {
+                case "vacuum": if(here) TickAutonomousVacuum(rig,dt); break;
                 case "farm": TickNursery(rig,dt); break;
                 case "mail": TickCapsule(rig,dt); break;
                 case "robot": if(here) TickWorkRobot(rig,dt); break;
@@ -193,6 +194,47 @@ namespace Raid
                     if(rig.kind=="magnet") MagnetPulse(rig,cycle);
                     else SoundAndBubbles(rig,cycle);
                     break;
+            }
+        }
+
+        static Vector3 VacuumInlet(TechRig rig) => rig.position+Vector3.up*.22f;
+
+        void TickAutonomousVacuum(TechRig rig,float dt)
+        {
+            // Old saves may contain the removed handheld or jammed pump modes.
+            if(rig.mode is "pumping" or "working" or "jammed")
+            {
+                rig.mode="placed";
+                rig.operatorId=rig.helperId=rig.baitId=-1;
+                rig.timer=0;
+            }
+            if(rig.mode!="placed")return;
+            int remaining=IndustryFree(rig);
+            if(remaining<=0)return;
+            rig.timer=Mathf.Max(0,rig.timer-dt);
+            var inlet=VacuumInlet(rig);
+            float radius=IndustryRadius(rig);
+            float catchRadius=Fishery.vacuumInlet*IndustryValue(rig,"compact");
+            float pull=Fishery.vacuumPull*IndustryValue(rig,"speed")*dt;
+            bool allowHeavy=IndustryUnlocked(rig,"range");
+            foreach(var fish in FishActor.ServerSchool)
+            {
+                if(!fish || fish.cargoSize>remaining || !fish.CanHarvestRig(allowHeavy))continue;
+                var position=fish.transform.position;
+                float distance=(position-inlet).sqrMagnitude;
+                if(distance>radius*radius || !IndustryCanPull(position,inlet,.06f))continue;
+                if(distance>catchRadius*catchRadius)
+                {
+                    fish.DrawTowardRig(inlet,pull);
+                    continue;
+                }
+                if(rig.timer>0)continue;
+                var item=fish.HarvestRig(allowHeavy);
+                if(item==null)continue;
+                rig.contents.Add(item);
+                remaining-=item.cargoSize;
+                rig.timer=IndustryPeriod(rig)/IndustryValue(rig,"auto");
+                if(remaining<=0)break;
             }
         }
 

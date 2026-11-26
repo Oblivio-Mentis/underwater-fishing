@@ -18,8 +18,14 @@ namespace Raid
         public CatchItem localStock;
         public List<CatchItem> contents=new(), brood=new();
         public bool Carrying(int player) => mode=="carried" && (operatorId==player || helperId==player);
-        public static int TotalLimit(TeamProgress team,TechItem item) =>
-            item==null?0:Mathf.Clamp(Mathf.RoundToInt(item.limit*(item.id is "charge" or "trap" or "bubbles" or "farm" or "mail" ? team.TechValue(item.id,"limit",1f) : 1f)),1,24);
+        public static int TotalLimit(TeamProgress team,TechItem item)
+        {
+            if(item==null)return 0;
+            if(item.id=="vacuum")return 1+Mathf.Clamp(team.TechRank("vacuum","vacuum_capacity"),0,3);
+            float multiplier=item.id is "charge" or "trap" or "bubbles" or "farm" or "mail" ? team.TechValue(item.id,"limit",1f) : 1f;
+            int extra=item.id=="charge"?team.TechRank("charge","group"):0;
+            return Mathf.Clamp(Mathf.RoundToInt(item.limit*multiplier)+extra,1,24);
+        }
         public void Detach()
         {
             operatorId=helperId=baitId=towDiver=-1;
@@ -62,6 +68,24 @@ namespace Raid
             id=TechIdPrefix+next;
             return true;
         }
+        public bool CanPlaceVacuum(int existingSerial,out string reason)
+        {
+            int limit=TechRig.TotalLimit(this,TechCatalog.Find("vacuum"));
+            int placed=0;
+            foreach(var rig in rigs)
+            {
+                if(rig.serial==existingSerial || rig.kind!="vacuum" || rig.mode is "carried" or "stored")continue;
+                placed++;
+            }
+            if(placed>=limit)
+            {
+                reason=$"Уже установлено рыбососов: {placed}/{limit}.";
+                return false;
+            }
+            reason=null;
+            return true;
+        }
+
         public TechRig AddRig(string kind,Vector3 position,int owner)
         {
             var rig=new TechRig{ serial=checked(++lastRigSerial),kind=kind,depth=expeditionDepth,
