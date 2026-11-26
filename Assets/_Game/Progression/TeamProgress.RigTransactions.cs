@@ -72,28 +72,6 @@ namespace Raid
             }
         }
 
-        public bool IssueRig(string id,Vector3 position,int owner,TechRig recalled,MaterialCost price,Func<bool> persist)
-        {
-            var wallet=Treasury;
-            int oldSlot=recalled==null?-1:rigs.IndexOf(recalled), revision=teamRevision, serial=lastRigSerial;
-            if(!price.IsValid || !wallet.Covers(price) || serial==int.MaxValue ||
-                (!price.IsEmpty && revision==int.MaxValue) || (recalled!=null && (oldSlot<0 || !recalled.CanRecall)))return false;
-            if(oldSlot>=0)rigs.RemoveAt(oldSlot);
-            var issued=AddRig(id,position,owner);
-            Treasury=wallet.Subtract(price);
-            if(!price.IsEmpty)teamRevision++;
-            bool committed=false;
-            try{return committed=persist==null || persist();}
-            finally
-            {
-                if(!committed)
-                {
-                    rigs.Remove(issued);if(oldSlot>=0)rigs.Insert(oldSlot,recalled);
-                    Treasury=wallet;teamRevision=revision;lastRigSerial=serial;
-                }
-            }
-        }
-
         public bool RepairRig(TechRig rig,int scrapCost,Func<bool> persist)
         {
             if(!rigs.Contains(rig) || rig.health>=1 || scrapCost<0 || scrap<scrapCost ||
