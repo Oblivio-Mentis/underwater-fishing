@@ -62,7 +62,14 @@ namespace Raid
                 return added;
             }
             var salvage=tool.CarriedSalvage;
-            return salvage ? salvage.IntoEquipment(rig.contents,IndustryFree(rig),diver) : tool.StowSelectedInRig(rig.contents,IndustryFree(rig));
+            int space=IndustryFree(rig);
+            if(rig.kind=="robot")
+            {
+                float kg=RobotFreeKilograms(rig);
+                if(salvage && SalvageKilograms(salvage.electronics)>kg)return false;
+                if(!salvage)space=Mathf.Min(space,Mathf.FloorToInt(kg/IndustrialSettings.fishSlotKg));
+            }
+            return salvage ? salvage.IntoEquipment(rig.contents,space,diver) : tool.StowSelectedInRig(rig.contents,space);
         }
 
         bool UseIndustrialRig(TechRig rig, DiverMotor diver, string action, Vector3 aim)
@@ -164,7 +171,7 @@ namespace Raid
                 rig.progress-=dt;
                 if(rig.progress<=0){rig.progress=.45f;MagnetPulse(rig,.45f);}
                 var handler=IndustryDiver(rig.operatorId);
-                if(handler)handler.equipmentPace *= Mathf.Lerp(1,.45f,Mathf.Clamp01(MagnetWeight(rig)/Mathf.Max(1,IndustryCapacity(rig))));
+                if(handler)handler.equipmentPace *= Mathf.Lerp(1,.45f,Mathf.Clamp01(CargoWeight(rig)/Mathf.Max(1,IndustryCapacity(rig))));
                 return;
             }
             if(!IndustryPresent(rig))return;
@@ -268,10 +275,12 @@ namespace Raid
             }
         }
 
-        static float MagnetWeight(TechRig rig)
+        static float SalvageKilograms(int electronics) => electronics>0?IndustrialSettings.crateWeight:IndustrialSettings.metalWeight;
+        static float CargoKilograms(CatchItem item) => item.IsSalvage?SalvageKilograms(item.electronics):item.cargoSize*IndustrialSettings.fishSlotKg;
+        static float CargoWeight(TechRig rig)
         {
             float weight=0;
-            foreach(var item in rig.contents)weight+=item.electronics>0?IndustrialSettings.crateWeight:IndustrialSettings.metalWeight;
+            foreach(var item in rig.contents)weight+=CargoKilograms(item);
             return weight;
         }
 
@@ -281,7 +290,7 @@ namespace Raid
             float radius=IndustryRadius(rig);
             foreach(var stock in LootActor.VisibleStock)
             {
-                if(!stock || !stock.IsFreeOnSeabed || stock.tier!=rig.depth || stock.CarryWeight>space || (stock.electronics>0?IndustrialSettings.crateWeight:IndustrialSettings.metalWeight)>Mathf.Min(IndustrialSettings.maxMagnetLoad*IndustryValue(rig,"reinforced"),IndustryCapacity(rig)-MagnetWeight(rig)))continue;
+                if(!stock || !stock.IsFreeOnSeabed || stock.tier!=rig.depth || stock.CarryWeight>space || SalvageKilograms(stock.electronics)>Mathf.Min(IndustrialSettings.maxMagnetLoad*IndustryValue(rig,"reinforced"),IndustryCapacity(rig)-CargoWeight(rig)))continue;
                 if((rig.selection==1 && stock.electronics>0) || (rig.selection==2 && stock.electronics==0)) continue;
                 var delta=stock.transform.position-rig.position;
                 if(delta.sqrMagnitude>radius*radius)continue;
@@ -327,12 +336,14 @@ namespace Raid
         bool TransferManifest(TechRig source,TechRig target)
         {
             int space=IndustryFree(target);
+            float kg=target.kind=="robot"?RobotFreeKilograms(target):float.PositiveInfinity;
             bool moved=false;
             for(int i=0;i<source.contents.Count && space>0;)
             {
                 var item=source.contents[i];
-                if(item.cargoSize>space) {i++;continue;}
-                source.contents.RemoveAt(i);target.contents.Add(item);space-=item.cargoSize;moved=true;
+                float mass=CargoKilograms(item);
+                if(item.cargoSize>space || mass>kg) {i++;continue;}
+                source.contents.RemoveAt(i);target.contents.Add(item);space-=item.cargoSize;kg-=mass;moved=true;
             }
             return moved;
         }

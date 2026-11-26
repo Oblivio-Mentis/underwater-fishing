@@ -10,8 +10,9 @@ namespace Raid
         bool RigAlreadyTowed(TechRig rig) => team.rigs.Exists(other=> (other.kind=="winch" || other.kind=="robot") && other.targetSerial==rig.serial);
         static float RigWeight(TechRig rig)
         {
-            float weight=rig.kind=="cage" ? 2 : 1;
-            foreach(var item in rig.contents)weight+=item.cargoSize;
+            float weight=rig.kind is "winch" or "net" or "vacuum" or "cage" ? IndustrialSettings.heavyRigKg : IndustrialSettings.lightRigKg;
+            foreach(var item in rig.contents)weight+=CargoKilograms(item);
+            foreach(var item in rig.brood)weight+=CargoKilograms(item);
             return weight;
         }
 
@@ -68,10 +69,10 @@ namespace Raid
                 ClearCable(cable);return;
             }
             if(distance>IndustryRange(cable)*1.1f){ClearCable(cable);return;}
-            float mass=target!=null?RigWeight(target):passenger?1:Mathf.Max(1,dropped[index].Fish?dropped[index].Fish.cargoSize:1);
-            float speed=IndustrialSettings.towSpeed*IndustryValue(cable,"speed")*Mathf.Min(1,IndustryValue(cable,"reinforced")/mass);
+            float mass=target!=null?RigWeight(target):passenger?IndustrialSettings.diverKg:IndustrialSettings.fishSlotKg*Mathf.Max(1,dropped[index].Fish?dropped[index].Fish.cargoSize:1);
+            float speed=IndustrialSettings.towSpeed*IndustryValue(cable,"speed")*Mathf.Min(1,IndustrialSettings.heavyRigKg*IndustryValue(cable,"reinforced")/mass);
             Vector3 next=Vector3.MoveTowards(position,towards,speed*dt);
-            if(mass*IndustrialSettings.towUnitWeight>TechCatalog.Find("winch").capacity*IndustryValue(cable,"reinforced") ||
+            if(mass>TechCatalog.Find("winch").capacity*IndustryValue(cable,"reinforced") ||
                 !IndustryCanPull(position,next,target!=null?.45f:.16f) || !IndustryCanPull(position+Vector3.up*.2f,towards,.03f))
             {
                 cable.progress+=dt;
