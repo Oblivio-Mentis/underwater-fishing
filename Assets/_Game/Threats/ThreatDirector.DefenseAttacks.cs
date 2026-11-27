@@ -355,7 +355,7 @@ namespace Raid
             if(Steer(a,a.exit,a.card.burstSpeed*.79f,dt,true))RemoveAttacker(index,false,true);
         }
 
-        void RemoveAttacker(int index,bool loot,bool fled,HarpoonTool catcher=null)
+        void RemoveAttacker(int index,bool loot,bool fled,HarpoonTool catcher=null,Vector3? blastOrigin=null,float blastRadius=0)
         {
             var a=attackers[index];
             var world=RaidWorld.Instance;
@@ -382,7 +382,7 @@ namespace Raid
             defenseState.Value=stateCopy;
             if(a.collider)Destroy(a.collider.gameObject);
             attackers.RemoveAt(index);
-            if(world.ArchiveDefense() && loot)world.CreateDefenseCatch(a.data.kind,a.data.position,a.data.forward,catcher);
+            if(world.ArchiveDefense() && loot)world.CreateDefenseCatch(a.data.kind,a.data.position,a.data.forward,catcher,blastOrigin,blastRadius);
         }
 
         void TearRemora(DefenseAttacker a)
@@ -402,7 +402,7 @@ namespace Raid
                 if(intensity<=0 || !ClearDefenseLine(origin,a.data.position))continue;
                 a.vitality-=damage*Mathf.Lerp(.40f,1f,intensity);
                 ReleaseVictim(a);
-                if(a.vitality<=0){if(a.attached)TearRemora(a);RemoveAttacker(i,true,false);}
+                if(a.vitality<=0){if(a.attached)TearRemora(a);RemoveAttacker(i,true,false,blastOrigin:origin,blastRadius:radius);}
                 else if(a.hooks.Count==0)SetPose(a,AttackerPose.Stagger,1.7f);
             }
         }

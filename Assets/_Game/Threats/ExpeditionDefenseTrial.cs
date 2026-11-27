@@ -13,7 +13,7 @@ namespace Raid
         {
             public string status="running", phase="", error="";
             public int peers, species, phases, hits, losses, recovered;
-            public float minimumIntegrity=100;
+            public float minimumIntegrity=100, assaultMeanFrameMs, assaultP95FrameMs;
             public List<string> checks=new();
             public void Check(bool valid,string description)
             {
@@ -148,6 +148,54 @@ namespace Raid
             }
         }
 
+        static async Awaitable SwarmFrame(string folder,DiverMotor player,ThreatDirector director)
+        {
+            await Awaitable.WaitForSecondsAsync(1.25f);
+            var vessel=Nereid.NereidVessel.Active;
+            var center=director.DefenseCenter;
+            var rights=vessel.transform.right;
+            for(int i=0;i<2;i++)
+            {
+                Vector3 outward=rights*(i==0?1:-1);
+                var at=center+outward*13+Vector3.down*2;
+                if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.55f))continue;
+                var eye=at+Vector3.up*.6f;
+                float closest=16;
+                Vector3 target=Vector3.zero;
+                for(int slot=0;slot<Nereid.DefenseAtmosphereView.SwarmSlotCount;slot++)
+                {
+                    var p=Nereid.DefenseAtmosphereView.SampleOrbit(director.Defense.seed,slot,director.SwarmAge,center).Position;
+                    var step=p-eye;
+                    float distance=step.magnitude;
+                    if(distance>closest || distance<5 || Vector3.Dot(step.normalized,outward)<.24f ||
+                        !MarineSpawn.ClearLeg(eye,p,.12f,distance))continue;
+                    closest=distance;target=p;
+                }
+                player.Teleport(at);
+                player.LookAtConsole(target.sqrMagnitude>.001f?target:eye+outward*13);
+                break;
+            }
+            await Awaitable.WaitForSecondsAsync(.28f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm.png"));
+        }
+
+        static async Awaitable RecordFrameTime(Report report)
+        {
+            var samples=new List<float>(150);
+            float deadline=Time.realtimeSinceStartup+1.35f;
+            float sum=0;
+            while(Time.realtimeSinceStartup<deadline)
+            {
+                await Awaitable.NextFrameAsync();
+                float ms=Time.unscaledDeltaTime*1000;
+                samples.Add(ms);sum+=ms;
+            }
+            if(samples.Count==0)return;
+            samples.Sort();
+            report.assaultMeanFrameMs=sum/samples.Count;
+            report.assaultP95FrameMs=samples[Mathf.Clamp(Mathf.CeilToInt(samples.Count*.95f)-1,0,samples.Count-1)];
+        }
+
         static async Awaitable Play(Report report,string folder,int peers)
         {
             var world=RaidWorld.Instance;var team=world.Team;var d=world.threats;
@@ -176,9 +224,7 @@ namespace Raid
             float interval=team.hungerRemaining;
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"encirclement");
             await Shot(folder,host,d,d.DefenseCenter,"02-encirclement");
-            host.LookAtConsole(host.transform.position+(host.transform.position-d.DefenseCenter)*3);
-            await Awaitable.WaitForSecondsAsync(.18f);
-            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm.png"));
+            await SwarmFrame(folder,host,d);
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
@@ -205,6 +251,7 @@ namespace Raid
                 }
             }
             report.Check(report.species==31,"All five interactive creature profiles appeared in the main level.");
+            await RecordFrameTime(report);
             d.DefenseFixtureEnd();
             await Wait(()=>!d.DefenseActive,"successful recovery",22);
             report.Check(team.tank.Count==20 && team.ongoingDefense==null && d.Defense.Ratio==1,"Successful defense keeps the manifest and restores the shield.");
@@ -292,8 +339,22 @@ namespace Raid
             host.Teleport(guest.transform.position+side*3.2f);
             if(!d.DefenseFixtureCapture(guest))throw new InvalidOperationException("Could not secure a victim in open water");
             host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
-            tool.DefenseFixtureFire();
-            await Wait(()=>tool.OwnsFriendTether,"existing friendly line attaches to captive",4);
+            deadline=Time.realtimeSinceStartup+3.5f;
+            string sightline="no contact";
+            while(!tool.OwnsFriendTether && Time.realtimeSinceStartup<deadline)
+            {
+                host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
+                Vector3 eye=host.transform.position+Vector3.up*.6f;
+                Physics.SyncTransforms();
+                if(HarpoonTool.AimCast(tool.tuning,eye,host.AimDirection,out var hit))
+                {
+                    sightline=hit.collider.name;
+                    if(hit.collider.GetComponentInParent<DiverMotor>()==guest)tool.DefenseFixtureFire();
+                }
+                await Awaitable.NextFrameAsync();
+            }
+            report.Check(tool.OwnsFriendTether,"Existing friendly line attaches to captive. First contact: "+sightline);
+
             report.Check(guest.IsTrapped,"An attached friendly line releases the captive only under load.");
             deadline=Time.realtimeSinceStartup+4;
             while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)

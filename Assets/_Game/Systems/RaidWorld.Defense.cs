@@ -67,7 +67,7 @@ namespace Raid
         internal bool TryGetDefenseLoot(long id,out CatchItem item)=>defenseLoot.TryGetValue(id,out item);
         internal void ForgetDefenseLoot(long id)=>defenseLoot.Remove(id);
 
-        internal void CreateDefenseCatch(DefenseSpecies kind,Vector3 at,Vector3 facing,HarpoonTool cutter)
+        internal void CreateDefenseCatch(DefenseSpecies kind,Vector3 at,Vector3 facing,HarpoonTool cutter,Vector3? blastOrigin=null,float blastRadius=0)
         {
             if(!defenseSpecimen)
             {
@@ -92,6 +92,7 @@ namespace Raid
                 position=at, yaw=facing.sqrMagnitude>.01f?Quaternion.LookRotation(facing).eulerAngles.y:0,
                 dead=true, roll=82, defenseSpecies=(byte)((int)kind+1)
             };
+            if(blastOrigin.HasValue && blastRadius>0)StartFishDrift(ref corpse,blastOrigin.Value,blastRadius);
             RegisterDrop(corpse);
         }
     }

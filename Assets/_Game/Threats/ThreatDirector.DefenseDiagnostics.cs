@@ -38,7 +38,12 @@ namespace Raid
         {
             if(!IsServerInitialized || !DefenseActive)return false;
             foreach(var a in attackers)
-                if(a.data.kind==DefenseSpecies.Abductor && a.data.victim<0 && a.hooks.Count==0 && TryCapture(a,victim))return true;
+            {
+                if(a.data.kind!=DefenseSpecies.Abductor || a.data.victim>=0 || a.hooks.Count!=0)continue;
+                var away=(a.data.position-DefenseCenter).normalized;
+                a.exit=a.data.position+away*10;
+                if(TryCapture(a,victim))return true;
+            }
             return false;
         }
 
