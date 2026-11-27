@@ -413,16 +413,22 @@ namespace Raid
             await Wait(()=>d.DefenseFixtureGrip(carrier,out float gap) && gap<.18f,
                 "the rendered prey reaches the moving mouth socket",1.6f);
             report.Check(true,"The stolen fish follows the moving mouth socket.");
-            await ShotPredator(folder,host,d,carrier,"05-carrier");
+            if(watching!=host)await ShotPredator(folder,host,d,carrier,"05-carrier");
+            else
+            {
+                host.LookAtConsole(departure);
+                UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"05-carrier.png"));
+            }
             float watchesUntil=Time.realtimeSinceStartup+1.55f;
             while(Time.realtimeSinceStartup<watchesUntil)
             {
-                if(!d.TryDefenseAnchor(carrier,out var at))throw new InvalidOperationException("A guest watched the carrier disappear.");
+                if(!d.DefenseFixtureCarrier(carrier,out var at))throw new InvalidOperationException("A watched carrier disappeared.");
                 watching.Teleport(at+Vector3.left*.85f);
+                watching.LookAtConsole(at);
                 await Awaitable.NextFrameAsync();
             }
-            if(!d.TryDefenseAnchor(carrier,out var current))throw new InvalidOperationException("No recoverable carrier");
-            report.Check(Vector3.Distance(current,departure)>5,"The carrier accelerates away and remains while a guest is close enough to see it.");
+            if(!d.DefenseFixtureCarrier(carrier,out var current))throw new InvalidOperationException("No recoverable carrier");
+            report.Check(Vector3.Distance(current,departure)>5,"The carrier accelerates away and remains while a diver watches it.");
             d.BlastDefense(current,.20f,180);
             await Wait(()=>d.Defense.returned>0,"a defeated carrier returns its held fish",10);
             report.recovered=d.Defense.returned;

@@ -106,6 +106,18 @@ namespace Raid
             return true;
         }
 
+        internal bool DefenseFixtureCarrier(int id,out Vector3 position)
+        {
+            foreach(var actor in attackers)
+            {
+                if(actor.data.id!=id || actor.catchItem==null)continue;
+                position=actor.data.position;
+                return true;
+            }
+            position=default;
+            return false;
+        }
+
         internal bool DefenseFixtureTongueWrap(int id,out float span,out Vector3 center)
         {
             span=0;
