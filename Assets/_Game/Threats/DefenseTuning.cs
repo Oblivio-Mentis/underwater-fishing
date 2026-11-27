@@ -52,7 +52,7 @@ namespace Raid
         [Min(.5f)] public float captiveCarrySpeed=3.8f, harpoonRangeMargin=1.4f;
         [Min(2)] public float squidTongueRange=10.5f;
         [Min(.1f)] public float squidTongueSeconds=.4f;
-        [Min(1)] public float squidMinimumPullSeconds=4.8f;
+        [Min(1)] public float squidMinimumPullSeconds=5.6f;
         [Min(.1f)] public float rescuePullSeconds=.74f;
         [Range(.3f,1)] public float small=.85f;
         [Range(1,2)] public float large=1.20f;

@@ -50,7 +50,7 @@ MonoBehaviour:
   captiveCarrySpeed: 3.8
   squidTongueRange: 10.5
   squidTongueSeconds: 0.4
-  squidMinimumPullSeconds: 4.8
+  squidMinimumPullSeconds: 5.6
   harpoonRangeMargin: 1.4
   rescuePullSeconds: 0.74
   small: 0.85

@@ -556,6 +556,22 @@ namespace Raid
                 await Awaitable.NextFrameAsync();
             }
             report.Check(guest.IsTrapped && !guest.IsDead,"The crew still has a chance to rescue after four seconds.");
+            var captive=guest.transform.position;
+            bool hasLane=false;
+            for(int index=0;index<8;index++)
+            {
+                Vector3 around=Quaternion.AngleAxis(index*45f,Vector3.up)*side;
+                Vector3 firingPoint=captive+around*3.1f+Vector3.up*.12f;
+                Vector3 eye=firingPoint+Vector3.up*.6f;
+                Vector3 target=captive+Vector3.up*.55f;
+                if(!MarineSpawn.InOpenWater(world.CurrentDepth,firingPoint,.60f) ||
+                    !HarpoonTool.AimCast(tool.tuning,eye,(target-eye).normalized,out var hit) ||
+                    hit.collider.GetComponentInParent<DiverMotor>()!=guest)continue;
+                host.Teleport(firingPoint);
+                hasLane=true;
+                break;
+            }
+            report.Check(hasLane,"The rescuer can get a clear shot next to the diver after the initial drag.");
             host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
             deadline=Time.realtimeSinceStartup+3.5f;
             string sightline="no contact";
