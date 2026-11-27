@@ -91,7 +91,10 @@ namespace Raid.Nereid.Editor
             var aisle=Find(vessel.transform,"Starboard inspection aisle");
 
             if(process && arch)
-                FitPenetration(vessel.transform,arch,process,0,1,2,.61f,.58f,"Process arch");
+            {
+                var trim=Find(vessel.transform,"Pump room passage")?.Find("Door jambs, sill and drive");
+                FitPenetration(vessel.transform,arch,process,0,1,2,.61f,.58f,"Process arch",trim);
+            }
 
             if(service && aisle)
             {
@@ -189,7 +192,7 @@ namespace Raid.Nereid.Editor
         }
 
         static void FitPenetration(Transform hull,Transform wall,NereidPipeRoute route,
-            int u,int v,int axis,float halfU,float halfV,string label)
+            int u,int v,int axis,float halfU,float halfV,string label,Transform trim=null)
         {
             var backing=wall.Find("Inclined collision");
             if(!backing || !backing.TryGetComponent<BoxCollider>(out var plate))return;
@@ -198,12 +201,29 @@ namespace Raid.Nereid.Editor
             thickness[axis]=plate.size[axis];
             float depth=Mathf.Abs(hull.InverseTransformVector(backing.TransformVector(thickness))[axis]);
             if(depth>.01f && Crossing(hull,route,axis,plane,out var centre))
-                FitSleeve(hull,wall,route,centre,u,v,axis,halfU,halfV,depth,label);
+                FitSleeve(hull,wall,route,centre,u,v,axis,halfU,halfV,depth,label,trim);
         }
 
         static void FitSleeve(Transform hull,Transform wall,NereidPipeRoute route,Vector3 at,
-            int u,int v,int axis,float halfU,float halfV,float depth,string label)
+            int u,int v,int axis,float halfU,float halfV,float depth,string label,Transform trim)
         {
+            float sleeveDepth=depth;
+            if(trim && trim.TryGetComponent<MeshFilter>(out var fascia) && fascia.sharedMesh)
+            {
+                string asset=label+" opened facing.asset";
+                if(AssetDatabase.GetAssetPath(fascia.sharedMesh)!=Plumbing+asset)
+                {
+                    var border=DrillMesh(fascia.sharedMesh,trim,hull,at,u,v,axis,halfU,halfV,.53f);
+                    if(border)
+                    {
+                        Undo.RecordObject(fascia,"Open the facing around the pressure sleeve");
+                        fascia.sharedMesh=Store(border,asset);
+                        PrefabUtility.RecordPrefabInstancePropertyModifications(fascia);
+                    }
+                }
+                sleeveDepth=Mathf.Max(depth,.43f);
+            }
+
             string tag=label+" · pressure penetration";
             if(wall.Find(tag))return;
             var filter=wall.GetComponent<MeshFilter>();
@@ -226,7 +246,7 @@ namespace Raid.Nereid.Editor
             if(Crossing(hull,route,axis,at[axis]-.035f,out var before) &&
                Crossing(hull,route,axis,at[axis]+.035f,out var after))
                 slope=(after-before)/.07f;
-            var sleeve=SleeveMesh(hull,owner,at,slope,route.radius,u,v,axis,halfU,halfV,depth);
+            var sleeve=SleeveMesh(hull,owner,at,slope,route.radius,u,v,axis,halfU,halfV,sleeveDepth);
             owner.gameObject.AddComponent<MeshFilter>().sharedMesh=Store(sleeve,label+" sleeve flange.asset");
             owner.gameObject.AddComponent<MeshRenderer>().sharedMaterials=new[]{route.metal,route.enamel};
             var shell=owner.gameObject.AddComponent<MeshCollider>();
