@@ -37,6 +37,8 @@ MonoBehaviour:
   maximumAssaultSeconds: 104
   arrivalDistance: 21
   sceneryClearance: 0.32
+  schoolTravelDistance: 19
+  schoolHeight: 3.7
   concealment: 0.85
   carrySeconds: 8
   inkSeconds: 5

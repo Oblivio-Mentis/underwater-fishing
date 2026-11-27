@@ -37,6 +37,8 @@ namespace Raid
         [Min(1)] public int baseActive=4, activePerExtraDiver=2, maximumActive=12, maximumGroup=3;
         [Min(.1f)] public float firstGroupGap=5.7f, lateGroupGap=2.9f, maximumAssaultSeconds=104;
         [Min(4)] public float arrivalDistance=21, sceneryClearance=.32f;
+        [Min(8)] public float schoolTravelDistance=19;
+        [Min(0)] public float schoolHeight=3.7f;
         [Range(0,1)] public float concealment=.85f;
         [Header("Captures")]
         [Min(1)] public float carrySeconds=8, inkSeconds=5;

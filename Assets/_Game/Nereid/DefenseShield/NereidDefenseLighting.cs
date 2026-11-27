@@ -13,7 +13,7 @@ namespace Raid.Nereid
         [SerializeField] internal Light[] searchlights;
         [SerializeField] internal MeshRenderer[] volumes;
         [SerializeField] internal Light[] alarmLights;
-        [Min(0)] public float alarmIntensity=31;
+        [Min(0)] public float alarmIntensity=58;
         [Min(0)] public float searchIntensity=2150;
         [Min(1)] public float turnSpeed=96;
         readonly Vector4[] origins=new Vector4[LampCount];
@@ -35,7 +35,7 @@ namespace Raid.Nereid
         public void Present(bool active,Vector3 target,double clock)
         {
             AlarmActive=active;Target=target;
-            float flash=.19f+.81f*Mathf.Pow(.5f+.5f*Mathf.Cos((float)(clock%1.4)*Mathf.PI*2/1.4f),1.65f);
+            float flash=.32f+.68f*Mathf.Pow(.5f+.5f*Mathf.Cos((float)(clock%1.4)*Mathf.PI*2/1.4f),1.65f);
             foreach(var lamp in alarmLights)
             {
                 lamp.enabled=active;

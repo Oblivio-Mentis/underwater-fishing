@@ -153,16 +153,13 @@ namespace Raid
             var vessel=Nereid.NereidVessel.Active;
             var center=director.DefenseCenter;
             float side=Vector3.Dot(director.Defense.approachEnd-center,vessel.transform.right)<0?-1:1;
-            var layout=Nereid.NereidDeckNavigation.Active.rooms;
-            Transform observation=null;
-            foreach(var volume in layout.dryCompartments)
-                if(volume.room && volume.room.name=="ObservationHall"){observation=volume.room;break;}
+            var observation=vessel.ObservationRoom();
             if(!observation)throw new InvalidOperationException("The observation hall is absent.");
             var at=observation.TransformPoint(new Vector3(side<0?-4.68f:3.24f,side<0?1.55f:.06f,-.35f));
             player.Teleport(at);
             await Awaitable.NextFrameAsync();
             player.LookAtConsole(director.DefenseApproachFocus);
-            await Awaitable.WaitForSecondsAsync(.28f);
+            await Awaitable.WaitForSecondsAsync(.60f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
         }
 
@@ -217,7 +214,10 @@ namespace Raid
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"school approach",d.defenseTuning.warningSeconds+4);
             await Awaitable.WaitForSecondsAsync(2f);
             var lighting=prefab.GetComponentInChildren<Nereid.NereidDefenseLighting>();
-            report.Check(lighting && lighting.AlarmActive && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
+            int aimed=0;
+            if(lighting)foreach(var lamp in lighting.searchlights)
+                if(lamp.enabled && Vector3.Angle(lamp.transform.forward,lighting.Target-lamp.transform.position)<12)aimed++;
+            report.Check(lighting && lighting.AlarmActive && aimed==2 && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
                 "The alarm and exterior spotlights follow the synchronized approaching school before the first attack.");
             await SwarmFrame(folder,host,d);
             float glassHaze=Shader.GetGlobalFloat("_RaidDryHaze");

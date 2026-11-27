@@ -263,7 +263,9 @@ namespace Raid.UI
                 HudWarnings.Signal.CriticalPressure=>("Опасное давление","Поднимитесь выше",Mark.Shield,true),
                 HudWarnings.Signal.Pressure=>("Давление растёт","Уменьшите глубину",Mark.Shield,false),
                 _=>c.Threats && c.Threats.DefenseActive
-                    ?("Атака на щит","Защитите улов гарпуном",Mark.Shield,true)
+                    ?c.Threats.Defense.phase==DefensePhase.Encirclement
+                        ?("Стая приближается","Следите за прожекторами",Mark.Shield,true)
+                        :("Атака на щит","Защитите улов гарпуном",Mark.Shield,true)
                     :("Атака на резервуар","Защитите улов гарпуном",Mark.Jaw,true)
             };
         }

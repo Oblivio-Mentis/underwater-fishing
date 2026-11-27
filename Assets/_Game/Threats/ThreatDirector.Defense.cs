@@ -169,19 +169,50 @@ namespace Raid
             var vessel=NereidVessel.Active;
             var center=DefenseCenter;
             Vector3 broadside=vessel.transform.right*((seed&1)==0?1:-1);
-            Vector3 higher=center+Vector3.up*3.7f;
-            for(int i=0;i<12;i++)
+            Vector3 higher=center+Vector3.up*defenseTuning.schoolHeight;
+            float finishDistance=Mathf.Max(10,defenseTuning.arrivalDistance*.72f);
+            var observation=vessel.ObservationRoom();
+            Vector3 port=WindowSight(-1),starboard=WindowSight(1);
+            var markers=SpawnLayout?.defenseApproaches;
+            if(markers!=null)for(int i=0;i<markers.Length;i++)
             {
-                float angle=(i/2%3)*24*(i%2==0?-1:1);
-                Vector3 heading=Quaternion.AngleAxis(angle,Vector3.up)*broadside*(i<6?1:-1);
-                Vector3 near=higher+heading*15f-Vector3.up*.12f;
-                Vector3 far=higher+heading*34f+Vector3.up*1.25f;
-                if(!MarineSpawn.InOpenWater(depthTier,near,.9f) || !MarineSpawn.InOpenWater(depthTier,far,.9f) ||
-                    !DefensePathClear(far,near) || !FindPath(near,FieldContact(near),out _))continue;
+                var marker=markers[(i+(seed&int.MaxValue)%markers.Length)%markers.Length];
+                if(!marker)continue;
+                var horizontal=Vector3.ProjectOnPlane(marker.position-center,Vector3.up);
+                if(horizontal.sqrMagnitude<finishDistance*finishDistance)continue;
+                var near=higher+horizontal.normalized*finishDistance;
+                if(!Valid(marker.position,near))continue;
+                start=marker.position;end=near;return;
+            }
+            for(int height=0;height<3;height++)
+            for(int i=0;i<18;i++)
+            {
+                int lane=i%9;
+                float angle=((lane+1)/2)*13*(lane%2==0?-1:1);
+                Vector3 heading=Quaternion.AngleAxis(angle,Vector3.up)*broadside*(i<9?1:-1);
+                Vector3 altitude=higher+Vector3.up*(height*2.7f);
+                Vector3 near=altitude+heading*finishDistance-Vector3.up*.12f;
+                Vector3 far=altitude+heading*(finishDistance+defenseTuning.schoolTravelDistance-height*4f)+Vector3.up*1.25f;
+                if(!Valid(far,near))continue;
                 start=far;end=near;return;
             }
-            start=higher+broadside*33f;
-            end=higher+broadside*15f;
+            start=higher+broadside*(finishDistance+defenseTuning.schoolTravelDistance);
+            end=higher+broadside*finishDistance;
+
+            Vector3 WindowSight(int side)
+            {
+                Vector3 outward=vessel.transform.right*side;
+                var window=observation?observation.Find(side<0?"Port observation window 2":"Starboard observation window 2"):null;
+                var eye=window?window.position:higher;
+                return eye+outward*(7.85f-Vector3.Dot(eye-center,outward));
+            }
+
+            bool Valid(Vector3 far,Vector3 near)
+            {
+                Vector3 glass=Vector3.Dot(near-center,vessel.transform.right)<0?port:starboard;
+                return MarineSpawn.InOpenWater(depthTier,near,.9f) && MarineSpawn.InOpenWater(depthTier,far,.9f) &&
+                    DefensePathClear(far,near) && DefensePathClear(glass,near) && DefensePathClear(glass,far);
+            }
         }
 
         void SetDefenseMessage(string text)

@@ -107,7 +107,7 @@ namespace Raid.UI
             if(airBand==2)return Signal.CriticalAir;
             if(!p.IsInside && AttackNearby(c))return Signal.Attack;
             if(DiverMotor.PressureEnabled && !p.IsInside && p.PressureStress>=p.tuning.stressDanger)return Signal.CriticalPressure;
-            if(c.DefendingReservoir)return Signal.Wave;
+            if(c.DefendingReservoir && (!c.Threats.DefenseActive || c.Threats.DefenseAlarm))return Signal.Wave;
             if(airBand==1)return Signal.Oxygen;
             if(DiverMotor.PressureEnabled && !p.IsInside && p.PressureStress>=p.tuning.stressWarning)return Signal.Pressure;
             return Signal.None;

@@ -81,6 +81,15 @@ namespace Raid.Nereid
                 !ContainsSealed(center+shoulders) && !ContainsSealed(center-shoulders) && !ContainsSealed(center+Vector3.up*(.42f*scale));
         }
 
+        internal Transform ObservationRoom()
+        {
+            var navigation=NereidDeckNavigation.Active;
+            if(!navigation || !navigation.rooms)return null;
+            foreach(var volume in navigation.rooms.dryCompartments)
+                if(volume.room && volume.room.name=="ObservationHall")return volume.room;
+            return null;
+        }
+
         public bool InsideJaws(Vector3 chest)
         {
             Vector3 local=transform.InverseTransformPoint(chest);

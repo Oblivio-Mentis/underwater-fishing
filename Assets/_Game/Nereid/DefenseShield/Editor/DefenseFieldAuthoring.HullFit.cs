@@ -67,7 +67,8 @@ namespace Raid.Nereid.Editor
             }
             for(int i=0;i<controller.alarmLights.Length;i++)
             {
-                var node=Node(group,"Observation deck red alarm "+(i+1),new Vector3(0,3.8f,(i-1)*3.65f));
+                var location=i<2?new Vector3(i==0?-3.8f:3.8f,3.8f,.12f):new Vector3(0,3.8f,3.32f);
+                var node=Node(group,"Observation deck red alarm "+(i+1),location);
                 var lamp=controller.alarmLights[i]=node.gameObject.AddComponent<Light>();
                 lamp.type=LightType.Point;lamp.color=new Color(1,.028f,.015f);lamp.range=7.5f;
                 lamp.shadowStrength=0;lamp.lightUnit=UnityEngine.Rendering.LightUnit.Candela;lamp.enabled=false;
