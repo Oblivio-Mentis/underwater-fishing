@@ -233,10 +233,17 @@ namespace Raid
                 var window=room.Find((side<0?"Port":"Starboard")+" observation window "+index);
                 if(!window)continue;
                 Vector3 aboveDeck=window.position-outward*1.22f+Vector3.up*.6f;
-                if(!Physics.Raycast(aboveDeck,Vector3.down,out var deck,4,obstacleMask,QueryTriggerInteraction.Ignore) ||
-                    !deck.collider.transform.IsChildOf(room) || deck.normal.y<.8f)continue;
+                int floors=Physics.RaycastNonAlloc(aboveDeck,Vector3.down,escapeSightHits,4,obstacleMask,QueryTriggerInteraction.Ignore);
+                float nearest=float.PositiveInfinity;
+                for(int floor=0;floor<floors;floor++)
+                {
+                    var hit=escapeSightHits[floor];
+                    if(hit.normal.y>=.8f && hit.collider.transform.IsChildOf(room))
+                        nearest=Mathf.Min(nearest,hit.distance);
+                }
+                if(!float.IsFinite(nearest))continue;
                 // The standing view is 0.60 m above the diver's centred 1.80 m capsule.
-                Vector3 eye=deck.point+Vector3.up*1.51f;
+                Vector3 eye=aboveDeck+Vector3.up*(1.51f-nearest);
                 if(!vessel.ContainsSealed(eye) || !WindowRay(window,eye,outward,near,out float nearScore) ||
                     !WindowRay(window,eye,outward,far,out float farScore))continue;
                 Vector3 centre=Vector3.Lerp(near,far,.45f);

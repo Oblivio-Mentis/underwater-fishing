@@ -315,7 +315,7 @@ namespace Raid.Nereid
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return;
             var look = UnderwaterLook.Instance;
             Camera eye = look ? look.DiverCamera : Camera.main;
-            if (!eye || !eye.isActiveAndEnabled){HideSwarm();HideCloud();return;}
+            if (!eye || !eye.isActiveAndEnabled){HideSwarm();HideCloud();HideCurrents();return;}
             var profile = Settings;
             float now = Time.time;
             float interpolation = Mathf.Clamp(now-appliedAt,0,.10f);
@@ -403,6 +403,7 @@ namespace Raid.Nereid
 
         void OnDisable()
         {
+            HideCurrents();
             HideCloud();
             HideSwarm();
         }
