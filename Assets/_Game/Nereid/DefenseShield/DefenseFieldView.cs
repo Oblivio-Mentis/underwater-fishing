@@ -66,7 +66,8 @@ namespace Raid.Nereid
         internal static float BeamAtDepth(float depth,float z)
         {
             float hullCurl = SectionWidth(depth);
-            float wideSide = .56f+.44f*Mathf.Pow(hullCurl,.38f);
+            float keelRound = Mathf.SmoothStep(1,0,Mathf.InverseLerp(.89f,1,depth));
+            float wideSide = .56f*keelRound+.44f*Mathf.Pow(hullCurl,.38f);
             float blend = Mathf.SmoothStep(0,1,Mathf.Min(Mathf.InverseLerp(-1,-.92f,z),Mathf.InverseLerp(1,.52f,z)));
             return BeamAt(z)*Mathf.Lerp(hullCurl,wideSide,blend);
         }

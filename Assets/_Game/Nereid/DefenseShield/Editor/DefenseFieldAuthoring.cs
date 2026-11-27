@@ -194,11 +194,6 @@ namespace Raid.Nereid.Editor
                         DefenseFieldView.SideNormal(side,depth,z));
                 });
             }
-            AddSurface(crossSections, stations, (u,v) =>
-            {
-                float z = LengthStation(v);
-                return (new Vector3((2*u-1)*DefenseFieldView.BeamAtDepth(1,z),-DefenseFieldView.DepthAt(z),z),Vector3.down);
-            });
             foreach (float z in new[] {DefenseFieldView.AftEdge,DefenseFieldView.ForeEdge})
             {
                 AddSurface(crossSections, crossSections/2, (u,v) =>
@@ -218,9 +213,12 @@ namespace Raid.Nereid.Editor
 
             float LengthStation(float v)
             {
-                if (v < .25f) return Mathf.Lerp(DefenseFieldView.AftEdge,-.86f,v/.25f);
-                if (v > .75f) return Mathf.Lerp(.66f,DefenseFieldView.ForeEdge,(v-.75f)/.25f);
-                return Mathf.Lerp(-.86f,.66f,(v-.25f)/.5f);
+                float station = v*stations;
+                if (station <= 2) return Mathf.Lerp(DefenseFieldView.AftEdge,-1,station/2);
+                if (station <= 5) return Mathf.Lerp(-1,-.86f,(station-2)/3);
+                if (station <= 17) return Mathf.Lerp(-.86f,.66f,(station-5)/12);
+                if (station <= 22) return Mathf.Lerp(.66f,1,(station-17)/5);
+                return Mathf.Lerp(1,DefenseFieldView.ForeEdge,(station-22)/2);
             }
 
             void AddSurface(int width,int length,System.Func<float,float,(Vector3 point,Vector3 normal)> sample)

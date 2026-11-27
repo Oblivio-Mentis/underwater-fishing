@@ -218,6 +218,8 @@ namespace Raid.Nereid.Editor
                 belly.Any(c => c.Raycast(SideRay(c,0),out _,19)) ||
                 belly.Any(c => !c.Raycast(SideRay(c,-5.55f),out _,19)))
                 throw new InvalidOperationException("The hull collider must open only inside the stock bay.");
+            Vector3[] membrane = field.surface.GetComponent<MeshFilter>().sharedMesh.vertices;
+            for (int i = 0; i < membrane.Length; i++) membrane[i] = field.surface.transform.TransformPoint(membrane[i]);
             float aftGap = StockSeamGap(false), foreGap = StockSeamGap(true);
             if (Mathf.Max(aftGap,foreGap) > .055f)
                 throw new InvalidOperationException($"The field misses the hull profile. Aft {aftGap:F3} m, fore {foreGap:F3} m.");
@@ -235,18 +237,17 @@ namespace Raid.Nereid.Editor
             float StockSeamGap(bool fore)
             {
                 float maximum = 0;
-                float z = fore ? 1 : -1;
                 foreach (var plate in belly)
                 {
                     int side = plate.name.StartsWith("Port") ? -1 : 1;
                     for (int i = 0; i <= 16; i++)
                     {
                         float section = i/16f;
-                        float depth = Mathf.Cos(section*Mathf.PI*.5f);
                         var hullPoint = OceanEnvelopeAuthoring.StockSeamPoint(fore,side,section);
-                        var stock = new Vector3(side*DefenseFieldView.BeamAtDepth(depth,z),-depth*DefenseFieldView.DepthAt(z),z);
-                        var fieldPoint = field.transform.TransformPoint(Vector3.Scale(stock,field.EnvelopeScale)+Vector3.up*field.RimHeight);
-                        maximum = Mathf.Max(maximum,Vector3.Distance(fieldPoint,plate.transform.parent.TransformPoint(hullPoint)));
+                        var world = plate.transform.parent.TransformPoint(hullPoint);
+                        float closest = float.PositiveInfinity;
+                        foreach (var vertex in membrane) closest = Mathf.Min(closest,(vertex-world).sqrMagnitude);
+                        maximum = Mathf.Max(maximum,Mathf.Sqrt(closest));
                     }
                 }
                 return maximum;
@@ -283,7 +284,7 @@ namespace Raid.Nereid.Editor
                 RenderAt("02-seating",new Vector3(9.82f,-.90f,-1.5f), new Vector3(6.75f,.70f,.55f));
                 RenderAt("05-aft-seam",new Vector3(11f,-1.25f,-6.3f),new Vector3(3.9f,-1.35f,-4.68f));
                 RenderAt("08-fore-seam",new Vector3(11f,-2.15f,6.65f),new Vector3(3.8f,-1.85f,4.69f));
-                RenderAt("09-keel-profile",new Vector3(19f,-2.85f,.15f),new Vector3(0,-1.15f,0));
+                RenderAt("09-keel-profile",new Vector3(13.4f,-2.8f,-3.25f),new Vector3(0,-1.15f,0));
                 Vector3 pipe = field.transform.InverseTransformPoint(field.PipeSealWorld(0));
                 float side = pipe.x < 0 ? -1 : 1;
                 RenderAt("06-pipe-seal",pipe+new Vector3(side*3.4f,-.7f,-1.6f),pipe);
