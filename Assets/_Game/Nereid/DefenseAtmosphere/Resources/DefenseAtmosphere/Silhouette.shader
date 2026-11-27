@@ -9,7 +9,8 @@ Shader "RAID/Defense/Swarm Silhouette"
         _Range ("Dissolve distance", Float) = 47
         _Billow ("Swim speed and flexibility", Vector) = (5,.22,0,0)
         [HideInInspector] _CloudBatch ("Batched bank", Float) = 0
-        [HideInInspector] _CloudDistanceScale ("Cloud distance scale", Float) = 1
+        [HideInInspector] _Handoff ("Leave for live swimmer", Range(0,1)) = 0
+        [HideInInspector] _Motion ("Stroke, effort, species, pigment", Vector) = (0,1,0,1)
         [HideInInspector] _SrcBlend ("Source blend", Float) = 1
         [HideInInspector] _DstBlend ("Destination blend", Float) = 0
         [HideInInspector] _ZWrite ("Write depth", Float) = 1
@@ -37,9 +38,9 @@ Shader "RAID/Defense/Swarm Silhouette"
             half4 _Tint;
             half _EyeGlow, _Fade, _EyePass;
             float _Range;
-            float4 _Billow;
-            float _CloudBatch, _CloudDistanceScale;
-            float4 _CloudPoints[110], _CloudHeadings[110];
+            float4 _Billow, _Motion;
+            float _CloudBatch, _Handoff;
+            float4 _CloudPoints[110], _CloudHeadings[110], _CloudMotion[110];
             CBUFFER_END
             float3 _NereidReefClarity;
 
@@ -69,37 +70,55 @@ Shader "RAID/Defense/Swarm Silhouette"
                 Varyings o;
                 float3 root = TransformObjectToWorld(float3(0,0,0));
                 int index = (int)v.bank.x;
-                if(_CloudBatch>.5)root=_CloudPoints[index].xyz;
-                float phase = dot(root, float3(.71,1.12,-.86));
-                float beat = _Time.y * _Billow.x + phase;
-                float tail = saturate(.48 - v.position.z);
-                v.position.x += sin(beat + v.position.z * 4.7) * tail * tail * _Billow.y;
-                v.position.y += cos(beat * .68 + abs(v.position.x) * 2.9) * saturate(abs(v.position.x)-.18) * _Billow.y * .53;
+                float4 motion=_Motion;
+                if(_CloudBatch>.5)
+                {
+                    root=_CloudPoints[index].xyz;
+                    motion=_CloudMotion[index];
+                }
+                float beat=motion.x, effort=motion.y;
+                float shell=saturate(.54-v.position.z);
+                float fin=saturate(abs(v.position.x)-.18);
+                float tail=sin(beat+v.position.z*4.7)*shell*shell;
+                v.position.x+=tail*_Billow.y*effort;
+                v.position.y+=cos(beat*.82+abs(v.position.x)*2.9)*fin*_Billow.y*.43*effort;
+                if(abs(motion.z-3)<.25)
+                {
+                    // A squid takes water into its mantle and pulses. Keep this
+                    // silhouette distinct from the fish driving with their tails.
+                    float contract=.057*sin(beat)*saturate(1-shell)*effort;
+                    v.position.xy*=1+contract;
+                    v.position.z-=contract*.24;
+                }
                 o.world = TransformObjectToWorld(v.position);
                 o.normal = TransformObjectToWorldNormal(v.normal);
                 o.halo=v.bank.yz;
                 o.visibility=1;
                 if(_CloudBatch>.5)
                 {
-                    float3 forward=_CloudHeadings[index].xyz;
-                    float3 side=normalize(cross(float3(0,1,0),forward));
+                    float4 heading=_CloudHeadings[index];
+                    float3 forward=heading.xyz;
+                    float3 side=SafeNormalize(cross(float3(0,1,0),forward));
                     float3 up=cross(forward,side);
-                    o.world=root+(v.position.x*side+v.position.y*up+v.position.z*forward)*_CloudPoints[index].w;
-                    o.normal=v.normal.x*side+v.normal.y*up+v.normal.z*forward;
+                    float twist=sin(heading.w), upright=cos(heading.w);
+                    float3 bank=side*upright+up*twist;
+                    up=up*upright-side*twist;
+                    o.world=root+(v.position.x*bank+v.position.y*up+v.position.z*forward)*_CloudPoints[index].w;
+                    o.normal=v.normal.x*bank+v.normal.y*up+v.normal.z*forward;
                     if(v.bank.w>.5)
                     {
-                        float3 view=normalize(GetCameraPositionWS()-o.world);
-                        o.visibility=smoothstep(-.37,.27,dot(view,forward))*smoothstep(-.28,.67,dot(view,o.normal));
+                        float3 view=SafeNormalize(GetCameraPositionWS()-o.world);
+                        o.visibility=smoothstep(-.24,.45,dot(view,forward))*smoothstep(-.30,.55,dot(view,o.normal));
                         float travel=distance(o.world,GetCameraPositionWS());
-                        float size=lerp(.20,.82,smoothstep(16,73,travel/_CloudDistanceScale))*_CloudDistanceScale;
+                        float size=lerp(.18,.74,smoothstep(35,145,travel));
                         float3 right=UNITY_MATRIX_I_V._m00_m10_m20;
                         float3 vertical=UNITY_MATRIX_I_V._m01_m11_m21;
-                        o.world+=(right*v.bank.y+vertical*v.bank.z)*size+view*.065;
+                        o.world+=(right*v.bank.y+vertical*v.bank.z)*size+view*.045;
                     }
                 }
                 o.clip = TransformWorldToHClip(o.world);
                 o.pigment = v.pigment.rgb;
-                o.beat = sin(beat * .41);
+                o.beat = motion.w*(.92+.08*sin(beat*.41));
                 return o;
             }
 
@@ -108,37 +127,36 @@ Shader "RAID/Defense/Swarm Silhouette"
                 float3 delta = i.world - GetCameraPositionWS();
                 float d2 = dot(delta,delta);
                 float distanceToEye = sqrt(d2);
-                float glowDistance = lerp(1,_CloudDistanceScale,_CloudBatch);
-                float glowD2 = d2/(glowDistance*glowDistance);
                 half3 view = -SafeNormalize(delta);
                 half luminous = _EyePass;
-                half limit = 1-smoothstep(_Range*.74,_Range,distanceToEye);
+                half limit = 1-smoothstep(_Range*.76,_Range,distanceToEye);
                 if(luminous>1.5)
                 {
                     float haloRadius=dot(i.halo,i.halo);
-                    half falloff=exp2(-8*haloRadius)*.39 + exp2(-46*haloRadius)*1.6;
+                    half falloff=exp2(-7*haloRadius)*.22 + exp2(-30*haloRadius)*.64;
                     half halo=saturate(1-haloRadius)*falloff*limit*_Fade*i.visibility;
-                    halo*=exp2(-glowD2*.00017);
-                    return half4(i.pigment*halo*_EyeGlow*(.88+.12*i.beat),0);
+                    halo*=exp2(-d2*.00009);
+                    return half4(i.pigment*halo*_EyeGlow*i.beat,0);
                 }
                 // Depth-tested opaque fragments keep the finest brackets behind the hull and window frames.
-                half coverage = max(limit, luminous*limit*1.35) * smoothstep(2.5,5.6,distanceToEye) * _Fade;
+                half coverage = limit * smoothstep(2.5,5.6,distanceToEye) * _Fade;
                 float dither = frac(52.9829189 * frac(dot(floor(i.clip.xy), float2(.06711056,.00583715))));
                 clip(coverage - dither - .002);
+                if(_Handoff>0)clip(dither-_Handoff);
 
                 half3 n = FacetNormalWS(i.world,i.normal);
                 half edge = saturate(1 - abs(dot(n,view)));
                 half overhead = saturate(dot(n, half3(-.32,.90,-.28))*.55+.45);
                 half3 pigment = i.pigment * _Tint.rgb;
-                half3 color = pigment * (.12 + .28*overhead);
-                color += pigment * pow(edge,2.3) * .25;
-                half search=saturate(RaidSearchBeam(i.world));
-                color += pigment * saturate(NereidBeam(i.world)) * .82;
-                half3 column = WaterColumnColor(-view, _NereidReefClarity.x);
-                half extinction = exp2(-d2 * max(.00042, _NereidReefClarity.x * lerp(.53,.20,_CloudBatch)));
-                half3 shadow = lerp(column * .51, color, max(extinction,search*.76));
-                half eyeFalloff = exp2(-glowD2 * lerp(.00049,.00020,_CloudBatch));
-                half3 lamp = i.pigment * _EyeGlow * eyeFalloff * (.91 + .09*i.beat);
+                half search=saturate(RaidSearchBeam(i.world)*3);
+                half beam=saturate(NereidBeam(i.world)*2);
+                half3 color=pigment*(.10+.21*overhead)+pigment*pow(edge,2.3)*.15;
+                color+=pigment*beam*(.29+.51*overhead);
+                half3 column=WaterColumnColor(-view,_NereidReefClarity.x);
+                half extinction=exp2(-d2*max(.00029,_NereidReefClarity.x*lerp(.50,.22,_CloudBatch)));
+                half3 shadow=lerp(column*.53,color,max(extinction,search*.89));
+                half eyeFalloff=exp2(-d2*lerp(.00013,.00009,_CloudBatch));
+                half3 lamp=i.pigment*_EyeGlow*eyeFalloff*i.beat;
                 return half4(lerp(shadow,lamp,luminous),1);
             }
             ENDHLSL

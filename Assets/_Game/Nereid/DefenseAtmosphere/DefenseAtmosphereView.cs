@@ -6,8 +6,14 @@ namespace Raid.Nereid
     [DisallowMultipleComponent, DefaultExecutionOrder(860)]
     public sealed partial class DefenseAtmosphereView : MonoBehaviour
     {
-        const int SpeciesCount = 5;
-        const int MaxSlots = 60;
+        internal const int SpeciesCount = 5;
+        internal const int SlotCapacity = 60;
+        internal const int LeadSlots = 10;
+        internal const float HandoffSeconds = .18f;
+        const int PodCount = 8;
+        const float WarningDrift = 11f;
+        static readonly float[] PodBearings = { 0, -36, 52, -77, 97, 143, -142, 177 };
+        static readonly float[] PodTiers = { .10f, -.31f, .56f, .18f, .83f, .42f, -.12f, .69f };
         const float Tau = 2 * Mathf.PI;
         static readonly string[] ModelNames = { "Rammer", "Remora", "Thief", "Abductor", "Stalker" };
         static readonly float[] SwimBeat = { 5.4f, 6.1f, 8.8f, 4.1f, 6.3f };
@@ -17,21 +23,23 @@ namespace Raid.Nereid
         static readonly int Glow = Shader.PropertyToID("_EyeGlow");
         static readonly int Range = Shader.PropertyToID("_Range");
         static readonly int Billow = Shader.PropertyToID("_Billow");
-        static readonly int CloudDistanceScale = Shader.PropertyToID("_CloudDistanceScale");
+        static readonly int Motion = Shader.PropertyToID("_Motion");
+        static readonly int Handoff = Shader.PropertyToID("_Handoff");
         static DefenseAtmosphereSettings stock;
 
         [SerializeField] DefenseAtmosphereSettings settings;
 
         readonly Mesh[] meshes = new Mesh[SpeciesCount];
-        readonly MeshRenderer[] swimmers = new MeshRenderer[MaxSlots];
+        readonly MeshRenderer[] swimmers = new MeshRenderer[SlotCapacity];
         readonly MaterialPropertyBlock[,] blocks = new MaterialPropertyBlock[SpeciesCount,2];
         Material material;
         int raidSeed, phase;
         float phaseAge, appliedAt, swarmAge, sampledAt, shade;
         Vector3 anchor;
         Vector3 approachStart, approachEnd;
-        float approachFraction, warningReveal;
+        float approachAge, approachSeconds, warningReveal, retreatElapsed, recoveryEntry;
         ulong promoted;
+        float[] handoffs;
         bool hasSwarmClock, bound;
 
         public static DefenseAtmosphereSettings Stock
@@ -45,83 +53,158 @@ namespace Raid.Nereid
         }
 
         public DefenseAtmosphereSettings Settings => settings ? settings : Stock;
-        public static int SwarmSlotCount => Mathf.Clamp(Stock.silhouetteCount, 35, MaxSlots);
+        public static int SwarmSlotCount => Mathf.Clamp(Stock.silhouetteCount, 35, SlotCapacity);
         public int VisibleCount { get; private set; }
 
         public readonly struct OrbitPose
         {
-            public readonly Vector3 Position, Forward;
-            public readonly float Scale;
+            public readonly Vector3 Position, Forward, Velocity;
+            public readonly float Scale, Bank;
             public readonly int Kind;
-            public OrbitPose(Vector3 position, Vector3 forward, float scale, int kind)
+            public OrbitPose(Vector3 position, Vector3 velocity, float scale, float bank, int kind)
             {
                 Position = position;
-                Forward = forward;
+                Velocity = velocity;
+                Forward = velocity.sqrMagnitude > .0001f ? velocity.normalized : Vector3.forward;
                 Scale = scale;
+                Bank = bank;
                 Kind = kind;
             }
         }
 
-        public static OrbitPose SampleOrbit(int seed, int slot, float swarmSeconds, Vector3 vesselCenter)
-            => SampleOrbit(seed, slot, swarmSeconds, vesselCenter, Stock);
+        // The server promotes these exact poses. Keep a slot's identity and trajectory
+        // independent of frame rate, view visibility, and the order in which peers connect.
+        public static OrbitPose SampleSwimmer(int seed,int slot,float signalledAge,float closeSeconds,
+            Vector3 center,Vector3 start,Vector3 end,float withdrawal=0,DefenseAtmosphereSettings profile=null)
+            => SampleShoal(seed,slot,signalledAge,closeSeconds,center,start,end,withdrawal,false,profile);
 
-        public static OrbitPose SampleOrbit(int seed, int slot, float swarmSeconds, Vector3 vesselCenter,
-            DefenseAtmosphereSettings profile)
-        {
-            if (!profile) profile = Stock;
-            uint key = unchecked((uint)seed * 0x9e3779b9u + (uint)slot * 0x85ebca6bu);
-            int kind = (int)((uint)slot % SpeciesCount);
-            float start = slot * 2.399963f + Unit(key) * .58f;
-            float direction = Unit(key + 3) > .31f ? 1 : -1;
-            float speed = direction * Mathf.Lerp(.049f,.12f,Unit(key + 5)) * profile.swimSpeed;
-            float tilt = Unit(key + 7) * Tau;
-            float radius = Mathf.Max(6,profile.orbitRadius) + Mathf.Max(0,profile.radiusVariation) * Unit(key + 11);
-            float height = (Unit(key + 13) - .48f) * profile.heightVariation * 1.36f;
-            float scale = Mathf.Lerp(1-profile.sizeVariation,1+profile.sizeVariation,Unit(key + 17));
-            float age = Mathf.Max(0,swarmSeconds);
-            Vector3 current = Point(age,start,speed,tilt,radius,height);
-            Vector3 tangent = Point(age+.075f,start,speed,tilt,radius,height)-current;
-            if (tangent.sqrMagnitude < .000001f) tangent = Vector3.forward;
-            Vector3 faceShip = new Vector3(-current.x,-.18f*current.y,-current.z).normalized;
-            float bank = Mathf.Pow(Mathf.Max(0, Mathf.Sin(age*.37f + tilt)), 5) * .81f;
-            Vector3 heading = Vector3.Slerp(tangent.normalized, faceShip, bank);
-            return new OrbitPose(vesselCenter + current, heading, scale, kind);
-        }
-
-        static Vector3 Point(float age,float start,float speed,float tilt,float radius,float height)
-        {
-            float angle = start + speed * age + Mathf.Sin(age*.19f + tilt)*.19f;
-            float swimRadius = radius + Mathf.Sin(angle * 2.1f + tilt + age*.16f)*2.2f;
-            float y = height + Mathf.Sin(angle*1.7f + tilt + age*.27f)*1.9f + Mathf.Cos(angle*3.1f-tilt)*.81f;
-            return new Vector3(Mathf.Cos(angle)*swimRadius,Mathf.Clamp(y-1.1f,-6.8f,7.9f),Mathf.Sin(angle)*swimRadius*1.12f);
-        }
-
-        public static OrbitPose SampleApproach(int seed,int slot,float time,Vector3 start,Vector3 end,float fraction,
-            DefenseAtmosphereSettings profile=null)
+        static OrbitPose SampleShoal(int seed,int slot,float age,float closing,Vector3 center,Vector3 start,
+            Vector3 end,float withdrawal,bool distant,DefenseAtmosphereSettings profile)
         {
             if(!profile)profile=Stock;
-            uint key=unchecked((uint)seed+(uint)slot*15731u);
-            uint sizing=unchecked((uint)seed*0x9e3779b9u+(uint)slot*0x85ebca6bu);
-            Vector3 heading=(end-start).normalized;
-            Vector3 lateral=Vector3.Cross(Vector3.up,heading).normalized;
-            float push=Mathf.InverseLerp(Unit(key+29)*.22f,1,fraction);
-            Vector3 school=Vector3.Lerp(start,end,push*(.23f+.77f*push));
-            float row=(slot%5-2)*2.35f+Mathf.Sin(time*.82f+slot*.81f)*1.42f;
-            Vector3 point=school+lateral*(row+(Unit(key+19)-.5f)*3.1f)+
-                Vector3.up*((Unit(key+31)-.5f)*4.7f+Mathf.Sin(time*.9f+slot*.47f)*.28f)-heading*(Unit(key+43)*8.5f);
-            float scale=Mathf.Lerp(1-profile.sizeVariation,1+profile.sizeVariation,Unit(sizing+17));
-            return new OrbitPose(point,heading,scale,slot%SpeciesCount);
+            const float sampleStep=.10f;
+            uint key=SlotKey(seed,slot);
+            int pod=distant?(slot/SpeciesCount)%PodCount : slot<LeadSlots?0:1+(slot-LeadSlots)%(PodCount-1);
+            uint podKey=SlotKey(seed,pod+607);
+            Vector3 axis=Vector3.ProjectOnPlane(end-center,Vector3.up).normalized;
+            if(axis.sqrMagnitude<.5f)axis=Vector3.forward;
+            float initial=Mathf.Max(profile.orbitRadius+40,Vector3.ProjectOnPlane(start-center,Vector3.up).magnitude);
+            float shelf=Mathf.Max(profile.orbitRadius,Vector3.ProjectOnPlane(end-center,Vector3.up).magnitude);
+            float level=end.y-center.y;
+            float offset=PhaseOffset(key,distant,pod==0);
+            float clock=age+offset;
+            var position=Path(clock,withdrawal,pod,podKey,key,closing,initial,shelf,level,axis,distant,profile);
+            var next=Path(clock+sampleStep,withdrawal>0?withdrawal+sampleStep:0,pod,podKey,key,
+                closing,initial,shelf,level,axis,distant,profile);
+            Vector3 velocity;
+            float bank;
+            if(distant)
+            {
+                velocity=(next-position)/sampleStep;
+                var radius=Vector3.ProjectOnPlane(position,Vector3.up).normalized;
+                bank=Mathf.Clamp(Vector3.Cross(radius,velocity).y*1.9f,-18,18);
+            }
+            else
+            {
+                var previous=Path(clock-sampleStep,Mathf.Max(0,withdrawal-sampleStep),pod,podKey,key,
+                    closing,initial,shelf,level,axis,distant,profile);
+                velocity=(next-previous)/(2*sampleStep);
+                float yaw=Vector3.SignedAngle(Vector3.ProjectOnPlane(position-previous,Vector3.up),
+                    Vector3.ProjectOnPlane(next-position,Vector3.up),Vector3.up);
+                bank=Mathf.Clamp(-yaw*11,-27,27);
+            }
+            float scale=Mathf.Lerp(1-profile.sizeVariation,1+profile.sizeVariation,Unit(key+17));
+            return new OrbitPose(center+position,velocity,scale,bank,slot%SpeciesCount);
         }
 
-        public static OrbitPose SampleSwimmer(int seed,int slot,float time,Vector3 center,Vector3 start,Vector3 end,
-            float fraction,int phase,float phaseSeconds,DefenseAtmosphereSettings profile=null)
+        static uint SlotKey(int seed,int slot) => unchecked((uint)seed*0x9e3779b9u+(uint)slot*0x85ebca6bu);
+        static float PhaseOffset(uint key,bool distant,bool lead) => (Unit(key+41)-.5f)*(distant?3.4f:lead?.42f:1.4f);
+
+        static Vector3 Path(float age,float withdrawal,int pod,uint podKey,uint key,float closing,float initial,float shelf,
+            float level,Vector3 axis,bool distant,DefenseAtmosphereSettings profile)
         {
-            var orbit=SampleOrbit(seed,slot,time,center,profile);
-            if(phase>=4 || (end-start).sqrMagnitude<=1 || phase==3 && phaseSeconds>=13)return orbit;
-            var approach=SampleApproach(seed,slot,time,start,end,fraction,profile);
-            float spread=phase==3?Mathf.SmoothStep(0,1,phaseSeconds/13f):0;
-            return new OrbitPose(Vector3.Lerp(approach.Position,orbit.Position,spread),
-                Vector3.Slerp(approach.Forward,orbit.Forward,spread),orbit.Scale,orbit.Kind);
+            bool wing=pod==0 && !distant;
+            float tier=PodTiers[pod];
+            float angle=(PodBearings[pod]+(Unit(podKey+7)-.5f)*(wing?4:24))*Mathf.Deg2Rad;
+            float individual=(Unit(key+19)-.5f)*(distant?12:5.6f);
+            float scatter=(Unit(key+23)-.5f)*(distant?22:4.6f);
+            float depth=(Unit(key+29)-.5f)*(distant?10:3.8f);
+            float phase=Unit(podKey+31)*Tau;
+            float turn=(pod==2 || pod==5 || pod==7?-1:1);
+            float strength=Mathf.Lerp(.72f,1.22f,Unit(podKey+37));
+            float speed=turn*profile.swimSpeed*strength*(distant?profile.cloudOrbitSpeed*.55f:.080f);
+            float radial,height;
+            float bankAge=Mathf.Max(0,age+closing+WarningDrift);
+            float pulse=Mathf.Sin(bankAge*.19f+phase);
+            if(distant)
+            {
+                // Several deep bands with open lanes. Drift round the sides at different
+                // rates and depths, leaving water between the groups for the searchlights.
+                float outer=profile.cloudRadius*profile.cloudDistanceScale;
+                radial=outer*(1.02f+tier*.33f)+11+6*pulse+2.3f*Mathf.Sin(bankAge*.43f+phase)+
+                    Mathf.SmoothStep(20,0,Mathf.InverseLerp(-closing-WarningDrift,3,age));
+                angle+=speed*bankAge+.085f*Mathf.Sin(bankAge*.24f+phase);
+                height=level-7+profile.cloudHeight*tier+3.9f*Mathf.Sin(bankAge*.13f+phase);
+            }
+            else
+            {
+                float berth=wing?profile.handoffRadius:Mathf.Max(shelf+3,shelf+profile.radiusVariation*(.27f+tier*.63f));
+                float entranceSpeed=wing?-2.8f:-.7f;
+                float tangentSpeed=wing?.014f:turn*.043f;
+                float approachStart=-closing-WarningDrift;
+                float approachRadius=initial+5*tier;
+                float halfway=approachRadius-15;
+                if(age<-closing)
+                {
+                    float t=Mathf.InverseLerp(approachStart,-closing,age);
+                    radial=Hermite(approachRadius,halfway,0,-3.4f,t,WarningDrift);
+                    angle+=Hermite(-tangentSpeed*2,0,0,tangentSpeed*.44f,t,WarningDrift);
+                }
+                else if(age<=0)
+                {
+                    float t=Mathf.InverseLerp(-closing,0,age);
+                    radial=Hermite(halfway,berth,-3.4f,entranceSpeed,t,closing);
+                    angle+=Hermite(0,tangentSpeed*closing*.70f,tangentSpeed*.44f,tangentSpeed,t,closing);
+                }
+                else
+                {
+                    float leave=wing?10:5;
+                    float orbit=wing?shelf+4:berth+4.1f;
+                    float t=Mathf.Clamp01(age/leave);
+                    radial=Hermite(berth,orbit,entranceSpeed,0,t,leave);
+                    radial+=Mathf.SmoothStep(0,1,Mathf.InverseLerp(2,11,age))*
+                        (4.4f*pulse+2.1f*Mathf.Sin(bankAge*.47f+phase));
+                    angle+=tangentSpeed*closing*.70f+
+                        EasedTravel(tangentSpeed,speed,age,leave);
+                    angle+=Mathf.SmoothStep(0,1,t)*.11f*Mathf.Sin(bankAge*.17f+phase);
+                }
+                height=level+profile.heightVariation*tier+1.55f*Mathf.Sin(bankAge*.34f+phase);
+            }
+            float spacing=wing?Mathf.SmoothStep(.25f,1,Mathf.InverseLerp(.65f,3.3f,Mathf.Abs(age))):1;
+            radial+=(individual+Mathf.Sin(age*.77f+Unit(key+59)*Tau)*(distant?2.4f:.66f))*spacing;
+            if(withdrawal>0)
+            {
+                float spread=withdrawal-.9f*(1-Mathf.Exp(-withdrawal/.9f));
+                radial+=spread*(distant?5.4f:5.9f);
+                height+=Mathf.Min(10,spread*.8f);
+            }
+            angle+=scatter/Mathf.Max(radial,12);
+            var facing=axis*Mathf.Cos(angle)+Vector3.Cross(Vector3.up,axis)*Mathf.Sin(angle);
+            return facing*radial+Vector3.up*(height+depth);
+        }
+
+        static float Hermite(float a,float b,float da,float db,float t,float duration)
+        {
+            float t2=t*t,t3=t2*t;
+            return (2*t3-3*t2+1)*a+(t3-2*t2+t)*da*duration+(-2*t3+3*t2)*b+(t3-t2)*db*duration;
+        }
+
+        // Integral of a cubic ease between angular velocities. The heading stays
+        // tangent to the same continuous curve when the assault begins.
+        static float EasedTravel(float from,float to,float age,float duration)
+        {
+            float t=Mathf.Clamp01(age/duration);
+            return from*t*duration+(to-from)*duration*t*t*t*(1-.5f*t)+Mathf.Max(0,age-duration)*to;
         }
 
         static float Unit(uint number)
@@ -144,12 +227,17 @@ namespace Raid.Nereid
             clockFrame = Time.frameCount;
         }
 
-        public void SetPromotedSlots(ulong mask) => promoted = mask;
+        public void SetPromotedSlots(ulong mask,float[] startedAt)
+        {
+            promoted=mask;
+            handoffs=startedAt;
+        }
 
-        public void SetApproach(Vector3 start,Vector3 end,float fraction,float anticipation)
+        public void SetApproach(Vector3 start,Vector3 end,float age,float closing,float anticipation)
         {
             approachStart=start;approachEnd=end;
-            approachFraction=Mathf.Clamp01(fraction);
+            approachAge=age;
+            approachSeconds=Mathf.Max(.5f,closing);
             warningReveal=Mathf.Clamp01(anticipation);
         }
 
@@ -157,6 +245,13 @@ namespace Raid.Nereid
         {
             if (seed != raidSeed && (phase == 0 || phase == 1) && Time.frameCount != clockFrame)
                 hasSwarmClock = false;
+            if(seed!=raidSeed || phase<4)retreatElapsed=recoveryEntry=0;
+            if(phase==4)retreatElapsed=phaseAge;
+            if(phase==5)
+            {
+                if(this.phase!=5 || seed!=raidSeed)recoveryEntry=this.phase==4?retreatElapsed:1.2f;
+                retreatElapsed=recoveryEntry+phaseAge;
+            }
             raidSeed = seed;
             this.phase = Mathf.Clamp(phase,0,5);
             this.phaseAge = Mathf.Max(0,phaseAge);
@@ -215,23 +310,26 @@ namespace Raid.Nereid
             if (!eye || !eye.isActiveAndEnabled){HideSwarm();HideCloud();return;}
             var profile = Settings;
             float now = Time.time;
-            float elapsed = phaseAge + Mathf.Max(0, now-appliedAt);
-            float orbitAge = hasSwarmClock ? swarmAge + Mathf.Max(0,now-sampledAt) : elapsed;
+            float interpolation = Mathf.Clamp(now-appliedAt,0,.10f);
+            float elapsed = phaseAge + interpolation;
+            float orbitAge = hasSwarmClock ? swarmAge + Mathf.Clamp(now-sampledAt,0,.10f) : elapsed;
+            float agedApproach = approachAge+interpolation;
+            float retreat = phase>=4?retreatElapsed+interpolation:0;
 
             if (phase == 0){HideSwarm();HideCloud();return;}
             BindAssets();
-            PresentCloud(profile,orbitAge,elapsed);
+            PresentCloud(profile,orbitAge,agedApproach,retreat);
             float reveal = phase == 1 ? Mathf.SmoothStep(0,1,warningReveal)
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
             if (!material || reveal < .02f){HideSwarm();return;}
-            RenderSwarm(profile,eye,orbitAge,reveal);
+            RenderSwarm(profile,eye,orbitAge,agedApproach,retreat,reveal);
         }
 
-        void RenderSwarm(DefenseAtmosphereSettings profile,Camera eye,float orbitAge,float reveal)
+        void RenderSwarm(DefenseAtmosphereSettings profile,Camera eye,float orbitAge,float agedApproach,float retreat,float reveal)
         {
             VisibleCount=0;
             float range = Mathf.Lerp(profile.clearDrawingDistance,profile.darkDrawingDistance,shade);
-            int slots = Mathf.Clamp(profile.silhouetteCount,35,MaxSlots);
+            int slots = Mathf.Clamp(profile.silhouetteCount,35,SlotCapacity);
             var vessel=NereidVessel.Active;
             Vector3 scale=transform.lossyScale;
             var unit=new Vector3(1/scale.x,1/scale.y,1/scale.z);
@@ -250,33 +348,38 @@ namespace Raid.Nereid
                 var swimmer=swimmers[i];
                 if(!swimmer)continue;
                 if(i>=slots || (promoted & (1UL << i)) != 0){swimmer.enabled=false;continue;}
-                OrbitPose pose = SampleSwimmer(raidSeed,i,orbitAge,anchor,approachStart,approachEnd,
-                    approachFraction,phase,phaseAge,profile);
+                OrbitPose pose = SampleSwimmer(raidSeed,i,agedApproach,approachSeconds,anchor,approachStart,approachEnd,retreat,profile);
                 Vector3 point = pose.Position;
                 Vector3 heading = pose.Forward;
-                if(phase>=4)
-                {
-                    Vector3 leave=Vector3.ProjectOnPlane(point-anchor,Vector3.up).normalized;
-                    float distance=phase==4?phaseAge*6.4f:34+phaseAge*6.4f;
-                    point+=leave*distance+Vector3.up*Mathf.Min(9,distance*.19f);
-                    heading=Vector3.Slerp(heading,(leave+Vector3.up*.19f).normalized,
-                        Mathf.Clamp01(distance/11f));
-                }
                 if ((point-eye.transform.position).sqrMagnitude>(range+3)*(range+3)){swimmer.enabled=false;continue;}
                 Vector3 view = eye.WorldToViewportPoint(point);
                 if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f)))
                 {swimmer.enabled=false;continue;}
                 if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale))
                 {swimmer.enabled=false;continue;}
-                float roll = Mathf.Sin(orbitAge*(1.5f+.17f*pose.Kind)+i*.73f) * (8+pose.Kind*2.2f);
-                Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(roll,Vector3.forward);
+                Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(pose.Bank,Vector3.forward);
                 swimmer.transform.SetPositionAndRotation(point,bank);
                 swimmer.transform.localScale=unit*pose.Scale;
                 for(int surface=0;surface<Mathf.Min(meshes[pose.Kind].subMeshCount,2);surface++)
-                    swimmer.SetPropertyBlock(blocks[pose.Kind,surface],surface);
+                {
+                    var block=blocks[pose.Kind,surface];
+                    float handoff=handoffs!=null && handoffs[i]>0?Mathf.Clamp01((Time.time-handoffs[i])/HandoffSeconds):0;
+                    block.SetFloat(Handoff,handoff);
+                    block.SetVector(Motion,SampleStroke(raidSeed,i,pose,orbitAge));
+                    swimmer.SetPropertyBlock(block,surface);
+                }
                 swimmer.enabled=true;
                 VisibleCount++;
             }
+        }
+
+        internal static Vector4 SampleStroke(int seed,int slot,OrbitPose pose,float age)
+        {
+            uint key=SlotKey(seed,slot);
+            float rhythm=SwimBeat[pose.Kind]*Mathf.Lerp(.84f,1.16f,Unit(key+71));
+            float stroke=age*rhythm+Unit(key+73)*Tau+Mathf.Sin(age*.75f+Unit(key+79)*Tau)*.52f;
+            float effort=Mathf.Lerp(.49f,1.03f,Mathf.InverseLerp(.9f,8f,pose.Velocity.magnitude));
+            return new Vector4(stroke,effort,pose.Kind,Mathf.Lerp(.72f,1.08f,Unit(key+83)));
         }
 
         void HideSwarm()

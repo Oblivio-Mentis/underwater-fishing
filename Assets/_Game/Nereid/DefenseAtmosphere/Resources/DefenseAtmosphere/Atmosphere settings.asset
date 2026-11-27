@@ -13,20 +13,21 @@ MonoBehaviour:
   m_Name: Atmosphere settings
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.DefenseAtmosphereSettings
   silhouetteCount: 53
-  orbitRadius: 51
+  orbitRadius: 56
   radiusVariation: 24
+  handoffRadius: 32
   heightVariation: 5.7
   swimSpeed: 1
   sizeVariation: 0.29
   clearDrawingDistance: 160
   darkDrawingDistance: 145
-  eyeGlow: 1.35
+  eyeGlow: 1.11
   cloudCount: 510
-  cloudRadius: 37
+  cloudRadius: 34
   cloudDistanceScale: 3
-  cloudHeight: 27
-  cloudDrawingDistance: 104
-  cloudOrbitSpeed: 0.23
+  cloudHeight: 23
+  cloudDrawingDistance: 64
+  cloudOrbitSpeed: 0.12
   silhouetteMaterial: {fileID: 2100000, guid: 16dec4a992bb51228b7c881468a2a56f, type: 2}
   silhouetteMeshes:
   - {fileID: 4300000, guid: a45e4373af43b6f489cf42735363497b, type: 2}

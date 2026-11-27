@@ -18,6 +18,8 @@ namespace Raid
             public DefenseSignal signal;
             public SquidTongueView tongue;
             public DiverMotor tongueVictim;
+            public Renderer[] arrivingSkin;
+            public float handoffAt=-1;
             public SkinnedMeshRenderer squidSkin;
             public bool captiveCamera;
             public Renderer[] remoraSkin;
@@ -45,7 +47,11 @@ namespace Raid
         Material inkMaterial;
         MaterialPropertyBlock inkProperties;
         DefenseAtmosphereView atmosphere;
-        ulong presentedSlots;
+        static readonly int RaidPromotion=Shader.PropertyToID("_RaidPromotion");
+        readonly float[] slotHandoffs=new float[DefenseAtmosphereView.SlotCapacity];
+        MaterialPropertyBlock promotionBlock;
+        ulong presentedSlots, committedSlots;
+        float committedAt;
         int presentedRaid;
         internal int VisibleDefenseSwarm => atmosphere?atmosphere.VisibleCount:0;
         internal int DefenseCloudCount => atmosphere?atmosphere.CloudCount:0;
@@ -89,23 +95,16 @@ namespace Raid
                     :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.65f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
                 field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
-                if(defenseLighting)
-                {
-                    var focus=DefenseApproachFocus;
-                    if(snapshot.phase==DefensePhase.Assault)
-                    {
-                        int priority=int.MaxValue;
-                        AttackerSnapshot threat=default;
-                        foreach(var attacker in defenseActors)
-                            if(attacker.group<priority && attacker.pose!=AttackerPose.Retreat)
-                            {priority=attacker.group;threat=attacker;}
-                        if(threat.id>0)focus=threat.position;
-                    }
-                    defenseLighting.Present(DefenseAlarm,focus,DefenseClock,DefenseBlackout);
-                }
+                if(defenseLighting)PresentDefenseSearchlights(snapshot);
             }
             PresentRaidPressure(snapshot,field);
             PresentRaidInk();
+            if(presentedRaid!=snapshot.seed)
+            {
+                presentedRaid=snapshot.seed;
+                presentedSlots=committedSlots=0;
+                System.Array.Clear(slotHandoffs,0,slotHandoffs.Length);
+            }
             visibleIds.Clear();
             foreach(var current in defenseActors)
             {
@@ -117,16 +116,23 @@ namespace Raid
                     var root=model.transform;
                     var start=current.position;
                     var heading=current.forward;
+                    float bank=0, stroke=current.id*2.17f, introducedAt=-1;
+                    Renderer[] arrivingSkin=null;
                     if(current.slot>=0 && (presentedSlots&(1UL<<current.slot))==0)
                     {
                         var swimmer=SampleDefenseSlot(current.slot);
-                        if((swimmer.Position-start).sqrMagnitude<3.2f)
+                        if((swimmer.Position-start).sqrMagnitude<6.25f)
                         {
                             start=swimmer.Position;
                             heading=swimmer.Forward;
+                            bank=swimmer.Bank;
+                            stroke=DefenseAtmosphereView.SampleStroke(snapshot.seed,current.slot,swimmer,SwarmAge).x;
+                            introducedAt=slotHandoffs[current.slot]=Time.time;
+                            arrivingSkin=root.GetComponentsInChildren<Renderer>();
                         }
                     }
-                    root.SetPositionAndRotation(start,heading.sqrMagnitude>.01f?Quaternion.LookRotation(heading):Quaternion.identity);
+                    Quaternion rotation=heading.sqrMagnitude>.01f?Quaternion.LookRotation(heading):Quaternion.identity;
+                    root.SetPositionAndRotation(start,rotation*Quaternion.AngleAxis(bank,Vector3.forward));
                     root.localScale=Vector3.one*current.scale;
                     visual=new VisibleAttacker{root=root,body=root.Find("Body"),tail=root.Find("Tail"),left=root.Find("FinLeft"),
                         right=root.Find("FinRight"),jaw=root.Find("Jaw"),mouth=root.Find("MouthSocket"),lastPose=current.pose};
@@ -136,7 +142,9 @@ namespace Raid
                     visual.bodyRest=visual.body?visual.body.localScale:Vector3.one;
                     visual.previousPosition=root.position;
                     visual.currentHeading=root.forward;
-                    visual.phase=current.id*2.17f;
+                    visual.phase=stroke;
+                    visual.handoffAt=introducedAt;
+                    visual.arrivingSkin=arrivingSkin;
                     visual.leftRest=visual.left?visual.left.localRotation:Quaternion.identity;
                     visual.rightRest=visual.right?visual.right.localRotation:Quaternion.identity;
                     visual.jawRest=visual.jaw?visual.jaw.localRotation:Quaternion.identity;
@@ -167,7 +175,8 @@ namespace Raid
                     visual.lastPose=current.pose;
                 }
                 UpdateAttackModel(current,visual);
-                bool danger=current.urgency!=DefenseUrgency.None;
+                PresentPromotion(visual);
+                bool danger=current.urgency!=DefenseUrgency.None && visual.handoffAt<0;
                 var local=UI.UiRoot.Instance?.Context?.Player;
                 if(local && current.victim==local.OwnerId)danger=false;
                 if(danger && !visual.signal)visual.signal=DefenseSignal.Attach(visual.root);
@@ -190,6 +199,57 @@ namespace Raid
             }
         }
 
+        void PresentPromotion(VisibleAttacker view)
+        {
+            if(view.handoffAt<0)return;
+            float progress=Mathf.Clamp01((Time.time-view.handoffAt)/DefenseAtmosphereView.HandoffSeconds);
+            promotionBlock??=new MaterialPropertyBlock();
+            foreach(var part in view.arrivingSkin)
+            {
+                if(!part)continue;
+                part.GetPropertyBlock(promotionBlock);
+                promotionBlock.SetFloat(RaidPromotion,progress);
+                part.SetPropertyBlock(promotionBlock);
+            }
+            if(progress>=1)
+            {
+                view.handoffAt=-1;
+                view.arrivingSkin=null;
+            }
+        }
+
+        void PresentDefenseSearchlights(DefenseSnapshot snapshot)
+        {
+            if(!DefenseAlarm)
+            {
+                defenseLighting.Present(false,DefenseCenter,DefenseCenter,DefenseClock,DefenseBlackout);
+                return;
+            }
+            Vector3 primary=DefenseApproachFocus;
+            Vector3 secondary=SampleDefenseSlot(DefenseAtmosphereView.LeadSlots+2).Position;
+            if(snapshot.phase==DefensePhase.Assault)
+            {
+                int firstGroup=int.MaxValue;
+                int flankGroup=int.MaxValue;
+                Vector3 center=DefenseCenter;
+                foreach(var attacker in defenseActors)
+                    if(attacker.group<firstGroup && attacker.pose!=AttackerPose.Retreat)
+                    {
+                        primary=attacker.position;
+                        firstGroup=attacker.group;
+                    }
+                var primaryBearing=Vector3.ProjectOnPlane(primary-center,Vector3.up);
+                foreach(var attacker in defenseActors)
+                    if(attacker.group<flankGroup && attacker.group!=firstGroup && attacker.pose!=AttackerPose.Retreat &&
+                        Vector3.Angle(primaryBearing,Vector3.ProjectOnPlane(attacker.position-center,Vector3.up))>23)
+                    {
+                        secondary=attacker.position;
+                        flankGroup=attacker.group;
+                    }
+            }
+            defenseLighting.Present(DefenseAlarm,primary,secondary,DefenseClock,DefenseBlackout);
+        }
+
         void PresentDefenseAtmosphere(DefenseSnapshot snapshot)
         {
             if(!atmosphere)
@@ -199,16 +259,25 @@ namespace Raid
                 atmosphere=Instantiate(art,transform,false).GetComponent<DefenseAtmosphereView>();
             }
             atmosphere.SetSwarmAge(SwarmAge);
-            atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,DefenseApproachFraction,
-                1-Mathf.InverseLerp(defenseTuning.encirclementSeconds,defenseTuning.encirclementSeconds+11,DefenseCountdown));
-            if(presentedRaid!=snapshot.seed)
+            atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,(float)(DefenseClock-snapshot.assaultAt),
+                defenseTuning.encirclementSeconds,1-Mathf.InverseLerp(defenseTuning.encirclementSeconds,
+                    defenseTuning.encirclementSeconds+11,DefenseCountdown));
+            // The list and the raid mask can be delivered on different network ticks.
+            // Hold a slot until its active model is ready, or until the mask settles.
+            if(committedSlots!=snapshot.promoted)
             {
-                presentedRaid=snapshot.seed;
-                presentedSlots=snapshot.promoted;
+                committedSlots=snapshot.promoted;
+                committedAt=Time.time;
             }
+            ulong transitioning=0;
             foreach(var a in defenseActors)
-                if(a.slot>=0 && visibleAttackers.ContainsKey(a.id))presentedSlots|=1UL<<a.slot;
-            atmosphere.SetPromotedSlots(presentedSlots);
+            {
+                if(a.slot<0 || !visibleAttackers.TryGetValue(a.id,out var view))continue;
+                if(view.handoffAt>=0)transitioning|=1UL<<a.slot;
+                else presentedSlots|=1UL<<a.slot;
+            }
+            if(Time.time-committedAt>.35f)presentedSlots|=committedSlots&~transitioning;
+            atmosphere.SetPromotedSlots(presentedSlots,slotHandoffs);
             atmosphere.Apply(snapshot.seed,(int)snapshot.phase,DefenseAge,DefenseCenter,DefenseConcealment);
         }
 

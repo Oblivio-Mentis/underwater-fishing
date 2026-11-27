@@ -75,28 +75,19 @@ namespace Raid
             DefensePhase.Recovery=>1-Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds),
             _=>0
         };
-        internal Vector3 DefenseApproachFocus
-        {
-            get
-            {
-                var s=Defense;
-                float p=DefenseApproachFraction;
-                return Vector3.Lerp(s.approachStart,s.approachEnd,p*(.23f+.77f*p));
-            }
-        }
+        internal Vector3 DefenseApproachFocus => DefenseActive?SampleDefenseSlot(0).Position:DefenseCenter;
         public Vector3 DefenseCenter => fieldAnchor?fieldAnchor.position:
             NereidVessel.Active?NereidVessel.Active.transform.TransformPoint(new Vector3(0,-1.195f,-2)):tuning.reservoirPoint;
         public double DefenseClock => !NetworkObject || TimeManager==null?Time.timeAsDouble:
             TimeManager.TicksToTime(TimeManager.Tick)+TimeManager.GetTickElapsedAsDouble();
         public float DefenseConcealment => defenseTuning?DefenseBlackout*defenseTuning.concealment:0;
-        float DefenseApproachFraction => Defense.phase==DefensePhase.Warning?0:Defense.phase==DefensePhase.Encirclement
-            ?Mathf.Clamp01(DefenseAge/defenseTuning.encirclementSeconds):1;
 
         DefenseAtmosphereView.OrbitPose SampleDefenseSlot(int slot)
         {
             var snapshot=Defense;
-            return DefenseAtmosphereView.SampleSwimmer(snapshot.seed,slot,SwarmAge,DefenseCenter,
-                snapshot.approachStart,snapshot.approachEnd,DefenseApproachFraction,(int)snapshot.phase,DefenseAge);
+            float approachAge=(float)(DefenseClock-snapshot.assaultAt);
+            return DefenseAtmosphereView.SampleSwimmer(snapshot.seed,slot,approachAge,defenseTuning.encirclementSeconds,
+                DefenseCenter,snapshot.approachStart,snapshot.approachEnd);
         }
 
         void LoadDefenseSettings()
@@ -179,7 +170,9 @@ namespace Raid
             Vector3 extent=fieldView?fieldView.transform.lossyScale:Vector3.one;
             float hullSide=fieldView?fieldView.radii.x*extent.x:10;
             Vector3 higher=center+Vector3.up*(defenseTuning.schoolHeight*extent.y);
-            float finishDistance=Mathf.Max(hullSide+6,defenseTuning.arrivalDistance);
+            var school=DefenseAtmosphereView.Stock;
+            float finishDistance=Mathf.Max(school.orbitRadius,Mathf.Max(hullSide+6,defenseTuning.arrivalDistance));
+            float startDistance=Mathf.Max(finishDistance+48,defenseTuning.schoolTravelDistance+40);
             var observation=vessel.ObservationRoom();
             Vector3 port=WindowSight(-1),starboard=WindowSight(1);
             var markers=SpawnLayout?.defenseApproaches;
@@ -190,7 +183,7 @@ namespace Raid
                 var horizontal=Vector3.ProjectOnPlane(marker.position-center,Vector3.up);
                 if(horizontal.sqrMagnitude<1)continue;
                 var near=higher+horizontal.normalized*finishDistance;
-                var far=near+horizontal.normalized*defenseTuning.schoolTravelDistance+Vector3.up*1.25f;
+                var far=higher+horizontal.normalized*startDistance+Vector3.up*1.25f;
                 if(!Valid(far,near))continue;
                 start=far;end=near;return;
             }
@@ -206,7 +199,7 @@ namespace Raid
                 if(!Valid(far,near))continue;
                 start=far;end=near;return;
             }
-            start=higher+broadside*(finishDistance+defenseTuning.schoolTravelDistance);
+            start=higher+broadside*startDistance;
             end=higher+broadside*finishDistance;
 
             Vector3 WindowSight(int side)
@@ -370,12 +363,17 @@ namespace Raid
             if(Defense.phase==DefensePhase.Assault)
             {
                 int count=DefenseAtmosphereView.SwarmSlotCount;
+                int lead=DefenseAtmosphereView.LeadSlots;
                 for(int i=0;i<count;i++)
                 {
-                    slot=(lane+i)%count;
-                    if((Defense.promoted&(1UL<<slot))!=0)continue;
+                    // The opening group separates from the lead shoal in view of the crew.
+                    // Later waves arise in the reserves wherever there is a clear route.
+                    slot=groupSerial==0
+                        ? i<lead ? (lane+i)%lead : lead+(lane+i-lead)%(count-lead)
+                        : (lane+i)%count;
+                    if((Defense.promoted&(1UL<<slot))!=0 || slot%DefenseAtmosphereView.SpeciesCount!=(int)species)continue;
                     var pose=SampleDefenseSlot(slot);
-                    if(pose.Kind!=(int)species || !NereidVessel.Active.OutsideDefenseHull(pose.Position,pose.Forward,pose.Scale) ||
+                    if(!NereidVessel.Active.OutsideDefenseHull(pose.Position,pose.Forward,pose.Scale) ||
                         !MarineSpawn.InOpenWater(depthTier,pose.Position,.70f) ||
                         !FindPath(pose.Position,FieldContact(pose.Position),out _))continue;
                     point=pose.Position;return true;

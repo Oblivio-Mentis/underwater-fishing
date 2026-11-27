@@ -46,7 +46,7 @@ namespace Raid.Nereid
             }
         }
 
-        public void Present(bool active,Vector3 target,double clock,float darkness=0)
+        public void Present(bool active,Vector3 target,Vector3 flankTarget,double clock,float darkness=0)
         {
             AlarmActive=active;Target=target;
             float flash=.32f+.68f*Mathf.Pow(.5f+.5f*Mathf.Cos((float)(clock%1.4)*Mathf.PI*2/1.4f),1.65f);
@@ -57,7 +57,7 @@ namespace Raid.Nereid
                 lamp.intensity=alarmIntensity*flash;
             }
             float focusSide=transform.InverseTransformPoint(target).x<0?-1:1;
-            Vector3 radial=Vector3.ProjectOnPlane(target-transform.position,Vector3.up).normalized;
+            float flankSide=transform.InverseTransformPoint(flankTarget).x<0?-1:1;
             var eye=UnderwaterLook.Instance?UnderwaterLook.Instance.DiverCamera:Camera.main;
             bool depth=eye && eye.TryGetComponent<UniversalAdditionalCameraData>(out var data) && data.requiresDepthTexture;
             for(int i=0;i<searchlights.Length;i++)
@@ -70,13 +70,14 @@ namespace Raid.Nereid
                 volumes[i].enabled=selected&&depth;
                 float side=i<2?-1:1;
                 Vector3 outward=transform.right*side;
-                float sweep=Mathf.Sin((float)clock*.57f+i*1.76f);
-                Vector3 scan=Quaternion.AngleAxis((i%2==0?-28:34)+sweep*24,Vector3.up)*outward;
-                Vector3 heading=side==focusSide?Vector3.Slerp(scan,radial,i%2==0?.84f:.38f):scan;
-                if(Vector3.Dot(heading,outward)<.14f)heading=(heading+outward*.72f).normalized;
-                Vector3 desired=heading*(searchRange*.72f)+Vector3.up*(3.4f+(i%2)*7+sweep*4);
-                if(side==focusSide && i%2==0 && Vector3.Dot((target-axis.position).normalized,outward)>.22f)
-                    desired=target-axis.position;
+                float sweep=Mathf.Sin((float)clock*(i%2==0?.36f:.51f)+i*1.76f);
+                Vector3 scan=Quaternion.AngleAxis((i%2==0?-28:34)+sweep*22,Vector3.up)*outward;
+                Vector3 desired=scan*(searchRange*.72f)+Vector3.up*(1.8f+(i%2)*8+sweep*4);
+                bool lead=side==focusSide && i%2==0;
+                bool flank=side==flankSide && (focusSide==flankSide ? i%2==1 : i%2==0);
+                Vector3 focus=lead?target:flankTarget;
+                if((lead || flank) && Vector3.Dot((focus-axis.position).normalized,outward)>.22f)
+                    desired=focus-axis.position;
                 if(selected && desired.sqrMagnitude>.01f)
                     axis.rotation=Quaternion.RotateTowards(axis.rotation,Quaternion.LookRotation(desired),turnSpeed*Time.deltaTime);
                 var pos=axis.position;var direction=axis.forward;

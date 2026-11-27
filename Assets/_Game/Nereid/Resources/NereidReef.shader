@@ -13,6 +13,7 @@ Shader "RAID/Nereid Reef"
         _WreckDirection("Wreck length",Vector)=(0,0,1,0)
         _WreckLampOrigin("First worklight",Vector)=(0,0,0,0)
         _PigmentLightCap("Matte pigment light cap",Float)=0
+        [HideInInspector] _RaidPromotion("Raid swimmer appearing", Range(0,1))=1
         [HideInInspector] _EncounterClearance("First-person clearance",Float)=0
         [HideInInspector] _RemoraJaw("Remora jaw and length",Vector)=(0,0,0,0)
         [HideInInspector] _RemoraForward("Remora body direction",Vector)=(0,0,0,0)
@@ -35,7 +36,7 @@ Shader "RAID/Nereid Reef"
             #include "Assets/_Game/Threats/Resources/RemoraStretch.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck, _EncounterClearance;
+            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck, _EncounterClearance, _RaidPromotion;
             float4 _WreckDirection, _WreckLampOrigin;
             float4 _RemoraJaw, _RemoraForward, _RemoraPull;
             CBUFFER_END
@@ -106,11 +107,11 @@ Shader "RAID/Nereid Reef"
                 float3 eye=GetCameraPositionWS();
                 float3 toSurface=i.pos-eye;
                 float d=max(.01,length(toSurface));
-                if(_EncounterClearance>.01)
+                if(_RaidPromotion<.9999 || _EncounterClearance>.01)
                 {
-                    float keep=smoothstep(_EncounterClearance*.70,_EncounterClearance,d);
+                    float keep=_EncounterClearance>.01?smoothstep(_EncounterClearance*.70,_EncounterClearance,d):1;
                     float pattern=frac(52.9829189*frac(dot(floor(i.clip.xy),float2(.06711056,.00583715))));
-                    clip(keep-pattern-.001);
+                    clip(min(keep,_RaidPromotion)-pattern-.001);
                 }
                 float3 view=toSurface/d;
                 // Rift basalt and anything standing in Depth II water loses the surface key
