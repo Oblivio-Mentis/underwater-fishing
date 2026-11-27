@@ -182,6 +182,8 @@ namespace Raid
             var observation=vessel.ObservationRoom();
             if(!observation)throw new InvalidOperationException("The observation hall is absent.");
             var at=observation.TransformPoint(new Vector3(side<0?-4.68f:3.24f,side<0?1.55f:.22f,.55f));
+            if(director.TryDefenseWindow(director.Defense.approachEnd,director.Defense.approachStart,out var window))
+                at=window-Vector3.up*.6f;
             player.Teleport(at);
             float ready=Time.realtimeSinceStartup+.68f;
             do
@@ -369,6 +371,7 @@ namespace Raid
             report.Check(team.hungerRemaining<interval || Mathf.Abs(team.hungerRemaining-interval)<.05f,"The clock restarts with a single next cycle.");
 
             ReportPhase("breach and real theft",report,folder);
+            host.Teleport(Nereid.NereidDeckNavigation.CrewSpawn(host.OwnerId,new Vector3(0,1.2f,1)));
             if(!d.DefenseFixtureBegin(1,team.RequiredFood(world.progression)*2))throw new InvalidOperationException("Failure fixture did not start");
             d.DefenseFixtureForceAssault();
             d.DefenseFixturePauseGroups();

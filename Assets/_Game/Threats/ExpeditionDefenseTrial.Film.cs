@@ -40,22 +40,33 @@ namespace Raid
             host.Teleport(eyeAtWindow-Vector3.up*.60f);
             await Awaitable.WaitForSecondsAsync(.24f);
             var windowFocus=Vector3.Lerp(d.Defense.approachEnd,d.Defense.approachStart,.43f);
+            var camera=host.GetComponentInChildren<Camera>();
+            if(!host.IsInside || Vector3.Distance(camera.transform.position,eyeAtWindow)>.32f)
+                throw new InvalidOperationException($"The diver did not settle at the observation window: eye {camera.transform.position:F2}, expected {eyeAtWindow:F2}");
             await Clip(folder,"01-window",5,host,()=>windowFocus);
 
             ReportPhase("film exterior approach",report,folder);
             Vector3 side=Vector3.Cross(Vector3.up,bearing);
-            bool exterior=false;
-            for(int step=0;step<16;step++)
+            Vector3 exterior=default;
+            int best=0;
+            for(int step=0;step<25;step++)
             {
-                var point=d.DefenseCenter+bearing*(15+step*.9f)+side*(step%2==0?7:-7)+Vector3.up*(2.4f+step*.38f);
+                int port=step%5-2;
+                var point=d.DefenseCenter+bearing*(16+Mathf.Abs(port)*2)+side*(port*5.8f)+Vector3.up*(2.8f+step/5*2.7f);
                 var eye=point+Vector3.up*.6f;
                 if(vessel.ContainsSealed(eye) || !MarineSpawn.InOpenWater(depth,point,.66f) ||
-                    !MarineSpawn.ClearLeg(eye,arrival,.18f,Vector3.Distance(eye,arrival)*.87f))continue;
-                host.Teleport(point);
-                exterior=true;
-                break;
+                    !ClearFrame(eye,arrival))continue;
+                int score=1;
+                if(ClearFrame(eye,arrival+side*14))score++;
+                if(ClearFrame(eye,arrival-side*14))score++;
+                if(ClearFrame(eye,arrival+Vector3.up*13))score++;
+                if(ClearFrame(eye,d.Defense.approachStart))score++;
+                if(score<=best)continue;
+                best=score;
+                exterior=point;
             }
-            if(!exterior)throw new InvalidOperationException("Film needs a clear exterior view of the attack lane");
+            if(best<3)throw new InvalidOperationException("Film needs a clear exterior view of the attack lane");
+            host.Teleport(exterior);
             await Clip(folder,"02-outside",7,host,()=>arrival);
 
             ReportPhase("film shield contact",report,folder);
@@ -72,6 +83,8 @@ namespace Raid
             report.Check(world.CurrentDepth==depth && d.Defense.breached,
                 $"Seed {FilmSeed} on Depth {depth}: window, exterior, contact and breach recorded.");
             report.phase="done";
+
+            bool ClearFrame(Vector3 from,Vector3 to) => MarineSpawn.ClearLeg(from,to,.20f,Vector3.Distance(from,to)-.5f);
         }
 
         static async Awaitable Clip(string root,string name,float duration,DiverMotor host,Func<Vector3> focus)
@@ -99,6 +112,7 @@ namespace Raid
         {
             if(!IsServerInitialized || team==null || tier<1 || tier>2)return false;
             if(CurrentDepth==tier)return true;
+            if(!team.CanVisitDepth(tier))team.teamSkills.Add(SkillTreeDefinition.Id(SkillLine.Hull,1));
             pendingDepth=tier;
             CompleteTravel();
             return CurrentDepth==tier;

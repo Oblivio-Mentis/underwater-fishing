@@ -175,6 +175,9 @@ namespace Raid
             var school=DefenseAtmosphereView.Stock;
             float finishDistance=Mathf.Max(school.orbitRadius,Mathf.Max(hullSide+6,defenseTuning.arrivalDistance));
             float startDistance=Mathf.Max(finishDistance+48,defenseTuning.schoolTravelDistance+40);
+            Vector3 bestStart=higher+broadside*startDistance;
+            Vector3 bestEnd=higher+broadside*finishDistance;
+            float bestScore=-1;
             var markers=SpawnLayout?.defenseApproaches;
             if(markers!=null)for(int i=0;i<markers.Length;i++)
             {
@@ -184,8 +187,7 @@ namespace Raid
                 if(horizontal.sqrMagnitude<1)continue;
                 var near=higher+horizontal.normalized*finishDistance;
                 var far=higher+horizontal.normalized*startDistance+Vector3.up*1.25f;
-                if(!Valid(far,near))continue;
-                start=far;end=near;return;
+                Consider(far,near,.06f);
             }
             for(int height=0;height<3;height++)
             for(int i=0;i<18;i++)
@@ -196,36 +198,53 @@ namespace Raid
                 Vector3 altitude=higher+Vector3.up*(height*2.7f);
                 Vector3 near=altitude+heading*finishDistance-Vector3.up*.12f;
                 Vector3 far=altitude+heading*(startDistance-height*4f)+Vector3.up*1.25f;
-                if(!Valid(far,near))continue;
-                start=far;end=near;return;
+                Consider(far,near,0);
             }
-            start=higher+broadside*startDistance;
-            end=higher+broadside*finishDistance;
+            start=bestStart;
+            end=bestEnd;
 
-            bool Valid(Vector3 far,Vector3 near)
+            void Consider(Vector3 far,Vector3 near,float markerPreference)
             {
-                return MarineSpawn.InOpenWater(depthTier,near,.9f) &&
-                    DefensePathClear(far,near) && TryDefenseWindow(near,far,out _);
+                if(!MarineSpawn.InOpenWater(depthTier,near,.9f) || !DefensePathClear(far,near))return;
+                TryDefenseWindow(near,far,out _,out float opening);
+                float score=opening+markerPreference;
+                if(score<=bestScore)return;
+                bestScore=score;
+                bestStart=far;
+                bestEnd=near;
             }
         }
 
         internal bool TryDefenseWindow(Vector3 near,Vector3 far,out Vector3 bestEye)
+            => TryDefenseWindow(near,far,out bestEye,out _);
+
+        bool TryDefenseWindow(Vector3 near,Vector3 far,out Vector3 bestEye,out float best)
         {
             bestEye=default;
+            best=0;
             var vessel=NereidVessel.Active;
             var room=vessel?vessel.ObservationRoom():null;
             if(!room)return false;
-            float best=0;
             int side=Vector3.Dot(near-DefenseCenter,vessel.transform.right)<0?-1:1;
             var outward=vessel.transform.right*side;
+            var forward=room.forward;
             for(int index=1;index<=3;index++)
             {
                 var window=room.Find((side<0?"Port":"Starboard")+" observation window "+index);
                 if(!window)continue;
-                Vector3 eye=window.position-outward*1.24f+vessel.transform.up*.38f;
+                Vector3 aboveDeck=window.position-outward*1.22f+Vector3.up*.6f;
+                if(!Physics.Raycast(aboveDeck,Vector3.down,out var deck,4,obstacleMask,QueryTriggerInteraction.Ignore) ||
+                    !deck.collider.transform.IsChildOf(room) || deck.normal.y<.8f)continue;
+                // The standing view is 0.60 m above the diver's centred 1.80 m capsule.
+                Vector3 eye=deck.point+Vector3.up*1.51f;
                 if(!vessel.ContainsSealed(eye) || !WindowRay(window,eye,outward,near,out float nearScore) ||
                     !WindowRay(window,eye,outward,far,out float farScore))continue;
-                float score=nearScore*.65f+farScore*.35f;
+                Vector3 centre=Vector3.Lerp(near,far,.45f);
+                float roomToEitherSide=0;
+                if(WindowRay(window,eye,outward,centre-forward*15,out _))roomToEitherSide+=.46f;
+                if(WindowRay(window,eye,outward,centre+forward*15,out _))roomToEitherSide+=.46f;
+                if(WindowRay(window,eye,outward,centre+Vector3.up*11,out _))roomToEitherSide+=.28f;
+                float score=nearScore*.65f+farScore*.35f+roomToEitherSide;
                 if(score<=best)continue;
                 best=score;
                 bestEye=eye;
