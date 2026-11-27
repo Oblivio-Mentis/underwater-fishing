@@ -4,7 +4,7 @@ Shader "RAID/Defense/Impact shards"
     {
         _ShardTint("Displaced field fragments", Color) = (.46,.90,.96,1)
         [HideInInspector] _FieldState("Field state", Vector) = (1,1,0,0)
-        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (2.52,1.28,4.88,0)
+        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
         [HideInInspector] _Impact0("Impact 0", Vector) = (0,0,0,3)
         [HideInInspector] _Impact1("Impact 1", Vector) = (0,0,0,3)
         [HideInInspector] _Impact2("Impact 2", Vector) = (0,0,0,3)
@@ -36,15 +36,18 @@ Shader "RAID/Defense/Impact shards"
                 float4 impact = a.seed.y < .5 ? _Impact0 : a.seed.y < 1.5 ? _Impact1 : _Impact2;
                 float seed = a.seed.x;
                 float t = saturate((impact.w - Hash(seed + 6.1) * .072) / (.30 + Hash(seed + 3.8) * .36));
-                float3 axis = normalize(impact.xyz + float3(.0001,.0003,.0001));
-                float3 normal = normalize(axis / _FieldRadii.xyz);
+                float3 axis = dot(impact.xyz,impact.xyz) > .0001 ? impact.xyz : float3(0,-1,0);
+                float2 p2 = axis.xz * axis.xz;
+                float horizontal4 = max(.0001, pow(dot(p2*p2,p2), 2.0/3.0));
+                float3 slope = float3(p2.x*p2.x*axis.x / horizontal4, axis.y, p2.y*p2.y*axis.z / horizontal4);
+                float3 normal = normalize(slope / _FieldRadii.xyz);
                 float3 tangent = normalize(cross(abs(normal.y) > .92 ? float3(1,0,0) : float3(0,1,0), normal));
                 float3 bitangent = cross(normal, tangent);
                 float angle = Hash(seed + 1.3) * 6.283185;
                 float3 radial = tangent * cos(angle) + bitangent * sin(angle);
                 float breach = 1 - smoothstep(0,.18,_FieldState.x);
                 float reach = (1 - exp2(-t * 3.3)) * (.28 + .94 * Hash(seed + 7.4)) * (1 + breach * .7);
-                float3 center = axis * _FieldRadii.xyz + radial * reach + normal * (.03 + .35 * t);
+                float3 center = axis * _FieldRadii.xyz + float3(0,_FieldRadii.w,0) + radial * reach + normal * (.03 + .35 * t);
                 center.y += .45 * t * t;
                 float size = (.019 + Hash(seed + 0.7) * .043) * (1 - .68 * t);
                 float3 spin = radial * a.shape.x + bitangent * a.shape.y + normal * a.shape.z;

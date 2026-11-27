@@ -6,10 +6,11 @@ Shader "RAID/Defense/Containment membrane"
         _WarningTint("Critical field", Color) = (.98,.32,.10,1)
         _GridScale("Cells per metre", Range(.5,3)) = 1.4
         _BodyOpacity("Surface opacity", Range(0,.24)) = .045
-        _RimOpacity("Rim opacity", Range(0,.65)) = .23
-        _CellOpacity("Lattice opacity", Range(0,.4)) = .081
+        _RimOpacity("Rim opacity", Range(0,.65)) = .32
+        _SillCharge("Sill illumination", Range(0,.45)) = .24
+        _CellOpacity("Lattice opacity", Range(0,.4)) = .054
         [HideInInspector] _FieldState("Integrity, formation, recovery", Vector) = (1,1,0,0)
-        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (2.52,1.28,4.88,0)
+        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
         [HideInInspector] _BreakAxis("Breach direction", Vector) = (0,-1,0,0)
         [HideInInspector] _Impact0("Impact 0", Vector) = (0,0,0,3)
         [HideInInspector] _Impact1("Impact 1", Vector) = (0,0,0,3)
@@ -32,16 +33,17 @@ Shader "RAID/Defense/Containment membrane"
             CBUFFER_START(UnityPerMaterial)
             half4 _FieldTint, _WarningTint;
             float4 _FieldState, _FieldRadii, _BreakAxis, _Impact0, _Impact1, _Impact2;
-            float _GridScale, _BodyOpacity, _RimOpacity, _CellOpacity;
+            float _GridScale, _BodyOpacity, _RimOpacity, _CellOpacity, _SillCharge;
             CBUFFER_END
             float3 _NereidReefClarity;
 
-            struct Attributes { float3 positionOS : POSITION; };
+            struct Attributes { float3 positionOS : POSITION; float3 normalOS : NORMAL; };
             struct Interpolators
             {
                 float4 positionCS : SV_POSITION;
                 float3 unit : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
+                float3 normalWS : TEXCOORD2;
             };
 
             Interpolators Vert(Attributes v)
@@ -53,6 +55,7 @@ Shader "RAID/Defense/Containment membrane"
                 float worn = 1 - smoothstep(.04,.68,_FieldState.x);
                 p *= 1 + interference * worn * .022;
                 o.unit = v.positionOS;
+                o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.positionWS = TransformObjectToWorld(p);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 return o;
@@ -95,14 +98,14 @@ Shader "RAID/Defense/Containment membrane"
 
             half4 Frag(Interpolators i, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
             {
-                float3 unit = normalize(i.unit);
-                float3 local = unit * _FieldRadii.xyz;
+                float3 unit = i.unit;
+                float3 local = unit * _FieldRadii.xyz + float3(0,_FieldRadii.w,0);
                 float3 fromCamera = i.positionWS - GetCameraPositionWS();
                 float d2 = max(dot(fromCamera, fromCamera), .0001);
                 float3 direction = fromCamera * rsqrt(d2);
-                float3 n = TransformObjectToWorldNormal(unit);
+                float3 n = normalize(i.normalWS);
                 float rim = pow(1 - abs(dot(n, direction)), 2.4);
-                float front = IS_FRONT_VFACE(face, 1.0, .50);
+                float front = IS_FRONT_VFACE(face, 1.0, .38);
                 float3 facets = pow(abs(unit), 5);
                 facets /= max(.001, facets.x + facets.y + facets.z);
                 float3 panels = local * _GridScale;
@@ -124,8 +127,8 @@ Shader "RAID/Defense/Containment membrane"
                 float2 hit = saturate(Hit(unit,_Impact0) + Hit(unit,_Impact1) + Hit(unit,_Impact2));
 
                 // Assembly sweeps out from the hull. On breach the lattice fragments from the impact.
-                float relativeHeight = .50 - .50 * unit.y;
-                float fray = lerp(relativeHeight, .5 + dot(unit, _BreakAxis.xyz) * .49,
+                float relativeHeight = -unit.y;
+                float fray = lerp(relativeHeight, .5 + dot(normalize(unit), normalize(_BreakAxis.xyz)) * .49,
                     1 - _FieldState.z);
                 float threshold = lerp(fray, patch, .23);
                 float mask = smoothstep(threshold - .10, threshold + .05, formation * 1.16 - .10);
@@ -134,14 +137,19 @@ Shader "RAID/Defense/Containment membrane"
                     * (1 - smoothstep(.83,.99,formation)) * smoothstep(.015,.16,formation);
                 float baseOpacity = _BodyOpacity + _RimOpacity * rim + grid * _CellOpacity * (.48 + .52 * flow);
                 baseOpacity *= unstable * lerp(1,.72,critical);
-                float accent = hit.x * .36 + hit.y * (.073 + grid * .29) + arc * .34 + assembly * (.13 + grid * .22);
+                float sillDepth = -unit.y * _FieldRadii.y;
+                float sill = exp2(-sillDepth * sillDepth * 27);
+                float feed = .63 + .37 * pow(saturate(.55 + .45 * sin(local.z * 2.8 + local.x * .38 - _Time.y * 1.85)),3);
+                float sillPower = sill * feed * _SillCharge * lerp(1,.66,critical);
+                float accent = hit.x * .36 + hit.y * (.073 + grid * .29) + arc * .34
+                    + assembly * (.13 + grid * .22) + sillPower;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * front * contrast);
 
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
                 half3 radiance = pigment * (.43 + rim * .38 + grid * .22 + flow * .15)
-                    + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 1.48 + hit.y * .65 + assembly * .68 + arc);
+                    + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 1.48 + hit.y * .65 + assembly * .68 + arc + sillPower * 2.4);
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }

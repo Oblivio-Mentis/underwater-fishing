@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace Raid.Nereid.Editor
 {
-    public static class DefenseFieldAuthoring
+    public static partial class DefenseFieldAuthoring
     {
         const string AssetRoot = "Assets/_Game/Nereid/DefenseShield";
         const string PrefabRoot = AssetRoot + "/Resources/DefenseShield";
@@ -25,7 +25,7 @@ namespace Raid.Nereid.Editor
 
             Directory.CreateDirectory(PrefabRoot);
             AssetDatabase.Refresh();
-            var membrane = Asset("Containment membrane", Envelope());
+            var membrane = Asset("Hull-conforming membrane", Envelope());
             var housing = Asset("Induction generator", Housing());
             var lens = Asset("Induction ceramic", Lenses());
             var sparks = Asset("Displaced field shards", Shards());
@@ -44,7 +44,8 @@ namespace Raid.Nereid.Editor
             {
                 var view = root.AddComponent<DefenseFieldView>();
                 view.surface = MakeMesh(root.transform, "Field envelope", membrane, fieldMaterial);
-                view.surface.transform.localScale = view.radii;
+                view.surface.transform.localScale = view.EnvelopeScale;
+                view.surface.transform.localPosition = Vector3.up * view.RimHeight;
                 view.sparks = MakeMesh(root.transform, "Local impact fragments", sparks, sparksMaterial);
                 view.sparks.enabled = false;
                 Transform generators = Node(root.transform, "Hull induction generators", Vector3.zero);
@@ -60,6 +61,7 @@ namespace Raid.Nereid.Editor
                     view.generatorLenses[index++] = MakeMesh(mount, "Status glazing and emitter", lens, lensMaterial);
                 }
 
+                Fit(view, generators, housingMaterial);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 AssetDatabase.SaveAssets();
                 Selection.activeObject = prefab;
@@ -176,43 +178,48 @@ namespace Raid.Nereid.Editor
 
         static Mesh Envelope()
         {
-            const int levels = 16, slices = 36;
-            var points = new List<Vector3> {Vector3.up};
-            var triangles = new List<int>();
-            for (int level = 1; level < levels; level++)
+            const int levels = 14, slices = 64;
+            var points = new List<Vector3>(levels*slices+1);
+            var normals = new List<Vector3>(points.Capacity);
+            var triangles = new List<int>((levels*2-1)*slices*3);
+            for (int level = 0; level < levels; level++)
             {
-                float latitude = Mathf.PI * level / levels;
+                float angle = Mathf.PI * .5f * level / levels;
+                float radius = Mathf.Cos(angle);
                 for (int ring = 0; ring < slices; ring++)
                 {
-                    float longitude = Mathf.PI * 2 * (ring + (level % 2 == 0 ? .5f : 0)) / slices;
-                    points.Add(new Vector3(Mathf.Sin(latitude) * Mathf.Cos(longitude), Mathf.Cos(latitude),
-                        Mathf.Sin(latitude) * Mathf.Sin(longitude)));
+                    float meridian = Mathf.PI * 2 * ring / slices;
+                    var point = DefenseFieldView.RimDirection(meridian) * radius;
+                    point.y = -Mathf.Sin(angle);
+                    points.Add(point);
+                    normals.Add(DefenseFieldView.UnitNormal(point));
                 }
             }
+
             points.Add(Vector3.down);
-            int end = points.Count - 1;
+            normals.Add(Vector3.down);
+            int pole = points.Count - 1;
             for (int ring = 0; ring < slices; ring++)
             {
                 int next = (ring + 1) % slices;
-                Face(0, 1 + ring, 1 + next);
-                Face(end, end - slices + next, end - slices + ring);
-                for (int level = 0; level < levels - 2; level++)
+                Face(pole, pole - slices + next, pole - slices + ring);
+                for (int level = 0; level < levels - 1; level++)
                 {
-                    int a = 1 + level * slices, b = a + slices;
+                    int a = level*slices, b = a + slices;
                     Face(a + ring, b + ring, a + next);
                     Face(a + next, b + ring, b + next);
                 }
             }
-            var mesh = new Mesh { name = "Containment membrane" };
+            var mesh = new Mesh { name = "Hull-conforming membrane" };
             mesh.SetVertices(points);
-            mesh.SetNormals(points);
+            mesh.SetNormals(normals);
             mesh.SetTriangles(triangles, 0);
             mesh.RecalculateBounds();
             return mesh;
 
             void Face(int a,int b,int c)
             {
-                bool reverse = Vector3.Dot(Vector3.Cross(points[b]-points[a],points[c]-points[a]),points[a]) < 0;
+                bool reverse = Vector3.Dot(Vector3.Cross(points[b]-points[a],points[c]-points[a]),normals[a]) < 0;
                 triangles.Add(a);
                 triangles.Add(reverse ? c : b);
                 triangles.Add(reverse ? b : c);
@@ -323,6 +330,9 @@ namespace Raid.Nereid.Editor
                     Triangle(center+Vector3.up*hy,upperA,upperB,Vector3.up,tint*1.1f);
                 }
             }
+
+            public void Facing(Vector3 a,Vector3 b,Vector3 c,Vector3 d,Vector3 outward,Color tint)
+                => Quad(a,b,c,d,outward,tint);
 
             void Quad(Vector3 a,Vector3 b,Vector3 c,Vector3 d,Vector3 outward,Color tint)
             {
