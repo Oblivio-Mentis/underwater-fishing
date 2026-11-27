@@ -379,11 +379,20 @@ namespace Raid
                 throw new InvalidOperationException("Could not stage fleeing carriers at the two lateral approaches");
             if(!d.DefenseFixtureSpawn(DefenseSpecies.Remora,false,9,9))
                 throw new InvalidOperationException("Could not stage a remora before failure");
+            float nextRemoraSample=0;
             await Wait(()=>
             {
                 for(int i=0;i<d.DefenseActorCount;i++)
-                    if(d.DefenseActorAt(i).kind==DefenseSpecies.Remora && d.DefenseActorAt(i).pose==AttackerPose.Latch)
-                        return true;
+                {
+                    var actor=d.DefenseActorAt(i);
+                    if(actor.kind!=DefenseSpecies.Remora)continue;
+                    if(Time.realtimeSinceStartup>=nextRemoraSample)
+                    {
+                        nextRemoraSample=Time.realtimeSinceStartup+1.2f;
+                        Debug.Log("[BreachRemora] "+d.DefenseFixtureMotion(actor.id));
+                    }
+                    return actor.pose==AttackerPose.Latch;
+                }
                 return false;
             },"a remora attaches before its supporting field breaks",14);
             d.DefenseFixtureSetIntegrity(0);
