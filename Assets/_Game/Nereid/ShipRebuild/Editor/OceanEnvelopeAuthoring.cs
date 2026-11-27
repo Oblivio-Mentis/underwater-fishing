@@ -146,10 +146,7 @@ namespace Raid.Nereid.Editor
             {
                 string hand=side<0?"Port":"Starboard";
                 var belly=Part(hand+" bathysphere plating",new(side*3,-2,-10),true);
-                foreach(var band in new[]{(0f,.48f,carbon),(.48f,.52f,titanium),(.52f,.78f,teal),(.78f,1f,slate)})
-                    foreach(var span in Bays(Z[0],Z[Z.Length-1],Z))
-                        belly.Surface(band.Item3,1,band.Item1==0?2:1,(u,v)=>Lower(side,Mix(span.start,span.end,u),Mix(band.Item1,band.Item2,v)),
-                        (u,v)=>new Vector3(side*.75f,-.7f,0));
+                PressureBelly(belly,side);
                 var roof=Part(hand+" dorsal ceramic shield",new(side*3,4.6f,-8),true);
                 foreach(var bay in new[]{(Z[0],-30.63f,0f),(-30.63f,-24.74f,4.39f),(-24.74f,-16.24f,3.70f),
                     (-16.24f,-5.55f,0f),(-5.55f,-.45f,2.58f),(-.45f,8.45f,0f),(8.45f,Z[Z.Length-1],0f)})

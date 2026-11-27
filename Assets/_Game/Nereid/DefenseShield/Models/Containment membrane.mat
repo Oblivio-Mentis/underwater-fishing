@@ -26,12 +26,13 @@ Material:
     m_Ints: []
     m_Floats:
     - _BodyOpacity: 0.045
-    - _CellOpacity: 0.081
+    - _CellOpacity: 0.054
     - _GridScale: 1.4
-    - _RimOpacity: 0.23
+    - _RimOpacity: 0.32
+    - _SillCharge: 0.24
     m_Colors:
     - _BreakAxis: {r: 0, g: -1, b: 0, a: 0}
-    - _FieldRadii: {r: 2.52, g: 1.28, b: 4.88, a: 0}
+    - _FieldRadii: {r: 7.13, g: 4.935, b: 4.7, a: 0.885}
     - _FieldState: {r: 1, g: 1, b: 0, a: 0}
     - _FieldTint: {r: 0.17999998, g: 0.72, b: 0.81, a: 1}
     - _Impact0: {r: 0, g: 0, b: 0, a: 3}
