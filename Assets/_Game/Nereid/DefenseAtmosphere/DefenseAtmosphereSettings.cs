@@ -23,6 +23,10 @@ namespace Raid.Nereid
         [Min(10)] public float cloudHeight=23;
         [Min(35)] public float cloudDrawingDistance=64;
         [Range(.1f,.48f)] public float cloudOrbitSpeed=.12f;
+        [Header("Suspended sediment")]
+        [Range(0f,.32f)] public float currentOpacity=.20f;
+        [Min(4f)] public float currentLength=23f;
+        [Min(1f)] public float currentHeight=5.8f;
         public Material silhouetteMaterial;
         [Tooltip("Rammer, Remora, Thief, Abductor, Stalker. Use vertex colours and two submeshes, pigment then eyes.")]
         public Mesh[] silhouetteMeshes = new Mesh[5];

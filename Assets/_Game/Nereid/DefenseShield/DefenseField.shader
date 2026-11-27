@@ -11,7 +11,7 @@ Shader "RAID/Defense/Containment membrane"
         _CellOpacity("Lattice opacity", Range(0,.4)) = .125
         [HDR] _PipeGlowTint("Pipe seal glow", Color) = (.15,1.05,1.28,1)
         _PipeBandWidth("Pipe seal width", Range(.018,.22)) = .065
-        [HideInInspector] _FieldState("Integrity, formation, recovery", Vector) = (1,1,0,0)
+        [HideInInspector] _FieldState("Integrity, formation, recovery, breach age", Vector) = (1,1,0,-1)
         [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.585,4.70,.885)
         [HideInInspector] _BreakAxis("Breach direction", Vector) = (0,-1,0,0)
         [HideInInspector] _Impact0("Impact 0", Vector) = (0,0,0,3)
@@ -56,6 +56,14 @@ Shader "RAID/Defense/Containment membrane"
                 return length(local - contact.xyz) / max(.06, contact.w);
             }
 
+            float BreachFront(float3 unit)
+            {
+                float3 span=(_BreakAxis.xyz-unit)*_FieldRadii.xyz;
+                float distance=length(span)/max(.001,length(_FieldRadii.xyz)*1.62);
+                float progress=saturate((_FieldState.w-.045)/.955);
+                return distance-(-.025+progress*(1.30+.10*progress));
+            }
+
             Interpolators Vert(Attributes v)
             {
                 Interpolators o;
@@ -71,10 +79,13 @@ Shader "RAID/Defense/Containment membrane"
                     contactHold = max(contactHold, (1-smoothstep(.75,1.8,distance))*_RaiderPressures[index]);
                 }
                 p *= 1 + interference * worn * lerp(.022,.005,contactHold);
-                float breakup = (1-step(.001,_FieldState.x)) * (1-_FieldState.z);
-                float scanId = floor(p.y*13+p.z*4.2);
-                float slip = sin(scanId*5.719+floor(_Time.y*19)*2.17);
-                p.xz += float2(slip,-slip*.54)*(.034*breakup) * step(.34,abs(slip));
+                if(_FieldState.w>=0)
+                {
+                    float lead=BreachFront(v.positionOS);
+                    float slip=sin(floor(local.y*3.6+local.z*1.72)*4.16+floor(_Time.y*23)*2.26);
+                    float load=exp2(-lead*lead*940)*smoothstep(.015,.12,_FieldState.w);
+                    p.xz+=float2(slip,-slip*.54)*(.013*load);
+                }
                 o.unit = v.positionOS;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.positionWS = TransformObjectToWorld(p);
@@ -198,14 +209,24 @@ Shader "RAID/Defense/Containment membrane"
                 float assemblyEdge = (threshold - formation * 1.16 + .10) * 13;
                 float assembly = exp2(-assemblyEdge * assemblyEdge)
                     * (1 - smoothstep(.83,.99,formation)) * smoothstep(.015,.16,formation);
-                float breakup = (1-step(.001,integrity)) * (1-_FieldState.z);
-                float pulseTime=floor(travel*19);
-                float tear=HashCell(float3(floor(local.z*4.8),floor(local.y*12),pulseTime));
-                float block=HashCell(float3(floor(local.x*3),floor(local.z*3.8),floor(local.y*5)+pulseTime*.07));
-                float fracture=step(lerp(.20,.89,1-formation),lerp(tear,block,.46));
-                float fault=breakup*LinearTrace(local.y*7+travel*2.3+floor(local.z*1.6)*.023)
-                    * (.25+.75*tear)*(.2+.80*grid);
-                mask*=lerp(1,fracture,breakup);
+                float fault=0;
+                float afterglow=0;
+                if(_FieldState.w>=0)
+                {
+                    float lead=BreachFront(unit)+(patch-.5)*.04+
+                        .019*sin(local.z*2.3+local.y*2.1+local.x*.91);
+                    float survived=smoothstep(-.020,.017,lead);
+                    float crest=exp2(-lead*lead*2750);
+                    float skips=.47+.53*smoothstep(.21,.82,flutter);
+                    float split=LinearTrace(local.y*4.1+local.z*2.2+
+                        sin(local.x*9.8+local.z*3.7)*.3);
+                    fault=crest*skips*(.31+grid*.59+split*.35)*
+                        smoothstep(.02,.115,_FieldState.w)*(1-smoothstep(.74,1,_FieldState.w));
+                    float discarded=smoothstep(-.13,-.030,lead)*(1-survived);
+                    afterglow=discarded*grid*.34*skips*(1-smoothstep(.78,1,_FieldState.w));
+                    mask=saturate(survived+fault*.48+afterglow);
+                    assembly=0;
+                }
                 float band=pow(saturate(.52+.48*sin(local.y*1.6-local.z*.49+local.x*.29+travel*1.13)),8);
                 float baseOpacity = _BodyOpacity + _RimOpacity * rim + grid * _CellOpacity * (.41 + .40 * flow + .49*band) + band*.012;
                 baseOpacity *= unstable * lerp(1,.72,critical);
@@ -218,7 +239,7 @@ Shader "RAID/Defense/Containment membrane"
                 float contact = grip.x*(.14+.32*grid)+grip.y*.26;
                 float joint = 1-smoothstep(1.0005,1.0105,abs(unit.z));
                 float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34 + surge*.26
-                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + contact + fault*.68;
+                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + contact + fault*.51 + afterglow*.25;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * joint * front * contrast);
@@ -227,7 +248,8 @@ Shader "RAID/Defense/Containment membrane"
                 half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
                     + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 2.3 + hit.y * 1.18 + assembly * .68 + arc + sillPower * 2.4)
                     + _PipeGlowTint.rgb*(seal*1.3+grip.x*(.3+.58*grid)+grip.y*.65)
-                    + lerp(half3(.18,1,1.6),half3(1.4,.22,.54),tear)*fault*2.9;
+                    + lerp(half3(.28,.89,1.10),half3(1.25,.39,.11),patch)*fault*1.9
+                    + half3(.12,.69,.85)*afterglow;
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }

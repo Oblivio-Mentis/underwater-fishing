@@ -138,7 +138,7 @@ namespace Raid.Nereid
                     var heading=pose.Forward;
                     batch.points[i]=new Vector4(position.x,position.y,position.z,pose.Scale);
                     batch.headings[i]=new Vector4(heading.x,heading.y,heading.z,pose.Bank*Mathf.Deg2Rad);
-                    batch.motion[i]=SampleStroke(raidSeed,slot+SlotCapacity,pose,age);
+                    batch.motion[i]=SampleStroke(raidSeed,slot+SlotCapacity,pose,age,approach);
                 }
                 for(int pass=0;pass<batch.properties.Length;pass++)
                 {
@@ -169,6 +169,10 @@ namespace Raid.Nereid
             if(glowHaze)Destroy(glowHaze);
         }
 
-        void OnDestroy()=>DisposeCloud();
+        void OnDestroy()
+        {
+            DisposeCloud();
+            DisposeCurrents();
+        }
     }
 }

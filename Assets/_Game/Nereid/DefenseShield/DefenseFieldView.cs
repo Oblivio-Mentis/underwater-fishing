@@ -215,7 +215,8 @@ namespace Raid.Nereid
         }
 
         /// <summary>Present the server's field state and most recent impact, with age in seconds.</summary>
-        public void Apply(float integrity01, float formation01, int impactSequence, Vector3 impactWorldPoint, float impactAge, float impactStrength = 1)
+        public void Apply(float integrity01, float formation01, int impactSequence, Vector3 impactWorldPoint,
+            float impactAge, float impactStrength = 1, float breachProgress = -1)
         {
             if (!surface) return;
 
@@ -260,7 +261,7 @@ namespace Raid.Nereid
 
             state ??= new MaterialPropertyBlock();
             state.Clear();
-            state.SetVector(FieldState, new Vector4(integrity01, formation01, recovering, 0));
+            state.SetVector(FieldState, new Vector4(integrity01, formation01, recovering, breachProgress));
             state.SetVector(FieldRadii, new Vector4(dimensions.x, dimensions.y, dimensions.z, RimHeight));
             state.SetVector(ImpactPower, new Vector4(impactPowers[0],impactPowers[1],impactPowers[2],0));
             state.SetVectorArray(ImpactNormals,impactNormals);

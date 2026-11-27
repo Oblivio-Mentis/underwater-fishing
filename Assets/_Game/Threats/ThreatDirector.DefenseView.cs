@@ -95,7 +95,9 @@ namespace Raid
                     :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.65f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
                 PresentShieldContacts(field);
-                field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
+                float breach=snapshot.breached && snapshot.phase!=DefensePhase.Recovery?Mathf.Clamp01(DefenseAge/1.65f):-1;
+                field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),
+                    snapshot.impactStrength,breach);
                 if(defenseLighting)PresentDefenseSearchlights(snapshot);
             }
             PresentRaidPressure(snapshot,field);

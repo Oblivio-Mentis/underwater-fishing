@@ -175,8 +175,6 @@ namespace Raid
             var school=DefenseAtmosphereView.Stock;
             float finishDistance=Mathf.Max(school.orbitRadius,Mathf.Max(hullSide+6,defenseTuning.arrivalDistance));
             float startDistance=Mathf.Max(finishDistance+48,defenseTuning.schoolTravelDistance+40);
-            var observation=vessel.ObservationRoom();
-            Vector3 port=WindowSight(-1),starboard=WindowSight(1);
             var markers=SpawnLayout?.defenseApproaches;
             if(markers!=null)for(int i=0;i<markers.Length;i++)
             {
@@ -204,21 +202,57 @@ namespace Raid
             start=higher+broadside*startDistance;
             end=higher+broadside*finishDistance;
 
-            Vector3 WindowSight(int side)
-            {
-                Vector3 outward=vessel.transform.right*side;
-                var window=observation?observation.Find(side<0?"Port observation window 2":"Starboard observation window 2"):null;
-                var eye=window?window.position:higher;
-                return eye+outward*(hullSide+1.5f-Vector3.Dot(eye-center,outward));
-            }
-
             bool Valid(Vector3 far,Vector3 near)
             {
-                Vector3 glass=Vector3.Dot(near-center,vessel.transform.right)<0?port:starboard;
                 return MarineSpawn.InOpenWater(depthTier,near,.9f) &&
-                    !Physics.CheckSphere(glass,.35f,obstacleMask,QueryTriggerInteraction.Ignore) &&
-                    DefensePathClear(far,near) && DefensePathClear(glass,near) && DefensePathClear(glass,far);
+                    DefensePathClear(far,near) && TryDefenseWindow(near,far,out _);
             }
+        }
+
+        internal bool TryDefenseWindow(Vector3 near,Vector3 far,out Vector3 bestEye)
+        {
+            bestEye=default;
+            var vessel=NereidVessel.Active;
+            var room=vessel?vessel.ObservationRoom():null;
+            if(!room)return false;
+            float best=0;
+            int side=Vector3.Dot(near-DefenseCenter,vessel.transform.right)<0?-1:1;
+            var outward=vessel.transform.right*side;
+            for(int index=1;index<=3;index++)
+            {
+                var window=room.Find((side<0?"Port":"Starboard")+" observation window "+index);
+                if(!window)continue;
+                Vector3 eye=window.position-outward*1.24f+vessel.transform.up*.38f;
+                if(!vessel.ContainsSealed(eye) || !WindowRay(window,eye,outward,near,out float nearScore) ||
+                    !WindowRay(window,eye,outward,far,out float farScore))continue;
+                float score=nearScore*.65f+farScore*.35f;
+                if(score<=best)continue;
+                best=score;
+                bestEye=eye;
+            }
+            return best>0;
+        }
+
+        bool WindowRay(Transform window,Vector3 eye,Vector3 outward,Vector3 target,out float score)
+        {
+            score=0;
+            Vector3 ray=target-eye;
+            float outwardTravel=Vector3.Dot(ray,outward);
+            if(outwardTravel<4)return false;
+            float intercept=Vector3.Dot(window.position-eye,outward)/outwardTravel;
+            var local=window.InverseTransformPoint(eye+ray*intercept);
+            if(Mathf.Abs(local.y)>1.26f || Mathf.Abs(local.z)>1.57f)return false;
+
+            int count=Physics.RaycastNonAlloc(eye,ray.normalized,escapeSightHits,ray.magnitude-.45f,
+                obstacleMask,QueryTriggerInteraction.Ignore);
+            if(count==escapeSightHits.Length)return false;
+            for(int index=0;index<count;index++)
+            {
+                var surface=escapeSightHits[index].collider;
+                if(!IsObservationGlass(surface.transform) && !surface.GetComponentInParent<DiverMotor>())return false;
+            }
+            score=1-.36f*Mathf.Abs(local.y)-.23f*Mathf.Abs(local.z);
+            return true;
         }
 
         void SetDefenseMessage(string text)

@@ -179,6 +179,14 @@ namespace Raid.Nereid
                     angle+=Mathf.SmoothStep(0,1,t)*.11f*Mathf.Sin(bankAge*.17f+phase);
                 }
                 height=level+profile.heightVariation*tier+1.55f*Mathf.Sin(bankAge*.34f+phase);
+                if(wing)
+                {
+                    // The fast pod peels into three offset runs before the server takes over.
+                    float fork=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-4.9f,-.35f,age));
+                    int split=(int)(key%3)-1;
+                    scatter+=split*5.6f*fork;
+                    height+=(1.5f-split*1.35f)*fork;
+                }
             }
             float spacing=wing?Mathf.SmoothStep(.25f,1,Mathf.InverseLerp(.65f,3.3f,Mathf.Abs(age))):1;
             radial+=(individual+Mathf.Sin(age*.77f+Unit(key+59)*Tau)*(distant?2.4f:.66f))*spacing;
@@ -316,9 +324,10 @@ namespace Raid.Nereid
             float agedApproach = approachAge+interpolation;
             float retreat = phase>=4?retreatElapsed+interpolation:0;
 
-            if (phase == 0){HideSwarm();HideCloud();return;}
+            if (phase == 0){HideSwarm();HideCloud();HideCurrents();return;}
             BindAssets();
             PresentCloud(profile,orbitAge,agedApproach,retreat);
+            PresentCurrents(profile,agedApproach,retreat);
             float reveal = phase == 1 ? Mathf.SmoothStep(0,1,warningReveal)
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
             if (!material || reveal < .02f){HideSwarm();return;}
@@ -365,7 +374,7 @@ namespace Raid.Nereid
                     var block=blocks[pose.Kind,surface];
                     float handoff=handoffs!=null && handoffs[i]>0?Mathf.Clamp01((Time.time-handoffs[i])/HandoffSeconds):0;
                     block.SetFloat(Handoff,handoff);
-                    block.SetVector(Motion,SampleStroke(raidSeed,i,pose,orbitAge));
+                    block.SetVector(Motion,SampleStroke(raidSeed,i,pose,orbitAge,agedApproach));
                     swimmer.SetPropertyBlock(block,surface);
                 }
                 swimmer.enabled=true;
@@ -373,13 +382,17 @@ namespace Raid.Nereid
             }
         }
 
-        internal static Vector4 SampleStroke(int seed,int slot,OrbitPose pose,float age)
+        internal static Vector4 SampleStroke(int seed,int slot,OrbitPose pose,float age,float approachTime=float.NegativeInfinity)
         {
             uint key=SlotKey(seed,slot);
             float rhythm=SwimBeat[pose.Kind]*Mathf.Lerp(.84f,1.16f,Unit(key+71));
             float stroke=age*rhythm+Unit(key+73)*Tau+Mathf.Sin(age*.75f+Unit(key+79)*Tau)*.52f;
             float effort=Mathf.Lerp(.49f,1.03f,Mathf.InverseLerp(.9f,8f,pose.Velocity.magnitude));
-            return new Vector4(stroke,effort,pose.Kind,Mathf.Lerp(.72f,1.08f,Unit(key+83)));
+            float alertCenter=slot<LeadSlots?-3.25f+slot*.17f:-4.40f+Unit(key+97)*1.7f;
+            float flash=approachTime-alertCenter;
+            float recruitment=Mathf.Exp(-(flash*flash)*(slot<LeadSlots?7.5f:18f));
+            return new Vector4(stroke,effort,pose.Kind,Mathf.Lerp(.72f,1.08f,Unit(key+83))+
+                recruitment*(slot<LeadSlots?.67f:.21f));
         }
 
         void HideSwarm()

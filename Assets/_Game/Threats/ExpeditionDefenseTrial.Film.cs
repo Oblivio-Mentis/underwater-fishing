@@ -35,13 +35,12 @@ namespace Raid
             var vessel=Nereid.NereidVessel.Active;
             Vector3 bearing=Vector3.ProjectOnPlane(d.Defense.approachEnd-d.DefenseCenter,Vector3.up).normalized;
             Vector3 arrival=d.DefenseCenter+bearing*55+Vector3.up*3.8f;
-            float broadside=Vector3.Dot(bearing,vessel.transform.right)<0?-1:1;
-            var room=vessel.ObservationRoom();
-            var window=room?room.Find(broadside<0?"Port observation window 2":"Starboard observation window 2"):null;
-            if(!window)throw new InvalidOperationException("Film needs the port or starboard observation window");
-            host.Teleport(window.position-vessel.transform.right*(1.64f*broadside)-Vector3.up*.64f);
+            if(!d.TryDefenseWindow(d.Defense.approachEnd,d.Defense.approachStart,out var eyeAtWindow))
+                throw new InvalidOperationException("No window with a clear line to the approaching shoal");
+            host.Teleport(eyeAtWindow-Vector3.up*.60f);
             await Awaitable.WaitForSecondsAsync(.24f);
-            await Clip(folder,"01-window",5,host,()=>arrival);
+            var windowFocus=Vector3.Lerp(d.Defense.approachEnd,d.Defense.approachStart,.43f);
+            await Clip(folder,"01-window",5,host,()=>windowFocus);
 
             ReportPhase("film exterior approach",report,folder);
             Vector3 side=Vector3.Cross(Vector3.up,bearing);
