@@ -436,6 +436,8 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.16f);
             tool.DefenseFixtureFire();
             await Wait(()=>tool.HasDefenseLine && tool.AttachedContact.defenseId==remora.id,"server validated the shot into the remora",3);
+            report.Check(host.GetComponentInChildren<AudioSource>()==null &&
+                Resources.LoadAll<AudioClip>("FishingAudio").Length==0,"The real harpoon shot loads no fishing audio and creates no emitter.");
             report.Check(d.DefenseActorCount==1,"A harpoon strike does not remove an attached remora on impact.");
             HarpoonShotFx flight=null;
             await Wait(()=>

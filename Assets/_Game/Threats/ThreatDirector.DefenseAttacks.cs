@@ -19,7 +19,7 @@ namespace Raid
         {
             public AttackerSnapshot data;
             public DefenseTuning.Species card;
-            public int cost, slot;
+            public int cost;
             public float vitality, progress, windAim, latchTick, life, rescuePull, gripObstruction;
             public double until, nextRoute, captureUntil, recoilUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
             public bool hasFleeRoute;
@@ -60,7 +60,7 @@ namespace Raid
                     forward=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized,
                     scale=slot>=0?swimmer.Scale:size*card.silhouetteScale,
                     slot=slot,victim=-1,group=group},
-                card=card,cost=cost,vitality=card.health*size,slot=slot,collider=hit,exit=point
+                card=card,cost=cost,vitality=card.health*size,collider=hit,exit=point
             };
             go.transform.localScale=Vector3.one*a.data.scale;
             go.transform.rotation=Quaternion.LookRotation(a.data.forward);

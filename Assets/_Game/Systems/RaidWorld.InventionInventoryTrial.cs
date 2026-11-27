@@ -374,6 +374,7 @@ namespace Raid
             var release=charge.position;
             await WaitRackUi(()=>chargePoses.ContainsKey(charge.serial) && rigShells.ContainsKey(charge.serial),"separate charge motion stream and client shell");
             var chargeShell=rigShells[charge.serial];
+            report.Check(chargeShell.GetComponentInChildren<AudioSource>()==null,"The thrown charge has no fuse or impact audio source.");
             int motionFrames=0;
             Vector3 lastCharge=chargeShell.transform.position;
             float end=Time.unscaledTime+.47f;

@@ -104,7 +104,18 @@ namespace Raid
                     var model=DefenseCreatureAssets.Model(current.kind,transform);
                     if(!model)continue;
                     var root=model.transform;
-                    root.SetPositionAndRotation(current.position,current.forward.sqrMagnitude>.01f?Quaternion.LookRotation(current.forward):Quaternion.identity);
+                    var start=current.position;
+                    var heading=current.forward;
+                    if(current.slot>=0 && (presentedSlots&(1UL<<current.slot))==0)
+                    {
+                        var swimmer=SampleDefenseSlot(current.slot);
+                        if((swimmer.Position-start).sqrMagnitude<3.2f)
+                        {
+                            start=swimmer.Position;
+                            heading=swimmer.Forward;
+                        }
+                    }
+                    root.SetPositionAndRotation(start,heading.sqrMagnitude>.01f?Quaternion.LookRotation(heading):Quaternion.identity);
                     root.localScale=Vector3.one*current.scale;
                     visual=new VisibleAttacker{root=root,body=root.Find("Body"),tail=root.Find("Tail"),left=root.Find("FinLeft"),
                         right=root.Find("FinRight"),jaw=root.Find("Jaw"),mouth=root.Find("MouthSocket"),lastPose=current.pose};
