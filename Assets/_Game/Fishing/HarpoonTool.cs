@@ -635,8 +635,10 @@ namespace Raid
         bool TryHookFriend(HarpoonTool target)
         {
             if (target == null || target == this || !CanTetherParticipant(this) || !CanTetherParticipant(target)) return false;
-            if (HasBallLine || target.HasBallLine || target.HasDefenseLine || HasDefenseLine || TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull) return false;
-            if (target.gameObject.scene != gameObject.scene || Time.unscaledTime < target._friendRefuseUntil) return false;
+            bool rescue=target.Motor.RaidCaptive>0;
+            if (HasBallLine || target.HasBallLine || target.HasDefenseLine || HasDefenseLine || TetherActive || _fish != null ||
+                target.TetherActive || target.AssistTarget != null || target.HandsFull && !rescue) return false;
+            if (target.gameObject.scene != gameObject.scene || !rescue && Time.unscaledTime < target._friendRefuseUntil) return false;
             if (Vector3.Distance(transform.position, target.transform.position) > TetherMaxRange || !FriendLineVisible(target)) return false;
             _friendTarget.Value = target.NetworkObject;
             target._friendSource.Value = NetworkObject;
@@ -657,10 +659,11 @@ namespace Raid
             if (!OwnsFriendTether) return;
             var target = ToolOf(_friendTarget.Value);
             float timeout = Safe(tuning == null ? .35f : tuning.inputTimeout, .35f, .05f, 1);
+            bool rescue=target!=null && target.Motor.RaidCaptive>0;
             if (!CanTetherParticipant(this) || !CanTetherParticipant(target) || target._friendSource.Value != NetworkObject
-                || target.gameObject.scene != gameObject.scene || Time.unscaledTime < target._friendRefuseUntil
+                || target.gameObject.scene != gameObject.scene || !rescue && Time.unscaledTime < target._friendRefuseUntil
                 || Time.unscaledTime >= _friendExpiresAt
-                || Time.unscaledTime - _lastControls > timeout || Time.unscaledTime - target._lastControls > timeout)
+                || Time.unscaledTime - _lastControls > timeout || !rescue && Time.unscaledTime - target._lastControls > timeout)
             { ReleaseOutgoingFriend(); return; }
             Vector3 offset = transform.position - target.transform.position;
             float distance = offset.magnitude;

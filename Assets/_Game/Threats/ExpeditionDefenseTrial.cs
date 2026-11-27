@@ -348,8 +348,11 @@ namespace Raid
                 Physics.SyncTransforms();
                 if(HarpoonTool.AimCast(tool.tuning,eye,host.AimDirection,out var hit))
                 {
-                    sightline=hit.collider.name;
-                    if(hit.collider.GetComponentInParent<DiverMotor>()==guest)tool.DefenseFixtureFire();
+                    var seen=hit.collider.GetComponentInParent<DiverMotor>();
+                    sightline=hit.collider.name+" owner="+(seen?seen.OwnerId:-1)+" guest="+guest.OwnerId+
+                        " captive="+guest.IsTrapped+" shooter slot="+tool.ActiveSlot+" sight="+Vector3.Distance(eye,guest.transform.position).ToString("0.0");
+                    tool.DefenseFixtureWind(false);
+                    if(seen==guest)tool.DefenseFixtureFire();
                 }
                 await Awaitable.NextFrameAsync();
             }
