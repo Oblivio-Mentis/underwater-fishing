@@ -17,6 +17,8 @@ namespace Raid
             public ParticleSystem thrust;
             public DefenseSignal signal;
             public SquidTongueView tongue;
+            public SkinnedMeshRenderer squidSkin;
+            public bool captiveCamera;
             public readonly List<(Transform joint,Quaternion rest,float side,int index)> arms=new();
             public long stolen;
             public AttackerPose lastPose;
@@ -136,6 +138,7 @@ namespace Raid
                     if(current.kind==DefenseSpecies.Abductor)
                     {
                         visual.tongue=SquidTongueView.Attach(root);
+                        visual.squidSkin=root.GetComponent<SkinnedMeshRenderer>();
                         AddArms(visual,visual.left,-1);
                         AddArms(visual,visual.right,1);
                     }
@@ -317,6 +320,14 @@ namespace Raid
             var mouth=view.mouth?view.mouth.position:view.root.TransformPoint(SquidBeak);
             var player=UI.UiRoot.Instance?.Context?.Player;
             bool firstPerson=gripping && player && player.OwnerId==s.victim;
+            if(view.squidSkin && view.captiveCamera!=firstPerson)
+            {
+                view.captiveCamera=firstPerson;
+                var properties=new MaterialPropertyBlock();
+                view.squidSkin.GetPropertyBlock(properties);
+                properties.SetFloat("_EncounterClearance",firstPerson?.91f:0);
+                view.squidSkin.SetPropertyBlock(properties);
+            }
             view.tongue.Present(mouth,Vector3.Lerp(mouth,target,reach),reach,gripping,charge,view.phase,firstPerson);
             if(view.jaw)
                 view.jaw.localRotation=view.jawRest*Quaternion.Euler(gripping?29+wave*4:firing?38:8+charge*34,0,0);

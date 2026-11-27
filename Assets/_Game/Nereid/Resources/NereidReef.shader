@@ -13,6 +13,7 @@ Shader "RAID/Nereid Reef"
         _WreckDirection("Wreck length",Vector)=(0,0,1,0)
         _WreckLampOrigin("First worklight",Vector)=(0,0,0,0)
         _PigmentLightCap("Matte pigment light cap",Float)=0
+        [HideInInspector] _EncounterClearance("First-person clearance",Float)=0
     }
     SubShader
     {
@@ -30,7 +31,7 @@ Shader "RAID/Nereid Reef"
             #include "Assets/_Game/Materials/FacetNormal.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
-            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck;
+            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck, _EncounterClearance;
             float4 _WreckDirection, _WreckLampOrigin;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
@@ -99,6 +100,12 @@ Shader "RAID/Nereid Reef"
                 float3 eye=GetCameraPositionWS();
                 float3 toSurface=i.pos-eye;
                 float d=max(.01,length(toSurface));
+                if(_EncounterClearance>.01)
+                {
+                    float keep=smoothstep(_EncounterClearance*.70,_EncounterClearance,d);
+                    float pattern=frac(52.9829189*frac(dot(floor(i.clip.xy),float2(.06711056,.00583715))));
+                    clip(keep-pattern-.001);
+                }
                 float3 view=toSurface/d;
                 // Rift basalt and anything standing in Depth II water loses the surface key
                 // (sun direction, shadowed shafts, wet gloss). A weak wrap from above keeps forms round.
