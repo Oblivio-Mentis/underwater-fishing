@@ -12,12 +12,12 @@ namespace Raid.Nereid
         [Range(0f,9f)] public float heightVariation = 5.7f;
         [Range(.25f,3f)] public float swimSpeed = 1f;
         [Range(0f,.5f)] public float sizeVariation = .29f;
-        [Min(10f)] public float clearDrawingDistance = 58f;
-        [Min(10f)] public float darkDrawingDistance = 43f;
-        [Min(0f)] public float giveWayDistance = 6f;
+        [Min(10f)] public float clearDrawingDistance = 160f;
+        [Min(10f)] public float darkDrawingDistance = 145f;
         [Range(0f,3f)] public float eyeGlow = 1.35f;
         [Range(100,550)] public int cloudCount=510;
         [Min(20)] public float cloudRadius=37;
+        [Range(1,4)] public float cloudDistanceScale=3;
         [Min(10)] public float cloudHeight=27;
         [Min(35)] public float cloudDrawingDistance=104;
         [Range(.1f,.48f)] public float cloudOrbitSpeed=.23f;

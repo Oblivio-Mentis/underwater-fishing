@@ -125,6 +125,13 @@ namespace Raid
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
             var threats=ThreatDirector.Instance;
+            if(camera)
+            {
+                float range=threats && threats.DefenseActive
+                    ?Nereid.DefenseAtmosphereView.Stock.cloudDrawingDistance*Nereid.DefenseAtmosphereView.Stock.cloudDistanceScale+80
+                    :DiverMotor.NormalViewDistance;
+                if(camera.farClipPlane!=range)camera.farClipPlane=range;
+            }
             float concealment=threats?threats.DefenseConcealment:0;
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
             float dryHaze=(1-wetBlend)*concealment;

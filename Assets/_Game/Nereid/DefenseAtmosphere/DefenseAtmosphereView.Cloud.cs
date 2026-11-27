@@ -126,8 +126,8 @@ namespace Raid.Nereid
             float far=phase==1?Mathf.Lerp(1.46f,1.29f,warningReveal):
                 phase==2?Mathf.Lerp(1.29f,1,Mathf.SmoothStep(0,1,approachFraction)):1;
             float retreat=phase==4?elapsed:phase==5?6+elapsed:0;
-            float fade=phase==1?Mathf.SmoothStep(0,.96f,elapsed/8f):
-                1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(5,11,retreat));
+            float fade=Mathf.SmoothStep(0,1,age/8f)*
+                (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(5,11,retreat)));
             if(fade<.015f){HideCloud();return;}
             for(int kind=0;kind<cloud.Length;kind++)
             {
@@ -140,12 +140,12 @@ namespace Raid.Nereid
                     float tier=Unit(key+21), spin=slot%6==0?-.70f:1;
                     float speed=spin*profile.cloudOrbitSpeed*Mathf.Lerp(.64f,1.34f,Unit(key+3));
                     float azimuth=slot*2.399963f+age*speed+.14f*Mathf.Sin(age*.94f+slot*.67f);
-                    float radius=(profile.cloudRadius*Mathf.Lerp(1.18f,.63f,tier)+Unit(key+9)*12)*far
+                    float radius=(profile.cloudRadius*Mathf.Lerp(1.18f,.63f,tier)+Unit(key+9)*12)*far*profile.cloudDistanceScale
                         +Mathf.Min(73,retreat*7.1f);
                     float x=Mathf.Cos(azimuth),z=Mathf.Sin(azimuth);
                     float surge=Mathf.Sin(azimuth*3+tier*8-age*.36f);
                     float y=Mathf.Lerp(-3.7f,profile.cloudHeight,tier)+surge*3.8f+Unit(key+11)*2;
-                    Vector3 position=center+cross*(x*radius)+primary*(z*(radius+20))+Vector3.up*y;
+                    Vector3 position=center+cross*(x*radius)+primary*(z*(radius+20*profile.cloudDistanceScale))+Vector3.up*y;
                     Vector3 tangent=(cross*(-z)+primary*x)*spin;
                     Vector3 radial=cross*x+primary*z;
                     Vector3 heading=Vector3.Lerp(tangent,phase<=2?-radial:radial,phase<=2?.38f:
@@ -161,7 +161,8 @@ namespace Raid.Nereid
                     block.SetFloat(CloudBatchId,1);
                     block.SetFloat(EyePass,pass);
                     block.SetFloat(Fade,fade);
-                    block.SetFloat(Range,profile.cloudDrawingDistance);
+                    block.SetFloat(Range,profile.cloudDrawingDistance*profile.cloudDistanceScale);
+                    block.SetFloat(CloudDistanceScale,profile.cloudDistanceScale);
                     block.SetFloat(Glow,profile.eyeGlow*1.65f);
                     block.SetVector(Billow,new Vector4(SwimBeat[kind]*1.32f,FinFlex[kind],0,0));
                     block.SetVectorArray(CloudPointsId,batch.points);

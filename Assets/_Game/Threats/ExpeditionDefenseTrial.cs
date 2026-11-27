@@ -258,10 +258,20 @@ namespace Raid
             report.Check(d.DefenseCountdown>44 && d.DefenseCountdown<=45.1f && !d.DefenseAlarm,
                 "The raid begins with a 45-second countdown and the ship awaits the incoming school.");
             await Shot(folder,host,d,d.Defense.approachStart,"01-countdown");
+            await Wait(()=>d.DefenseBlackout>.995f,"cabin night during the countdown",3);
+            var lighting=prefab.GetComponentInChildren<Nereid.NereidDefenseLighting>();
+            await SwarmFrame(folder,host,d,"01-preparation-cabin");
+            float warningGain=lighting.WorkLightGain;
+            float warningHaze=Shader.GetGlobalFloat("_RaidDryHaze");
+            report.Check(d.Defense.phase==DefensePhase.Warning && warningGain<.085f && warningHaze>.32f,
+                $"The dry cabin is already dark during the countdown (work lights {warningGain:F3}, haze {warningHaze:F2}).");
+            var center=d.DefenseCenter;
+            float departureRange=Vector3.ProjectOnPlane(d.Defense.approachStart-center,Vector3.up).magnitude;
+            report.Check(departureRange>=105 && Nereid.DefenseAtmosphereView.Stock.cloudDistanceScale==3,
+                $"The main swarm is three times farther out, and the attack wing starts {departureRange:F0} m from the ship.");
             float interval=team.hungerRemaining;
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"school approach",d.defenseTuning.warningSeconds+4);
             await Awaitable.WaitForSecondsAsync(2f);
-            var lighting=prefab.GetComponentInChildren<Nereid.NereidDefenseLighting>();
             int aimed=0, scanning=0;
             if(lighting)foreach(var lamp in lighting.searchlights)
             {
@@ -295,6 +305,13 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.32f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-encirclement.png"));
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
+            var firstAttacker=d.DefenseActorAt(0);
+            report.Check(firstAttacker.slot>=0 && (d.Defense.promoted&(1UL<<firstAttacker.slot))!=0,
+                "The first active attacker continues from an existing swarm swimmer.");
+            await SwarmFrame(folder,host,d,"03-assault-cabin");
+            report.Check(Mathf.Abs(lighting.WorkLightGain-warningGain)<.02f &&
+                Mathf.Abs(Shader.GetGlobalFloat("_RaidDryHaze")-warningHaze)<.025f,
+                "Cabin work lighting and sea haze stay at the same levels when the assault begins.");
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
             await Wait(()=>d.Defense.impact>0 && d.Defense.Ratio<1,"authentic monster hit",36);

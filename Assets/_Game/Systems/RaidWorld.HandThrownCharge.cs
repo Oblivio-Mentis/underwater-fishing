@@ -143,7 +143,6 @@ namespace Raid
             }
             if(ok)
             {
-                AnnounceRigPulse(hand,0);
                 Publish();
                 ChargeMotion(launched.serial,launched.position,launched.anchor,Channel.Reliable);
             }

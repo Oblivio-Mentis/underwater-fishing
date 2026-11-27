@@ -36,6 +36,8 @@ namespace Raid
         Material inkMaterial;
         MaterialPropertyBlock inkProperties;
         DefenseAtmosphereView atmosphere;
+        ulong presentedSlots;
+        int presentedRaid;
         internal int VisibleDefenseSwarm => atmosphere?atmosphere.VisibleCount:0;
         internal int DefenseCloudCount => atmosphere?atmosphere.CloudCount:0;
         static readonly int InkDensity=Shader.PropertyToID("_Density");
@@ -92,7 +94,6 @@ namespace Raid
                     defenseLighting.Present(DefenseAlarm,focus,DefenseClock,DefenseBlackout);
                 }
             }
-            PresentDefenseAtmosphere(snapshot);
             PresentRaidInk();
             visibleIds.Clear();
             foreach(var current in defenseActors)
@@ -131,6 +132,7 @@ namespace Raid
             foreach(var pair in visibleAttackers)
                 if(!visibleIds.Contains(pair.Key)){Destroy(pair.Value.root.gameObject);retiredViews.Add(pair.Key);}
             foreach(int id in retiredViews)visibleAttackers.Remove(id);
+            PresentDefenseAtmosphere(snapshot);
         }
 
         void PresentDefenseAtmosphere(DefenseSnapshot snapshot)
@@ -142,13 +144,16 @@ namespace Raid
                 atmosphere=Instantiate(art,transform,false).GetComponent<DefenseAtmosphereView>();
             }
             atmosphere.SetSwarmAge(SwarmAge);
-            float approach=snapshot.phase==DefensePhase.Warning?0:snapshot.phase==DefensePhase.Encirclement
-                ?DefenseAge/defenseTuning.encirclementSeconds:1;
-            atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,approach,
+            atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,DefenseApproachFraction,
                 1-Mathf.InverseLerp(defenseTuning.encirclementSeconds,defenseTuning.encirclementSeconds+11,DefenseCountdown));
-            ulong promoted=0;
-            foreach(var a in defenseActors)if(a.slot>=0)promoted|=1UL<<a.slot;
-            atmosphere.SetPromotedSlots(promoted);
+            if(presentedRaid!=snapshot.seed)
+            {
+                presentedRaid=snapshot.seed;
+                presentedSlots=snapshot.promoted;
+            }
+            foreach(var a in defenseActors)
+                if(a.slot>=0 && visibleAttackers.ContainsKey(a.id))presentedSlots|=1UL<<a.slot;
+            atmosphere.SetPromotedSlots(presentedSlots);
             atmosphere.Apply(snapshot.seed,(int)snapshot.phase,DefenseAge,DefenseCenter,DefenseConcealment);
         }
 

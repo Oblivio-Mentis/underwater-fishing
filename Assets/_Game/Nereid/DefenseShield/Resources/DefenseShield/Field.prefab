@@ -2743,6 +2743,7 @@ MonoBehaviour:
   - {fileID: 1839418849076570906}
   alarmIntensity: 58
   searchIntensity: 2150
+  searchRange: 190
   turnSpeed: 96
 --- !u!1 &5190005032399478719
 GameObject:

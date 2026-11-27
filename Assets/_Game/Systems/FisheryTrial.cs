@@ -178,6 +178,7 @@ namespace Raid
             charge.mode="fuse";charge.timer=TechCatalog.Find("charge").interval;charge.anchor=Vector3.zero;
             // Select the normal preserved-fish outcome and leave the world's random stream untouched.
             var stream=UnityEngine.Random.state;
+            int audioSources=FindObjectsByType<AudioSource>().Length;
             try
             {
                 for(int seed=0;;seed++)
@@ -192,6 +193,7 @@ namespace Raid
             finally{UnityEngine.Random.state=stream;}
             var drop=Enumerable.Range(0,world.DroppedCount).Select(world.DroppedAt).FirstOrDefault(x=>x.id==id);
             Check(charge.mode=="spent" && host.Health<hp,"pulse consumes the charge and hurts the nearby diver");
+            Check(FindObjectsByType<AudioSource>().Length==audioSources,"the live explosion creates no audio source");
             Check(drop.id==id && drop.Fish==sample && !sample.IsFreeSwimming && drop.dead && !drop.spoiled,
                 "affected school fish becomes an identifiable corpse and preserves the same catch ID");
             if(peer)

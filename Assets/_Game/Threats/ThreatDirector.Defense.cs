@@ -66,8 +66,7 @@ namespace Raid
         public bool DefenseAlarm => Defense.phase is DefensePhase.Encirclement or DefensePhase.Assault or DefensePhase.Resolution;
         public float DefenseBlackout => Defense.phase switch
         {
-            DefensePhase.Warning=>Mathf.SmoothStep(.14f,.72f,DefenseAge/11f),
-            DefensePhase.Encirclement=>Mathf.SmoothStep(.72f,1,DefenseAge/2.4f),
+            DefensePhase.Warning or DefensePhase.Encirclement=>Mathf.SmoothStep(0,1,SwarmAge/.85f),
             DefensePhase.Assault or DefensePhase.Resolution=>1,
             DefensePhase.Recovery=>1-Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds),
             _=>0
@@ -77,7 +76,7 @@ namespace Raid
             get
             {
                 var s=Defense;
-                float p=s.phase==DefensePhase.Encirclement?Mathf.Clamp01(DefenseAge/defenseTuning.encirclementSeconds):1;
+                float p=DefenseApproachFraction;
                 return Vector3.Lerp(s.approachStart,s.approachEnd,p*(.23f+.77f*p));
             }
         }
@@ -85,20 +84,15 @@ namespace Raid
             NereidVessel.Active?NereidVessel.Active.transform.TransformPoint(new Vector3(0,-1.195f,-2)):tuning.reservoirPoint;
         public double DefenseClock => !NetworkObject || TimeManager==null?Time.timeAsDouble:
             TimeManager.TicksToTime(TimeManager.Tick)+TimeManager.GetTickElapsedAsDouble();
-        public float DefenseConcealment
+        public float DefenseConcealment => defenseTuning?DefenseBlackout*defenseTuning.concealment:0;
+        float DefenseApproachFraction => Defense.phase==DefensePhase.Warning?0:Defense.phase==DefensePhase.Encirclement
+            ?Mathf.Clamp01(DefenseAge/defenseTuning.encirclementSeconds):1;
+
+        DefenseAtmosphereView.OrbitPose SampleDefenseSlot(int slot)
         {
-            get
-            {
-                if(!DefenseActive || !defenseTuning)return 0;
-                float fade=Defense.phase switch
-                {
-                    DefensePhase.Warning=>Mathf.SmoothStep(0,.46f,DefenseAge/defenseTuning.warningSeconds),
-                    DefensePhase.Encirclement=>Mathf.SmoothStep(.46f,1,DefenseAge/Mathf.Max(.1f,defenseTuning.visibilitySeconds)),
-                    _=>1
-                };
-                if(Defense.phase==DefensePhase.Recovery)fade*=1-Mathf.SmoothStep(0,1,Mathf.Clamp01(DefenseAge/defenseTuning.restorationSeconds));
-                return fade*defenseTuning.concealment;
-            }
+            var snapshot=Defense;
+            return DefenseAtmosphereView.SampleSwimmer(snapshot.seed,slot,SwarmAge,DefenseCenter,
+                snapshot.approachStart,snapshot.approachEnd,DefenseApproachFraction,(int)snapshot.phase,DefenseAge);
         }
 
         void LoadDefenseSettings()
@@ -190,10 +184,11 @@ namespace Raid
                 var marker=markers[(i+(seed&int.MaxValue)%markers.Length)%markers.Length];
                 if(!marker)continue;
                 var horizontal=Vector3.ProjectOnPlane(marker.position-center,Vector3.up);
-                if(horizontal.sqrMagnitude<finishDistance*finishDistance)continue;
+                if(horizontal.sqrMagnitude<1)continue;
                 var near=higher+horizontal.normalized*finishDistance;
-                if(!Valid(marker.position,near))continue;
-                start=marker.position;end=near;return;
+                var far=near+horizontal.normalized*defenseTuning.schoolTravelDistance+Vector3.up*1.25f;
+                if(!Valid(far,near))continue;
+                start=far;end=near;return;
             }
             for(int height=0;height<3;height++)
             for(int i=0;i<18;i++)
@@ -221,7 +216,7 @@ namespace Raid
             bool Valid(Vector3 far,Vector3 near)
             {
                 Vector3 glass=Vector3.Dot(near-center,vessel.transform.right)<0?port:starboard;
-                return MarineSpawn.InOpenWater(depthTier,near,.9f) && MarineSpawn.InOpenWater(depthTier,far,.9f) &&
+                return MarineSpawn.InOpenWater(depthTier,near,.9f) &&
                     !Physics.CheckSphere(glass,.35f,obstacleMask,QueryTriggerInteraction.Ignore) &&
                     DefensePathClear(far,near) && DefensePathClear(glass,near) && DefensePathClear(glass,far);
             }
@@ -368,17 +363,17 @@ namespace Raid
         bool TryArrival(int lane,DefenseSpecies species,out Vector3 point,out int slot)
         {
             Vector3 center=DefenseCenter;
-            int count=DefenseAtmosphereView.SwarmSlotCount;
-            if(groupSerial==0 && Defense.phase==DefensePhase.Assault && Defense.approachEnd!=Vector3.zero)
+            if(Defense.phase==DefensePhase.Assault)
             {
+                int count=DefenseAtmosphereView.SwarmSlotCount;
                 for(int i=0;i<count;i++)
                 {
                     slot=(lane+i)%count;
                     if((Defense.promoted&(1UL<<slot))!=0)continue;
-                    var pose=DefenseAtmosphereView.SampleApproach(Defense.seed,slot,SwarmAge,
-                        Defense.approachStart,Defense.approachEnd,1);
+                    var pose=SampleDefenseSlot(slot);
                     if(pose.Kind!=(int)species || !NereidVessel.Active.OutsideDefenseHull(pose.Position,pose.Forward,pose.Scale) ||
-                        !MarineSpawn.InOpenWater(depthTier,pose.Position,.70f) || !FindPath(pose.Position,FieldContact(pose.Position),out _))continue;
+                        !MarineSpawn.InOpenWater(depthTier,pose.Position,.70f) ||
+                        !FindPath(pose.Position,FieldContact(pose.Position),out _))continue;
                     point=pose.Position;return true;
                 }
             }
@@ -389,21 +384,21 @@ namespace Raid
                 {
                     var marker=authored[(i+lane)%authored.Length];
                     if(marker && Vector3.Distance(marker.position,center)>=7 && MarineSpawn.InOpenWater(depthTier,marker.position,.4f) &&
+                        !CrewSeesEscape(marker.position,DefenseAtmosphereView.Stock.darkDrawingDistance) &&
                         ReefHabitats.CanArrive(marker.position,7,12) && FindPath(marker.position,FieldContact(marker.position),out _))
                     {point=marker.position;slot=-1;return true;}
                 }
             }
-            for(int attempt=0;attempt<count;attempt++)
+            // A wave can outlast its available silhouettes. Search for covered approach lanes.
+            for(int attempt=0;attempt<15;attempt++)
             {
-                slot=(lane+attempt)%count;
-                if((Defense.promoted&(1UL<<slot))!=0)continue;
-                var orbit=DefenseAtmosphereView.SampleOrbit(Defense.seed,slot,SwarmAge,center);
-                if(orbit.Kind!=(int)species)continue;
-                point=orbit.Position;
-                if(!NereidVessel.Active.OutsideDefenseHull(point,orbit.Forward,orbit.Scale) ||
-                    Vector3.Distance(point,center)<7 || !MarineSpawn.InOpenWater(depthTier,point,.4f) ||
-                    !ReefHabitats.CanArrive(point,7,12))continue;
-                if(FindPath(point,FieldContact(point),out _))return true;
+                float angle=lane*29+attempt*137.5f;
+                var direction=Quaternion.AngleAxis(angle,Vector3.up)*Vector3.forward;
+                var candidate=center+direction*(27+attempt%3*9)+Vector3.up*(2+attempt%4*1.7f);
+                if(!MarineSpawn.InOpenWater(depthTier,candidate,.7f) ||
+                    CrewSeesEscape(candidate,DefenseAtmosphereView.Stock.darkDrawingDistance) ||
+                    !FindPath(candidate,FieldContact(candidate),out _))continue;
+                point=candidate;slot=-1;return true;
             }
             point=default;slot=-1;
             return false;

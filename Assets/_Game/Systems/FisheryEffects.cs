@@ -52,11 +52,10 @@ namespace Raid
         public static void Play(Vector3 at, byte cue)
         {
             if(cue>=cues.Length)return;
-            if(!Application.isBatchMode)
+            if(cue>=2 && !Application.isBatchMode)
             {
                 if(!cues[cue])cues[cue]=MakeSound(cue);
-                if(cue==1)PlayBlastSound(at,cues[cue]);
-                else AudioSource.PlayClipAtPoint(cues[cue],at,.6f);
+                AudioSource.PlayClipAtPoint(cues[cue],at,.6f);
             }
             if((cue!=1 && cue!=3) || SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)return;
             if(cue==1)
@@ -101,19 +100,6 @@ namespace Raid
             Object.Destroy(go,3f);
         }
 
-        static void PlayBlastSound(Vector3 point,AudioClip clip)
-        {
-            var go=new GameObject("Динамит · звук подводного импульса");
-            go.transform.position=point;
-            var source=go.AddComponent<AudioSource>();
-            source.spatialBlend=1;
-            source.rolloffMode=AudioRolloffMode.Linear;
-            source.minDistance=3.5f;
-            source.maxDistance=29f;
-            source.PlayOneShot(clip,.95f);
-            Object.Destroy(go,clip.length+.1f);
-        }
-
         static void BurstDebris(Vector3 point)
         {
             var go=new GameObject("Динамит · выброс ила и искр");
@@ -144,25 +130,16 @@ namespace Raid
         static AudioClip MakeSound(int cue)
         {
             const int rate=22050;
-            float seconds=cue==1?1.65f:cue==0?.64f:.37f;
+            const float seconds=.37f;
             float[] data=new float[Mathf.CeilToInt(rate*seconds)];
             var random=new System.Random(6083+cue);
             float low=0;
             for(int i=0;i<data.Length;i++)
             {
                 float t=(float)i/rate;
-                float phase=t/seconds, envelope=Mathf.Exp(-phase*(cue==1?5.5f:6f));
+                float envelope=Mathf.Exp(-6*t/seconds);
                 low=Mathf.Lerp(low,(float)random.NextDouble()*2-1,.12f);
-                float sample;
-                if(cue==0) sample=Mathf.Sin(2*Mathf.PI*680*t)*Mathf.Exp(-12*(t%.21f));
-                else if(cue==1)
-                {
-                    float thump=1.15f*Mathf.Sin(2*Mathf.PI*(64*t-12*t*t)) * Mathf.Exp(-3.2f*t);
-                    float crack=(float)(random.NextDouble()*2-1)*Mathf.Exp(-38*t);
-                    float reflection=Mathf.Sin(2*Mathf.PI*39*t)*Mathf.Exp(-5.4f*Mathf.Max(0,t-.18f))*Mathf.Clamp01((t-.18f)*8);
-                    sample=.63f*thump+.60f*crack+.45f*low+.23f*reflection;
-                }
-                else sample=Mathf.Sin(2*Mathf.PI*(cue==2?430:127)*t)*.5f+low*(cue==2?.2f:.9f);
+                float sample=Mathf.Sin(2*Mathf.PI*(cue==2?430:127)*t)*.5f+low*(cue==2?.2f:.9f);
                 data[i]=Mathf.Clamp(sample*envelope*Mathf.Clamp01(t*650),-.98f,.98f);
             }
             var clip=AudioClip.Create("Fishery underwater cue "+cue,data.Length,1,rate,false);

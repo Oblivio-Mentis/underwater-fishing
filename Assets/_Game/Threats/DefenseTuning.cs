@@ -31,13 +31,13 @@ namespace Raid
         [Min(1)] public int lateLossCap=24;
         [Header("Escalation and passes")]
         [Min(.5f)] public float warningSeconds=37, encirclementSeconds=8;
-        [Min(.1f)] public float visibilitySeconds=6.5f, retreatSeconds=4;
+        [Min(.1f)] public float retreatSeconds=4;
         [Min(1)] public float baseBudget=14, lateBudgetCap=96;
         [Range(0,2)] public float appetiteExponent=.54f, crewMultiplier=.34f;
         [Min(1)] public int baseActive=6, activePerExtraDiver=2, maximumActive=14, maximumGroup=5;
         [Min(.1f)] public float firstGroupGap=3.9f, lateGroupGap=2.6f, maximumAssaultSeconds=104;
         [Min(4)] public float arrivalDistance=21, sceneryClearance=.32f;
-        [Min(8)] public float schoolTravelDistance=32;
+        [Min(8)] public float schoolTravelDistance=96;
         [Min(0)] public float schoolHeight=3.7f;
         [Range(0,1)] public float concealment=.85f;
         [Header("Captures")]

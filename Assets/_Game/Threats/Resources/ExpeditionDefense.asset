@@ -22,7 +22,6 @@ MonoBehaviour:
   lateLossCap: 24
   warningSeconds: 37
   encirclementSeconds: 8
-  visibilitySeconds: 6.5
   retreatSeconds: 4
   baseBudget: 14
   lateBudgetCap: 96
@@ -37,7 +36,7 @@ MonoBehaviour:
   maximumAssaultSeconds: 104
   arrivalDistance: 21
   sceneryClearance: 0.32
-  schoolTravelDistance: 32
+  schoolTravelDistance: 96
   schoolHeight: 3.7
   concealment: 0.85
   snatchSeconds: 0.44

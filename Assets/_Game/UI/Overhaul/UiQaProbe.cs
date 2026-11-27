@@ -49,8 +49,7 @@ namespace Raid.UI
             public string fishBehaviour, anglerStage;
             public int fishHookSequence, fishTugSequence, biteSequence, biteVictim;
             public float fishTugStrength, anglerDistance;
-            public bool soloTow,coordinated,reelAudio;
-            public int fishingAudioCues;
+            public bool soloTow,coordinated;
             public bool tetherActive,isPulled;
             public int tetherOwner=-1,tetherTarget=-1;
             public float tetherRefusal;
@@ -473,9 +472,6 @@ namespace Raid.UI
                 snapshot.helperOwner = tool.AssistingDiver == null ? -1 : tool.AssistingDiver.OwnerId;
                 snapshot.assistedOwner = tool.AssistTarget == null ? -1 : tool.AssistTarget.OwnerId;
             }
-            var feel=player==null?null:player.GetComponentInChildren<FishingFeel>();
-            snapshot.fishingAudioCues=feel==null?0:feel.AudioCueCount;
-            snapshot.reelAudio=feel!=null&&feel.ReelAudioPlaying;
             if(world!=null)
             {
                 foreach(var station in ShipConsole.Stations)

@@ -16,7 +16,7 @@ namespace Raid.Nereid
         [SerializeField] internal Light[] alarmLights;
         [Min(0)] public float alarmIntensity=58;
         [Min(0)] public float searchIntensity=2150;
-        [Min(15)] public float searchRange=62;
+        [Min(15)] public float searchRange=190;
         [Min(1)] public float turnSpeed=96;
         readonly Vector4[] origins=new Vector4[LampCount];
         readonly Vector4[] directions=new Vector4[LampCount];
@@ -74,7 +74,7 @@ namespace Raid.Nereid
                 Vector3 scan=Quaternion.AngleAxis((i%2==0?-28:34)+sweep*24,Vector3.up)*outward;
                 Vector3 heading=side==focusSide?Vector3.Slerp(scan,radial,i%2==0?.84f:.38f):scan;
                 if(Vector3.Dot(heading,outward)<.14f)heading=(heading+outward*.72f).normalized;
-                Vector3 desired=heading*42+Vector3.up*(3.4f+(i%2)*7+sweep*4);
+                Vector3 desired=heading*(searchRange*.72f)+Vector3.up*(3.4f+(i%2)*7+sweep*4);
                 if(side==focusSide && i%2==0 && Vector3.Dot((target-axis.position).normalized,outward)>.22f)
                     desired=target-axis.position;
                 if(selected && desired.sqrMagnitude>.01f)

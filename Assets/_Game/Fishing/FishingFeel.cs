@@ -5,7 +5,7 @@ namespace Raid
     // Owned-view feedback for server-confirmed fishing events. Reads replicated sequence
     // counters only; never fires, moves, damages or decides a catch.
     [DisallowMultipleComponent, DefaultExecutionOrder(930)]
-    public sealed partial class FishingFeel : MonoBehaviour
+    public sealed class FishingFeel : MonoBehaviour
     {
         DiverMotor owner;
         HarpoonTool tool;
@@ -25,7 +25,6 @@ namespace Raid
             camera = diver == null ? null : diver.CameraImpulse;
             eye = diver ? diver.GetComponentInChildren<Camera>() : null;
             carriedCount = tool ? tool.CatchCount : 0;
-            if (tool != null) tool.ShotVisual += PlayShotAudio;
             ResetCounters();
         }
 
@@ -69,7 +68,6 @@ namespace Raid
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
 
             bool fighting = fish != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
-            UpdateFishingAudio(fighting, controlling);
             if (fighting && controlling && camera != null)
             {
                 float strain = Mathf.Clamp01(tool.LineTension * .9f + fish.TugStrength * .8f + (fish.SurgeWarning ? .25f : 0));
@@ -88,7 +86,6 @@ namespace Raid
             bool solo = fighting && fish.SoloTow;
             if (solo && !wasSoloTow && controlling)
             {
-                PlayFishingCue(soloClip, fish.tuning.cueVolume);
                 ui.PushFishingPunch(fish.tuning.soloHeavyCameraImpulse * Setting(s => s.fishingCamera));
                 Vector3 toFish = fish.transform.position - owner.transform.position;
                 if (camera != null) camera.Hit(fish.tuning.soloHeavyCameraHit, 1.6f, Mathf.Sign(Vector3.Dot(owner.transform.right, toFish)));
@@ -97,7 +94,6 @@ namespace Raid
             bool coordinated = fighting && fish.Coordinated;
             if (coordinated && !wasCoordinated && controlling)
             {
-                PlayFishingCue(coordinatedClip, fish.tuning.cueVolume);
                 ui.HitMark(UI.UiTheme.Green, .9f);
             }
             else if (!coordinated && wasCoordinated && fighting && fish.RequiresPartner && controlling)
@@ -120,7 +116,6 @@ namespace Raid
                     float hit = Setting(s => s.hitImpulse);
                     ui.PushFishingPunch(6.5f * hit);
                     ui.HitMark(UI.UiTheme.Cyan, 1f);
-                    PlayFishingCue(hookClip, fish.tuning.cueVolume);
                     if (camera != null) camera.Hit(.010f * Mathf.Clamp(fish.power,.5f,3f), 1.1f, 0f);
                 }
             }

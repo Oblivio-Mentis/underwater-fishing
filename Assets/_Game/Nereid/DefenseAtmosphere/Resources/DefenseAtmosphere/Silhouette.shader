@@ -9,6 +9,7 @@ Shader "RAID/Defense/Swarm Silhouette"
         _Range ("Dissolve distance", Float) = 47
         _Billow ("Swim speed and flexibility", Vector) = (5,.22,0,0)
         [HideInInspector] _CloudBatch ("Batched bank", Float) = 0
+        [HideInInspector] _CloudDistanceScale ("Cloud distance scale", Float) = 1
         [HideInInspector] _SrcBlend ("Source blend", Float) = 1
         [HideInInspector] _DstBlend ("Destination blend", Float) = 0
         [HideInInspector] _ZWrite ("Write depth", Float) = 1
@@ -37,7 +38,7 @@ Shader "RAID/Defense/Swarm Silhouette"
             half _EyeGlow, _Fade, _EyePass;
             float _Range;
             float4 _Billow;
-            float _CloudBatch;
+            float _CloudBatch, _CloudDistanceScale;
             float4 _CloudPoints[110], _CloudHeadings[110];
             CBUFFER_END
             float3 _NereidReefClarity;
@@ -90,7 +91,7 @@ Shader "RAID/Defense/Swarm Silhouette"
                         float3 view=normalize(GetCameraPositionWS()-o.world);
                         o.visibility=smoothstep(-.37,.27,dot(view,forward))*smoothstep(-.28,.67,dot(view,o.normal));
                         float travel=distance(o.world,GetCameraPositionWS());
-                        float size=lerp(.20,.82,smoothstep(16,73,travel));
+                        float size=lerp(.20,.82,smoothstep(16,73,travel/_CloudDistanceScale))*_CloudDistanceScale;
                         float3 right=UNITY_MATRIX_I_V._m00_m10_m20;
                         float3 vertical=UNITY_MATRIX_I_V._m01_m11_m21;
                         o.world+=(right*v.bank.y+vertical*v.bank.z)*size+view*.065;
@@ -107,6 +108,8 @@ Shader "RAID/Defense/Swarm Silhouette"
                 float3 delta = i.world - GetCameraPositionWS();
                 float d2 = dot(delta,delta);
                 float distanceToEye = sqrt(d2);
+                float glowDistance = lerp(1,_CloudDistanceScale,_CloudBatch);
+                float glowD2 = d2/(glowDistance*glowDistance);
                 half3 view = -SafeNormalize(delta);
                 half luminous = _EyePass;
                 half limit = 1-smoothstep(_Range*.74,_Range,distanceToEye);
@@ -115,7 +118,7 @@ Shader "RAID/Defense/Swarm Silhouette"
                     float haloRadius=dot(i.halo,i.halo);
                     half falloff=exp2(-8*haloRadius)*.39 + exp2(-46*haloRadius)*1.6;
                     half halo=saturate(1-haloRadius)*falloff*limit*_Fade*i.visibility;
-                    halo*=exp2(-d2*.00017);
+                    halo*=exp2(-glowD2*.00017);
                     return half4(i.pigment*halo*_EyeGlow*(.88+.12*i.beat),0);
                 }
                 // Depth-tested opaque fragments keep the finest brackets behind the hull and window frames.
@@ -134,7 +137,7 @@ Shader "RAID/Defense/Swarm Silhouette"
                 half3 column = WaterColumnColor(-view, _NereidReefClarity.x);
                 half extinction = exp2(-d2 * max(.00042, _NereidReefClarity.x * lerp(.53,.20,_CloudBatch)));
                 half3 shadow = lerp(column * .51, color, max(extinction,search*.76));
-                half eyeFalloff = exp2(-d2 * lerp(.00049,.00020,_CloudBatch));
+                half eyeFalloff = exp2(-glowD2 * lerp(.00049,.00020,_CloudBatch));
                 half3 lamp = i.pigment * _EyeGlow * eyeFalloff * (.91 + .09*i.beat);
                 return half4(lerp(shadow,lamp,luminous),1);
             }

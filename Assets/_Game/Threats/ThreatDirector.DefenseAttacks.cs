@@ -37,12 +37,7 @@ namespace Raid
             float size=Mathf.Lerp(defenseTuning.small,defenseTuning.large,(float)raidRandom.NextDouble());
             if(large || AvailableBudget()>=card.cost+1 && activeRaid.budget>17 && raidRandom.NextDouble()<defenseTuning.titanChance)
                 size=defenseTuning.large*1.16f;
-            var orbit=slot>=0?DefenseAtmosphereView.SampleOrbit(Defense.seed,slot,SwarmAge,DefenseCenter):default;
-            if(slot>=0 && group==1 && Defense.phase==DefensePhase.Assault && Defense.approachEnd!=Vector3.zero)
-            {
-                var arrival=DefenseAtmosphereView.SampleApproach(Defense.seed,slot,SwarmAge,Defense.approachStart,Defense.approachEnd,1);
-                if((point-arrival.Position).sqrMagnitude<1)orbit=arrival;
-            }
+            var swimmer=slot>=0?SampleDefenseSlot(slot):default;
             int cost=card.cost+(size>defenseTuning.large && AvailableBudget()>card.cost?1:0);
             var go=new GameObject("Defense target");
             go.transform.SetParent(transform,true);
@@ -62,8 +57,8 @@ namespace Raid
             }
             var a=new DefenseAttacker {
                 data=new AttackerSnapshot{id=++actorSerial,kind=card.kind,position=point,
-                    forward=slot>=0?orbit.Forward:(DefenseCenter-point).normalized,
-                    scale=slot>=0 && size<=defenseTuning.large?orbit.Scale:size*card.silhouetteScale,
+                    forward=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized,
+                    scale=slot>=0?swimmer.Scale:size*card.silhouetteScale,
                     slot=slot,victim=-1,group=group},
                 card=card,cost=cost,vitality=card.health*size,slot=slot,collider=hit,exit=point
             };
@@ -581,7 +576,6 @@ namespace Raid
                 activeRaid.remainingCarriers=Mathf.Max(0,activeRaid.remainingCarriers-1);
             activeRaid.spent=Mathf.Min(activeRaid.budget,activeRaid.spent+a.cost);
             var stateCopy=Defense;stateCopy.spent=activeRaid.spent;
-            if(a.slot>=0)stateCopy.promoted&=~(1UL<<a.slot);
             defenseState.Value=stateCopy;
             if(a.collider)Destroy(a.collider.gameObject);
             attackers.RemoveAt(index);

@@ -17,6 +17,7 @@ namespace Raid.Nereid
         static readonly int Glow = Shader.PropertyToID("_EyeGlow");
         static readonly int Range = Shader.PropertyToID("_Range");
         static readonly int Billow = Shader.PropertyToID("_Billow");
+        static readonly int CloudDistanceScale = Shader.PropertyToID("_CloudDistanceScale");
         static DefenseAtmosphereSettings stock;
 
         [SerializeField] DefenseAtmosphereSettings settings;
@@ -112,6 +113,17 @@ namespace Raid.Nereid
             return new OrbitPose(point,heading,scale,slot%SpeciesCount);
         }
 
+        public static OrbitPose SampleSwimmer(int seed,int slot,float time,Vector3 center,Vector3 start,Vector3 end,
+            float fraction,int phase,float phaseSeconds,DefenseAtmosphereSettings profile=null)
+        {
+            var orbit=SampleOrbit(seed,slot,time,center,profile);
+            if(phase>=4 || (end-start).sqrMagnitude<=1 || phase==3 && phaseSeconds>=13)return orbit;
+            var approach=SampleApproach(seed,slot,time,start,end,fraction,profile);
+            float spread=phase==3?Mathf.SmoothStep(0,1,phaseSeconds/13f):0;
+            return new OrbitPose(Vector3.Lerp(approach.Position,orbit.Position,spread),
+                Vector3.Slerp(approach.Forward,orbit.Forward,spread),orbit.Scale,orbit.Kind);
+        }
+
         static float Unit(uint number)
         {
             unchecked
@@ -202,7 +214,6 @@ namespace Raid.Nereid
             Camera eye = look ? look.DiverCamera : Camera.main;
             if (!eye || !eye.isActiveAndEnabled){HideSwarm();HideCloud();return;}
             var profile = Settings;
-            Vector3 observer = eye.transform.position;
             float now = Time.time;
             float elapsed = phaseAge + Mathf.Max(0, now-appliedAt);
             float orbitAge = hasSwarmClock ? swarmAge + Mathf.Max(0,now-sampledAt) : elapsed;
@@ -210,23 +221,20 @@ namespace Raid.Nereid
             if (phase == 0){HideSwarm();HideCloud();return;}
             BindAssets();
             PresentCloud(profile,orbitAge,elapsed);
-            float reveal = phase == 1 ? warningReveal*.75f
+            float reveal = phase == 1 ? Mathf.SmoothStep(0,1,warningReveal)
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
             if (!material || reveal < .02f){HideSwarm();return;}
-            RenderSwarm(profile,eye,observer,orbitAge,reveal);
+            RenderSwarm(profile,eye,orbitAge,reveal);
         }
 
-        void RenderSwarm(DefenseAtmosphereSettings profile,Camera eye,Vector3 observer,float orbitAge,float reveal)
+        void RenderSwarm(DefenseAtmosphereSettings profile,Camera eye,float orbitAge,float reveal)
         {
             VisibleCount=0;
             float range = Mathf.Lerp(profile.clearDrawingDistance,profile.darkDrawingDistance,shade);
             int slots = Mathf.Clamp(profile.silhouetteCount,35,MaxSlots);
-            float fleeRange = Mathf.Max(.01f,profile.giveWayDistance);
             var vessel=NereidVessel.Active;
             Vector3 scale=transform.lossyScale;
             var unit=new Vector3(1/scale.x,1/scale.y,1/scale.z);
-            bool advancing=phase<=3 && (approachEnd-approachStart).sqrMagnitude>1;
-            float spreadOut=phase==3?Mathf.SmoothStep(0,1,phaseAge/13f):0;
             for(int species=0;species<SpeciesCount;species++)
             for(int surface=0;surface<2;surface++)
             {
@@ -242,15 +250,10 @@ namespace Raid.Nereid
                 var swimmer=swimmers[i];
                 if(!swimmer)continue;
                 if(i>=slots || (promoted & (1UL << i)) != 0){swimmer.enabled=false;continue;}
-                OrbitPose pose = SampleOrbit(raidSeed,i,orbitAge,anchor,profile);
+                OrbitPose pose = SampleSwimmer(raidSeed,i,orbitAge,anchor,approachStart,approachEnd,
+                    approachFraction,phase,phaseAge,profile);
                 Vector3 point = pose.Position;
                 Vector3 heading = pose.Forward;
-                if(advancing && spreadOut<1)
-                {
-                    var formed=SampleApproach(raidSeed,i,orbitAge,approachStart,approachEnd,approachFraction,profile);
-                    point=Vector3.Lerp(formed.Position,point,spreadOut);
-                    heading=Vector3.Slerp(formed.Forward,heading,spreadOut);
-                }
                 if(phase>=4)
                 {
                     Vector3 leave=Vector3.ProjectOnPlane(point-anchor,Vector3.up).normalized;
@@ -259,21 +262,11 @@ namespace Raid.Nereid
                     heading=Vector3.Slerp(heading,(leave+Vector3.up*.19f).normalized,
                         Mathf.Clamp01(distance/11f));
                 }
-                Vector3 away = point-observer;
-                float distanceSquared = away.sqrMagnitude;
-                if (distanceSquared > range*range){swimmer.enabled=false;continue;}
-                if (distanceSquared < fleeRange*fleeRange)
-                {
-                    Vector3 swimOff = (away.normalized + pose.Forward*.44f).normalized;
-                    float avoid = Mathf.Pow(1-Mathf.Sqrt(distanceSquared)/fleeRange,1.7f);
-                    point += swimOff * (5.6f*avoid);
-                    heading = Vector3.Slerp(heading,swimOff,avoid);
-                }
+                if ((point-eye.transform.position).sqrMagnitude>(range+3)*(range+3)){swimmer.enabled=false;continue;}
                 Vector3 view = eye.WorldToViewportPoint(point);
                 if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f)))
                 {swimmer.enabled=false;continue;}
-                if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale) ||
-                    Physics.CheckSphere(point,pose.Scale*.40f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale))
                 {swimmer.enabled=false;continue;}
                 float roll = Mathf.Sin(orbitAge*(1.5f+.17f*pose.Kind)+i*.73f) * (8+pose.Kind*2.2f);
                 Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(roll,Vector3.forward);

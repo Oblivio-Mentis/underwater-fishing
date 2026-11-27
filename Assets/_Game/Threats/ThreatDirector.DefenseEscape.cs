@@ -70,9 +70,9 @@ namespace Raid
             return FindPath(start,a.exit,out goal) && (start-goal).sqrMagnitude>.35f;
         }
 
-        bool CrewSeesEscape(Vector3 point)
+        bool CrewSeesEscape(Vector3 point,float minimumRange=0)
         {
-            float range=defenseTuning.escapeSightDistance;
+            float range=Mathf.Max(defenseTuning.escapeSightDistance,minimumRange);
             foreach(var diver in DiverMotor.ServerDivers)
             {
                 if(!diver || !diver.IsServerInitialized || diver.IsDead)continue;

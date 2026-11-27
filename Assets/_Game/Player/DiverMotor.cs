@@ -8,6 +8,7 @@ namespace Raid
     [RequireComponent(typeof(CharacterController))]
     public sealed partial class DiverMotor : NetworkBehaviour
     {
+        internal const float NormalViewDistance = 160f;
         public static readonly System.Collections.Generic.List<DiverMotor> ServerDivers = new();
         public DiverTuning tuning;
         [Header("Diver presentation")]
@@ -152,10 +153,11 @@ namespace Raid
             view.tag = "MainCamera";
             _camera = view.GetComponent<Camera>();
             _camera.nearClipPlane = 0.05f;
-            _camera.farClipPlane = 160f;
+            _camera.farClipPlane = NormalViewDistance;
             _camera.fieldOfView = 80f;
             _camera.clearFlags = CameraClearFlags.SolidColor;
             _camera.backgroundColor = RenderSettings.fogColor;
+            if (!FindAnyObjectByType<AudioListener>()) view.AddComponent<AudioListener>();
             if(Nereid.NereidVessel.Active!=null)view.AddComponent<HypoxiaLens>().Bind(this);
             CameraImpulse=view.AddComponent<Nereid.NereidFeedingCameraImpulse>();
             view.AddComponent<FishingFeel>().Bind(this);

@@ -18,12 +18,12 @@ MonoBehaviour:
   heightVariation: 5.7
   swimSpeed: 1
   sizeVariation: 0.29
-  clearDrawingDistance: 58
-  darkDrawingDistance: 43
-  giveWayDistance: 6
+  clearDrawingDistance: 160
+  darkDrawingDistance: 145
   eyeGlow: 1.35
   cloudCount: 510
   cloudRadius: 37
+  cloudDistanceScale: 3
   cloudHeight: 27
   cloudDrawingDistance: 104
   cloudOrbitSpeed: 0.23

@@ -41,11 +41,6 @@ MonoBehaviour:
   soloHeavyCameraImpulse: 2.5
   soloHeavyCameraHit: 0.012
   fightTrembleMultiplier: 1
-  shotVolume: 0.3
-  reelVolume: 0.16
-  cueVolume: 0.26
-  preBreakWarningThreshold: 0.82
-  preBreakWarningInterval: 1.4
   warningSeconds: 0.55
   minimumWindingSeconds: 0.4
   slackAllowance: 0.18

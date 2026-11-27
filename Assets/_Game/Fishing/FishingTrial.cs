@@ -556,8 +556,7 @@ namespace Raid
             int initialCatches = host.CatchCount;
             int initialTugs = fish.TugSequence;
             host.QaHoldOwned(false, 0);
-            var feel = host.GetComponentInChildren<FishingFeel>();
-            Require(feel != null && feel.AudioCueCount >= 2, "Confirmed shot and attachment did not produce distinct audio cues.");
+            Require(host.GetComponentInChildren<AudioSource>() == null, "The harpoon shot or attachment created an audio source.");
             yield return Wait(() => fish.SoloTow && host.HookedFish == fish, 4, "Heavy fish did not enter continuous solo tow.");
 
             const int steps = 36;
@@ -816,8 +815,7 @@ namespace Raid
                 {
                     cooperationConfirmed = true;
                     Require(!fish.SoloTow && fish.HookCount >= 2, "Coordinated pull retained the solo tow state.");
-                    var feel = host.GetComponentInChildren<FishingFeel>();
-                    Require(feel != null && feel.ReelAudioPlaying, "The working reel has no audible loop while the coordinated pull is active.");
+                    Require(host.GetComponentInChildren<AudioSource>() == null, "Reeling created an audio source.");
                     Check("Coordinated pull changed the server state and started the reel audio loop.");
                 }
                 if (remoteReeling && fish.Coordinated && Vector3.Distance(host.transform.position,fish.transform.position)<6
