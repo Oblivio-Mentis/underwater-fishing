@@ -48,7 +48,9 @@ namespace Raid
             var swimmer=slot>=0?SampleDefenseSlot(slot):default;
             Vector3 heading=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized;
             float scale=slot>=0?swimmer.Scale:size*card.silhouetteScale;
-            if(!OutsideAttackEntry(card.kind,point,heading,scale))return false;
+            // A remora must be able to pivot into its shield approach immediately.
+            // Authored fallback lanes were checked with a nominal, rather than rolled, scale.
+            if(card.kind==DefenseSpecies.Remora && !OutsideAttackEntry(card.kind,point,heading,scale))return false;
             int cost=card.cost+(size>defenseTuning.large && AvailableBudget()>card.cost?1:0);
             var go=new GameObject("Defense target");
             go.transform.SetParent(transform,true);
