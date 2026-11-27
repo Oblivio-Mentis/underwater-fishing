@@ -26,7 +26,7 @@ namespace Raid
                 var at=center+new Vector3(Mathf.Sin(angle)*radius,-1.8f,Mathf.Cos(angle)*radius);
                 if(!OutsideAttackEntry(species,at,(center-at).normalized,shape))continue;
                 if(!MarineSpawn.InOpenWater(depthTier,at,.4f) || !DefensePathClear(at,FieldContact(at)))continue;
-                SpawnAttacker(card,at,-1,group,large);
+                if(!TrySpawnAttacker(card,at,-1,group,large))continue;
                 PublishAttackers();
                 return true;
             }
@@ -49,7 +49,7 @@ namespace Raid
                 float yaw=((i+1)/2)*(i%2==0?-14:14);
                 var at=pickup+Quaternion.AngleAxis(yaw,Vector3.up)*broadside*distance;
                 if(!MarineSpawn.InOpenWater(depthTier,at,.55f) || !DefensePathClear(at,pickup))continue;
-                SpawnAttacker(card,at,-1,group,false);
+                if(!TrySpawnAttacker(card,at,-1,group,false))continue;
                 PublishAttackers();
                 return true;
             }
@@ -76,8 +76,8 @@ namespace Raid
                     !ship.OutsideDefenseHull(captain+Vector3.up*.6f,outward,1.46f) ||
                     !DefensePathClear(predator,captain+Vector3.up*.6f) ||
                     !DefensePathClear(captain+Vector3.up*.55f,predator+outward*8))continue;
+                if(!TrySpawnAttacker(card,predator,-1,group,false))continue;
                 player.Teleport(captain);
-                SpawnAttacker(card,predator,-1,group,false);
                 id=attackers[attackers.Count-1].data.id;
                 PublishAttackers();
                 return true;

@@ -138,7 +138,7 @@ namespace Raid
                 for(int i=0;thief!=null && i<record.remainingCarriers;i++)
                 {
                     if(!TryArrival(i*11,thief.kind,out var point,out var slot))continue;
-                    SpawnAttacker(thief,point,slot,1,false);
+                    if(!TrySpawnAttacker(thief,point,slot,1,false))continue;
                     SetPose(attackers[^1],AttackerPose.Carry,0);
                 }
             }
@@ -398,8 +398,7 @@ namespace Raid
                     :ChooseAttacker(AvailableBudget());
                 if(card==null)break;
                 if(!TryArrival(lane+i*7,card.kind,out var point,out var slot))continue;
-                SpawnAttacker(card,point,slot,group,false);
-                any=true;
+                any|=TrySpawnAttacker(card,point,slot,group,false);
             }
             if(any)
             {

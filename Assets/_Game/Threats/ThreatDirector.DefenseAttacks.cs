@@ -40,12 +40,15 @@ namespace Raid
             public double nextFightDeflection;
         }
 
-        void SpawnAttacker(DefenseTuning.Species card,Vector3 point,int slot,int group,bool large)
+        bool TrySpawnAttacker(DefenseTuning.Species card,Vector3 point,int slot,int group,bool large)
         {
             float size=Mathf.Lerp(defenseTuning.small,defenseTuning.large,(float)raidRandom.NextDouble());
             if(large || AvailableBudget()>=card.cost+1 && activeRaid.budget>17 && raidRandom.NextDouble()<defenseTuning.titanChance)
                 size=defenseTuning.large*1.16f;
             var swimmer=slot>=0?SampleDefenseSlot(slot):default;
+            Vector3 heading=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized;
+            float scale=slot>=0?swimmer.Scale:size*card.silhouetteScale;
+            if(!OutsideAttackEntry(card.kind,point,heading,scale))return false;
             int cost=card.cost+(size>defenseTuning.large && AvailableBudget()>card.cost?1:0);
             var go=new GameObject("Defense target");
             go.transform.SetParent(transform,true);
@@ -66,9 +69,9 @@ namespace Raid
             }
             var a=new DefenseAttacker {
                 data=new AttackerSnapshot{id=++actorSerial,kind=card.kind,position=point,
-                    forward=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized,
+                    forward=heading,
                     velocity=slot>=0?swimmer.Velocity:Vector3.zero,
-                    scale=slot>=0?swimmer.Scale:size*card.silhouetteScale,
+                    scale=scale,
                     slot=slot,victim=-1,group=group},
                 card=card,cost=cost,vitality=card.health*size,collider=hit,exit=point,
                 hitShapes=card.kind==DefenseSpecies.Abductor?go.GetComponents<Collider>():null
@@ -77,6 +80,7 @@ namespace Raid
             go.transform.rotation=Quaternion.LookRotation(a.data.forward);
             attackers.Add(a);
             var s=Defense;if(slot>=0)s.promoted|=1UL<<slot;defenseState.Value=s;
+            return true;
         }
 
         void SetPose(DefenseAttacker a,AttackerPose pose,float seconds)
