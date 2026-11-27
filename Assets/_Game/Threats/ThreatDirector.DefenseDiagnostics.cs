@@ -44,10 +44,11 @@ namespace Raid
             if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault || card==null)return false;
             var pickup=TheftPickup();
             var broadside=(fieldAnchor?fieldAnchor.right:Vector3.right)*side;
-            for(int i=0;i<7;i++)
+            for(int ring=0;ring<4;ring++)
+            for(int i=0;i<13;i++)
             {
                 float yaw=((i+1)/2)*(i%2==0?-14:14);
-                var at=pickup+Quaternion.AngleAxis(yaw,Vector3.up)*broadside*distance;
+                var at=pickup+Quaternion.AngleAxis(yaw,Vector3.up)*broadside*(distance+ring*2.4f);
                 if(!MarineSpawn.InOpenWater(depthTier,at,.55f) || !DefensePathClear(at,pickup))continue;
                 if(!TrySpawnAttacker(card,at,-1,group,false))continue;
                 PublishAttackers();
