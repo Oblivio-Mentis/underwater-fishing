@@ -113,7 +113,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("player", type=Path)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--crew", type=int, choices=(2, 3, 4), default=2)
+    parser.add_argument("--crew", type=int, choices=(1, 2, 3, 4), default=2)
     parser.add_argument('--combat', action='store_true')
     parser.add_argument('--solo', action='store_true')
     parser.add_argument('--film-depth', type=int, choices=(1, 2), default=0)
