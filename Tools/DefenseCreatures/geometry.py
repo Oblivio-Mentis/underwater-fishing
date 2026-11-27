@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass, field
 from math import cos, pi, sin, sqrt
+from pathlib import Path
+import json
 
 
 def add(a, b):
@@ -153,6 +155,23 @@ def swimming_fin(part, direction, outline, ridge, color, normal=(0, 1, 0), thick
                thickness, side(direction, normal))
 
 
+def slit_eye(part, center, direction, width, color, socket, slant=.17):
+    normal = unit(direction)
+    along = unit(cross((0, 1, 0), normal))
+    up = cross(normal, along)
+
+    def lens_point(x, y, depth):
+        return add(center, add(mul(along, x*width), add(mul(up, y*width), mul(normal, depth))))
+
+    shape = [(-1, -slant), (-.59, .40), (.46, .28), (1, slant), (.36, -.35), (-.44, -.45)]
+    rim = [lens_point(x*1.29, y*1.65, 0) for x,y in shape]
+    part.wedge(rim, lens_point(.08, .31, width*.2), socket, .47, width*.34, normal)
+    lens = [lens_point(x, y, width*.27) for x,y in shape]
+    part.face(lens, color, normal, True)
+    part.face([lens_point(x*.62, y*.58, width*.31) for x,y in shape],
+              mix(color, paint("D8F0D9"), .34), normal, True)
+
+
 def school_eye(part, x, y, z, color):
     for sign in (-1, 1):
         center = (sign*x, y, z)
@@ -166,14 +185,21 @@ def school_eye(part, x, y, z, color):
 
 def rammer():
     c = Creature.new("Rammer", (0, 0, -.71), (0, .006, -1.13), (.40, -.10, .04),
-                     (0, -.205, .43), (0, -.185, .97))
-    steel, ventral, ivory, scale = map(paint, ("597579", "314347", "A7AFA0", "718687"))
-    eye = paint("F2B36A")
+                     (0, -.241, .39), (0, -.245, .96))
+    steel, ventral, ivory, scale = map(paint, ("384345", "1C242A", "B6B09A", "635A4A"))
+    obsidian, welt, eye = map(paint, ("282A2A", "7A563D", "FFC25B"))
     profile = [(0, 0, -.82, .105, .14), (0, .028, -.54, .248, .26),
                (0, .05, -.10, .424, .39), (0, .065, .30, .484, .415),
                (0, .075, .63, .438, .332), (0, .064, .855, .357, .245),
-               (0, .055, .933, .266, .176)]
+               (0, .079, .947, .308, .166)]
     c.body.loft(profile, steel, ventral, 12)
+    c.body.wedge([(-.21,.184,.94),(-.12,.258,.905),(.12,.258,.905),(.21,.184,.94),
+                  (.13,.118,1.012),(-.13,.118,1.012)],
+                 (0,.176,1.055), scale, .70, .056, (0,.20,1))
+    for z,y,w in [(-.44,.264,.097),(-.26,.338,.123),(-.037,.468,.157),(.243,.498,.187)]:
+        c.body.wedge([(-w,y,z+.15),(0,y+.04,z+.19),(w,y,z+.15),
+                      (w*.59,y-.022,z-.14),(-w*.66,y-.026,z-.125)],
+                     (.012,y+.15,z+.042), obsidian, thickness=.073)
     def shell_point(sign, angle, z, spacing):
         first, second = next((a, b) for a,b in zip(profile, profile[1:]) if a[2] <= z <= b[2])
         _, y, _, width, height = mix(first, second, (z-first[2])/(second[2]-first[2]))
@@ -190,20 +216,27 @@ def rammer():
                            (upper, end-.027), (center, end), (lower, end-.019)]
                 c.body.wedge([shell_point(s, a, z, .023) for a,z in outline],
                              shell_point(s, center, start+(end-start)*.4, .055),
-                             mix(scale, ivory, .14+k*.086+row*.04), .53, .047,
+                             mix(scale, ivory, .10+k*.085+row*.04), .46, .062,
                              (s*cos(center), sin(center), 0))
-        c.body.light(side(s, (.433, .085, .645)), (s, .16, .31), .040, eye, paint("253335"))
-        c.body.horn(side(s, (.418, -.047, .55)), side(s, (.545, -.128, .18)), .074, scale)
-        c.body.horn(side(s, (.429, -.090, .485)), side(s, (.533, -.17, .135)), .051, ivory)
+        slit_eye(c.body, side(s, (.436, .047, .675)), (s, .06, .35), .049, eye, obsidian, -.30*s)
+        c.body.horn(side(s, (.426, .108, .681)), side(s, (.492, .13, .499)), .054, obsidian)
+        c.body.horn(side(s, (.371, -.056, .833)), side(s, (.430, -.190, 1.021)), .114, scale)
+        c.body.horn(side(s, (.383, -.143, .899)), side(s, (.447, -.337, 1.065)), .065, ivory)
+        c.body.horn(side(s, (.443, -.026, .54)), side(s, (.613, -.155, .21)), .095, scale)
+        c.body.horn(side(s, (.421, -.091, .30)), side(s, (.563, -.20, .008)), .075, welt)
+        c.body.horn(side(s, (.358, -.125, .053)), side(s, (.487, -.196, -.202)), .053, obsidian)
         fin = c.left if s < 0 else c.right
         swimming_fin(fin, s, [(.35, -.071, .18), (.53, -.155, .051), (.86, -.246, -.37),
                               (.565, -.235, -.347), (.35, -.149, -.23)],
                      (.55, -.119, -.15), scale, thickness=.068)
-        for i in range(4):
-            c.jaw.horn(side(s, (.251-.023*i, -.168, .822-.079*i)),
-                       side(s, (.246-.019*i, -.086, .819-.073*i)), .022, ivory)
-    c.jaw.loft([(0, -.196, .385, .252, .065), (0, -.218, .64, .293, .105),
-                (0, -.196, .849, .225, .07), (0, -.146, .948, .138, .036)],
+        for i in range(5):
+            z = .922-.088*i
+            c.jaw.horn(side(s, (.204+.022*i, -.246, z)),
+                       side(s, (.183+.018*i, -.129-.016*i, z+.073)), .035-i*.002, ivory)
+            c.body.horn(side(s, (.186+.025*i, -.071, z-.011)),
+                        side(s, (.166+.022*i, -.161+.01*i, z+.025)), .030-i*.003, ivory)
+    c.jaw.loft([(0, -.211, .341, .256, .062), (0, -.304, .625, .296, .093),
+                (0, -.298, .854, .242, .085), (0, -.218, .979, .153, .045)],
                steel, ventral, 12)
     c.tail.loft([(0, 0, -.658, .158, .166), (0, .025, -.89, .106, .139),
                  (0, .01, -1.158, .073, .092)], steel, ventral, 9)
@@ -214,14 +247,18 @@ def rammer():
     c.school.loft([profile[i] for i in (0, 1, 2, 4, 6)], steel, ventral, 6)
     c.school.wedge([(0, .11, -.76), (0, .35, -1.49), (0, -.30, -1.46), (0, -.12, -.79)],
                   (.057, .003, -1.18), steel, thickness=.045, normal=(1, 0, 0))
-    school_eye(c.school, .36, .09, .69, eye)
+    for z,y in ((-.03,.45),(.27,.49),(.55,.41)):
+        c.school.wedge([(-.17,y,z+.08),(.17,y,z+.085),(0,y+.14,z-.068)],
+                       (.015,y+.075,z+.022), scale, thickness=.037)
+    school_eye(c.school, .44, .062, .68, eye)
     return c
 
 
 def remora():
     c = Creature.new("Remora", (0, -.034, -.44), (.062, -.045, -.98),
                      (.105, -.008, .11), (0, -.125, .625), (0, .006, .939))
-    hide, muscle, flesh, ridge, glow = map(paint, ("384E50", "27283A", "6F555B", "947E6D", "DD9475"))
+    hide, muscle, flesh, ridge, glow = map(paint, ("32343D", "1E182C", "6F3E58", "C0A394", "F0609A"))
+    sockets, enamel = paint("3E2946"), paint("D3C9A6")
     front = [(0, -.044, -.55, .106, .113), (0, -.022, -.13, .163, .146),
              (0, .026, .283, .161, .169), (0, .007, .565, .178, .163),
              (0, .005, .749, .238, .214), (0, .001, .837, .207, .196)]
@@ -240,57 +277,85 @@ def remora():
         lip.face((points[3], points[2], inner[1], inner[0]), ridge, (0, 0, 1))
         lip.face((inner[0], inner[1], deep[1], deep[0]), muscle, (0, 0, 1))
         theta = .5*(a+b)
-        lip.horn((cos(theta)*.174, sin(theta)*.153, .925),
-                 (cos(theta)*.133, sin(theta)*.119, .952-.012*(i%2)), .025, ridge)
+        crown = .018*sin(theta*5)
+        lip.wedge((points[0], points[1], points[2], points[3]),
+                  (cos(theta)*(.269+crown), sin(theta)*(.234+crown), .887+.015*(i%3)),
+                  mix(flesh, ridge, .25), .54, .035, (cos(theta), sin(theta), .12))
+        lip.horn((cos(theta)*.193, sin(theta)*.173, .929),
+                 (cos(theta)*.102, sin(theta)*.082, 1.006-.018*(i%2)), .032, enamel)
+        lip.horn((cos(theta+.10)*.127, sin(theta+.10)*.109, .897),
+                 (cos(theta+.24)*.068, sin(theta+.24)*.062, .958), .019, ridge)
         lips.append((cos(a)*.101, sin(a)*.089, .837))
     c.body.face(lips, paint("141215"), (0, 0, 1))
-    c.tail.loft([(0, -.04, -.33, .135, .122), (.043, -.035, -.62, .114, .11),
-                 (.062, -.045, -.998, .076, .071)], hide, muscle, 10)
-    c.tip.loft([(.062, -.045, -.90, .082, .08), (.119, -.013, -1.24, .047, .058),
-                (.238, .039, -1.53, .024, .039), (.327, .068, -1.68, .004, .014)],
-               hide, muscle, 8)
-    for sign in (-1, 1):
-        for k, (x, y, z, radius) in enumerate(((.16, .078, .42, .035), (.16, .04, .208, .031),
-                                                (.156, .028, -.019, .025), (.128, .01, -.228, .021),
-                                                (.103, -.015, -.55, .018), (.105, -.037, -.79, .018),
-                                                (.119, -.021, -1.117, .017))):
-            segment = c.body if k <= 3 else c.tail if k <= 5 else c.tip
-            segment.light((sign*x+max(0, -z-.35)*.074, y, z), (sign, .35, .08),
-                          radius, glow, muscle)
+    trunk = [(0,-.04,-.33,.135,.122),(.043,-.035,-.62,.114,.11),(.062,-.045,-.998,.076,.071)]
+    taper = [(.062,-.045,-.90,.082,.08),(.119,-.013,-1.24,.047,.058),
+             (.238,.039,-1.53,.024,.039),(.327,.068,-1.68,.004,.014)]
+    c.tail.loft(trunk, hide, muscle, 10)
+    c.tip.loft(taper, hide, muscle, 8)
+    for sign in (-1,1):
+        for segment, rings, positions in (
+            (c.body,front,((.42,.035),(.208,.031),(-.019,.025),(-.228,.021))),
+            (c.tail,trunk,((-.55,.018),(-.79,.018))),
+            (c.tip,taper,((-1.117,.017),)),
+        ):
+            for z,radius in positions:
+                a,b=next((a,b) for a,b in zip(rings,rings[1:]) if min(a[2],b[2])<=z<=max(a[2],b[2]))
+                x,y,_,w,h=mix(a,b,(z-a[2])/(b[2]-a[2]))
+                segment.light((x+sign*w*.95,y+h*.20,z),(sign,.35,.08),radius*.76,glow,muscle)
+                segment.horn((x+sign*w*.71,y+h*.36,z-.011),
+                             (x+sign*(w*.88+.051),y+h+.039,z-.126),radius*1.78,sockets)
+                segment.horn((x+sign*w*.77,y-h*.36,z-.04),
+                             (x+sign*(w+.035),y-h-.024,z-.166),radius*.99,flesh)
+        c.body.horn(side(sign, (.157,.137,.515)),side(sign,(.224,.183,.748)),.06,sockets)
         fin = c.left if sign < 0 else c.right
         swimming_fin(fin, sign, [(.093, .007, .32), (.228, -.067, .135), (.27, -.035, -.43),
                                  (.132, .012, -.32), (.102, .043, .03)],
                      (.165, -.022, .058), flesh, thickness=.025)
     c.school.loft([(0, 0, -1.43, .014, .018), (0, 0, -.64, .10, .10), *front[1::2]],
                   hide, muscle, 6)
-    school_eye(c.school, .16, .067, .58, glow)
+    c.school.loft([(0,.003,.63,.21,.19),(0,.005,.79,.265,.231),
+                   (0,.001,.897,.207,.192)],flesh,muscle,7)
+    school_eye(c.school, .158, .067, .58, glow)
     return c
 
 
 def thief():
     c = Creature.new("Thief", (0, .038, -.429), (0, -.036, -.83), (.206, -.069, .146),
                      (0, -.13, .403), (0, -.11, .836))
-    teal, belly, amber, edge, glow = map(paint, ("669997", "344C58", "A5916A", "9BB8AB", "BEF1C2"))
+    teal, belly, amber, edge, glow = map(paint, ("35605B", "1D2E30", "77816A", "B0BA95", "CAFC8F"))
+    chitin, bone = map(paint, ("26383A", "CED4AA"))
     hull = [(0, .043, -.54, .091, .092), (0, .067, -.29, .203, .173),
             (0, .067, .055, .284, .205), (0, .075, .333, .252, .181),
             (0, .048, .48, .178, .117), (0, .023, .613, .118, .067)]
     c.body.loft(hull, teal, belly, 12)
-    c.jaw.loft([(0, -.105, .323, .125, .06), (0, -.092, .526, .126, .042),
+    c.body.wedge([(-.173,.177,.266),(-.067,.17,.555),(0,.061,.734),(.067,.17,.555),
+                  (.173,.177,.266),(.055,.247,.16),(-.055,.247,.16)],
+                 (0,.225,.34),chitin, thickness=.038)
+    c.jaw.loft([(0, -.105, .323, .125, .06), (0, -.134, .526, .126, .05),
                 (0, -.052, .681, .052, .021), (0, -.012, .703, .022, .012)],
                edge, belly, 8)
     for s in (-1, 1):
-        c.body.light(side(s, (.202, .133, .367)), (s, .32, .43), .073, glow, paint("295751"))
-        c.body.horn(side(s, (.239, .085, .269)), side(s, (.317, .103, .082)), .04, amber)
+        slit_eye(c.body, side(s, (.207, .132, .411)), (s, .20, .53), .069, glow, chitin, .31*s)
+        c.body.horn(side(s, (.215,.18,.355)),side(s,(.30,.225,.109)),.055,chitin)
+        c.body.horn(side(s, (.219,.004,.303)),side(s,(.323,-.053,.074)),.064,amber)
+        c.body.horn(side(s, (.135,.001,.516)),side(s,(.09,-.130,.608)),.031,bone)
+        c.jaw.horn(side(s,(.095,-.14,.549)),side(s,(.084,-.068,.64)),.026,bone)
         fin = c.left if s < 0 else c.right
         fin.loft([(*side(s, (.168, -.075, .155)), .075, .062),
                   (*side(s, (.329, -.151, .276)), .063, .05),
                   (*side(s, (.469, -.13, .47)), .047, .046),
                   (*side(s, (.46, -.094, .638)), .052, .049)], teal, belly, 8)
-        for offset in (-.056, .065):
-            claw = [(.46+offset*.72, -.097, .598), (.465+offset*1.8, -.096, .736),
-                    (.432+offset*1.34, -.123, .857), (.382+offset*1.02, -.133, .89)]
-            fin.loft([(*side(s, point), rad, rad*.75)
-                      for point, rad in zip(claw, (.056, .058, .031, .004))], amber, belly, 7)
+        for offset in (-.075, .091):
+            claw = [(.458+offset*.48, -.092, .585), (.475+offset*1.4, -.074, .757),
+                    (.473+offset*1.7, -.106, .94), (.413+offset*.67, -.153, 1.054),
+                    (.386+offset*.24, -.215, 1.077)]
+            fin.loft([(*side(s, point), rad, rad*.79)
+                      for point, rad in zip(claw, (.065, .075, .043, .023, .004))], amber, chitin, 7)
+            for i, (x,y,z) in enumerate(claw[1:4]):
+                fin.horn(side(s,(x,y-.023,z)),
+                         side(s,(x-offset*.6,y-.048,z+.043)), .024-i*.004, bone)
+        fin.horn(side(s,(.387,-.109,.481)), side(s,(.553,-.035,.415)), .052, chitin)
+        fin.horn(side(s,(.344,-.116,.355)), side(s,(.476,-.024,.229)), .043, amber)
         swimming_fin(fin, s, [(.2, -.013, .121), (.432, .014, .163), (.779, -.047, -.151),
                               (.538, -.046, -.302), (.366, -.016, -.225), (.25, -.06, -.17)],
                      (.423, .026, -.135), edge, thickness=.035)
@@ -303,28 +368,41 @@ def thief():
     for s in (-1, 1):
         swimming_fin(c.school, s, [(.185, .016, .249), (.56, -.035, .12), (.54, -.055, -.22),
                                     (.23, -.03, -.176)], (.41, .018, -.033), teal, thickness=.018)
-    school_eye(c.school, .196, .109, .378, glow)
+    for s in (-1,1):
+        c.school.horn(side(s,(.23,-.076,.14)),side(s,(.472,-.145,.97)),.062,amber,4,.008)
+    school_eye(c.school, .204, .11, .41, glow)
     return c
 
 
 def abductor():
     c = Creature.new("Abductor", (0, .10, -.63), (0, -.01, -1.05), (.217, -.037, .27),
                      (0, -.11, .432), (0, -.08, .935))
-    mauve, ventral, web, claw, glow = map(paint, ("695D79", "332F48", "94767E", "A7938B", "ABCCFF"))
+    mauve, ventral, web, claw, glow = map(paint, ("51405E", "272237", "614352", "B0A09C", "C8ACFF"))
+    shell, hook = map(paint, ("382A46", "D5C9B3"))
     mantle = [(0, .064, -.83, .092, .119), (0, .13, -.58, .27, .256),
               (0, .152, -.31, .362, .325), (0, .117, -.011, .344, .30),
               (0, .048, .236, .241, .225), (0, -.015, .453, .244, .156),
               (0, -.038, .57, .185, .103)]
     c.body.loft(mantle, mauve, ventral, 12)
+    c.body.wedge([(-.22,.221,.147),(-.256,.282,-.152),(-.09,.378,-.449),(.09,.378,-.449),
+                  (.256,.282,-.152),(.22,.221,.147),(0,.146,.536)],
+                 (0,.375,.059), shell, thickness=.047)
     c.jaw.loft([(0, -.102, .337, .168, .085), (0, -.163, .531, .141, .079),
                 (0, -.123, .663, .058, .051), (0, -.08, .709, .016, .018)], claw, ventral, 8)
     for s in (-1, 1):
-        c.body.light(side(s, (.219, .113, .412)), (s, .42, .58), .057, glow, paint("302B48"))
-        c.body.light(side(s, (.208, .045, .529)), (s, .27, .63), .026, glow, ventral)
-        # Wrap-around mantle wings and ribs stay on the body, away from the animated capture arms.
-        swimming_fin(c.body, s, [(.198, .196, -.627), (.402, .193, -.813), (.692, .158, -.48),
-                                 (.519, .019, -.26), (.32, .039, -.117), (.233, .083, -.256)],
-                     (.417, .226, -.39), web, thickness=.07)
+        slit_eye(c.body,side(s,(.217,.142,.414)),(s,.46,.52),.060,glow,shell,-.21*s)
+        for x,y,z,radius in ((.174,.207,.395,.032),(.143,.223,.336,.018),(.201,.076,.532,.024)):
+            c.body.light(side(s,(x,y,z)),(s,.48,.51),radius,glow,ventral)
+        for i, (x,y,z) in enumerate(((.247,.194,.286),(.29,.264,.098),(.307,.314,-.114),(.284,.343,-.319))):
+            c.body.horn(side(s,(x*.88,y-.054,z)),
+                        side(s,(x+.089+.024*i,y+.08+.023*i,z-.125-.05*i)),.063-.004*i,shell)
+        c.body.horn(side(s,(.183,-.014,.565)),side(s,(.106,-.116,.72)),.038,hook)
+        c.jaw.horn(side(s,(.140,-.150,.56)),side(s,(.10,-.069,.684)),.032,hook)
+        # Mantle vanes remain independent of the capture arms.
+        swimming_fin(c.body, s, [(.198,.196,-.627),(.402,.193,-.813),(.751,.213,-.535),
+                                 (.603,.127,-.511),(.712,.035,-.334),(.537,.055,-.348),
+                                 (.56,-.006,-.157),(.32,.039,-.117),(.233,.083,-.256)],
+                     (.427,.243,-.473), web, thickness=.072)
         for k in range(2):
             c.body.horn(side(s, (.311-.036*k, .239, -.29+.18*k)),
                         side(s, (.398-.019*k, .288, -.445+.15*k)), .046, web, 6)
@@ -344,8 +422,11 @@ def abductor():
                 y = point[1]-.019
                 inner = point[0]-.044
                 arm.horn(side(s, (inner, y, point[2])),
-                         side(s, (inner-.049, y-.012, point[2]+.058)), .033,
-                         mix(web, claw, .14*(k-1)))
+                         side(s, (inner-.087, y-.024, point[2]+.091)), .039,
+                         mix(web, hook, .25+.18*(k-1)))
+            last, before = curve[-1], curve[-2]
+            arm.horn(side(s,before), side(s,(last[0]-.084,last[1]+.046,last[2]+.065)),
+                     .048, hook, 6, .003)
     c.tail.loft([(0, .078, -.571, .193, .192), (0, .089, -.79, .126, .121),
                  (0, -.012, -1.013, .076, .083), (0, -.033, -1.155, .042, .069)],
                 mauve, ventral, 10)
@@ -357,52 +438,65 @@ def abductor():
         swimming_fin(c.school, s, [(.179, .012, .294), (.72, -.058, .633), (.63, -.261, 1.125),
                                     (.405, -.297, .96), (.305, -.114, .667)],
                      (.406, -.049, .651), mauve, thickness=.039)
-    school_eye(c.school, .22, .028, .398, glow)
+    for s in (-1,1):
+        c.school.wedge([side(s,p) for p in ((.14,.24,-.63),(.70,.23,-.44),(.49,.055,-.21),(.22,.07,-.18))],
+                       side(s,(.40,.19,-.42)),web,thickness=.045)
+    school_eye(c.school, .232, .136, .409, glow)
     return c
 
 
 def stalker():
-    c = Creature.new("Stalker", (0, .018, -.52), (.01, .052, -.988), (.157, -.034, .12),
-                     (0, -.074, .412), (0, -.044, .85))
-    hide, belly, rib, edge, glow = map(paint, ("3B5360", "202936", "536670", "78828A", "B8D9EF"))
-    spine = [(0, .035, -.66, .075, .106), (0, .072, -.41, .132, .135),
-             (0, .087, -.015, .194, .179), (0, .089, .278, .192, .194),
-             (0, .072, .536, .161, .151), (0, .059, .747, .114, .089),
-             (0, .04, .845, .07, .043)]
-    c.body.loft(spine, hide, belly, 10)
-    # Tall segmented knife fin. Its dark opening is cut into the silhouette.
-    for z, height in ((.124, .313), (-.104, .418), (-.29, .391), (-.469, .305)):
-        c.body.wedge([(0, .19, z+.108), (0, height, z-.092), (0, height-.019, z-.18),
-                      (0, .18, z-.244)], (.031, .236, z-.093), rib,
-                     thickness=.027, normal=(1, 0, 0))
-    for s in (-1, 1):
-        c.body.light(side(s, (.147, .113, .566)), (s, .28, .53), .045, glow, belly)
-        c.body.horn(side(s, (.16, .156, .536)), side(s, (.191, .176, .412)), .036, rib, 5)
-        c.body.light(side(s, (.186, .11, .254)), (s, .21, .13), .014, glow, belly)
-        fin = c.left if s < 0 else c.right
-        swimming_fin(fin, s, [(.143, -.013, .258), (.359, -.026, .185),
-                              (.68, -.166, -.498), (.455, -.114, -.331), (.17, -.029, -.138)],
-                     (.344, .022, -.106), rib, thickness=.045)
-        for i in range(5):
-            z = .755-i*.064
-            x = .072+.014*i
-            c.jaw.horn(side(s, (x, -.061-.01*i, z)),
-                       side(s, (x*.94, -.009-.003*i, z+.011)), .016, edge)
-    c.jaw.loft([(0, -.071, .385, .126, .065), (0, -.104, .552, .143, .075),
-                (0, -.085, .727, .101, .05), (0, -.037, .85, .049, .022)], rib, belly, 10)
-    c.tail.loft([(0, .04, -.435, .127, .132), (0, .031, -.734, .096, .093),
-                 (.01, .05, -1.045, .035, .058)], hide, belly, 9)
-    c.tip.loft([(.01, .051, -.953, .047, .063), (.034, .065, -1.245, .021, .037),
-                (.06, .124, -1.59, .004, .013)], hide, belly, 7)
-    c.tip.wedge([(.011, .049, -.969), (.055, .376, -1.423), (.04, .14, -1.316),
-                 (.038, -.167, -1.469), (.019, -.073, -1.133)],
-                (.067, .045, -1.224), rib, thickness=.04, normal=(1, 0, 0))
-    c.school.loft([spine[0], *spine[2::2]], hide, belly, 6)
-    c.school.wedge([(0, .12, .195), (0, .41, -.182), (0, .295, -.61), (0, .103, -.65)],
-                  (.036, .174, -.267), rib, thickness=.03, normal=(1, 0, 0))
-    c.school.wedge([(0, .103, -.58), (0, .24, -1.42), (0, -.119, -1.42), (0, -.065, -.61)],
-                  (.036, .046, -1.04), hide, thickness=.022, normal=(1, 0, 0))
-    school_eye(c.school, .151, .107, .56, glow)
+    data = json.loads(Path(__file__).with_name("StalkerGeometry.json").read_text(encoding="utf-8"))
+    colors = [paint(swatch) for swatch in data["palette"]]
+    rig = data["parts"]
+    c = Creature.new("Stalker", rig["Tail"]["pivot"], rig["TailTip"]["pivot"],
+                     rig["FinRight"]["pivot"], rig["Jaw"]["pivot"], (0, -.391, 1.11))
+    for part in c.parts():
+        if part.name not in rig:
+            continue
+        geometry = rig[part.name]
+        part.pivot = tuple(geometry["pivot"])
+        points = [tuple(point) for point in geometry["verts"]]
+        for swatch, *corners in geometry["faces"]:
+            part.face([points[index] for index in corners], colors[swatch], emissive=(swatch == 9))
+
+    slate, belly, crest, bone, glow, well = (
+        paint(value) for value in ("3A384F","252331","514759","E7DBBC","51E9F5","221A2D"))
+    # The eyes in the reference are painted. These sit in the original eye sockets.
+    slit_eye(c.body, (.211,-.052,.992), (.77,.43,.46), .067, glow, well, -.28)
+    slit_eye(c.body, (-.307,-.052,1.001), (-.74,.42,.46), .064, glow, well, .28)
+    for sign in (-1,1):
+        shift = .048 if sign < 0 else 0
+        for index in range(2):
+            c.body.wedge([side(sign,p) for p in (
+                (.277+shift,-.209-index*.044,.806-index*.036),
+                (.309+shift,-.236-index*.047,.734-index*.030),
+                (.321+shift,-.273-index*.012,.700-index*.010))],
+                side(sign,(.313+shift,-.228-index*.039,.726-index*.030)),
+                crest, thickness=.019, normal=(sign,.05,.20))
+
+    c.school.loft([(0, .052,-.652,.103,.138),(0,.024,.154,.323,.35),
+                   (0,.003,.685,.31,.307),(0,-.075,1.27,.195,.10)],slate,belly,5)
+    c.school.loft([(0,.042,-.634,.12,.128),(-.075,.302,-.927,.101,.103),
+                   (-.119,.748,-1.033,.08,.08),(-.11,1.05,-1.117,.04,.057)],
+                  slate, crest, 5)
+    c.school.wedge([(-.417,1.221,-1.15),(-.105,1.149,-1.144),(.26,1.29,-1.20),
+                    (.10,1.057,-1.234),(-.098,.99,-1.097),(-.341,1.03,-1.21)],
+                   (-.087,1.094,-1.222),crest,thickness=.036,normal=(0,0,-1))
+    c.school.wedge([(0,.336,.431),(0,.667,.316),(0,.563,.142),
+                    (0,.613,-.223),(0,.417,-.227),(0,.437,-.525),(0,.277,-.604)],
+                   (.044,.393,-.02),crest,thickness=.048,normal=(1,0,0))
+    c.school.loft([(0,-.273,.729,.22,.159),(0,-.573,1.195,.135,.076)],slate,belly,5)
+    for sign in (-1,1):
+        swimming_fin(c.school,sign,[(.162,-.07,.625),(.387,-.271,.421),(.478,-.737,.152),
+                                   (.263,-.459,.145),(.214,-.185,.214)],
+                     (.308,-.270,.322),crest,thickness=.051)
+        c.school.wedge([side(sign,p) for p in ((.203,-.222,.814),(.271,-.418,.72),
+                        (.292,-.827,.418),(.221,-.405,.654))],
+                       side(sign,(.263,-.433,.691)),slate,thickness=.021,normal=(sign,0,0))
+        c.school.wedge([side(sign,p) for p in ((.115,-.151,1.161),(.158,-.16,1.18),(.142,-.313,1.245))],
+                        side(sign,(.147,-.187,1.21)),bone,thickness=.014,normal=(sign,0,0))
+    school_eye(c.school,.239,-.037,1.002,glow)
     return c
 
 
