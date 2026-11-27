@@ -116,6 +116,9 @@ def main():
         for existing in bpy.data.collections:
             if existing.name in ("Rammer", "Remora", "Thief", "Abductor", "Stalker"):
                 existing.hide_render = existing is not collection
+        is_stalker = creature.name == "Stalker"
+        scene.camera.data.ortho_scale = 4.76 if is_stalker else 3.2
+        aim(scene.camera, (0, .05, .18 if is_stalker else -.02))
         scene.render.filepath = str(output / (creature.name + ".png"))
         bpy.ops.render.render(write_still=True)
     for i, root in enumerate(collection_roots):
