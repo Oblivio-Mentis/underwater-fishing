@@ -65,6 +65,7 @@ namespace Raid
                     MigrateV6Pockets(progress,envelope.payload);
                     progress.schemaVersion=TeamProgress.CurrentSchema;
                 }
+                if(progress.schemaVersion==7)progress.schemaVersion=TeamProgress.CurrentSchema;
                 progress.Validate();
                 return progress;
             }

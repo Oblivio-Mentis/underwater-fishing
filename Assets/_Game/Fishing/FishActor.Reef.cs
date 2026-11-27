@@ -245,6 +245,14 @@ namespace Raid
             }
         }
 
+        internal static void ScatterFromDefense(Vector3 center,float radius,float duration,int tier)
+        {
+            foreach(var fish in ServerSchool)
+                if(fish && fish.depthTier==tier && fish._depthActive && fish.Mode==FishMode.Roam &&
+                    fish.DesiredState==FishMode.Roam && (fish.transform.position-center).sqrMagnitude<radius*radius)
+                    fish.Frighten(center,duration);
+        }
+
         bool SolidAhead(Vector3 start,Vector3 end)
         {
             Vector3 path=end-start;

@@ -1,0 +1,116 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2268a42343c54782b987504dc96320d5, type: 3}
+  m_Name: ExpeditionDefense
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.DefenseTuning
+  maximumIntegrity: 100
+  damaged: 0.6
+  critical: 0.25
+  restorationSeconds: 5
+  theftSeconds: 17
+  minorLossFraction: 0.1
+  severeLossFraction: 0.35
+  lateLossCap: 24
+  warningSeconds: 6
+  encirclementSeconds: 5
+  visibilitySeconds: 6.5
+  retreatSeconds: 4
+  baseBudget: 14
+  lateBudgetCap: 96
+  appetiteExponent: 0.54
+  crewMultiplier: 0.34
+  baseActive: 4
+  activePerExtraDiver: 2
+  maximumActive: 12
+  maximumGroup: 3
+  firstGroupGap: 5.7
+  lateGroupGap: 2.9
+  maximumAssaultSeconds: 104
+  arrivalDistance: 21
+  sceneryClearance: 0.32
+  concealment: 0.85
+  carrySeconds: 8
+  inkSeconds: 5
+  inkRadius: 4
+  captiveCarrySpeed: 2.5
+  harpoonRangeMargin: 1.4
+  small: 0.85
+  large: 1.2
+  titanChance: 0.085
+  salvageBiomass: 1
+  salvageOffering: 1
+  species:
+  - kind: 0
+    cost: 3
+    simultaneous: 3
+    health: 85
+    speed: 5.8
+    burstSpeed: 12.5
+    shieldDamage: 10
+    diverDamage: 28
+    windup: 1.2
+    cooldown: 5.8
+    fightSeconds: 5.5
+    counterChance: 0.48
+    silhouetteScale: 1
+  - kind: 1
+    cost: 2
+    simultaneous: 4
+    health: 53
+    speed: 4.6
+    burstSpeed: 6.2
+    shieldDamage: 1.5
+    diverDamage: 9
+    windup: 0.42
+    cooldown: 4.5
+    fightSeconds: 5.1
+    counterChance: 0.15
+    silhouetteScale: 0.92
+  - kind: 2
+    cost: 1
+    simultaneous: 4
+    health: 36
+    speed: 7.7
+    burstSpeed: 10.2
+    shieldDamage: 1.5
+    diverDamage: 6
+    windup: 0.42
+    cooldown: 6.4
+    fightSeconds: 3.1
+    counterChance: 0.08
+    silhouetteScale: 0.75
+  - kind: 3
+    cost: 3
+    simultaneous: 2
+    health: 91
+    speed: 4.9
+    burstSpeed: 8.3
+    shieldDamage: 2.5
+    diverDamage: 19
+    windup: 0.95
+    cooldown: 6.7
+    fightSeconds: 6.2
+    counterChance: 0.5
+    silhouetteScale: 1.13
+  - kind: 4
+    cost: 2
+    simultaneous: 3
+    health: 64
+    speed: 6.3
+    burstSpeed: 11
+    shieldDamage: 4
+    diverDamage: 23
+    windup: 0.7
+    cooldown: 6
+    fightSeconds: 4.6
+    counterChance: 0.42
+    silhouetteScale: 1

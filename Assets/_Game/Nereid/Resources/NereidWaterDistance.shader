@@ -11,7 +11,7 @@ Shader "RAID/Nereid Water Distance"
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "NereidWaterColumn.hlsl"
-            float _NereidTurbidity;
+            float _NereidTurbidity, _RaidConcealment;
             float3 _NereidReefClarity;
             struct Input {float3 pos:POSITION;};
             struct Vary {float4 clip:SV_POSITION;float3 dir:TEXCOORD0;};
@@ -39,7 +39,8 @@ Shader "RAID/Nereid Water Distance"
                 // The same column the object fog resolves to; the surface shimmer belongs to Depth I only.
                 half shallow=1-NereidDeepWater(_NereidReefClarity.x);
                 half3 surfaceGlow=half3(.007,.024,.032)*pow(toward,6)*(.85+.15*shimmer)*shallow;
-                return half4(lerp(sky,WaterColumnColor(dir,_NereidReefClarity.x)+surfaceGlow,_NereidTurbidity),1);
+                half3 column=lerp(sky,WaterColumnColor(dir,_NereidReefClarity.x)+surfaceGlow,_NereidTurbidity);
+                return half4(lerp(column,half3(.003,.009,.017),saturate(_RaidConcealment)),1);
             }
             ENDHLSL
         }

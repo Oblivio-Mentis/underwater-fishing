@@ -65,9 +65,18 @@ namespace Raid.Nereid
                 case ShipConsoleKind.SkillTree:
                     heading = "ОСНАЩЕНИЕ"; value = "Модули экипажа"; detail = "Дерево развития"; ratio = 0; break;
                 default:
-                    heading = "РЕЗЕРВУАР"; value = $"Улов   {team.tank.Count} / {team.ReservoirCapacity(world.progression)}";
+                    heading = "ПОЛЕ УЛОВА"; value = $"Улов   {team.tank.Count} / {team.ReservoirCapacity(world.progression)}";
                     detail = route.active ? (route.feeding ? "Подача к пасти" : "Подача в переработчик") : "Выбрать назначение рыбы";
-                    ratio = (float)team.tank.Count / Mathf.Max(1,team.ReservoirCapacity(world.progression)); break;
+                    ratio = (float)team.tank.Count / Mathf.Max(1,team.ReservoirCapacity(world.progression));
+                    var raid=world.threats;
+                    if(raid && raid.DefenseActive)
+                    {
+                        var field=raid.Defense;
+                        detail=field.breached && field.phase==DefensePhase.Resolution?"Поле разрушено · перехватите улов":
+                            field.phase==DefensePhase.Recovery?"Генераторы восстанавливаются":"Прочность поля   "+Mathf.CeilToInt(field.Ratio*100)+"%";
+                        ratio=field.Ratio;
+                    }
+                    break;
             }
             string label = $"<color=#76CCD0>{heading}</color>\n\n<size=132%>{value}</size>\n\n{detail}";
             if (readout.text != label) readout.SetText(label);

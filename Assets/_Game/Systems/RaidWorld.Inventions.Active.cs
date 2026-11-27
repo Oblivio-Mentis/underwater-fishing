@@ -98,6 +98,7 @@ namespace Raid
             float impactRadius = Fishery.chargeImpactRadius;
             float keep = Mathf.Clamp01(Fishery.chargeYield * GearScale(rig,"quality"));
             PushLooseFish(rig.position,radius);
+            threats?.BlastDefense(rig.position,radius,Fishery.chargeDamage*1.35f);
             int affected = 0;
             foreach (var fish in FishActor.ServerSchool)
             {

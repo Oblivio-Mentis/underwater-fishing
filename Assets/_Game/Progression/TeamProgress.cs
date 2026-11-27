@@ -41,14 +41,14 @@ namespace Raid
         public FeedingOutcome outcome;
         public int required, paid;
         public float deficit, mitigation;
-        public bool Attack => outcome == FeedingOutcome.None;
+        public bool Attack => required>0 && paid<required;
     }
 
     /// <summary>Host-owned rules. Call from the server thread; serialized fields are save/snapshot data.</summary>
     [Serializable]
     public sealed partial class TeamProgress
     {
-        public const int CurrentSchema = 7;
+        public const int CurrentSchema = 8;
         public int schemaVersion = CurrentSchema;
         public int biomass, chitin, scrap, electronics;
         public long lifetimeCatch;
@@ -95,10 +95,10 @@ namespace Raid
         }
 
         public bool FitsReservoir(ProgressionTuning tuning) =>
-            (long)tank.Count+CargoFishCount<=ReservoirCapacity(tuning);
+            (long)tank.Count+HeldRaidStock+CargoFishCount<=ReservoirCapacity(tuning);
 
         public int HoistFishCount(ProgressionTuning tuning) =>
-            Math.Min(CargoFishCount,Math.Max(0,ReservoirCapacity(tuning)-tank.Count));
+            Math.Min(CargoFishCount,Math.Max(0,ReservoirCapacity(tuning)-tank.Count-HeldRaidStock));
 
         public bool HasHoistSalvage => cargo.Exists(item=>item.IsSalvage);
 
@@ -245,7 +245,7 @@ namespace Raid
         {
             int required=RequiredFood(tuning);
             HungerReport report = new HungerReport { required = required, paid = offeringPoints,
-                deficit = Math.Max(0f, 1f - (float)offeringPoints / required),
+                deficit = (float)Math.Max(0,required-offeringPoints) / required,
                 outcome = offeringPoints == 0 ? FeedingOutcome.None : offeringPoints < required ? FeedingOutcome.Underfed :
                     offeringPoints == required ? FeedingOutcome.Enough : FeedingOutcome.Overfed };
             bool ready=rationCyclesUntilReady==0;
@@ -258,6 +258,7 @@ namespace Raid
             long retained=(long)Math.Max(0,offeringPoints-required)*TeamValue(SkillLine.Carryover)/100;
             offeringPoints=(int)Math.Min((long)Math.Max(0,tuning.maximumFoodCarry)*FoodScale,retained);
             hungerRemaining=HungerInterval(tuning);
+            if(feedingCycle<int.MaxValue)feedingCycle++;
             return report;
         }
 
@@ -291,6 +292,7 @@ namespace Raid
             foreach (CatchItem item in tank)
                 if (item == null || !item.IsValid || item.IsSalvage || !delivered.Contains(item.id) || !stock.Add(item.id))
                     throw new InvalidOperationException("Invalid tank contents.");
+            ValidateDefense(stock,delivered);
             foreach (CatchItem item in cargo)
                 if (item == null || !item.IsValid || delivered.Contains(item.id) || !stock.Add(item.id))
                     throw new InvalidOperationException("Invalid cargo contents.");

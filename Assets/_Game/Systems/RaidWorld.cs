@@ -66,6 +66,7 @@ namespace Raid
             catchOwners.Clear();
             looseFishMotion.Clear();
             blastCatches.Clear();
+            defenseLoot.Clear();defenseSpecimen=null;
             ResetKrakenBreath();
             ResetCrabs();
             ResetFishRoute();
@@ -174,16 +175,21 @@ namespace Raid
                 SendProcessingReceipt(salvageYield,beforeHoist,team.Treasury,fromSalvage:true);
             // A defense belongs to the deadline that just expired. The next feeding
             // interval stays full in the save and begins ticking when defense ends.
-            if((threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
+            if(transitionRemaining<=0 && (threats==null || !threats.WaveActive) && team.TickHunger(Time.fixedDeltaTime,progression))
             {
                 var report=team.EvaluateHunger(progression);
                 message.Value="Feeding: "+report.outcome+" ("+TeamProgress.FoodText(report.paid)+"/"+TeamProgress.FoodText(report.required)+")";
                 if(report.Attack && threats!=null)
                 {
-                    waveLossBudget=team.StockLossLimit(progression);
-                    threats.StartWave(report.deficit*(1-report.mitigation),Mathf.Max(1,team.highestDepth-1));
+                    if(Nereid.NereidVessel.Active)threats.BeginDefense(report);
+                    else
+                    {
+                        waveLossBudget=team.StockLossLimit(progression);
+                        threats.StartWave(report.deficit*(1-report.mitigation),Mathf.Max(1,team.highestDepth-1));
+                    }
                 }
                 Publish();
+                Save();
             }
             if(transitionRemaining>0)
             {
@@ -300,6 +306,7 @@ namespace Raid
             switch(action)
             {
                 case WorldAction.DiveOne: case WorldAction.DiveTwo:
+                    if(threats && threats.WaveActive){Respond(sender,requestId,false,"defense");return;}
                     int chosen=action==WorldAction.DiveOne?1:2;
                     if(chosen==CurrentDepth || !team.CanVisitDepth(chosen) || !AllInside() || team.hoistPhase!=HoistPhase.Loading || team.cargo.Count>0) break;
                     pendingDepth=chosen; transitionRemaining=tuning.transitionSeconds; message.Value="Changing depth…"; success=true; break;
@@ -404,7 +411,7 @@ namespace Raid
             Save();
             foreach(var fish in FishActor.FindObjectsByType<FishActor>()) fish.EnterHabitat(fish.depthTier==pendingDepth);
             foreach(var loot in FindObjectsByType<LootActor>()) loot.SetDepth(pendingDepth);
-            if(threats!=null) threats.SetDepth(pendingDepth);
+            if(threats!=null){threats.SetDepth(pendingDepth);threats.ResumeDefense(team.ongoingDefense);}
             if(!saveFailed) message.Value="Depth "+depth.Value+": catch fish and deliver cargo";
         }
         private void OnStockAttacked(float severity)

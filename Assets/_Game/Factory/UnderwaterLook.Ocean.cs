@@ -139,17 +139,24 @@ namespace Raid
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
                 float density=Mathf.Lerp(state.fogTop,state.fogBottom,lowerWater);
-                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density,wetBlend);
-                var waterTint=Color.Lerp(state.tintTop,state.tintBottom,lowerWater);
+                var raid=ThreatDirector.Instance;
+                float concealment=raid?raid.DefenseConcealment:0;
+                float ink=raid && camera?raid.DefenseInkAt(camera.transform.position):0;
+                float murk=Mathf.Clamp01(concealment+ink*.55f);
+                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density+wetBlend*(concealment*.065f+ink*.16f),wetBlend);
+                var waterTint=Color.Lerp(Color.Lerp(state.tintTop,state.tintBottom,lowerWater),new Color(.006f,.013f,.021f),murk);
+                Shader.SetGlobalFloat("_RaidConcealment",murk*wetBlend);
                 // Custom reef and hull transmission follows the camera through the same layers.
-                Shader.SetGlobalVector(ReefClarityShader,Vector4.Lerp(state.clarityTop,state.clarityBottom,lowerWater));
+                var clarity=Vector4.Lerp(state.clarityTop,state.clarityBottom,lowerWater);
+                clarity.x=Mathf.Lerp(clarity.x,Mathf.Max(.018f,clarity.x),murk);
+                Shader.SetGlobalVector(ReefClarityShader,clarity);
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;
                 RenderSettings.fogColor=Color.Lerp(initialColor,fogTint,wetBlend);
                 Shader.SetGlobalVector(WaterTintShader,(Vector4)waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
             }
-            else ResetFog();
+            else {ResetFog();Shader.SetGlobalFloat("_RaidConcealment",0);}
             Shader.SetGlobalFloat(WaterShader,wetBlend);
             if(oceanFill!=null)
             {

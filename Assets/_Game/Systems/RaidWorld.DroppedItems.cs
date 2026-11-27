@@ -12,12 +12,13 @@ namespace Raid
         public NetworkObject species;
         public string invention;
         public bool handDropped,dead,spoiled,crabCarried;
+        public byte defenseSpecies;
         public int depth;
         public Vector3 position;
         public float yaw,pitch,roll;
         public FishActor Fish => species == null ? null : species.GetComponent<FishActor>();
         public string Label => kind==DroppedKind.Invention ? TechCatalog.Find(invention)?.title ?? invention :
-            kind==DroppedKind.Harpoon ? "гарпун" : UI.ReelReadout.Species(Fish?.SpeciesId);
+            kind==DroppedKind.Harpoon ? "гарпун" : defenseSpecies>0?DefenseCreatureAssets.Name((DefenseSpecies)(defenseSpecies-1)):UI.ReelReadout.Species(Fish?.SpeciesId);
         public static DroppedItem Gun(long id, Vector3 position, float yaw) =>
             new DroppedItem { kind = DroppedKind.Harpoon, id = id, position = position, yaw = yaw };
         // Normal gear and catches have positive instance IDs. A packed invention retains its unique rig serial.
@@ -106,6 +107,10 @@ namespace Raid
         internal void RegisterDrop(DroppedItem item)
         {
             item.depth=CurrentDepth;
+            if(defenseLoot.TryGetValue(item.id,out var specimen) && DefenseCreatureAssets.ReadKey(specimen.species,out var kind))
+            {
+                item.defenseSpecies=(byte)((int)kind+1);item.dead=true;item.roll=78;
+            }
             if(item.kind==DroppedKind.Catch && blastCatches.Contains(item.id) && !item.dead)
             {
                 item.dead=true;
@@ -227,6 +232,7 @@ namespace Raid
     {
         readonly List<Mesh> ownedMeshes = new();
         CatchFishModel fishModel;
+        GameObject carcass;
         bool built,dead,beingCarried;
         Vector3 targetPosition;
         Quaternion targetRotation;
@@ -254,12 +260,13 @@ namespace Raid
                 else
                 {
                     if(!item.Fish)return false;
-                    fishModel=CatchFishModel.Create(transform,item.Fish.SpeciesId,item.dead?item.id:0).GetComponent<CatchFishModel>();
-                    transform.localScale=Vector3.one*(item.Fish.RequiresPartner?1.25f:.68f);
+                    if(item.defenseSpecies>0)carcass=DefenseCreatureAssets.Model((DefenseSpecies)(item.defenseSpecies-1),transform);
+                    if(!carcass)fishModel=CatchFishModel.Create(transform,item.Fish.SpeciesId,item.dead?item.id:0).GetComponent<CatchFishModel>();
+                    transform.localScale=Vector3.one*(carcass?.82f:item.Fish.RequiresPartner?1.25f:.68f);
                 }
                 built=true;
             }
-            if(item.dead && !dead && fishModel)
+            if(item.dead && !dead && (fishModel || carcass))
             {
                 dead=true;
                 PresentDeadFish();

@@ -19,6 +19,8 @@ MonoBehaviour:
   returningSeconds: 6
   foodRequired: 12
   foodPerDepth: 6
+  foodGrowthPerCycle: 1.17
+  foodHardCap: 2500
   maximumFoodCarry: 3
   hungerInterval: 180
   maximumStockLossFraction: 0.35

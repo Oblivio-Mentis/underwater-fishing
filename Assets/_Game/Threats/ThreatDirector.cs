@@ -44,11 +44,11 @@ namespace Raid
         {
             if (primitiveHitbox != null) primitiveHitbox.enabled = usePrimitive && IsServerInitialized;
         }
-        public Vector3 WavePosition => state.Value.WavePosition;
-        public float WaveHealth => state.Value.WaveHealth;
+        public Vector3 WavePosition => DefenseActive?(defenseActors.Count>0?defenseActors[0].position:DefenseCenter):state.Value.WavePosition;
+        public float WaveHealth => DefenseActive?Defense.integrity:state.Value.WaveHealth;
         public int WaveHits => state.Value.WaveHits;
         private float waveArrivalAt, predatorCooldown, respawn, waveRemaining, stockCooldown, waveDeficit, patrolTime;
-        public bool WaveActive => state.Value.WaveActive;
+        public bool WaveActive => DefenseActive || state.Value.WaveActive;
         public string Message => state.Value.Message ?? "";
         public HuntStage AnglerStage=>state.Value.AnglerStage;
         public Vector3 AnglerPosition=>state.Value.PredatorPosition;
@@ -58,6 +58,7 @@ namespace Raid
             Instance = this;
             if (tuning == null) { tuning = ScriptableObject.CreateInstance<ThreatTuning>(); ownsTuning = true; }
             EnsureProfile();
+            LoadDefenseSettings();
             state.UpdateSettings(new SyncTypeSettings(Mathf.Max(.02f, tuning.snapshotInterval)));
             reefState.UpdateSettings(new SyncTypeSettings(.15f));
             predatorView = Primitive("Predator", new Vector3(1.4f, .8f, 2.8f), new Color(.8f, .23f, .12f));
@@ -89,11 +90,14 @@ namespace Raid
             primitiveHitbox.sharedMesh = waveView.GetComponent<MeshFilter>().sharedMesh;
             primitiveHitbox.enabled = true;
             ResetReef();
+            ResetDefense();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
             state.Value = new ThreatSnapshot { PredatorPosition = AnglerArrival, PredatorHealth = Nereid.NereidVessel.Active || SpawnLayout?.anglerEnabled==false ? 0 : tuning.predatorHealth, AnglerHeading = Vector3.forward };
         }
 
-        public override void OnStopClient() { if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
+        public override void OnStopServer() => StopDefense();
+
+        public override void OnStopClient() { StopDefensePresentation();if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
 
         public void SetDepth(int tier)
         {
@@ -113,6 +117,14 @@ namespace Raid
         public void StartWave(float deficit, int masteredDepth, bool provoked=false)
         {
             if (!IsServerInitialized || SpawnLayout?.raiderEnabled==false || WaveActive || !Finite(deficit) || deficit <= 0f) return;
+            var world=RaidWorld.Instance;
+            if(Nereid.NereidVessel.Active && world?.Team!=null)
+            {
+                int need=world.Team.RequiredFood(world.progression);
+                BeginDefense(new HungerReport{required=need,paid=Mathf.FloorToInt(need*(1-Mathf.Clamp01(deficit))),
+                    deficit=Mathf.Clamp01(deficit),outcome=FeedingOutcome.Underfed},provoked);
+                return;
+            }
             ThreatSnapshot next = state.Value;
             waveDeficit = Mathf.Clamp01(deficit);
             next.WaveActive = true;
@@ -134,6 +146,8 @@ namespace Raid
             if (!IsServerInitialized) return;
             ThreatSnapshot next = state.Value;
             float dt = Time.fixedDeltaTime;
+            TickDefense(dt);
+            next=state.Value;
             if(Nereid.NereidVessel.Active!=null)
             {
                 TickReef(ref next,dt);
@@ -293,6 +307,7 @@ namespace Raid
                 predatorView.rotation = Quaternion.RotateTowards(predatorView.rotation,Quaternion.LookRotation(snapshot.AnglerHeading),
                     Time.deltaTime * (snapshot.AnglerStage == HuntStage.Pursuit ? 240 : 120));
             if (!IsServerInitialized) PlaceRaider(snapshot, true);
+            PresentDefense();
         }
 
         private void Show(Transform visual, Vector3 position, bool visible, bool faceTravel)
@@ -306,6 +321,6 @@ namespace Raid
         }
 
         private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
-        private void OnDestroy() { if (Instance == this) Instance = null; if (ownsTuning) Destroy(tuning); if (ownsProfile) Destroy(anglerProfile); }
+        private void OnDestroy() { if (Instance == this) Instance = null; if (ownsTuning) Destroy(tuning); if (ownsProfile) Destroy(anglerProfile); if(ownsDefenseTuning)Destroy(defenseTuning); if(inkMaterial)Destroy(inkMaterial); }
     }
 }

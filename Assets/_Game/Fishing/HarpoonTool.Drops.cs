@@ -100,6 +100,7 @@ namespace Raid
         void UnequipGun()
         {
             ReleaseBallLineOnServer();
+            DetachDefenseLine();
             ReleaseOutgoingFriend();
             DetachGrip();
             if (_fish != null) _fish.ReleaseHook(this);
@@ -162,7 +163,7 @@ namespace Raid
         internal bool CanPickUp(DroppedItem item)
         {
             if (!MayHandleItems || HandsFull || _fish != null || TetherActive || AssistTarget != null
-                || HasBallLine || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
+                || HasBallLine || HasDefenseLine || RaidWorld.Instance.IsHoldingGosha(Motor)) return false;
             if(item.kind==DroppedKind.Invention)
             {
                 var world=RaidWorld.Instance;
@@ -175,7 +176,7 @@ namespace Raid
         public bool FishLoadTarget(out FishActor fish,out long cargoId)
         {
             fish=null;cargoId=0;
-            if(!MayHandleItems || Motor.IsTrapped || CarriedSalvage || TetherActive || HasBallLine || AssistTarget || CarriedInvention!=null ||
+            if(!MayHandleItems || Motor.IsTrapped || CarriedSalvage || TetherActive || HasBallLine || HasDefenseLine || AssistTarget || CarriedInvention!=null ||
                (!HoldingHeavyCatch && InventionInSlot(ActiveSlot).count>0) ||
                RaidWorld.Instance.IsHoldingGosha(Motor) || HasBallInSlot(ActiveSlot))return false;
             if(HoldingHeavyCatch){fish=HeavySpecies;cargoId=HeavyId;}

@@ -117,13 +117,14 @@ namespace Raid.Tests
             HungerReport report = team.EvaluateHunger(tuning);
             Assert.That(report.outcome, Is.EqualTo(outcome));
             Assert.That(report.deficit, Is.EqualTo(deficit).Within(.001));
-            Assert.That(report.Attack, Is.EqualTo(offered == 0));
+            Assert.That(report.Attack, Is.EqualTo(offered < tuning.foodRequired));
             Assert.That(team.offering, Is.Zero);
         }
 
         [Test]
         public void LastSecondMealProtectsOnlyTheDeadlineItReaches()
         {
+            tuning.foodRequired=1;
             team.hungerRemaining = 121;
             Assert.That(team.TickHunger(1, tuning), Is.False);
             Assert.That(team.hungerRemaining, Is.EqualTo(120));
@@ -132,8 +133,26 @@ namespace Raid.Tests
             Assert.That(team.Feed(91), Is.True);
             Assert.That(team.TickHunger(.5f, tuning), Is.True);
             Assert.That(team.EvaluateHunger(tuning).Attack, Is.False);
+            Assert.That(team.RequiredFood(tuning),Is.GreaterThan(TeamProgress.FoodScale));
             Assert.That(team.TickHunger(tuning.hungerInterval, tuning), Is.True);
             Assert.That(team.EvaluateHunger(tuning).Attack, Is.True);
+        }
+
+        [Test]
+        public void AppetiteAndUnfinishedRaidSurviveTheCampaignSave()
+        {
+            int first=team.RequiredFood(tuning);
+            team.offeringPoints=first-1;
+            var report=team.EvaluateHunger(tuning);
+            Assert.That(report.Attack,Is.True);
+            Assert.That(report.required,Is.EqualTo(first));
+            team.ongoingDefense=new DefenseRecord{seed=7,budget=3,spent=1,deficit=report.deficit,appetite=report.required,integrity=40};
+            TeamSave.Save(savePath,team);
+            var restored=TeamSave.Load(savePath,tuning);
+            Assert.That(restored.feedingCycle,Is.EqualTo(1));
+            Assert.That(restored.RequiredFood(tuning),Is.GreaterThan(first));
+            Assert.That(restored.ongoingDefense.integrity,Is.EqualTo(40));
+            Assert.That(restored.ongoingDefense.spent,Is.EqualTo(1));
         }
 
         [Test]

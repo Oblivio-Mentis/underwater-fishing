@@ -83,7 +83,7 @@ namespace Raid
         public bool IsHypoxic => !IsDead && _state.Value.HypoxicSeconds>0;
         public float HypoxiaSeverity => IsHypoxic?Mathf.Clamp01(.12f+_state.Value.HypoxicSeconds/20f):0;
         public bool IsHelpless => IsDead || (Nereid.NereidVessel.Active==null && Oxygen<=0);
-        public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f : _state.Value.Trapped;
+        public bool IsTrapped => IsServerInitialized ? _trappedTime > 0f || raidCaptive>0 : _state.Value.Trapped;
         public Vector3 AimDirection => Quaternion.Euler(_serverPitch, _serverYaw, 0f) * Vector3.forward;
 
         private void Awake()
@@ -351,7 +351,7 @@ namespace Raid
             state.BodyRotation=transform.rotation;
             state.Sprinting=_serverSprint && active && axes.sqrMagnitude>.04f && (state.Position-_previousPosition).sqrMagnitude>.000001f;
             state.Inside = IsSealedInterior(state.Position);
-            state.Trapped = _trappedTime > 0;
+            state.Trapped = IsTrapped;
             TickExpeditionSkills(state.Inside,Time.fixedDeltaTime);
             var lockRoom = Nereid.NereidAirlock.Active;
             var world = RaidWorld.Instance;
@@ -453,6 +453,7 @@ namespace Raid
                 ReviveAt(transform.position);
                 return;
             }
+            ThreatDirector.Instance?.RescueDefenseVictim(this);
             _trappedTime=0; _helplessTime=0;
             var state=_state.Value; state.Oxygen=Mathf.Max(state.Oxygen,tuning.rescueOxygen); _state.Value=state;
         }

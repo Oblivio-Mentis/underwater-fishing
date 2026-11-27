@@ -31,6 +31,9 @@ namespace Raid.UI
         readonly TMP_Text[] pocketAmounts=new TMP_Text[HarpoonTool.MaximumSlots];
         readonly RectTransform[] crewRows=new RectTransform[5];
         readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
+        readonly RectTransform defensePanel;
+        readonly Image defenseMeter;
+        readonly TMP_Text defenseCaption, defenseValue;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
         readonly TMP_Text healthText;
         readonly RectTransform navigation,depthTicks,hotbar,expedition;
@@ -68,6 +71,12 @@ namespace Raid.UI
             Box(stockStrip,"Clock divider",202,-7,1,17,Rim);
             timer=Caption(stockStrip,"Hunger Timer",208,0,88,32,19,TextAlignmentOptions.Center);
             route=Caption(expedition,"Stock Detail",0,-105,394,24,16,TextAlignmentOptions.Center);
+            defensePanel=Back(expedition,"Shield telemetry",12,-136,370,48);
+            Icon(defensePanel,"Shield",Mark.Shield,7,-8,30,30,Blue);
+            defenseCaption=Caption(defensePanel,"Shield status",42,-1,273,23,16,TextAlignmentOptions.Left);
+            defenseMeter=Meter(defensePanel,"Shield integrity",42,-28,258,9,Blue,9);
+            defenseValue=Caption(defensePanel,"Shield remaining",307,-5,58,30,17,TextAlignmentOptions.Center);
+            defensePanel.gameObject.SetActive(false);
 
             var vitals=At(root,"HUD Vitals",Vector2.zero,Vector2.zero,33,29,264,111);
             Icon(vitals,"Air Bottle",Mark.Bottle,0,-2,35,35,Ivory);
@@ -192,7 +201,26 @@ namespace Raid.UI
                     if(stack.count>0)UiKit.Set(pocketAmounts[i],"×"+stack.count);
                 }
             }
-            bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead;
+            var threats=c.Threats;
+            bool defense=threats && threats.DefenseActive;
+            defensePanel.gameObject.SetActive(defense);
+            if(defense)
+            {
+                var field=threats.Defense;
+                var color=field.breached && field.phase!=DefensePhase.Recovery || field.Ratio<=.25f?UiTheme.Red:field.Ratio<=.60f?Gold:Blue;
+                string phase=field.phase switch {
+                    DefensePhase.Warning=>"РЁВ · ВЕРНИТЕСЬ К ПОДЛОДКЕ",
+                    DefensePhase.Encirclement=>"СТАЯ ОКРУЖАЕТ ПОДЛОДКУ",
+                    DefensePhase.Assault=>"ПОЛЕ · ВОЛНА "+Mathf.Max(1,field.wave),
+                    DefensePhase.Resolution=>field.breached?"ПОЛЕ РАЗРУШЕНО · КРАЖА":"СТАЯ ОТСТУПАЕТ",
+                    _=>"ПОЛЕ ВОССТАНАВЛИВАЕТСЯ"
+                };
+                UiKit.Set(defenseCaption,phase);
+                UiKit.Set(defenseValue,Mathf.CeilToInt(field.Ratio*100)+"%");
+                defenseCaption.color=defenseValue.color=defenseMeter.color=color;
+                UiKit.Fraction(defenseMeter,field.Ratio);
+            }
+            bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead&&(!defense || threats.DefenseConcealment<.32f);
             navigation.gameObject.SetActive(showNav);
             if(!showNav)return;
             Plot(submarine,diver,c.World.tuning.terminalPosition,true);

@@ -34,6 +34,10 @@ namespace Raid
         [Min(.01f)] public float returningSeconds = 6f;
         [Min(1)] public int foodRequired = 12;
         [Min(0)] public int foodPerDepth = 6;
+        [Range(1f,2f)] public float foodGrowthPerCycle = 1.17f;
+        [Tooltip("Optional curve maps the number of completed feedings to the growth exponent. Empty uses the cycle number.")]
+        public AnimationCurve foodGrowthCurve = new();
+        [Min(12)] public int foodHardCap = 2500;
         [Min(0)] public int maximumFoodCarry = 3;
         [Min(1f)] public float hungerInterval = 180f;
         [Range(0f, 1f)] public float maximumStockLossFraction = .35f;

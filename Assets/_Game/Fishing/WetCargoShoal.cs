@@ -219,7 +219,8 @@ namespace Raid
             if(swimmers.TryGetValue(item.id,out var fish))return fish;
             bool large=item.cargoSize>1;
             string species=string.IsNullOrEmpty(item.species)?large?"Bristlefish":"Lanternfish":item.species;
-            var model=CatchFishModel.Create(transform,species,item.id).transform;
+            var specimen=DefenseCreatureAssets.ReadKey(species,out var speciesKind)?DefenseCreatureAssets.Model(speciesKind,transform):null;
+            var model=(specimen?specimen:CatchFishModel.Create(transform,species,item.id)).transform;
             float seed=HabitatNoise((ulong)item.id);
             fish=new Swimmer
             {

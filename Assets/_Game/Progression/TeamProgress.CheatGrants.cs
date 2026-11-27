@@ -47,7 +47,7 @@ namespace Raid
         public int ReservoirRoom(ProgressionTuning tuning=null)
         {
             int reserved=hoistPhase==HoistPhase.Loading?0:CargoFishCount;
-            return (int)Math.Max(0L,(long)ReservoirCapacity(tuning)-tank.Count-reserved);
+            return (int)Math.Max(0L,(long)ReservoirCapacity(tuning)-tank.Count-HeldRaidStock-reserved);
         }
 
         public bool TryGrantFish(CatchItem specimen,int amount,ProgressionTuning tuning,Func<bool> persist,

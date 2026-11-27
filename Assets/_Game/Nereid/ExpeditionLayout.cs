@@ -14,6 +14,8 @@ namespace Raid.Nereid
             public Transform[] anglerTerritories;
             [Tooltip("Centre of raider arrival. The entrance still needs an open swim path.")]
             public Transform raiderArrival;
+            [Tooltip("Optional launch markers for groups. Empty uses natural entries from the shoal itself.")]
+            public Transform[] defenseApproaches;
             [Tooltip("Sites projected onto the seabed.")]
             public Transform clamSite, krakenSite;
             [Tooltip("Ordered patrol loop. Eels also arrive around these legs.")]

@@ -89,6 +89,7 @@ namespace Raid
         public long CargoId => IsServerInitialized ? _cargoId : _snapshot.Value.CaptureId;
         public CatchItem ToCargo(long id)
         {
+            if(RaidWorld.Instance && RaidWorld.Instance.TryGetDefenseLoot(id,out var defeated))return defeated.Copy();
             var (scrap,electronics) = SpeciesId switch
             {
                 "Bristlefish" => (depthTier > 1 ? 2 : 1,0),

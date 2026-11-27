@@ -23,6 +23,8 @@ namespace Raid.Editor
             ("Популяции рыб", "t:FishHabitat", "Assets/_Game"),
             ("Виды рыб", "t:FishSpeciesProfile", "Assets/_Game"),
             ("Угрозы", "t:ThreatTuning", "Assets/_Game"),
+            ("Оборона подлодки", "t:DefenseTuning", "Assets/_Game"),
+            ("Стая и звук обороны", "t:DefenseAtmosphereSettings", "Assets/_Game"),
             ("Удильщик", "t:PredatorProfile", "Assets/_Game"),
             ("Прогрессия", "t:ProgressionTuning", "Assets/_Game"),
             ("Дерево прокачки", "RadialProgressionCatalog", "Assets/_Game"),
@@ -42,7 +44,7 @@ namespace Raid.Editor
             ("anglerEnabled","Удильщик"),("raiderEnabled","Налётчик"),("clamEnabled","Моллюск"),
             ("eelEnabled","Угорь"),("krakenEnabled","Кракен"),("raiderArrival","Прибытие налётчика"),
             ("clamSite","Место моллюска"),("krakenSite","Место кракена"),
-            ("anglerTerritories","Зоны удильщика"),("eelPatrol","Патруль угря")
+            ("anglerTerritories","Зоны удильщика"),("eelPatrol","Патруль угря"),("defenseApproaches","Заходы атакующих групп")
         };
 
         [MenuItem("RAID/Редактор экспедиции",false,0)]
@@ -158,6 +160,7 @@ namespace Raid.Editor
                 Pick("Пасть кракена · направление пламени",layout.flameOutlet);
                 Pick("Все ссылки и параметры размещения",layout);
             }
+            Pick("Защитное поле улова",InScene<DefenseFieldView>(scene).FirstOrDefault());
             Pick("Оборудование переработки и кормления",InScene<FactoryVisuals>(scene).FirstOrDefault());
             Pick("Навигация корабля и точки экипажа",InScene<NereidDeckNavigation>(scene).FirstOrDefault());
             Pick("Шлюз и уровни воды",InScene<NereidPressureDoors>(scene).FirstOrDefault());
@@ -193,6 +196,8 @@ namespace Raid.Editor
             {
                 if(zones.krakenEnabled && !zones.krakenSite && GUILayout.Button("+ Место кракена"))
                     zones.krakenSite=AddSpawn(layout,null,"Кракен",zones.clamSite)[0];
+                if(GUILayout.Button("+ Заход стаи"))
+                    zones.defenseApproaches=AddSpawn(layout,zones.defenseApproaches,"Заход стаи",zones.raiderArrival);
                 if(GUILayout.Button("+ Укрытие крабов"))
                     layout.crabDens=AddSpawn(layout,layout.crabDens,"Укрытие крабов",zones.clamSite);
                 if(GUILayout.Button("+ Место находки"))

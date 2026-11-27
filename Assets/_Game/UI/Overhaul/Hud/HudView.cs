@@ -135,6 +135,8 @@ namespace Raid.UI
             UiKit.Set(scanMarker,diver.ScanLabel);
         }
 
+        DefensePhase seenDefensePhase;
+
         void RefreshEvents(UiContext context)
         {
             bool wave=context.DefendingReservoir;
@@ -142,10 +144,17 @@ namespace Raid.UI
             if(observedPlayer!=context.Player || observedWorld!=context.World || loss<previousLoss)
             {
                 observedPlayer=context.Player;observedWorld=context.World;
-                previousWave=wave;previousLoss=loss;previousWorldMessage=message;return;
+                previousWave=wave;previousLoss=loss;previousWorldMessage=message;seenDefensePhase=context.Threats?context.Threats.Defense.phase:DefensePhase.Idle;return;
             }
             if(message!=previousWorldMessage && message.StartsWith("Feeding: ") && !message.Contains("None"))app.Toast(UiText.WorldMessage(message));
-            if(wave && !previousWave && !Root.gameObject.activeInHierarchy)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
+            var raid=context.Threats;
+            if(raid && raid.Defense.phase!=seenDefensePhase)
+            {
+                seenDefensePhase=raid.Defense.phase;
+                if(seenDefensePhase!=DefensePhase.Idle && !string.IsNullOrEmpty(raid.Message))
+                    app.Toast(raid.Message,seenDefensePhase!=DefensePhase.Recovery);
+            }
+            if(raid && !raid.DefenseActive && wave && !previousWave && !Root.gameObject.activeInHierarchy)app.Toast(UiText.HudWave+". "+UiText.HudWaveHint,true);
             if(!wave && previousWave)app.Toast(UiText.HudWaveEnded);
             if(loss>previousLoss)app.Toast(UiText.HudStockLost(loss-previousLoss),true);
             previousWave=wave;previousLoss=loss;previousWorldMessage=message;

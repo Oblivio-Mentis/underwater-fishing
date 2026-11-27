@@ -27,6 +27,6 @@ namespace Raid.UI
             return raw;
         }
         public const string QuoteChanged="Состав улова, уровень или цена изменились. Повторите действие";
-        public static string CommandReason(string reason) => reason=="resource_full"?"Запас ресурса заполнен. Груз сохранён.":reason=="ok"?"Сервер подтвердил действие":reason=="onboard"?"Войдите в подлодку и подойдите к пульту":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="reservoir_full"?"Освободите место в резервуаре":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
+        public static string CommandReason(string reason) => reason=="resource_full"?"Запас ресурса заполнен. Груз сохранён.":reason=="ok"?"Сервер подтвердил действие":reason=="onboard"?"Войдите в подлодку и подойдите к пульту":reason=="range"?"Подойдите ближе к точке взаимодействия":reason=="defense"?"Дождитесь окончания обороны":reason=="travel"?"Дождитесь завершения перехода":reason=="cooldown"?"Предыдущее действие ещё обрабатывается":reason=="helpless"?"Сначала дождитесь спасения":reason=="reservoir_full"?"Освободите место в резервуаре":reason=="route_busy"?RouteBusy:reason=="use_route"?UseFishRoute:reason=="changed"?QuoteChanged:"Действие отклонено: условия изменились на сервере";
     }
 }

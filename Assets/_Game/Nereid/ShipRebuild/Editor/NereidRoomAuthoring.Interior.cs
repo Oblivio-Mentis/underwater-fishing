@@ -162,22 +162,13 @@ namespace Raid.Nereid.Editor
         static void Aquarium()
         {
             const float x=2.42f,z0=-6.70f,z1=2.70f;
-            var pool=Part("Pressure tank and intake grids",new(0,-1.22f,-2));
-            pool.Box(enamel,new(0,-2.34f,-2),new(4.97f,.22f,9.56f));
-            foreach(int d in new[]{-1,1})
+            var shield=UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/_Game/Nereid/DefenseShield/Resources/DefenseShield/Field.prefab");
+            if(shield)
             {
-                pool.Box(hull,new(d*(x+.05f),-1.19f,-2),new(.15f,2.36f,9.51f));
-                pool.Box(hull,new(0,-1.19f,-2+d*4.75f),new(4.96f,2.36f,.15f));
-                for(int i=0;i<6;i++)
-                {
-                    float z=z0+.52f+i*1.62f;
-                    pool.Box(dark,new(d*(x-.06f),-1.29f,z),new(.18f,2.08f,.12f));
-                    pool.Box(cyan,new(d*(x-.11f),-1.42f,z),new(.054f,.58f,.13f));
-                    pool.Box(steel,new(d*1.88f,-2.20f,z),new(.41f,.075f,.64f));
-                    for(int t=0;t<4;t++)pool.Box(dark,new(d*1.88f,-2.152f,z-.20f+t*.13f),new(.34f,.018f,.055f));
-                }
-                pool.Tube(steel,new(d*2.27f,-1.95f,z0+.14f),new(d*2.27f,-1.95f,z1-.14f),.081f);
-                pool.Lamp("Submerged inspection wash",submerged,new(d*1.77f,-1.57f,-2+d*2.29f),18,6.1f);
+                var mounted=(GameObject)UnityEditor.PrefabUtility.InstantiatePrefab(shield,room);
+                mounted.name="Поле защиты улова";
+                mounted.transform.localPosition=new Vector3(0,.005f,0);
             }
             var glazing=Part("Laminated walkable glass",new(0,-.065f,-2));
             // Glazing slabs share a single continuous collision surface; seams cannot catch player feet.

@@ -36,8 +36,7 @@ namespace Raid
         public static string FoodText(int points) =>
             (points / (decimal)FoodScale).ToString("0.##", CultureInfo.GetCultureInfo("ru-RU"));
 
-        public int RequiredFood(ProgressionTuning tuning) =>
-            checked(Math.Max(1, tuning.foodRequired + (highestDepth - 1) * tuning.foodPerDepth) * FoodScale);
+        public int RequiredFood(ProgressionTuning tuning) => GrowingFood(tuning);
 
         public int TeamRank(SkillLine line) => SkillTreeDefinition.Rank(teamSkills,line);
         public int TeamValue(SkillLine line) => SkillTreeDefinition.Value(teamSkills,line);
@@ -81,6 +80,7 @@ namespace Raid
         {
             var projection=(TeamProgress)MemberwiseClone();
             projection.players=new List<PlayerProgress>();
+            projection.ongoingDefense=null;
             projection.rigs=rigs.ConvertAll(r=>r.PublicCopy());
             projection.goshaDen=new List<GoshaJunkKind>(goshaDen);
             projection.tank=tank.ConvertAll(item=>item.PublicCopy());

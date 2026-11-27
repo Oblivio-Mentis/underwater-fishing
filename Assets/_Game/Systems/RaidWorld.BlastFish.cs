@@ -138,8 +138,8 @@ namespace Raid
 
         void PresentDeadFish()
         {
-            fishModel.enabled=false;
-            var surfaces=fishModel.GetComponentsInChildren<MeshRenderer>();
+            if(fishModel)fishModel.enabled=false;
+            var surfaces=(carcass?carcass:fishModel.gameObject).GetComponentsInChildren<MeshRenderer>();
             var ink=new MaterialPropertyBlock();
             foreach(var skin in surfaces)
             {

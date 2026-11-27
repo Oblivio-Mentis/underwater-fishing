@@ -171,6 +171,7 @@ namespace Raid
         {
             if (!CanSelect(slot) || slot == ActiveSlot) return;
             ReleaseBallLineOnServer();
+            DetachDefenseLine();
             if (_fish != null) _fish.ReleaseHook(this);
             EquipSlot(slot);
         }
@@ -290,7 +291,7 @@ namespace Raid
                 float wheel = cheatPointer ? 0 : _wheel.ReadValue<float>();
                 if (Mathf.Abs(wheel) > .01f) SelectSlot((ActiveSlot + (wheel > 0 ? SlotCount-1 : 1)) % SlotCount);
             }
-            if (primaryPressed && !itemConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !TetherActive) FireServer();
+            if (primaryPressed && !itemConsumed && ActiveSlot == 0 && AssistTarget == null && _fish == null && !HasBallLine && !HasDefenseLine && !TetherActive) FireServer();
             bool keyboardControls = controlling || (gameplay && cheatPointer);
             if (Application.isFocused && _release.WasPressedThisFrame())
             {
@@ -316,7 +317,7 @@ namespace Raid
         [ServerRpc(RequireOwnership = true)]
         private void FireServer()
         {
-            if (HasBallLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
+            if (HasBallLine || HasDefenseLine || (RaidWorld.Instance?.IsHoldingGosha(Motor)??false) || (RaidWorld.Instance?.GoshaKnocked(Motor)??false))return;
             if (!OwnsHarpoon || HandsFull || tuning == null || ActiveSlot != 0 || AssistTarget != null || _fish != null || TetherActive || Motor.IsHelpless || Time.unscaledTime < _nextFire) return;
             if(FishLoadTarget(out _,out _) && CargoDispatch.ServerSeesOpening(RaidWorld.Instance,Motor,Motor.AimDirection))return;
             _nextFire = Time.unscaledTime + Mathf.Max(0.1f, tuning.fireCooldown);
@@ -332,6 +333,7 @@ namespace Raid
                 RaidWorld.Instance?.TryHookBall(this,ball,hit,out contact);
             else if(friend!=null)
             {
+                ThreatDirector.Instance?.RescueDefenseVictim(friend);
                 if(TryHookFriend(friend.GetComponent<HarpoonTool>()))
                     contact=HarpoonContact.FromHit(friend.NetworkObject,friend.transform,false,hit,Motor.AimDirection);
             }
@@ -347,7 +349,11 @@ namespace Raid
                     contact = candidate;
                 }
             }
-            else if(fish==null) ThreatDirector.Instance?.Strike(eye,Motor.AimDirection,1f,hit);
+            else if(fish==null)
+            {
+                var director=ThreatDirector.Instance;
+                if(director && !director.HookDefense(this,hit))director.Strike(eye,Motor.AimDirection,1f,hit);
+            }
             if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
             _impact.Value=contact;
             _shotSequence.Value++;
@@ -378,6 +384,7 @@ namespace Raid
             _friendRefuseUntil = Time.unscaledTime + Safe(friendTetherTuning.optOutSeconds, 3, 3, 10);
             _optOutRemaining.Value = _friendRefuseUntil - Time.unscaledTime;
             if (HasBallLine) { ReleaseBallLineOnServer(); return; }
+            if (HasDefenseLine) { DetachDefenseLine(); return; }
             if (IsPulled) { ReleaseIncomingFriend(); return; }
             if (OwnsFriendTether) { ReleaseOutgoingFriend(); return; }
             if (AssistTarget != null) { DetachGrip(); _assistHeld = false; return; }
@@ -428,7 +435,7 @@ namespace Raid
         internal bool QaReleaseOwned()
         {
             if (!IsClientInitialized || !IsOwner || (QaMenuBlocked && !IsPulled)
-                || (_fish == null && FishInSlot(ActiveSlot) == null && AssistTarget == null && !HasBallLine && !TetherActive)) return false;
+                || (_fish == null && FishInSlot(ActiveSlot) == null && AssistTarget == null && !HasBallLine && !HasDefenseLine && !TetherActive)) return false;
             ReleaseServer(); return true;
         }
 #endif
@@ -442,6 +449,7 @@ namespace Raid
         private void ReleaseAll(bool showDrops = true)
         {
             ReleaseBallLineOnServer();
+            DetachDefenseLine();
             _liftedHeavy.Value = default;
             ReleaseOutgoingFriend();
             ReleaseIncomingFriend();
@@ -540,7 +548,7 @@ namespace Raid
         private void FixedUpdate()
         {
             if (!IsServerInitialized) return;
-            _reelingActive.Value=!Motor.IsHelpless && (OwnsFriendTether || HasBallLine || HasFishingLine(this)) && Reeling;
+            _reelingActive.Value=!Motor.IsHelpless && (OwnsFriendTether || HasBallLine || HasDefenseLine || HasFishingLine(this)) && Reeling;
             if (Motor.IsHelpless)
             {
                 ReleaseAll();
@@ -554,7 +562,7 @@ namespace Raid
 
         private void TickGrip()
         {
-            if (!_assistHeld || HandsFull || tuning == null || HasBallLine || TetherActive || _fish != null || ActiveSlot > 1
+            if (!_assistHeld || HandsFull || tuning == null || HasBallLine || HasDefenseLine || TetherActive || _fish != null || ActiveSlot > 1
                 || Time.unscaledTime - _lastControls >= tuning.inputTimeout)
             { DetachGrip(); return; }
             var shooter = ToolOf(_assistTarget.Value);
@@ -583,7 +591,7 @@ namespace Raid
         }
 
         private bool CanGrip(HarpoonTool shooter, float reach) => shooter != null && shooter != this
-            && shooter.gameObject.scene == gameObject.scene && shooter._fish != null && shooter._fish.Mode != FishMode.Captured
+            && shooter.gameObject.scene == gameObject.scene && (shooter.HasDefenseLine || shooter._fish != null && shooter._fish.Mode != FishMode.Captured)
             && !shooter.Motor.IsHelpless && !shooter.TetherActive && (shooter._assistant.Value == null || shooter._assistant.Value == NetworkObject)
             && (shooter.transform.position - transform.position).sqrMagnitude <= reach * reach && FriendLineVisible(shooter);
 
@@ -599,6 +607,7 @@ namespace Raid
             if (_line == null) return;
             bool attached = _impact.Value.Resolve(out _,out var contact,out _,out _)
                 && (OwnsFriendTether || HasBallLine || HasFishingLine(this));
+            if(HasDefenseLine && ThreatDirector.Instance)attached=ThreatDirector.Instance.TryDefenseVisualAnchor(defenseHook.Value,out contact);
             _line.enabled=attached;
             if(!attached)return;
             _line.SetPosition(0,transform.position+Vector3.up*.6f+transform.right*.2f);
@@ -608,7 +617,7 @@ namespace Raid
         bool TryHookFriend(HarpoonTool target)
         {
             if (target == null || target == this || !CanTetherParticipant(this) || !CanTetherParticipant(target)) return false;
-            if (HasBallLine || target.HasBallLine || TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull) return false;
+            if (HasBallLine || target.HasBallLine || target.HasDefenseLine || HasDefenseLine || TetherActive || _fish != null || target.TetherActive || target.AssistTarget != null || target.HandsFull) return false;
             if (target.gameObject.scene != gameObject.scene || Time.unscaledTime < target._friendRefuseUntil) return false;
             if (Vector3.Distance(transform.position, target.transform.position) > TetherMaxRange || !FriendLineVisible(target)) return false;
             _friendTarget.Value = target.NetworkObject;
