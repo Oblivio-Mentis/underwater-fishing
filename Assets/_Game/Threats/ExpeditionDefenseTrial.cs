@@ -662,6 +662,7 @@ namespace Raid
             var arc=UnityEngine.Object.FindAnyObjectByType<UI.LineTensionArc>();
             while(tool.HasDefenseLine && Time.realtimeSinceStartup-start<7)
             {
+                if(!arc)arc=UnityEngine.Object.FindAnyObjectByType<UI.LineTensionArc>();
                 if(tool.LineTension>.71f)winding=false;
                 if(tool.LineTension<.40f)winding=true;
                 if(tool.TryHookedDefense(out var fight))

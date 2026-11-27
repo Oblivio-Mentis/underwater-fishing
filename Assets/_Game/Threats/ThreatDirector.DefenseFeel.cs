@@ -105,7 +105,7 @@ namespace Raid
                         +normal*Mathf.Lerp(.32f,1.4f,(float)random.NextDouble())+Vector3.up*.11f,
                     startLifetime=Mathf.Lerp(.28f,breach?1.45f:.84f,(float)random.NextDouble()),
                     startSize=Mathf.Lerp(.065f,breach?.35f:.22f,scatter),
-                    startRotation=(float)random.NextDouble()*360f,
+                    rotation=(float)random.NextDouble()*360f,
                     startColor=Color.Lerp(new Color(.19f,.43f,.49f,.68f),new Color(.54f,.81f,.80f,.79f),scatter)
                 },1);
             }
