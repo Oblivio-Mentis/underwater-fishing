@@ -184,20 +184,33 @@ namespace Raid.Nereid.Editor
             var normals = new List<Vector3>();
             var triangles = new List<int>();
 
+            foreach (float side in new[] {-1f,1f})
+            {
+                AddSurface(crossSections/2, stations, (u,v) =>
+                {
+                    float depth = Mathf.Sin(u*Mathf.PI*.5f);
+                    float z = LengthStation(v,DefenseFieldView.BowLimit(depth));
+                    return (new Vector3(side*DefenseFieldView.BeamAtDepth(depth,z),-depth*DefenseFieldView.DepthAt(z),z),
+                        DefenseFieldView.SideNormal(side,depth,z));
+                });
+            }
+            AddSurface(crossSections, crossSections/2, (u,v) =>
+            {
+                float depth = Mathf.Sin(v*Mathf.PI*.5f);
+                float z = DefenseFieldView.BowLimit(depth);
+                float x = (2*u-1)*DefenseFieldView.BeamAtDepth(depth,z);
+                return (new Vector3(x,-depth,z),DefenseFieldView.BowNormal(depth));
+            });
             AddSurface(crossSections, stations, (u,v) =>
             {
-                float angle = (u-.5f)*Mathf.PI;
-                float depth = Mathf.Max(0,Mathf.Cos(angle));
-                float x = Mathf.Sin(angle);
-                float z = Mathf.Lerp(DefenseFieldView.AftEdge,DefenseFieldView.BowLimit(depth),v);
-                return (new Vector3(x*DefenseFieldView.BeamAt(z),-depth*DefenseFieldView.DepthAt(z),z),
-                    new Vector3(x,-depth,0));
+                float z = LengthStation(v,DefenseFieldView.BowLimit(1));
+                return (new Vector3((2*u-1)*DefenseFieldView.BeamAtDepth(1,z),-DefenseFieldView.DepthAt(z),z),Vector3.down);
             });
             AddSurface(crossSections, crossSections/2, (u,v) =>
             {
                 float depth = Mathf.Sin(v*Mathf.PI*.5f);
-                float x = (2*u-1)*DefenseFieldView.SectionWidth(depth);
-                return (new Vector3(x,-depth,DefenseFieldView.BowLimit(depth)),DefenseFieldView.BowNormal(depth));
+                const float z = DefenseFieldView.AftEdge;
+                return (new Vector3((2*u-1)*DefenseFieldView.BeamAtDepth(depth,z),-depth*DefenseFieldView.DepthAt(z),z),Vector3.back);
             });
 
             var mesh = new Mesh { name = "Hull-conforming membrane" };
@@ -206,6 +219,10 @@ namespace Raid.Nereid.Editor
             mesh.SetTriangles(triangles, 0);
             mesh.RecalculateBounds();
             return mesh;
+
+            float LengthStation(float v,float end) => v < .25f
+                ? Mathf.Lerp(DefenseFieldView.AftEdge,-.86f,v/.25f)
+                : Mathf.Lerp(-.86f,end,(v-.25f)/.75f);
 
             void AddSurface(int width,int length,System.Func<float,float,(Vector3 point,Vector3 normal)> sample)
             {

@@ -69,8 +69,7 @@ namespace Raid.Nereid.Editor
                 float z = (i % 3 - 1) * view.radii.z * .58f;
                 float y = view.RimHeight - .19f;
                 float ny = (y - view.RimHeight) / extents.y;
-                float width = extents.x * DefenseFieldView.BeamAt(z/extents.z) *
-                    DefenseFieldView.SectionWidth(-ny/DefenseFieldView.DepthAt(z/extents.z));
+                float width = extents.x * DefenseFieldView.BeamAtDepth(-ny/DefenseFieldView.DepthAt(z/extents.z),z/extents.z);
                 mounting.localPosition = new Vector3(side*(width-.145f), view.RimHeight + .07f, z);
                 mounting.localRotation = Quaternion.Euler(0, side < 0 ? 180 : 0, 0);
 
@@ -259,15 +258,20 @@ namespace Raid.Nereid.Editor
 
                 RenderAt("01-installed",new Vector3(13.4f,-2.1f,-4.8f), new Vector3(0,-.46f,0));
                 RenderAt("02-seating",new Vector3(9.82f,-.90f,-1.5f), new Vector3(6.75f,.70f,.55f));
-                var contact = field.ContactWorld(field.transform.TransformPoint(new Vector3(10.4f,-1.7f,.8f)));
-                field.Apply(.60f,1,1,contact,.12f,1.16f);
-                RenderAt("03-impact",new Vector3(13.4f,-2.1f,-4.8f), new Vector3(0,-.46f,0));
-                field.Apply(.60f,1,2,contact,.46f,1.06f);
-                RenderAt("04-impact-wave",new Vector3(13.4f,-2.1f,-4.8f), new Vector3(0,-.46f,0));
                 RenderAt("05-aft-seam",new Vector3(11f,-1.25f,-6.3f),new Vector3(3.9f,-1.35f,-4.68f));
                 Vector3 pipe = field.transform.InverseTransformPoint(field.PipeSealWorld(0));
                 float side = pipe.x < 0 ? -1 : 1;
                 RenderAt("06-pipe-seal",pipe+new Vector3(side*3.4f,-.7f,-1.6f),pipe);
+                var contact = field.ContactWorld(field.transform.TransformPoint(new Vector3(10.4f,-1.7f,.8f)));
+                field.Apply(.60f,1,1,contact,.12f,1.16f);
+                RenderAt("03-impact",new Vector3(13.4f,-2.1f,-4.8f), new Vector3(0,-.46f,0));
+                field.Apply(.60f,1,0,Vector3.zero,float.PositiveInfinity);
+                field.Apply(.60f,1,2,contact,.46f,1.06f);
+                RenderAt("04-impact-wave",new Vector3(13.4f,-2.1f,-4.8f), new Vector3(0,-.46f,0));
+                var ship = field.GetComponentInParent<NereidVessel>().transform;
+                RenderAt("07-processing-flange",ToField(new Vector3(-2.12f,2.96f,-6.47f)),ToField(new Vector3(-3.24f,2.81f,-8.10f)));
+
+                Vector3 ToField(Vector3 point) => field.transform.InverseTransformPoint(ship.TransformPoint(point));
 
                 void RenderAt(string name, Vector3 eye, Vector3 target)
                 {
