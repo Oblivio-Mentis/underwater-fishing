@@ -261,8 +261,19 @@ namespace Raid
             }
             if(motion.sqrMagnitude<.00001f)return;
             var before=a.data.position;
-            a.nextRoute=0;
-            Steer(a,before+motion,motion.magnitude/Mathf.Max(.001f,dt),dt,Defense.breached,tool.Motor);
+            var heading=motion.normalized;
+            float distance=motion.magnitude;
+            if(DefenseObstacle(before,heading,distance+.033f,tool.Motor,out var surface))
+                distance=Mathf.Max(0,surface.distance-.033f);
+            var candidate=before+heading*distance;
+            var intent=winding>0 && !brain.Surging?(away+side*(sway*.29f)).normalized:heading;
+            var facing=Vector3.RotateTowards(a.data.forward,intent,(brain.Surging?6.6f:4.2f)*dt,0).normalized;
+            if(distance>.001f && OutsideAttackEntry(a.data.kind,candidate,facing,a.data.scale) &&
+                !DefenseOccupied(candidate,tool.Motor))
+            {
+                a.data.velocity=(candidate-before)/Mathf.Max(.001f,dt);
+                SetAttackerPosition(a,candidate,facing);
+            }
             if((a.data.position-before).sqrMagnitude<motion.sqrMagnitude*.1f && DefenseClock>=a.nextFightDeflection)
             {
                 brain.Deflect();

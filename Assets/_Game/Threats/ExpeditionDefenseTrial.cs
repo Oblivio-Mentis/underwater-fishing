@@ -693,7 +693,8 @@ namespace Raid
             }
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && tool.CatchCount==before+1,
-                $"The swimming predator uses the physical spool and lands in inventory in {Time.realtimeSinceStartup-start:F2} seconds.");
+                $"The swimming predator lands in {Time.realtimeSinceStartup-start:F2} seconds. " +
+                $"Line {tool.HasDefenseLine}, spool {tool.LineLength:F2} m, catch {tool.CatchCount}, prior {before}.");
             report.Check(sawTug && maxNeedle>.08f,"The ordinary fishing needle loads and warns before a real predator tug.");
         }
 
