@@ -129,7 +129,7 @@ namespace Raid
             float now=Time.unscaledTime,dt=Mathf.Min(Time.unscaledDeltaTime,.05f);
             var hit=tool.AttachedContact;
             bool confirmed=hit.Resolve(out var target,out var targetPoint,out var targetNormal,out var targetDirection)
-                && (tool.OwnsFriendTether || tool.HasBallLine || tool.HookedFish!=null && tool.HookedFish.Mode>=FishMode.Hooked && tool.HookedFish.Mode<=FishMode.Tired);
+                && (tool.HasDefenseLine || tool.OwnsFriendTether || tool.HasBallLine || tool.HookedFish!=null && tool.HookedFish.Mode>=FishMode.Hooked && tool.HookedFish.Mode<=FishMode.Tired);
             if(confirmed)
             {
                 attached=target;
@@ -187,7 +187,7 @@ namespace Raid
                 float length=Vector3.Distance(MuzzlePoint(),tip);
                 bool ownerInput=tool.IsOwner&&Application.isFocused&&!UI.UiInputGate.Blocked&&!UI.UiInputGate.PointerReserved&&Mouse.current!=null&&Mouse.current.leftButton.isPressed;
                 bool reeling=confirmed && (tool.Reeling || ownerInput);
-                float tension=tool.HookedFish==null?(reeling?1:0):tool.LineTension;
+                float tension=tool.HookedFish!=null || tool.HasDefenseLine?tool.LineTension:(reeling?1:0);
                 DrawCable(MuzzlePoint(),LineKnot,now,tension,reeling);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if(settled)

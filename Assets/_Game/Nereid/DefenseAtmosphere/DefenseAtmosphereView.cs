@@ -30,6 +30,8 @@ namespace Raid.Nereid
         int raidSeed, phase;
         float phaseAge, appliedAt, swarmAge, sampledAt, intensity, shade, impactAge = float.PositiveInfinity;
         Vector3 anchor, impactPoint;
+        Vector3 approachStart, approachEnd;
+        float approachFraction, warningReveal;
         ulong promoted;
         bool hasSwarmClock, bound;
 
@@ -117,6 +119,13 @@ namespace Raid.Nereid
 
         public void SetPromotedSlots(ulong mask) => promoted = mask;
 
+        public void SetApproach(Vector3 start,Vector3 end,float fraction,float anticipation)
+        {
+            approachStart=start;approachEnd=end;
+            approachFraction=Mathf.Clamp01(fraction);
+            warningReveal=Mathf.Clamp01(anticipation);
+        }
+
         public void Apply(int seed,int phase,float phaseAge,float tension,Vector3 vesselCenter,float visibility,
             float shieldAge,Vector3 newestImpact)
         {
@@ -179,7 +188,7 @@ namespace Raid.Nereid
 
             if (phase == 0) return;
             BindAssets();
-            float reveal = phase == 1 ? Mathf.SmoothStep(0,1,Mathf.InverseLerp(.65f,5.5f,elapsed))
+            float reveal = phase == 1 ? warningReveal*.75f
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
             if (!material || reveal < .02f) return;
             RenderSwarm(profile,eye,observer,orbitAge,reveal);
@@ -191,12 +200,28 @@ namespace Raid.Nereid
             float range = Mathf.Lerp(profile.clearDrawingDistance,profile.darkDrawingDistance,shade);
             int slots = Mathf.Clamp(profile.silhouetteCount,35,MaxSlots);
             float fleeRange = Mathf.Max(.01f,profile.giveWayDistance);
+            var vessel=NereidVessel.Active;
+            bool advancing=phase<=3 && (approachEnd-approachStart).sqrMagnitude>1;
+            float spreadOut=phase==3?Mathf.SmoothStep(0,1,phaseAge/13f):0;
+            Vector3 lead=advancing?(approachEnd-approachStart).normalized:Vector3.forward;
+            Vector3 lateral=Vector3.Cross(Vector3.up,lead).normalized;
+            Vector3 school=Vector3.Lerp(approachStart,approachEnd,Mathf.SmoothStep(0,1,approachFraction));
             for (int i = 0; i < slots; i++)
             {
                 if ((promoted & (1UL << i)) != 0) continue;
                 OrbitPose pose = SampleOrbit(raidSeed,i,orbitAge,anchor,profile);
                 Vector3 point = pose.Position;
                 Vector3 heading = pose.Forward;
+                if(advancing && spreadOut<1)
+                {
+                    uint key=unchecked((uint)raidSeed+(uint)i*15731u);
+                    float fin=Unit(key+19)-.5f;
+                    float row=(i%3-1)*2.9f+Mathf.Sin(orbitAge*.53f+i*.81f)*.78f;
+                    Vector3 formed=school+lateral*(row+fin*3.1f)+Vector3.up*((Unit(key+31)-.5f)*4.7f+
+                        Mathf.Sin(orbitAge*.9f+i*.47f)*.28f)-lead*(Unit(key+43)*8.5f);
+                    point=Vector3.Lerp(formed,point,spreadOut);
+                    heading=Vector3.Slerp(lead,heading,spreadOut);
+                }
                 Vector3 away = point-observer;
                 float distanceSquared = away.sqrMagnitude;
                 if (distanceSquared > range*range) continue;
@@ -210,6 +235,8 @@ namespace Raid.Nereid
                 Vector3 view = eye.WorldToViewportPoint(point);
                 if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f))) continue;
                 if (phase == 5) point += (pose.Position-anchor).normalized * (4.9f*(1-reveal));
+                if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale) ||
+                    Physics.CheckSphere(point,pose.Scale*.40f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
                 float roll = Mathf.Sin(orbitAge*(1.5f+.17f*pose.Kind)+i*.73f) * (8+pose.Kind*2.2f);
                 Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(roll,Vector3.forward);
                 matrices[pose.Kind][counts[pose.Kind]++] = Matrix4x4.TRS(point,bank,Vector3.one*pose.Scale);

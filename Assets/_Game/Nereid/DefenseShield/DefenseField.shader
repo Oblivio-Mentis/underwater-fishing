@@ -129,7 +129,10 @@ Shader "RAID/Defense/Containment membrane"
                 float front = IS_FRONT_VFACE(face, 1.0, .64);
                 float3 facets = pow(abs(unit), 5);
                 facets /= max(.001, facets.x + facets.y + facets.z);
-                float3 panels = local * _GridScale;
+                float travel=_Time.y;
+                float3 shift=float3(travel*.072,-travel*.18,travel*.103);
+                float3 distortion=.15*sin(local.zxy*1.16-travel*.81)+.07*cos(local.yzx*2.4+travel*.57);
+                float3 panels=local*_GridScale+shift+distortion;
                 float grid = dot(facets, float3(Lattice(panels.yz), Lattice(panels.xz), Lattice(panels.xy)));
 
                 float integrity = _FieldState.x;
@@ -157,7 +160,8 @@ Shader "RAID/Defense/Containment membrane"
                 float assemblyEdge = (threshold - formation * 1.16 + .10) * 13;
                 float assembly = exp2(-assemblyEdge * assemblyEdge)
                     * (1 - smoothstep(.83,.99,formation)) * smoothstep(.015,.16,formation);
-                float baseOpacity = _BodyOpacity + _RimOpacity * rim + grid * _CellOpacity * (.48 + .52 * flow);
+                float band=pow(saturate(.52+.48*sin(local.y*1.6-local.z*.49+local.x*.29+travel*1.13)),8);
+                float baseOpacity = _BodyOpacity + _RimOpacity * rim + grid * _CellOpacity * (.41 + .40 * flow + .49*band) + band*.012;
                 baseOpacity *= unstable * lerp(1,.72,critical);
                 float sillDepth = -unit.y * _FieldRadii.y;
                 float sill = exp2(-sillDepth * sillDepth * 27);

@@ -150,33 +150,14 @@ namespace Raid
 
         static async Awaitable SwarmFrame(string folder,DiverMotor player,ThreatDirector director)
         {
-            await Awaitable.WaitForSecondsAsync(1.25f);
             var vessel=Nereid.NereidVessel.Active;
             var center=director.DefenseCenter;
-            var rights=vessel.transform.right;
-            for(int i=0;i<2;i++)
-            {
-                Vector3 outward=rights*(i==0?1:-1);
-                var at=center+outward*13+Vector3.down*2;
-                if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.55f))continue;
-                var eye=at+Vector3.up*.6f;
-                float closest=16;
-                Vector3 target=Vector3.zero;
-                for(int slot=0;slot<Nereid.DefenseAtmosphereView.SwarmSlotCount;slot++)
-                {
-                    var p=Nereid.DefenseAtmosphereView.SampleOrbit(director.Defense.seed,slot,director.SwarmAge,center).Position;
-                    var step=p-eye;
-                    float distance=step.magnitude;
-                    if(distance>closest || distance<5 || Vector3.Dot(step.normalized,outward)<.24f ||
-                        !MarineSpawn.ClearLeg(eye,p,.12f,distance))continue;
-                    closest=distance;target=p;
-                }
-                player.Teleport(at);
-                player.LookAtConsole(target.sqrMagnitude>.001f?target:eye+outward*13);
-                break;
-            }
+            float side=Vector3.Dot(director.Defense.approachEnd-center,vessel.transform.right)<0?-1:1;
+            var at=vessel.transform.TransformPoint(new Vector3(side*4.30f,side<0?1.55f:.06f,-2.58f));
+            player.Teleport(at);
+            player.LookAtConsole(director.DefenseApproachFocus);
             await Awaitable.WaitForSecondsAsync(.28f);
-            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm.png"));
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
         }
 
         static async Awaitable RecordFrameTime(Report report)
@@ -221,10 +202,19 @@ namespace Raid
             team.hungerRemaining=.05f;
             await Wait(()=>d.Defense.phase==DefensePhase.Warning,"underfeeding warning");
             report.Check(team.feedingCycle==2 && d.Defense.budget>0,"Partial feeding queues one raid for the finished meal.");
+            report.Check(d.DefenseCountdown>44 && d.DefenseCountdown<=45.1f && !d.DefenseAlarm,
+                "The raid begins with a 45-second countdown and the ship awaits the incoming school.");
+            await Shot(folder,host,d,d.Defense.approachStart,"01-countdown");
             float interval=team.hungerRemaining;
-            await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"encirclement");
-            await Shot(folder,host,d,d.DefenseCenter,"02-encirclement");
+            await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"school approach",d.defenseTuning.warningSeconds+4);
+            await Awaitable.WaitForSecondsAsync(2f);
+            var lighting=prefab.GetComponentInChildren<Nereid.NereidDefenseLighting>();
+            report.Check(lighting && lighting.AlarmActive && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
+                "The alarm and exterior spotlights follow the synchronized approaching school before the first attack.");
             await SwarmFrame(folder,host,d);
+            report.Check(host.IsInside && Shader.GetGlobalFloat("_RaidDryHaze")>.32f,
+                "A dry observation deck camera still sees the exterior haze.");
+            await Shot(folder,host,d,d.DefenseApproachFocus,"02-encirclement");
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
@@ -307,8 +297,18 @@ namespace Raid
             host.LookAtConsole(remora.position);
             await Awaitable.WaitForSecondsAsync(.16f);
             tool.DefenseFixtureFire();
-            await Wait(()=>tool.HasDefenseLine,"server validated the shot into the remora",3);
+            await Wait(()=>tool.HasDefenseLine && tool.AttachedContact.defenseId==remora.id,"server validated the shot into the remora",3);
             report.Check(d.DefenseActorCount==1,"A harpoon strike does not remove an attached remora on impact.");
+            HarpoonShotFx flight=null;
+            await Wait(()=>
+            {
+                foreach(var fx in UnityEngine.Object.FindObjectsByType<HarpoonShotFx>())
+                    if(fx.VerifiedOwner==host.OwnerId && fx.VerifiedFrames>1 && fx.HasConfirmedAttachment){flight=fx;return true;}
+                return false;
+            },"the rendered barb and cable follow the predator",3);
+            report.Check(flight.MaxTipError<.035f && flight.MaxKnotError<.035f,
+                "The moving harpoon bolt stays in the creature with its cable attached.");
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-predator-harpoon.png"));
             float deadline=Time.realtimeSinceStartup+15;
             float peakTension=0;
             bool winding=true;

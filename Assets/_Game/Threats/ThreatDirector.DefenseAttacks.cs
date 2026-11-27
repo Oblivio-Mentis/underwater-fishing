@@ -25,7 +25,7 @@ namespace Raid
             public Vector3? stockApproach;
             public DiverMotor target;
             public CatchItem catchItem;
-            public SphereCollider collider;
+            public CapsuleCollider collider;
             public readonly List<DefenseHook> hooks=new(4);
         }
 
@@ -40,8 +40,10 @@ namespace Raid
             go.transform.SetParent(transform,true);
             go.transform.position=point;
             go.layer=Mathf.Max(0,RaiderLayer);
-            var hit=go.AddComponent<SphereCollider>();
-            hit.radius=.70f*size*card.silhouetteScale;
+            var hit=go.AddComponent<CapsuleCollider>();
+            hit.direction=2;
+            hit.radius=card.kind==DefenseSpecies.Rammer?.60f:.47f;
+            hit.height=card.kind switch {DefenseSpecies.Remora=>2.22f,DefenseSpecies.Stalker=>2.65f,_=>2.56f};
             var a=new DefenseAttacker {
                 data=new AttackerSnapshot{id=++actorSerial,kind=card.kind,position=point,
                     forward=slot>=0?orbit.Forward:(DefenseCenter-point).normalized,
@@ -49,6 +51,8 @@ namespace Raid
                     slot=slot,victim=-1,group=group},
                 card=card,cost=cost,vitality=card.health*size,slot=slot,collider=hit,exit=point
             };
+            go.transform.localScale=Vector3.one*a.data.scale;
+            go.transform.rotation=Quaternion.LookRotation(a.data.forward);
             attackers.Add(a);
             var s=Defense;if(slot>=0)s.promoted|=1UL<<slot;defenseState.Value=s;
         }
@@ -97,7 +101,11 @@ namespace Raid
         bool DefensePathClear(Vector3 from,Vector3 to)
         {
             var leg=to-from;
-            return leg.sqrMagnitude<.015f || !Physics.SphereCast(from,defenseTuning.sceneryClearance,leg.normalized,
+            if(leg.sqrMagnitude<.015f)return true;
+            int steps=Mathf.Max(1,Mathf.CeilToInt(leg.magnitude/1.2f));
+            var vessel=NereidVessel.Active;
+            if(vessel)for(int i=1;i<=steps;i++)if(vessel.ContainsSealed(from+leg*((float)i/steps)))return false;
+            return !Physics.SphereCast(from,defenseTuning.sceneryClearance,leg.normalized,
                 out _,leg.magnitude,obstacleMask,QueryTriggerInteraction.Ignore);
         }
 
@@ -137,9 +145,13 @@ namespace Raid
                 }
                 var candidate=a.data.position+motion;
                 if(!mayCrossShield && ShieldContains(candidate))candidate=FieldContact(candidate,.06f);
+                var vessel=NereidVessel.Active;
+                if((vessel && !vessel.OutsideDefenseHull(candidate,direction,a.data.scale)) ||
+                    Physics.CheckSphere(candidate,defenseTuning.sceneryClearance,obstacleMask,QueryTriggerInteraction.Ignore))
+                {a.nextRoute=0;return false;}
                 a.data.position=candidate;
                 a.data.forward=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
-                a.collider.transform.position=candidate;
+                a.collider.transform.SetPositionAndRotation(candidate,Quaternion.LookRotation(a.data.forward));
             }
             return (goal-a.data.position).sqrMagnitude<.62f*.62f;
         }

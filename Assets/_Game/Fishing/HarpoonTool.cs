@@ -366,7 +366,7 @@ namespace Raid
             else if(fish==null)
             {
                 var director=ThreatDirector.Instance;
-                if(director && !director.HookDefense(this,hit))director.Strike(eye,Motor.AimDirection,1f,hit);
+                if(director && !director.HookDefense(this,hit,out contact))director.Strike(eye,Motor.AimDirection,1f,hit);
             }
             if(contact.target==null)FishActor.AlertNearShot(eye,endpoint);
             _impact.Value=contact;
@@ -706,8 +706,8 @@ namespace Raid
             if(didHit && hit.collider.GetComponentInParent<FishActor>()!=null) return true;
             if(tuning.hitAssistRadius<=0) return didHit;
             if(Physics.SphereCast(eye, tuning.hitAssistRadius, direction, out var wide, tuning.maxRange, tuning.hitMask, QueryTriggerInteraction.Ignore)
-                && wide.collider.GetComponentInParent<FishActor>()!=null
-                && (!didHit || wide.distance<=hit.distance+tuning.hitAssistRadius))
+                && (wide.collider.GetComponentInParent<FishActor>()!=null && (!didHit || wide.distance<=hit.distance+tuning.hitAssistRadius)
+                    || wide.collider.gameObject.layer==ThreatDirector.RaiderLayer && (!didHit || wide.distance<hit.distance)))
             { hit=wide; return true; }
             return didHit;
         }

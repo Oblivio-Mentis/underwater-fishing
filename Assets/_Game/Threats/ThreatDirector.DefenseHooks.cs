@@ -4,8 +4,9 @@ namespace Raid
 {
     public sealed partial class ThreatDirector
     {
-        internal bool HookDefense(HarpoonTool tool,RaycastHit hit)
+        internal bool HookDefense(HarpoonTool tool,RaycastHit hit,out HarpoonContact contact)
         {
+            contact=default;
             if(!IsServerInitialized || !DefenseActive || !hit.collider || !tool || tool.HasDefenseLine || tool.Motor.IsTrapped)return false;
             foreach(var a in attackers)
             {
@@ -13,6 +14,8 @@ namespace Raid
                 a.hooks.Add(new DefenseHook{tool=tool,line=new FishingLine(Vector3.Distance(tool.FishingAnchor,a.data.position))});
                 if(a.data.victim<0)a.target=null;
                 a.data.impactOffset=Quaternion.Inverse(Quaternion.LookRotation(a.data.forward))*(hit.point-a.data.position);
+                contact=HarpoonContact.FromHit(NetworkObject,a.collider.transform,false,hit,tool.Motor.AimDirection);
+                contact.defenseId=a.data.id;
                 tool.AttachDefenseLine(a.data.id);
                 var s=state.Value;s.WaveHits++;state.Value=s;
                 return true;

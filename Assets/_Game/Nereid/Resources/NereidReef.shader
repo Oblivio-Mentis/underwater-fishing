@@ -185,7 +185,8 @@ Shader "RAID/Nereid Reef"
                 half3 murk=NereidWaterFade(closeColor,view,d*d,_NereidReefClarity.x);
                 half3 workLight=base*HullIrradiance(i.pos,n)*.95;
                 half3 workTransmission=lerp(transmit,exp2(-d*_NereidReefClarity.z*half3(.14,.114,.10)),_NereidTurbidity);
-                half3 result=lerp(outside,murk,_NereidTurbidity)+workLight*workTransmission;
+                half glassHaze=_RaidDryHaze*smoothstep(4,23,d);
+                half3 result=lerp(outside,murk,max(_NereidTurbidity,glassHaze))+workLight*workTransmission;
                 // A close mask lamp should still reveal the companion's shell markings.
                 if (_PigmentLightCap>0) result=min(result,base*_PigmentLightCap+.022+rgb*_Wreck*.38);
                 return half4(result,1);

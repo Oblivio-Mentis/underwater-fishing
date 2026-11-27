@@ -73,6 +73,14 @@ namespace Raid.Nereid
             return airlock!=null&&airlock.Contains(point)?!airlock.IsSubmerged(point):ContainsSealed(point);
         }
 
+        internal bool OutsideDefenseHull(Vector3 center,Vector3 heading,float scale)
+        {
+            Vector3 span=heading*(.85f*scale);
+            Vector3 shoulders=Vector3.Cross(Vector3.up,heading)*(.40f*scale);
+            return !ContainsSealed(center) && !ContainsSealed(center+span) && !ContainsSealed(center-span) &&
+                !ContainsSealed(center+shoulders) && !ContainsSealed(center-shoulders) && !ContainsSealed(center+Vector3.up*(.42f*scale));
+        }
+
         public bool InsideJaws(Vector3 chest)
         {
             Vector3 local=transform.InverseTransformPoint(chest);

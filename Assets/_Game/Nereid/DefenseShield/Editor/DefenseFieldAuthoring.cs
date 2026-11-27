@@ -62,6 +62,7 @@ namespace Raid.Nereid.Editor
                 }
 
                 Fit(view, generators, housingMaterial);
+                InstallDefenseLighting(view,housingMaterial);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 AssetDatabase.SaveAssets();
                 Selection.activeObject = prefab;

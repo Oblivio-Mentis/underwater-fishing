@@ -123,9 +123,17 @@ namespace Raid
             bool wet=IsEyeUnderwater();
             float dt=Time.unscaledDeltaTime;
             wetBlend=Mathf.MoveTowards(wetBlend,wet?1:0,dt*2.4f);
-            if(wetBlend<=0 && !appliedFog && !InAirlock())return;
-            UpdateDiveLamp(wet);
+            var threats=ThreatDirector.Instance;
+            float concealment=threats?threats.DefenseConcealment:0;
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
+            float dryHaze=(1-wetBlend)*concealment;
+            Shader.SetGlobalFloat("_RaidDryHaze",dryHaze);
+            if(wetBlend<=0 && !appliedFog && !InAirlock())
+            {
+                PresentSeaThroughGlass(abyss,concealment);
+                return;
+            }
+            UpdateDiveLamp(wet);
             bool inLock=InAirlock();
             float height=camera!=null?camera.transform.position.y:0f;
             float belowShelf=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-13f,-24f,height));
@@ -139,9 +147,7 @@ namespace Raid
                 appliedFog=true;
                 RenderSettings.fog=true;RenderSettings.fogMode=FogMode.ExponentialSquared;
                 float density=Mathf.Lerp(state.fogTop,state.fogBottom,lowerWater);
-                var raid=ThreatDirector.Instance;
-                float concealment=raid?raid.DefenseConcealment:0;
-                float ink=raid && camera?raid.DefenseInkAt(camera.transform.position):0;
+                float ink=threats && camera?threats.DefenseInkAt(camera.transform.position):0;
                 float murk=Mathf.Clamp01(concealment+ink*.55f);
                 RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density+wetBlend*(concealment*.043f+ink*.16f),wetBlend);
                 var waterTint=Color.Lerp(Color.Lerp(state.tintTop,state.tintBottom,lowerWater),new Color(.006f,.013f,.021f),murk);
@@ -156,7 +162,7 @@ namespace Raid
                 Shader.SetGlobalVector(WaterTintShader,(Vector4)waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
             }
-            else ResetFog();
+            else {ResetFog();PresentSeaThroughGlass(abyss,concealment);}
             Shader.SetGlobalFloat(WaterShader,wetBlend);
             if(oceanFill!=null)
             {
@@ -166,7 +172,6 @@ namespace Raid
                 oceanFill.intensity=target;
             }
             // Keep a continuous breathing rhythm as the animal approaches or retreats.
-            var threats=ThreatDirector.Instance;
             float danger=wet && viewed!=null && !viewed.IsDead && threats!=null
                 ? threats.NearbyDanger(camera.transform.position) : 0f;
             predatorProximity=Mathf.MoveTowards(predatorProximity,danger,dt*(danger>predatorProximity?.8f:.48f));
@@ -193,6 +198,16 @@ namespace Raid
             }
         }
 
+        void PresentSeaThroughGlass(bool abyss,float haze)
+        {
+            var state=abyss?grading.Abyss:grading.Shallow;
+            var clarity=state.clarityBottom;
+            clarity.x=Mathf.Lerp(clarity.x,Mathf.Max(.010f,clarity.x),haze);
+            Shader.SetGlobalVector(ReefClarityShader,clarity);
+            Shader.SetGlobalVector(WaterTintShader,(Vector4)Color.Lerp(state.tintBottom,new Color(.008f,.018f,.035f),haze));
+            Shader.SetGlobalFloat("_RaidConcealment",haze);
+        }
+
         void ResetFog()
         {
             RenderSettings.fog=initialFog;RenderSettings.fogMode=initialMode;
@@ -210,6 +225,8 @@ namespace Raid
             RenderSettings.ambientGroundColor=deckGround;
             if(oceanFill!=null)oceanFill.intensity=oceanFillBase;
             if(appliedFog)ResetFog();
+            Shader.SetGlobalFloat("_RaidDryHaze",0);
+            Shader.SetGlobalFloat("_RaidConcealment",0);
             Shader.SetGlobalVector(LampShader,Vector4.zero);
             if(diveLamp!=null)Destroy(diveLamp.gameObject);
         }

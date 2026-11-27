@@ -30,7 +30,7 @@ namespace Raid
         [Range(0,.6f)] public float minorLossFraction=.10f, severeLossFraction=.35f;
         [Min(1)] public int lateLossCap=24;
         [Header("Escalation and passes")]
-        [Min(.5f)] public float warningSeconds=6, encirclementSeconds=5;
+        [Min(.5f)] public float warningSeconds=37, encirclementSeconds=8;
         [Min(.1f)] public float visibilitySeconds=6.5f, retreatSeconds=4;
         [Min(1)] public float baseBudget=14, lateBudgetCap=96;
         [Range(0,2)] public float appetiteExponent=.54f, crewMultiplier=.34f;

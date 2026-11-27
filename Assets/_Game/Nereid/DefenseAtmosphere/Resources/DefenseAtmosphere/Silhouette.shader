@@ -88,10 +88,11 @@ Shader "RAID/Defense/Swarm Silhouette"
                 half3 pigment = i.pigment * _Tint.rgb;
                 half3 color = pigment * (.12 + .28*overhead);
                 color += pigment * pow(edge,2.3) * .25;
+                half search=saturate(RaidSearchBeam(i.world));
                 color += pigment * saturate(NereidBeam(i.world)) * .82;
                 half3 column = WaterColumnColor(-view, _NereidReefClarity.x);
                 half extinction = exp2(-d2 * max(.00042, _NereidReefClarity.x * .53));
-                half3 shadow = lerp(column * .51, color, extinction);
+                half3 shadow = lerp(column * .51, color, max(extinction,search*.76));
                 half eyeFalloff = exp2(-d2 * .00049);
                 half3 lamp = i.pigment * _EyeGlow * eyeFalloff * (.91 + .09*i.beat);
                 return half4(lerp(shadow,lamp,luminous),1);

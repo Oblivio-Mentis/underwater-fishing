@@ -8,6 +8,7 @@ namespace Raid
     {
         public NetworkObject target;
         public bool tail, ball;
+        public int defenseId;
         public Vector3 localPoint, localNormal, localDirection;
 
         public static HarpoonContact FromHit(NetworkObject target, Transform surface, bool tail, RaycastHit hit, Vector3 direction)
@@ -25,6 +26,12 @@ namespace Raid
         {
             surface=null;point=normal=direction=Vector3.zero;
             if(target==null)return false;
+            if(defenseId>0)
+            {
+                if(!target.TryGetComponent<ThreatDirector>(out var raid) || !raid.TryDefenseSurface(defenseId,out surface))return false;
+                ResolveOn(surface,out point,out normal,out direction);
+                return true;
+            }
             if(ball)
             {
                 if(!target.TryGetComponent<RaidWorld>(out var world) || !world.TryBallAnchor(out surface,out var center))return false;

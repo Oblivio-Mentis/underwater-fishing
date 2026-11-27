@@ -21,6 +21,7 @@ namespace Raid
         readonly HashSet<int> visibleIds=new();
         readonly List<int> retiredViews=new();
         DefenseFieldView fieldView;
+        NereidDefenseLighting defenseLighting;
         sealed class InkView
         {
             public Transform vapor, front, rear;
@@ -51,7 +52,11 @@ namespace Raid
                 if(anchor==vessel.transform)installed.transform.localPosition=new Vector3(0,-1.195f,-2);
                 fieldView=installed.GetComponent<DefenseFieldView>();
             }
-            if(fieldView){fieldAnchor=fieldView.transform;fieldRadii=Vector3.Max(fieldView.radii,Vector3.one*.05f);}
+            if(fieldView)
+            {
+                fieldAnchor=fieldView.transform;fieldRadii=Vector3.Max(fieldView.radii,Vector3.one*.05f);
+                defenseLighting=fieldView.GetComponentInChildren<NereidDefenseLighting>(true);
+            }
             return fieldView;
         }
 
@@ -67,6 +72,16 @@ namespace Raid
                     :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.15f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
                 field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
+                if(defenseLighting)
+                {
+                    var focus=DefenseApproachFocus;
+                    if(snapshot.phase==DefensePhase.Assault)
+                    {
+                        foreach(var attacker in defenseActors)
+                            if(attacker.group==1){focus=Vector3.Lerp(focus,attacker.position,.74f);break;}
+                    }
+                    defenseLighting.Present(DefenseAlarm,focus,DefenseClock);
+                }
             }
             PresentDefenseAtmosphere(snapshot);
             PresentRaidInk();
@@ -120,6 +135,10 @@ namespace Raid
                 atmosphere=Instantiate(art,transform,false).GetComponent<DefenseAtmosphereView>();
             }
             atmosphere.SetSwarmAge(SwarmAge);
+            float approach=snapshot.phase==DefensePhase.Warning?0:snapshot.phase==DefensePhase.Encirclement
+                ?DefenseAge/defenseTuning.encirclementSeconds:1;
+            atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,approach,
+                1-Mathf.InverseLerp(defenseTuning.encirclementSeconds,defenseTuning.encirclementSeconds+11,DefenseCountdown));
             ulong promoted=0;
             foreach(var a in defenseActors)if(a.slot>=0)promoted|=1UL<<a.slot;
             atmosphere.SetPromotedSlots(promoted);
@@ -140,7 +159,9 @@ namespace Raid
         {
             var root=view.root;
             float blend=1-Mathf.Exp(-Time.deltaTime*14);
-            root.position=Vector3.Lerp(root.position,snapshot.position,blend);
+            Vector3 next=Vector3.Lerp(root.position,snapshot.position,blend);
+            var vessel=NereidVessel.Active;
+            root.position=vessel && !vessel.OutsideDefenseHull(next,snapshot.forward,snapshot.scale)?snapshot.position:next;
             float frame=Mathf.Max(.0001f,Time.deltaTime);
             float pace=Mathf.InverseLerp(.15f,8f,Vector3.Distance(root.position,view.previousPosition)/frame);
             view.previousPosition=root.position;
@@ -196,6 +217,14 @@ namespace Raid
                 foreach(var actor in defenseActors)
                     if(actor.id==id){position=seen.root.position+seen.root.rotation*actor.impactOffset;return true;}
             return TryDefenseAnchor(id,out position);
+        }
+
+        internal bool TryDefenseSurface(int id,out Transform surface)
+        {
+            if(visibleAttackers.TryGetValue(id,out var visual) && visual.root){surface=visual.root;return true;}
+            if(IsServerInitialized)foreach(var a in attackers)
+                if(a.data.id==id && a.collider){surface=a.collider.transform;return true;}
+            surface=null;return false;
         }
 
         public float DefenseInkAt(Vector3 point)

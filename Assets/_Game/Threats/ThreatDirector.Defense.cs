@@ -17,8 +17,8 @@ namespace Raid
             public int seed, budget, spent, wave, lost, returned, impact;
             public ulong promoted;
             public float integrity, maximum, severity, impactStrength;
-            public double phaseAt, beginsAt, impactAt;
-            public Vector3 impactPoint;
+            public double phaseAt, beginsAt, impactAt, assaultAt;
+            public Vector3 impactPoint, approachStart, approachEnd;
             public bool breached, provoked;
             public float Ratio => maximum>0?Mathf.Clamp01(integrity/maximum):1;
         }
@@ -60,6 +60,18 @@ namespace Raid
         public AttackerSnapshot DefenseActorAt(int index) => defenseActors[index];
         public float DefenseAge => Mathf.Max(0,(float)(DefenseClock-Defense.phaseAt));
         public float SwarmAge => Mathf.Max(0,(float)(DefenseClock-Defense.beginsAt));
+        public float DefenseCountdown => Defense.phase is DefensePhase.Warning or DefensePhase.Encirclement
+            ? Mathf.Max(0,(float)(Defense.assaultAt-DefenseClock)) : 0;
+        public bool DefenseAlarm => Defense.phase is DefensePhase.Encirclement or DefensePhase.Assault;
+        internal Vector3 DefenseApproachFocus
+        {
+            get
+            {
+                var s=Defense;
+                float p=s.phase==DefensePhase.Encirclement?Mathf.Clamp01(DefenseAge/defenseTuning.encirclementSeconds):1;
+                return Vector3.Lerp(s.approachStart,s.approachEnd,Mathf.SmoothStep(0,1,p));
+            }
+        }
         public Vector3 DefenseCenter => fieldAnchor?fieldAnchor.position:
             NereidVessel.Active?NereidVessel.Active.transform.TransformPoint(new Vector3(0,-1.195f,-2)):tuning.reservoirPoint;
         public double DefenseClock => !NetworkObject || TimeManager==null?Time.timeAsDouble:
@@ -69,7 +81,12 @@ namespace Raid
             get
             {
                 if(!DefenseActive || !defenseTuning)return 0;
-                float fade=Mathf.SmoothStep(0,1,Mathf.Clamp01(SwarmAge/Mathf.Max(.1f,defenseTuning.visibilitySeconds)));
+                float fade=Defense.phase switch
+                {
+                    DefensePhase.Warning=>Mathf.SmoothStep(0,.46f,DefenseAge/defenseTuning.warningSeconds),
+                    DefensePhase.Encirclement=>Mathf.SmoothStep(.46f,1,DefenseAge/Mathf.Max(.1f,defenseTuning.visibilitySeconds)),
+                    _=>1
+                };
                 if(Defense.phase==DefensePhase.Recovery)fade*=1-Mathf.SmoothStep(0,1,Mathf.Clamp01(DefenseAge/defenseTuning.restorationSeconds));
                 return fade*defenseTuning.concealment;
             }
@@ -131,17 +148,40 @@ namespace Raid
             activeRaid=record;
             raidRandom=new System.Random(record.seed ^ record.spent);
             double now=DefenseClock;
+            SelectDefenseApproach(record.seed,out var approachStart,out var approachEnd);
             defenseState.Value=new DefenseSnapshot {
                 seed=record.seed, budget=record.budget, spent=record.spent, lost=record.lost,
                 integrity=Mathf.Clamp(record.integrity,0,defenseTuning.maximumIntegrity),maximum=defenseTuning.maximumIntegrity,
                 severity=record.deficit, phase=record.resolutionComplete?DefensePhase.Recovery:record.breached?DefensePhase.Resolution:DefensePhase.Warning,
                 breached=record.breached, provoked=record.provoked, beginsAt=now,phaseAt=now,
+                assaultAt=now+defenseTuning.warningSeconds+defenseTuning.encirclementSeconds,
+                approachStart=approachStart,approachEnd=approachEnd,
                 condition=record.breached?FieldCondition.Broken:FieldCondition.Normal
             };
             nextActorSnapshot=0;
             groupSerial=0;
             if(!record.breached && !record.resolutionComplete)FishActor.ScatterFromDefense(DefenseCenter,19f,3.5f,depthTier);
             SetDefenseMessage(record.provoked?"Рёв кракена. Стая идёт к подлодке!":"Кракен голоден. Возвращайтесь к подлодке!");
+        }
+
+        void SelectDefenseApproach(int seed,out Vector3 start,out Vector3 end)
+        {
+            var vessel=NereidVessel.Active;
+            var center=DefenseCenter;
+            Vector3 broadside=vessel.transform.right*((seed&1)==0?1:-1);
+            Vector3 higher=center+Vector3.up*1.25f;
+            for(int i=0;i<12;i++)
+            {
+                float angle=(i/2%3)*24*(i%2==0?-1:1);
+                Vector3 heading=Quaternion.AngleAxis(angle,Vector3.up)*broadside*(i<6?1:-1);
+                Vector3 near=higher+heading*15f+Vector3.down*.9f;
+                Vector3 far=higher+heading*34f+Vector3.up*.64f;
+                if(!MarineSpawn.InOpenWater(depthTier,near,.9f) || !MarineSpawn.InOpenWater(depthTier,far,.9f) ||
+                    !DefensePathClear(far,near) || !FindPath(near,FieldContact(near),out _))continue;
+                start=far;end=near;return;
+            }
+            start=higher+broadside*33f;
+            end=higher+broadside*15f;
         }
 
         void SetDefenseMessage(string text)
@@ -176,10 +216,10 @@ namespace Raid
             switch(snapshot.phase)
             {
                 case DefensePhase.Warning:
-                    if(age>=defenseTuning.warningSeconds)AdvanceDefense(DefensePhase.Encirclement,"Стая окружает подлодку. Приготовьтесь!");
+                    if(now>=snapshot.assaultAt-defenseTuning.encirclementSeconds)AdvanceDefense(DefensePhase.Encirclement,"Стая приближается. Следите за прожекторами!");
                     break;
                 case DefensePhase.Encirclement:
-                    if(age>=defenseTuning.encirclementSeconds)
+                    if(now>=snapshot.assaultAt)
                     {
                         nextGroupAt=now;
                         AdvanceDefense(DefensePhase.Assault,"Защищайте поле с уловом!");
@@ -218,7 +258,14 @@ namespace Raid
                     }
                     break;
             }
-            for(int i=attackers.Count-1;i>=0;i--)if(i<attackers.Count)TickAttacker(i,dt);
+            for(int i=attackers.Count-1;i>=0;i--)
+            {
+                if(i>=attackers.Count)continue;
+                var attacker=attackers[i];
+                TickAttacker(i,dt);
+                if(attacker.collider && attacker.data.forward.sqrMagnitude>.001f)
+                    attacker.collider.transform.rotation=Quaternion.LookRotation(attacker.data.forward);
+            }
             if(now>=nextActorSnapshot)
             {
                 nextActorSnapshot=now+.1;
@@ -277,6 +324,13 @@ namespace Raid
         bool TryArrival(int lane,DefenseSpecies species,out Vector3 point,out int slot)
         {
             Vector3 center=DefenseCenter;
+            if(groupSerial==0 && Defense.phase==DefensePhase.Assault && Defense.approachEnd!=Vector3.zero)
+            {
+                Vector3 across=Vector3.Cross(Vector3.up,(Defense.approachStart-Defense.approachEnd).normalized);
+                var entry=Defense.approachEnd+across*((lane%5-2)*.82f);
+                if(MarineSpawn.InOpenWater(depthTier,entry,.70f) && FindPath(entry,FieldContact(entry),out _))
+                {point=entry;slot=-1;return true;}
+            }
             var authored=SpawnLayout?.defenseApproaches;
             if(authored!=null)
             {

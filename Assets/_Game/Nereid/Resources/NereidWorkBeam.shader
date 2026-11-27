@@ -1,6 +1,6 @@
 Shader "RAID/Submerged Work Beam"
 {
-    Properties { [HideInInspector] _FloodIndex("Work light index",Float)=0 }
+    Properties { [HideInInspector] _FloodIndex("Work light index",Float)=0 [HideInInspector] _DefenseBeam("Defense searchlight",Float)=0 }
     SubShader
     {
         Tags {"RenderPipeline"="UniversalPipeline" "Queue"="Transparent-10" "RenderType"="Transparent" "DisableBatching"="True"}
@@ -19,9 +19,12 @@ Shader "RAID/Submerged Work Beam"
 
             CBUFFER_START(UnityPerMaterial)
             float _FloodIndex;
+            float _DefenseBeam;
             CBUFFER_END
             float _NereidTurbidity;
+            float _RaidDryHaze;
             float4 _NereidWorkLightRadiance[3],_NereidWorkLightDirections[3];
+            float4 _RaidLampDirections[4];
             struct Input {float3 position:POSITION;};
             struct Varyings {float4 clip:SV_POSITION;float3 world:TEXCOORD0;};
             Varyings vert(Input v)
@@ -66,10 +69,13 @@ Shader "RAID/Submerged Work Beam"
                     accumulated+=core*core*falloff;
                 }
                 int lamp=(int)_FloodIndex;
-                float backscatter=saturate(dot(-ray,_NereidWorkLightDirections[lamp].xyz));
+                float3 forward=lerp(_NereidWorkLightDirections[min(2,lamp)].xyz,_RaidLampDirections[lamp].xyz,_DefenseBeam);
+                half3 radiance=lerp(_NereidWorkLightRadiance[min(2,lamp)].rgb,
+                    half3(.54,.78,1)*_RaidLampDirections[lamp].w*2.5,_DefenseBeam);
+                float backscatter=saturate(dot(-ray,forward));
                 float transmission=exp2(-.032*(startDistance+endDistance)*.5);
-                half3 light=_NereidWorkLightRadiance[lamp].rgb*(.000006*ds*accumulated*transmission*
-                    (.70+.55*backscatter*backscatter)*_NereidTurbidity);
+                float water=lerp(_NereidTurbidity,max(_NereidTurbidity,_RaidDryHaze),_DefenseBeam);
+                half3 light=radiance*(.000006*ds*accumulated*transmission*(.70+.55*backscatter*backscatter)*water);
                 return half4(light,0);
             }
             ENDHLSL

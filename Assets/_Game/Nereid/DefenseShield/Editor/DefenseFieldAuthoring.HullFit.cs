@@ -29,10 +29,49 @@ namespace Raid.Nereid.Editor
                 var fittings = root.transform.Find("Hull induction generators");
                 var material = fittings.GetComponentInChildren<MeshRenderer>().sharedMaterial;
                 Fit(field, fittings, material);
+                InstallDefenseLighting(field,material);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
                 AssetDatabase.SaveAssets();
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
+        }
+
+        static void InstallDefenseLighting(DefenseFieldView field,Material housingMaterial)
+        {
+            if(field.GetComponentInChildren<NereidDefenseLighting>(true))return;
+            var group=Node(field.transform,"Defense alarm and searchlights",Vector3.zero);
+            var controller=group.gameObject.AddComponent<NereidDefenseLighting>();
+            var beamShape=new ReefGeometry();
+            beamShape.Tube(new[]{Vector3.zero,Vector3.forward},new[]{.001f,1f},Color.white,24);
+            var cone=Asset("Defense beam volume",beamShape.Mesh("Defense beam volume"));
+            var beamMaterial=Asset("Defense beam in water",new Material(Resources.Load<Shader>("NereidWorkBeam")));
+            var box=new PlateMesh();
+            box.Bevel(new Vector3(0,0,-.18f),new Vector3(.42f,.27f,.44f),.07f,new Color(.31f,.35f,.36f));
+            box.Bevel(new Vector3(0,0,.035f),new Vector3(.48f,.31f,.10f),.069f,new Color(.48f,.68f,.72f));
+            var hood=Asset("Hull defense searchlight head",box.Save("Hull defense searchlight head"));
+            controller.searchlights=new Light[4];controller.volumes=new MeshRenderer[4];controller.alarmLights=new Light[3];
+            int index=0;
+            foreach(int side in new[]{-1,1})
+            foreach(float z in new[]{-3.25f,3.25f})
+            {
+                var mount=Node(group,side<0?"Port searchlight":"Starboard searchlight",new Vector3(side*7.39f,.62f,z));
+                mount.localRotation=Quaternion.LookRotation(new Vector3(side,.16f,0));
+                var lamp=controller.searchlights[index]=mount.gameObject.AddComponent<Light>();
+                lamp.type=LightType.Spot;lamp.color=new Color(.72f,.86f,1);lamp.range=46;
+                lamp.spotAngle=51;lamp.innerSpotAngle=28;lamp.lightUnit=UnityEngine.Rendering.LightUnit.Candela;
+                lamp.shadows=LightShadows.None;lamp.enabled=false;
+                MakeMesh(mount,"Projector housing",hood,housingMaterial);
+                var volume=controller.volumes[index++]=MakeMesh(mount,"Searchlight through the water",cone,beamMaterial);
+                float radius=lamp.range*Mathf.Tan(lamp.spotAngle*.5f*Mathf.Deg2Rad);
+                volume.transform.localScale=new Vector3(radius,radius,lamp.range);volume.enabled=false;
+            }
+            for(int i=0;i<controller.alarmLights.Length;i++)
+            {
+                var node=Node(group,"Observation deck red alarm "+(i+1),new Vector3(0,3.8f,(i-1)*3.65f));
+                var lamp=controller.alarmLights[i]=node.gameObject.AddComponent<Light>();
+                lamp.type=LightType.Point;lamp.color=new Color(1,.028f,.015f);lamp.range=7.5f;
+                lamp.shadowStrength=0;lamp.lightUnit=UnityEngine.Rendering.LightUnit.Candela;lamp.enabled=false;
+            }
         }
 
         static void Fit(DefenseFieldView view, Transform generators, Material housingMaterial)

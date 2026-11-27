@@ -207,18 +207,21 @@ namespace Raid.UI
             if(defense)
             {
                 var field=threats.Defense;
+                bool approaching=field.phase is DefensePhase.Warning or DefensePhase.Encirclement;
                 var color=field.breached && field.phase!=DefensePhase.Recovery || field.Ratio<=.25f?UiTheme.Red:field.Ratio<=.60f?Gold:Blue;
                 string phase=field.phase switch {
-                    DefensePhase.Warning=>"РЁВ · ВЕРНИТЕСЬ К ПОДЛОДКЕ",
-                    DefensePhase.Encirclement=>"СТАЯ ОКРУЖАЕТ ПОДЛОДКУ",
+                    DefensePhase.Warning=>"ДО НАПАДЕНИЯ",
+                    DefensePhase.Encirclement=>"СТАЯ ПРИБЛИЖАЕТСЯ",
                     DefensePhase.Assault=>"ПОЛЕ · ВОЛНА "+Mathf.Max(1,field.wave),
                     DefensePhase.Resolution=>field.breached?"ПОЛЕ РАЗРУШЕНО · КРАЖА":"СТАЯ ОТСТУПАЕТ",
                     _=>"ПОЛЕ ВОССТАНАВЛИВАЕТСЯ"
                 };
                 UiKit.Set(defenseCaption,phase);
-                UiKit.Set(defenseValue,Mathf.CeilToInt(field.Ratio*100)+"%");
-                defenseCaption.color=defenseValue.color=defenseMeter.color=color;
-                UiKit.Fraction(defenseMeter,field.Ratio);
+                int countdown=Mathf.CeilToInt(threats.DefenseCountdown);
+                UiKit.Set(defenseValue,approaching?$"{countdown/60:00}:{countdown%60:00}":Mathf.CeilToInt(field.Ratio*100)+"%");
+                defenseCaption.color=defenseValue.color=defenseMeter.color=threats.DefenseAlarm&&approaching?UiTheme.Red:color;
+                float duration=(float)(field.assaultAt-field.beginsAt);
+                UiKit.Fraction(defenseMeter,approaching?threats.DefenseCountdown/Mathf.Max(1,duration):field.Ratio);
             }
             bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead&&(!defense || threats.DefenseConcealment<.32f);
             navigation.gameObject.SetActive(showNav);

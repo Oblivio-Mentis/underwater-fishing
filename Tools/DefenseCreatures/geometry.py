@@ -497,6 +497,24 @@ def stalker():
         c.school.wedge([side(sign,p) for p in ((.115,-.151,1.161),(.158,-.16,1.18),(.142,-.313,1.245))],
                         side(sign,(.147,-.187,1.21)),bone,thickness=.014,normal=(sign,0,0))
     school_eye(c.school,.239,-.037,1.002,glow)
+    # Bend the original FBX's upright tail back along the swim axis. The same deformation
+    # moves both overlapping joint surfaces, both pivots and the school silhouette.
+    base_y, base_z = c.tail.pivot[1:]
+
+    def lowered(point):
+        x, y, z = point
+        progress = max(0, min(1, (-z + base_z) / .65))
+        angle = -52*pi/180 * progress*progress*(3-2*progress)
+        height, length = y-base_y, z-base_z
+        return (x, base_y+cos(angle)*height-sin(angle)*length,
+                base_z+sin(angle)*height+cos(angle)*length)
+
+    for part in [*c.parts(), c.school]:
+        part.pivot = lowered(part.pivot)
+        faces, part.faces = part.faces, []
+        for surface in faces:
+            part.face(tuple(lowered(point) for point in surface.points), surface.color,
+                      emissive=surface.emissive)
     return c
 
 

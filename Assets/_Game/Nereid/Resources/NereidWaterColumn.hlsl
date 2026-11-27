@@ -1,6 +1,7 @@
 #ifndef NEREID_WATER_COLUMN_INCLUDED
 #define NEREID_WATER_COLUMN_INCLUDED
 float4 _NereidWaterTint;
+float _RaidDryHaze;
 // Rec.601-ish luminance of a scene-linear colour; shared so every water fade agrees.
 half NereidLuminance(half3 c){return dot(c,half3(.30,.55,.15));}
 // Depth II is recognised by its squared-distance extinction (Depth I .00136-.0023, Depth II .00625-.0094).

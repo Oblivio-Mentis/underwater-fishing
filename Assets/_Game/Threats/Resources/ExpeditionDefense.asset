@@ -20,8 +20,8 @@ MonoBehaviour:
   minorLossFraction: 0.1
   severeLossFraction: 0.35
   lateLossCap: 24
-  warningSeconds: 6
-  encirclementSeconds: 5
+  warningSeconds: 37
+  encirclementSeconds: 8
   visibilitySeconds: 6.5
   retreatSeconds: 4
   baseBudget: 14
