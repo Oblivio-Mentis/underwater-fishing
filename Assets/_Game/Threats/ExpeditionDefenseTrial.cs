@@ -449,7 +449,26 @@ namespace Raid
             d.BlastDefense(TrackCarrier(),.20f,180);
             await Wait(()=>d.Defense.returned>0,"a defeated carrier returns its held fish",10);
             report.recovered=d.Defense.returned;
-            await Wait(()=>world.StockLossCount>0,"a live carrier crosses the escape boundary",17);
+            // The crew just finished watching the first thief. Regroup inside so the
+            // escape check for the second thief has an explicitly unwatched lane.
+            foreach(var crewMember in DiverMotor.ServerDivers)
+                if(crewMember)crewMember.Teleport(Nereid.NereidDeckNavigation.CrewSpawn(crewMember.OwnerId,new Vector3(0,1.2f,1)));
+            float nextCarrierSample=0;
+            await Wait(()=>
+            {
+                if(world.StockLossCount>0)return true;
+                if(Time.realtimeSinceStartup>=nextCarrierSample)
+                {
+                    nextCarrierSample=Time.realtimeSinceStartup+1.8f;
+                    for(int i=0;i<d.DefenseActorCount;i++)
+                    {
+                        var thief=d.DefenseActorAt(i);
+                        if(thief.kind==DefenseSpecies.Thief)
+                            Debug.Log($"[EscapeCarrier] id={thief.id} pose={thief.pose} catch={thief.stolenId} position={thief.position:F2}");
+                    }
+                }
+                return false;
+            },"a live carrier crosses the escape boundary",17);
             report.losses=world.StockLossCount;
             await Wait(()=>!d.DefenseActive,"failed defense recovery",24);
             report.Check(team.tank.Count==20-report.losses && team.cumulativeRaidLoss==report.losses,
