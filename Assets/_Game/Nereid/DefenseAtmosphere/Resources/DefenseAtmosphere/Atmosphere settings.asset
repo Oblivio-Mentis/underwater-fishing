@@ -16,12 +16,12 @@ MonoBehaviour:
   orbitRadius: 56
   radiusVariation: 24
   handoffRadius: 32
-  heightVariation: 5.7
+  heightVariation: 7.4
   swimSpeed: 1
   sizeVariation: 0.29
   clearDrawingDistance: 160
   darkDrawingDistance: 145
-  eyeGlow: 1.11
+  eyeGlow: 1.52
   cloudCount: 510
   cloudRadius: 34
   cloudDistanceScale: 3

@@ -11,12 +11,12 @@ namespace Raid.Nereid
         [Min(0f)] public float radiusVariation = 24f;
         [Tooltip("Radius where the lead pod can split into the first attack.")]
         [Min(18f)] public float handoffRadius = 32f;
-        [Range(0f,9f)] public float heightVariation = 5.7f;
+        [Range(0f,9f)] public float heightVariation = 7.4f;
         [Range(.25f,3f)] public float swimSpeed = 1f;
         [Range(0f,.5f)] public float sizeVariation = .29f;
         [Min(10f)] public float clearDrawingDistance = 160f;
         [Min(10f)] public float darkDrawingDistance = 145f;
-        [Range(0f,3f)] public float eyeGlow = 1.11f;
+        [Range(0f,3f)] public float eyeGlow = 1.52f;
         [Range(100,550)] public int cloudCount=510;
         [Min(20)] public float cloudRadius=34;
         [Range(1,4)] public float cloudDistanceScale=3;

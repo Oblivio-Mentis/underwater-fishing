@@ -51,12 +51,14 @@ namespace Raid.Nereid
             AlarmActive=active;Target=target;
             float flash=.32f+.68f*Mathf.Pow(.5f+.5f*Mathf.Cos((float)(clock%1.4)*Mathf.PI*2/1.4f),1.65f);
             PresentWorkLights(darkness,clock);
+            float focusSide=transform.InverseTransformPoint(target).x<0?-1:1;
             foreach(var lamp in alarmLights)
             {
                 lamp.enabled=active;
-                lamp.intensity=alarmIntensity*flash;
+                float signedSide=transform.InverseTransformPoint(lamp.transform.position).x*focusSide;
+                float bearing=Mathf.Lerp(.45f,1.13f,Mathf.InverseLerp(-2.6f,2.6f,signedSide));
+                lamp.intensity=alarmIntensity*flash*bearing;
             }
-            float focusSide=transform.InverseTransformPoint(target).x<0?-1:1;
             float flankSide=transform.InverseTransformPoint(flankTarget).x<0?-1:1;
             var eye=UnderwaterLook.Instance?UnderwaterLook.Instance.DiverCamera:Camera.main;
             bool depth=eye && eye.TryGetComponent<UniversalAdditionalCameraData>(out var data) && data.requiresDepthTexture;

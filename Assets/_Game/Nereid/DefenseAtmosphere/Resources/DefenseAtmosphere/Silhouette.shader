@@ -108,9 +108,10 @@ Shader "RAID/Defense/Swarm Silhouette"
                     if(v.bank.w>.5)
                     {
                         float3 view=SafeNormalize(GetCameraPositionWS()-o.world);
-                        o.visibility=smoothstep(-.24,.45,dot(view,forward))*smoothstep(-.30,.55,dot(view,o.normal));
+                        float bearing=.23+.77*smoothstep(-.32,.42,dot(view,forward));
+                        o.visibility=bearing*smoothstep(-.33,.44,dot(view,o.normal));
                         float travel=distance(o.world,GetCameraPositionWS());
-                        float size=lerp(.18,.74,smoothstep(35,145,travel));
+                        float size=lerp(.22,.80,smoothstep(35,145,travel));
                         float3 right=UNITY_MATRIX_I_V._m00_m10_m20;
                         float3 vertical=UNITY_MATRIX_I_V._m01_m11_m21;
                         o.world+=(right*v.bank.y+vertical*v.bank.z)*size+view*.045;
@@ -135,7 +136,7 @@ Shader "RAID/Defense/Swarm Silhouette"
                     float haloRadius=dot(i.halo,i.halo);
                     half falloff=exp2(-7*haloRadius)*.22 + exp2(-30*haloRadius)*.64;
                     half halo=saturate(1-haloRadius)*falloff*limit*_Fade*i.visibility;
-                    halo*=exp2(-d2*.00009);
+                    halo*=exp2(-d2*.000071);
                     return half4(i.pigment*halo*_EyeGlow*i.beat,0);
                 }
                 // Depth-tested opaque fragments keep the finest brackets behind the hull and window frames.
@@ -154,8 +155,9 @@ Shader "RAID/Defense/Swarm Silhouette"
                 color+=pigment*beam*(.29+.51*overhead);
                 half3 column=WaterColumnColor(-view,_NereidReefClarity.x);
                 half extinction=exp2(-d2*max(.00029,_NereidReefClarity.x*lerp(.50,.22,_CloudBatch)));
-                half3 shadow=lerp(column*.53,color,max(extinction,search*.89));
-                half eyeFalloff=exp2(-d2*lerp(.00013,.00009,_CloudBatch));
+                half3 hazeTint=column*.62+pigment*(.035+.18*search)*edge;
+                half3 shadow=lerp(hazeTint,color,max(extinction,search*.89));
+                half eyeFalloff=exp2(-d2*lerp(.000108,.000071,_CloudBatch));
                 half3 lamp=i.pigment*_EyeGlow*eyeFalloff*i.beat;
                 return half4(lerp(shadow,lamp,luminous),1);
             }
