@@ -55,21 +55,18 @@ namespace Raid.Nereid
         Vector3 breakAxis = Vector3.down;
         Vector3 presentedDimensions;
 
-        internal const float AftEdge = -1.034f;
-        internal const float ForeEdge = 1.034f;
+        internal const float AftEdge = -1.011f;
+        internal const float ForeEdge = 1.011f;
 
         internal static float SectionWidth(float depth) => Mathf.Sqrt(Mathf.Max(0,1-depth*depth));
-        internal static float DepthAt(float z) => Mathf.SmoothStep(1,.98094f,Mathf.InverseLerp(.24f,1,z));
-        internal static float BeamAt(float z) => z < 0
-            ? Mathf.SmoothStep(.99625f,1,Mathf.InverseLerp(-1,-.52f,z))
-            : Mathf.SmoothStep(1,.98943f,Mathf.InverseLerp(.24f,1,z));
+        static float JointInset(float z) => Mathf.Lerp(1,.994f,Mathf.InverseLerp(1,ForeEdge,Mathf.Abs(z)));
+        internal static float DepthAt(float z) => Mathf.SmoothStep(1,.98094f,Mathf.InverseLerp(.24f,1,z))*JointInset(z);
         internal static float BeamAtDepth(float depth,float z)
         {
-            float hullCurl = SectionWidth(depth);
-            float keelRound = Mathf.SmoothStep(1,0,Mathf.InverseLerp(.89f,1,depth));
-            float wideSide = .56f*keelRound+.44f*Mathf.Pow(hullCurl,.38f);
-            float blend = Mathf.SmoothStep(0,1,Mathf.Min(Mathf.InverseLerp(-1,-.92f,z),Mathf.InverseLerp(1,.52f,z)));
-            return BeamAt(z)*Mathf.Lerp(hullCurl,wideSide,blend);
+            float beam = z < 0
+                ? Mathf.SmoothStep(.99625f,1,Mathf.InverseLerp(-1,-.52f,z))
+                : Mathf.SmoothStep(1,.98943f,Mathf.InverseLerp(.24f,1,z));
+            return beam*SectionWidth(depth)*JointInset(z);
         }
 
         internal static Vector3 RimDirection(float angle)
