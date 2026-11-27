@@ -19,7 +19,7 @@ namespace Raid
             public DefenseTuning.Species card;
             public int cost, slot;
             public float vitality, progress, windAim, latchTick, life, rescuePull;
-            public double until, nextRoute, captureUntil, nextSightTest, unseenSince=-1;
+            public double until, nextRoute, captureUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
             public bool hasFleeRoute;
             public bool counter, attached, ramHit;
             public Vector3 goal, waypoint, exit, fleeGoal;
@@ -49,7 +49,15 @@ namespace Raid
             var hit=go.AddComponent<CapsuleCollider>();
             hit.direction=2;
             hit.radius=card.kind==DefenseSpecies.Rammer?.60f:.47f;
-            hit.height=card.kind switch {DefenseSpecies.Remora=>2.22f,DefenseSpecies.Stalker=>2.65f,_=>2.56f};
+            hit.height=card.kind switch {DefenseSpecies.Remora=>2.47f,DefenseSpecies.Stalker=>2.86f,_=>2.56f};
+            if(card.kind is DefenseSpecies.Abductor or DefenseSpecies.Rammer)
+            {
+                var fins=go.AddComponent<CapsuleCollider>();
+                fins.direction=0;
+                fins.height=card.kind==DefenseSpecies.Abductor?2.18f:1.66f;
+                fins.radius=card.kind==DefenseSpecies.Abductor?.23f:.26f;
+                fins.center=new Vector3(0,card.kind==DefenseSpecies.Abductor?.04f:-.14f,-.23f);
+            }
             var a=new DefenseAttacker {
                 data=new AttackerSnapshot{id=++actorSerial,kind=card.kind,position=point,
                     forward=slot>=0?orbit.Forward:(DefenseCenter-point).normalized,
@@ -365,11 +373,12 @@ namespace Raid
         {
             if(a.catchItem!=null)
             {
-                TickStockEscape(index,a,dt);
+                TickDefenseEscape(index,a,dt,true);
                 return;
             }
             bool canCarry=Defense.breached && a.data.kind is DefenseSpecies.Thief or DefenseSpecies.Stalker or DefenseSpecies.Abductor;
             if(canCarry && a.data.pose!=AttackerPose.Retreat &&
+                (DefenseAge<defenseTuning.theftSeconds || a.data.pose==AttackerPose.Snatch) &&
                 activeRaid.lost+activeRaid.inTransit.Count<activeRaid.lossLimit)
             {
                 var pickup=TheftPickup();
@@ -402,8 +411,7 @@ namespace Raid
                 SetPose(a,AttackerPose.Snatch,defenseTuning.snatchSeconds);
                 return;
             }
-            if(a.data.pose!=AttackerPose.Retreat)SetPose(a,AttackerPose.Retreat,0);
-            if(Steer(a,a.exit,a.card.burstSpeed*.79f,dt,true))RemoveAttacker(index,false,true);
+            TickDefenseEscape(index,a,dt,false);
         }
 
         Vector3 TheftPickup()

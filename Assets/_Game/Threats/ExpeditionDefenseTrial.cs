@@ -109,27 +109,39 @@ namespace Raid
 
         static async Awaitable Shot(string output,DiverMotor host,ThreatDirector director,Vector3 point,string name)
         {
-            if(name.StartsWith("04-",StringComparison.Ordinal) || name=="05-carrier")
-            {
-                bool placed=false;
-                for(int i=0;i<18;i++)
-                {
-                    float angle=i*Mathf.PI/9;
-                    var at=point+new Vector3(Mathf.Sin(angle)*3.5f,-.75f,Mathf.Cos(angle)*3.5f);
-                    var eye=at+Vector3.up*.6f;
-                    if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.5f) ||
-                        !MarineSpawn.ClearLeg(eye,point,.12f,Mathf.Max(.1f,Vector3.Distance(eye,point)-.9f)))continue;
-                    host.Teleport(at);host.LookAtConsole(point);placed=true;break;
-                }
-                if(!placed)WatchField(host,director,point);
-                await Awaitable.WaitForSecondsAsync(.135f);
-            }
-            else
-            {
-                WatchField(host,director,point);
-                await Awaitable.WaitForSecondsAsync(.22f);
-            }
+            WatchField(host,director,point);
+            await Awaitable.WaitForSecondsAsync(.22f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(output,name+".png"));
+        }
 
+        static async Awaitable ShotPredator(string output,DiverMotor host,ThreatDirector director,int id,string name)
+        {
+            await Awaitable.NextFrameAsync();
+            if(!director.TryDefenseSurface(id,out var model))return;
+            var point=model.position;
+            var heading=Vector3.ProjectOnPlane(model.forward,Vector3.up).normalized;
+            bool placed=false;
+            for(int i=0;i<18;i++)
+            {
+                float angle=(90-(i/2)*20)*(i%2==0?1:-1);
+                var side=Quaternion.AngleAxis(angle,Vector3.up)*heading;
+                var at=point+side*4.5f+Vector3.up*(i<12?.20f:-.50f);
+                var eye=at+Vector3.up*.6f;
+                if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.63f) ||
+                    !MarineSpawn.ClearLeg(eye,point,.12f,Vector3.Distance(eye,point)-.7f))continue;
+                host.Teleport(at);
+                host.LookAtConsole(point);
+                placed=true;
+                break;
+            }
+            if(!placed)WatchField(host,director,point);
+
+            float end=Time.realtimeSinceStartup+.17f;
+            while(model && Time.realtimeSinceStartup<end)
+            {
+                host.LookAtConsole(model.position);
+                await Awaitable.NextFrameAsync();
+            }
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(output,name+".png"));
         }
 
@@ -268,7 +280,7 @@ namespace Raid
                     var a=d.DefenseActorAt(i);
                     if(a.kind!=kind || a.group!=group)continue;
                     report.species|=1<<(int)kind;
-                    await Shot(folder,host,d,a.position,"04-"+kind);
+                    await ShotPredator(folder,host,d,a.id,"04-"+kind);
                     break;
                 }
             }
@@ -293,20 +305,41 @@ namespace Raid
                 throw new InvalidOperationException("Could not stage fleeing carriers at the two lateral approaches");
             d.DefenseFixtureSetIntegrity(0);
             report.Check(d.Defense.breached && team.ongoingDefense.lossLimit>0 && team.tank.Count==20,"A breach opens theft without instantly removing stock.");
+            bool sawSnatch=false;
+            int carrier=0;
             bool CarryVisible()
             {
-                for(int i=0;i<d.DefenseActorCount;i++)if(d.DefenseActorAt(i).stolenId>0)return true;
+                for(int i=0;i<d.DefenseActorCount;i++)
+                {
+                    var actor=d.DefenseActorAt(i);
+                    if(actor.pose==AttackerPose.Snatch)sawSnatch=true;
+                    if(actor.stolenId<=0)continue;
+                    carrier=actor.id;
+                    return true;
+                }
                 return false;
             }
             await Wait(CarryVisible,"a thief collects the original fish and the snapshot shows it",13);
-            for(int i=0;i<d.DefenseActorCount;i++)
+            report.Check(sawSnatch,"The jaw windup and lunge precede the replicated pickup.");
+            var watching=host;
+            foreach(var other in DiverMotor.ServerDivers)
+                if(other!=host){watching=other;break;}
+            d.TryDefenseAnchor(carrier,out var departure);
+            watching.Teleport(departure+Vector3.left*.85f);
+            await Wait(()=>d.DefenseFixtureGrip(carrier,out float gap) && gap<.18f,
+                "the rendered prey reaches the moving mouth socket",1.6f);
+            report.Check(true,"The stolen fish follows the moving mouth socket.");
+            await ShotPredator(folder,host,d,carrier,"05-carrier");
+            float watchesUntil=Time.realtimeSinceStartup+1.55f;
+            while(Time.realtimeSinceStartup<watchesUntil)
             {
-                var actor=d.DefenseActorAt(i);
-                if(actor.stolenId==0)continue;
-                await Shot(folder,host,d,actor.position,"05-carrier");
-                if(d.TryDefenseAnchor(actor.id,out var current))d.BlastDefense(current,.20f,180);
-                break;
+                if(!d.TryDefenseAnchor(carrier,out var at))throw new InvalidOperationException("A guest watched the carrier disappear.");
+                watching.Teleport(at+Vector3.left*.85f);
+                await Awaitable.NextFrameAsync();
             }
+            if(!d.TryDefenseAnchor(carrier,out var current))throw new InvalidOperationException("No recoverable carrier");
+            report.Check(Vector3.Distance(current,departure)>5,"The carrier accelerates away and remains while a guest is close enough to see it.");
+            d.BlastDefense(current,.20f,180);
             await Wait(()=>d.Defense.returned>0,"a defeated carrier returns its held fish",10);
             report.recovered=d.Defense.returned;
             await Wait(()=>world.StockLossCount>0,"a live carrier crosses the escape boundary",17);

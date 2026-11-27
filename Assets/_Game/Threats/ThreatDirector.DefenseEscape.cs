@@ -7,22 +7,31 @@ namespace Raid
     {
         readonly RaycastHit[] escapeSightHits=new RaycastHit[20];
 
-        void TickStockEscape(int index,DefenseAttacker a,float dt)
+        void TickDefenseEscape(int index,DefenseAttacker a,float dt,bool carrying)
         {
-            if(a.data.pose!=AttackerPose.Carry)SetPose(a,AttackerPose.Carry,0);
-            if(!a.hasFleeRoute && FindStockEscape(a,out a.fleeGoal))
+            AttackerPose pose=carrying?AttackerPose.Carry:AttackerPose.Retreat;
+            if(a.data.pose!=pose)
             {
-                a.hasFleeRoute=true;
-                a.nextRoute=0;
+                SetPose(a,pose,0);
+                a.unseenSince=-1;
             }
-            float age=(float)(DefenseClock-a.data.stolenAt);
-            float speed=a.card.burstSpeed*defenseTuning.escapeSpeedMultiplier*Mathf.SmoothStep(.35f,1,age/.72f);
+            Vector3 origin=carrying?a.data.snatchPoint:DefenseCenter;
+            if(!a.hasFleeRoute && DefenseClock>=a.nextFleeSearch)
+            {
+                a.nextFleeSearch=DefenseClock+.30;
+                a.hasFleeRoute=FindDefenseEscape(a,origin,out a.fleeGoal);
+                if(a.hasFleeRoute)a.nextRoute=0;
+            }
+            float age=(float)(DefenseClock-(carrying?a.data.stolenAt:a.data.poseAt));
+            float sprint=carrying?defenseTuning.escapeSpeedMultiplier:1.10f;
+            float speed=a.card.burstSpeed*sprint*Mathf.SmoothStep(.35f,1,age/.72f);
             if(a.hasFleeRoute && (Steer(a,a.fleeGoal,speed,dt,true) ||
                 a.life%1.5f<dt && !DefensePathClear(a.data.position,a.fleeGoal)))
                 a.hasFleeRoute=false;
 
-            if(DefenseClock<a.nextSightTest || age<1.15f ||
-                (a.data.position-a.data.snatchPoint).sqrMagnitude<25) return;
+            float minimumEscapeAge=carrying?1.15f:defenseTuning.retreatSeconds;
+            if(DefenseClock<a.nextSightTest || age<minimumEscapeAge ||
+                (a.data.position-origin).sqrMagnitude<25) return;
             a.nextSightTest=DefenseClock+.15;
             Vector3 nose=a.data.position+a.data.forward*(.7f*a.data.scale);
             if(CrewSeesEscape(a.data.position) || CrewSeesEscape(nose))
@@ -31,14 +40,14 @@ namespace Raid
                 return;
             }
             if(a.unseenSince<0)a.unseenSince=DefenseClock;
-            if(DefenseClock-a.unseenSince>=.48)RemoveAttacker(index,false,true);
+            if(DefenseClock-a.unseenSince>=.48)RemoveAttacker(index,false,carrying);
         }
 
-        bool FindStockEscape(DefenseAttacker a,out Vector3 goal)
+        bool FindDefenseEscape(DefenseAttacker a,Vector3 origin,out Vector3 goal)
         {
             Vector3 start=a.data.position;
-            var away=Vector3.ProjectOnPlane(start-a.data.snatchPoint,Vector3.up);
-            if(away.sqrMagnitude<.25f)away=Vector3.ProjectOnPlane(a.exit-a.data.snatchPoint,Vector3.up);
+            var away=Vector3.ProjectOnPlane(start-origin,Vector3.up);
+            if(away.sqrMagnitude<.25f)away=Vector3.ProjectOnPlane(a.exit-origin,Vector3.up);
             if(away.sqrMagnitude<.01f)away=Vector3.ProjectOnPlane(a.data.forward,Vector3.up);
             away.Normalize();
             goal=default;

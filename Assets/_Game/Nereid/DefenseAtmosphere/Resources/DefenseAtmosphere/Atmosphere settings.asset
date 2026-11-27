@@ -24,11 +24,11 @@ MonoBehaviour:
   eyeGlow: 1.35
   silhouetteMaterial: {fileID: 2100000, guid: 16dec4a992bb51228b7c881468a2a56f, type: 2}
   silhouetteMeshes:
-  - {fileID: 4300000, guid: 37b174be2357b924a6baefd4067cd43a, type: 2}
-  - {fileID: 4300000, guid: 9aa5bf5dc81a5f6099ee44ea235f06da, type: 2}
-  - {fileID: 4300000, guid: 9bafd87b8d2ee9ecb54f686bb3174bf6, type: 2}
-  - {fileID: 4300000, guid: 233bc529ac5bd3064b83ccd22d97dcdd, type: 2}
-  - {fileID: 4300000, guid: e6233cf5b9830d8f0582ec7b63ff7141, type: 2}
+  - {fileID: 4300000, guid: a45e4373af43b6f489cf42735363497b, type: 2}
+  - {fileID: 4300000, guid: a4d85eff0e74ee54086276cfaa78396e, type: 2}
+  - {fileID: 4300000, guid: dd4561e5eb0814444889b896963cb030, type: 2}
+  - {fileID: 4300000, guid: 26b32aa4b6ebb714d8c48789454cdeab, type: 2}
+  - {fileID: 4300000, guid: f20f49821b4757f4b97a36b4667cfba2, type: 2}
   soundLevel: 0
   scoreLevel: 0
   swarmVolume: 0.42

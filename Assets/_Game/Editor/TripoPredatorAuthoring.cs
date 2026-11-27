@@ -60,7 +60,25 @@ namespace Raid.Editor
             }
             atmosphere.silhouetteMeshes=school;
             EditorUtility.SetDirty(atmosphere);
+            BakeReview();
             AssetDatabase.SaveAssets();
+        }
+
+        static void BakeReview()
+        {
+            EnsureFolder(Root,"Review");
+            var group=new GameObject("Predator Review");
+            try
+            {
+                foreach(DefenseSpecies species in Enum.GetValues(typeof(DefenseSpecies)))
+                {
+                    var prefab=AssetDatabase.LoadAssetAtPath<GameObject>($"{Prefabs}/{species}.prefab");
+                    var model=(GameObject)PrefabUtility.InstantiatePrefab(prefab,group.transform);
+                    model.transform.localPosition=new Vector3(((int)species-2)*3.2f,0,0);
+                }
+                PrefabUtility.SaveAsPrefabAsset(group,Root+"/Review/Predator Review.prefab");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(group); }
         }
 
         static void BakeModel(Specimen model,Material[] materials)

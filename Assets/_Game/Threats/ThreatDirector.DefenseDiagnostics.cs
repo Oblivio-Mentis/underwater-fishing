@@ -67,6 +67,14 @@ namespace Raid
             return false;
         }
 
+        internal bool DefenseFixtureGrip(int id,out float gap)
+        {
+            gap=float.PositiveInfinity;
+            if(!visibleAttackers.TryGetValue(id,out var view) || !view.cargo || !view.mouth)return false;
+            gap=Vector3.Distance(view.cargo.position,view.mouth.position);
+            return true;
+        }
+
         internal void DefenseFixtureSetIntegrity(float integrity)
         {
             if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault)return;

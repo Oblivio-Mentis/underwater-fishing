@@ -10,7 +10,7 @@ namespace Raid
             if(!IsServerInitialized || !DefenseActive || !hit.collider || !tool || tool.HasDefenseLine || tool.Motor.IsTrapped)return false;
             foreach(var a in attackers)
             {
-                if(hit.collider!=a.collider || a.hooks.Count>=4)continue;
+                if(hit.collider.transform!=a.collider.transform || a.hooks.Count>=4)continue;
                 a.hooks.Add(new DefenseHook{tool=tool,line=new FishingLine(Vector3.Distance(tool.FishingAnchor,a.data.position))});
                 if(a.data.victim<0)a.target=null;
                 a.data.impactOffset=Quaternion.Inverse(Quaternion.LookRotation(a.data.forward))*(hit.point-a.data.position);

@@ -270,9 +270,6 @@ namespace Raid
                     }
                     break;
                 case DefensePhase.Resolution:
-                    if(age>=(snapshot.breached?defenseTuning.theftSeconds:defenseTuning.retreatSeconds))
-                        for(int i=attackers.Count-1;i>=0;i--)
-                            if(attackers[i].catchItem==null)RemoveAttacker(i,false,false);
                     if(attackers.Count==0)
                     {
                         activeRaid.resolutionComplete=true;
