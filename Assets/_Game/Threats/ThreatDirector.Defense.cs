@@ -29,7 +29,7 @@ namespace Raid
             public DefenseSpecies kind;
             public AttackerPose pose;
             public Vector3 position, forward, impactOffset;
-            public float scale, effort;
+            public float scale, effort, stretch;
             public string stolenSpecies;
             public long stolenId;
         }
@@ -308,7 +308,10 @@ namespace Raid
         {
             for(int i=0;i<attackers.Count;i++)
             {
-                var data=attackers[i].data;
+                var actor=attackers[i];
+                var data=actor.data;
+                data.stretch=actor.attached && actor.hooks.Count>0
+                    ?Mathf.Clamp01(actor.progress/Mathf.Max(.1f,actor.card.fightSeconds)):0;
                 if(i<defenseActors.Count)defenseActors[i]=data;
                 else defenseActors.Add(data);
             }

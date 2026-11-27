@@ -1,4 +1,5 @@
 using FishNet.Object.Synchronizing;
+using UnityEngine;
 
 namespace Raid
 {
@@ -27,7 +28,13 @@ namespace Raid
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         internal void DefenseFixtureSelect(int slot) => SelectSlotServer(slot);
         internal void DefenseFixtureFire() => FireServer();
-        internal void DefenseFixtureWind(bool held) => SetControlsServer(held,false);
+        float defenseFixtureWindUntil;
+        bool DefenseFixtureWinding => Time.unscaledTime<defenseFixtureWindUntil;
+        internal void DefenseFixtureWind(bool held)
+        {
+            defenseFixtureWindUntil=held?Time.unscaledTime+.16f:-1;
+            SetControlsServer(held,false);
+        }
 #endif
 
         internal bool StoreDefenseCatch(FishActor template,long id,DefenseSpecies kind)

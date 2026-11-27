@@ -194,9 +194,17 @@ namespace Raid
         public DiverMotor TetherTarget => OwnsFriendTether ? MotorOf(_friendTarget.Value) : IsPulled ? Motor : null;
         public float TetherOptOutRemaining => _optOutRemaining.Value;
         public float TetherMaxRange => Mathf.Min(Safe(tuning == null ? 0 : tuning.maxRange, 0, 0, 100), Safe(friendTetherTuning == null ? 12 : friendTetherTuning.maximumRange, 12, 2, 20));
-        public bool Reeling => IsServerInitialized
-            ? _reelHeld && Time.unscaledTime - _lastControls < tuning.inputTimeout
-            : _reelingActive.Value;
+        public bool Reeling
+        {
+            get
+            {
+                if(!IsServerInitialized)return _reelingActive.Value;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if((HasDefenseLine || OwnsFriendTether) && DefenseFixtureWinding)return true;
+#endif
+                return _reelHeld && Time.unscaledTime-_lastControls<tuning.inputTimeout;
+            }
+        }
         public bool IsAssisted => _assistant.Value != null;
 
         private void Awake()

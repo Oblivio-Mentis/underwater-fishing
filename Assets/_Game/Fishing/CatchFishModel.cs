@@ -79,8 +79,7 @@ namespace Raid
         public Vector3 Displace(Vector3 local)
         {
             float t = Mathf.Clamp01((HeadZ - local.z) / (HeadZ - TailZ));
-            float envelope = .08f + t * t * (.3f + .7f * t);
-            float wave = Mathf.Sin(wavePhase - t * 3.1f) * waveAmplitude * envelope;
+            float wave = SwimWave(wavePhase,t,waveAmplitude);
             float bend = bendCurve * t * t;
             if (ray)
             {
@@ -94,6 +93,12 @@ namespace Raid
             float fin = Mathf.Clamp01((Mathf.Abs(local.x) - .22f) / .18f);
             if (fin > 0) local.y += Mathf.Sin(wavePhase * 1.15f + Mathf.Sign(local.x) * .6f) * (.03f + waveAmplitude * .35f) * fin;
             return local;
+        }
+
+        internal static float SwimWave(float phase,float along,float amplitude)
+        {
+            float envelope=.08f+along*along*(.3f+.7f*along);
+            return Mathf.Sin(phase-along*3.1f)*amplitude*envelope;
         }
 
         private void DeformSpine()

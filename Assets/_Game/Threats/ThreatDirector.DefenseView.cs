@@ -9,8 +9,10 @@ namespace Raid
     {
         sealed class VisibleAttacker
         {
-            public Transform root, body, tail, left, right, jaw, mouth, cargo;
-            public Quaternion tailRest,leftRest,rightRest,jawRest;
+            public Transform root, body, tail, tip, left, right, jaw, mouth, cargo;
+            public Quaternion tailRest,tipRest,leftRest,rightRest,jawRest;
+            public Vector3 bodyRest, previousPosition, currentHeading;
+            public float phase, stroke, turn;
             public long stolen;
             public AttackerPose lastPose;
         }
@@ -81,7 +83,13 @@ namespace Raid
                     root.localScale=Vector3.one*current.scale;
                     visual=new VisibleAttacker{root=root,body=root.Find("Body"),tail=root.Find("Tail"),left=root.Find("FinLeft"),
                         right=root.Find("FinRight"),jaw=root.Find("Jaw"),mouth=root.Find("MouthSocket"),lastPose=current.pose};
+                    visual.tip=visual.tail?visual.tail.Find("TailTip"):null;
                     visual.tailRest=visual.tail?visual.tail.localRotation:Quaternion.identity;
+                    visual.tipRest=visual.tip?visual.tip.localRotation:Quaternion.identity;
+                    visual.bodyRest=visual.body?visual.body.localScale:Vector3.one;
+                    visual.previousPosition=root.position;
+                    visual.currentHeading=root.forward;
+                    visual.phase=current.id*2.17f;
                     visual.leftRest=visual.left?visual.left.localRotation:Quaternion.identity;
                     visual.rightRest=visual.right?visual.right.localRotation:Quaternion.identity;
                     visual.jawRest=visual.jaw?visual.jaw.localRotation:Quaternion.identity;
@@ -133,21 +141,38 @@ namespace Raid
             var root=view.root;
             float blend=1-Mathf.Exp(-Time.deltaTime*14);
             root.position=Vector3.Lerp(root.position,snapshot.position,blend);
-            float amplitude=snapshot.pose switch {AttackerPose.Latch=>.09f,AttackerPose.Windup=>.37f,
-                AttackerPose.Strike=>.60f,AttackerPose.Fight=>.75f+snapshot.effort*.42f,_=>.65f};
-            float frequency=snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?11:5.3f;
-            float wave=Mathf.Sin(Time.time*frequency+snapshot.id*2.17f);
+            float frame=Mathf.Max(.0001f,Time.deltaTime);
+            float pace=Mathf.InverseLerp(.15f,8f,Vector3.Distance(root.position,view.previousPosition)/frame);
+            view.previousPosition=root.position;
+            float strength=snapshot.pose switch {
+                AttackerPose.Latch=>.10f,
+                AttackerPose.Windup=>.43f,
+                AttackerPose.Strike=>1f,
+                AttackerPose.Fight=>.62f+snapshot.effort*.38f,
+                _=>Mathf.Lerp(.20f,.84f,pace)
+            };
+            view.stroke=Mathf.MoveTowards(view.stroke,strength,frame*4f);
+            float frequency=snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?Mathf.Lerp(7,13,view.stroke):Mathf.Lerp(3.6f,9,pace);
+            view.phase=Mathf.Repeat(view.phase+frame*frequency,Mathf.PI*2);
+            float tailWave=CatchFishModel.SwimWave(view.phase,.79f,view.stroke);
+            float tipWave=CatchFishModel.SwimWave(view.phase,1,view.stroke);
+            float finWave=CatchFishModel.SwimWave(view.phase,.39f,view.stroke);
             if(snapshot.forward.sqrMagnitude>.01f)
             {
-                float bank=(snapshot.kind==DefenseSpecies.Stalker?18:8)*wave*amplitude;
-                var look=Quaternion.LookRotation(snapshot.forward)*Quaternion.Euler(0,0,bank);
+                float yaw=Vector3.SignedAngle(Vector3.ProjectOnPlane(view.currentHeading,Vector3.up),
+                    Vector3.ProjectOnPlane(snapshot.forward,Vector3.up),Vector3.up);
+                view.turn=Mathf.Lerp(view.turn,Mathf.Clamp(yaw*1.75f,-28,28),blend);
+                view.currentHeading=Vector3.Slerp(view.currentHeading,snapshot.forward,blend);
+                var look=Quaternion.LookRotation(view.currentHeading)*Quaternion.Euler(0,0,-view.turn+finWave*8);
                 root.rotation=Quaternion.Slerp(root.rotation,look,blend);
             }
-            if(view.tail)view.tail.localRotation=view.tailRest*Quaternion.Euler(0,wave*35*amplitude,0);
-            if(view.left)view.left.localRotation=view.leftRest*Quaternion.Euler(0,0,wave*18*amplitude);
-            if(view.right)view.right.localRotation=view.rightRest*Quaternion.Euler(0,0,-wave*18*amplitude);
-            if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(snapshot.pose is AttackerPose.Windup or AttackerPose.Strike?24+wave*6:
-                snapshot.pose==AttackerPose.Carry?11:wave*4,0,0);
+            if(view.body)view.body.localScale=Vector3.Scale(view.bodyRest,new Vector3(1-snapshot.stretch*.13f,1-snapshot.stretch*.13f,1+snapshot.stretch*.28f));
+            if(view.tail)view.tail.localRotation=view.tailRest*Quaternion.Euler(4*tipWave,tailWave*31+view.turn*.47f,0);
+            if(view.tip)view.tip.localRotation=view.tipRest*Quaternion.Euler(0,tipWave*25-tailWave*9,0);
+            if(view.left)view.left.localRotation=view.leftRest*Quaternion.Euler(0,view.turn*.22f,finWave*34);
+            if(view.right)view.right.localRotation=view.rightRest*Quaternion.Euler(0,-view.turn*.22f,-finWave*34);
+            if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(snapshot.pose is AttackerPose.Windup or AttackerPose.Strike?19+tipWave*9:
+                snapshot.pose==AttackerPose.Carry?8:tipWave*4,0,0);
 
             if(snapshot.stolenId!=view.stolen)
             {

@@ -235,7 +235,7 @@ namespace Raid.Tests
                 var migrated=TeamSave.Load(path);
                 var diver=migrated.Player("diver");
                 var buddy=migrated.Player("buddy");
-                Assert.That(migrated.schemaVersion,Is.EqualTo(7));
+                Assert.That(migrated.schemaVersion,Is.EqualTo(TeamProgress.CurrentSchema));
                 Assert.That(diver.revision,Is.EqualTo(17));Assert.That(buddy.revision,Is.EqualTo(3));
                 Assert.That(diver.OccupiedPocketExtent,Is.EqualTo(4));Assert.That(buddy.OccupiedPocketExtent,Is.EqualTo(2));
                 Assert.That(diver.pocketStacks.Select(s=>s.count),Is.EqualTo(new[]{1,0,0,2,0,0,0}));

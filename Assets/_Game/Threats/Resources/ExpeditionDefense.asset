@@ -43,6 +43,7 @@ MonoBehaviour:
   inkRadius: 4
   captiveCarrySpeed: 2.5
   harpoonRangeMargin: 1.4
+  rescuePullSeconds: 0.74
   small: 0.85
   large: 1.2
   titanChance: 0.085

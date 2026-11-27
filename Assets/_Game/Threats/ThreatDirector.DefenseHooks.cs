@@ -100,7 +100,7 @@ namespace Raid
                 bool taut=hook.line.Loaded(distance,tool.tuning.slackAllowance);
                 bool winding=tool.Reeling && clear && taut;
                 hook.tension=Mathf.Clamp01(hook.tension+(winding
-                    ? (.075f+surge*.36f)*jawLoad*a.data.scale*dt/(cable*teamwork)
+                    ? (.057f+surge*.29f)*jawLoad*a.data.scale*dt/(cable*teamwork)
                     : -tool.tuning.tensionRelease*dt));
                 if(hook.tension>=1 && tool.TryStabilizeDeepLine())hook.tension=.58f;
                 if(hook.tension>=1)

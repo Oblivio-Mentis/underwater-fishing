@@ -133,6 +133,21 @@ namespace Raid
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(output,name+".png"));
         }
 
+        static async Awaitable Broadside(string folder,DiverMotor player,ThreatDirector director)
+        {
+            var vessel=Nereid.NereidVessel.Active;
+            var center=director.DefenseCenter;
+            foreach(int side in new[]{1,-1})
+            {
+                var at=center+vessel.transform.right*(12*side)+Vector3.down*.36f-vessel.transform.forward*2.1f;
+                if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.56f))continue;
+                player.Teleport(at);
+                player.LookAtConsole(center-Vector3.up*.35f);
+                await Awaitable.WaitForSecondsAsync(.22f);
+                UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,side==1?"00-starboard.png":"00-port.png"));
+            }
+        }
+
         static async Awaitable Play(Report report,string folder,int peers)
         {
             var world=RaidWorld.Instance;var team=world.Team;var d=world.threats;
@@ -152,6 +167,7 @@ namespace Raid
             await Wait(()=>team.feedingCycle==1,"first completed meal");
             report.Check(!d.DefenseActive && team.RequiredFood(world.progression)>initial,"A complete meal prevents a raid and advances appetite only once.");
             await Shot(folder,host,d,d.DefenseCenter,"01-field");
+            await Broadside(folder,host,d);
             ReportPhase("underfed cycle",report,folder);
             team.offeringPoints=team.RequiredFood(world.progression)/3;
             team.hungerRemaining=.05f;
@@ -246,15 +262,20 @@ namespace Raid
             tool.DefenseFixtureFire();
             await Wait(()=>tool.HasDefenseLine,"server validated the shot into the remora",3);
             report.Check(d.DefenseActorCount==1,"A harpoon strike does not remove an attached remora on impact.");
-            float deadline=Time.realtimeSinceStartup+13;
+            float deadline=Time.realtimeSinceStartup+15;
+            float peakTension=0;
+            bool winding=true;
             while(tool.HasDefenseLine && Time.realtimeSinceStartup<deadline)
             {
-                tool.DefenseFixtureWind(true);
+                peakTension=Mathf.Max(peakTension,tool.LineTension);
+                if(tool.LineTension>.73f)winding=false;
+                if(tool.LineTension<.42f)winding=true;
+                tool.DefenseFixtureWind(winding);
                 await Awaitable.NextFrameAsync();
             }
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
-                "Reeling tears the attached remora, releases the line and creates one catch and local ink.");
+                $"Reeling tears the attached remora, releases the line and creates one catch and local ink. Line={tool.HasDefenseLine}, catch={tool.CatchCount}, ink={d.DefenseInkAt(remora.position)}, peak={peakTension:0.00}, actors={d.DefenseActorCount}");
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));
 
             ReportPhase("captive rescue",report,folder);
