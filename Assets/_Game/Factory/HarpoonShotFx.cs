@@ -222,6 +222,7 @@ namespace Raid
         {retractStart=tip;phaseAt=now;Phase=CablePhase.Retracting;}
 
         float shownLoad, thrum, twangKick; int cableTug;
+        FishingFightView lastFight;
         // The cable tells the fight: slack line hangs in a lazy catenary and drifts; a loaded line
         // snaps straight, thins, and thrums with a high-frequency standing wave that grows with pull.
         void DrawCable(Vector3 from,Vector3 to,float now,float tension,bool reeling)
@@ -232,7 +233,8 @@ namespace Raid
             Vector3 normal=Vector3.Cross(dir,Vector3.up);if(normal.sqrMagnitude<.1f)normal=Vector3.right;normal.Normalize();
             Vector3 binormal=Vector3.Cross(dir,normal);
             bool flying=Phase==CablePhase.Flying;
-            bool fighting=Phase==CablePhase.Attached && tool.HookedFish!=null;
+            var fight=default(FishingFightView);
+            bool fighting=Phase==CablePhase.Attached && tool.TryFishingFight(out fight);
             // Load = how taut the physical line is. The server spool pays out to the body anchor:
             // when paid-out length is within the slack allowance of the real anchor distance the
             // line is a straight wire; only genuine slack hangs.
@@ -241,19 +243,19 @@ namespace Raid
             float slack=fighting?Mathf.Max(0,tool.LineLength-anchorDistance):0;
             float allowance=tool.tuning!=null?tool.tuning.slackAllowance:.18f;
             bool taut=fighting?slack<=allowance+.04f:reeling;
-            var fishNow=tool.HookedFish;
-            bool pulling=fighting && (fishNow.Surging || fishNow.SurgeWarning || tool.Reeling);
+            bool pulling=fighting && (fight.Surging || fight.Warning || tool.Reeling);
             float load=fighting?(taut||pulling?1f:Mathf.Clamp01(1-slack/.9f)*.5f+tension*.3f):(reeling?1:0);
             shownLoad=Mathf.Lerp(shownLoad,load,1-Mathf.Exp(-Time.unscaledDeltaTime*(load>shownLoad?22:8)));
             float sag=Mathf.Lerp(Mathf.Min(.8f,.05f+length*.045f),0f,shownLoad)+Mathf.Min(.7f,slack*.4f)*(1-shownLoad);
             if(Phase==CablePhase.Retracting)sag=.2f;
             if(flying)sag=.02f;
             // Thrum: a fast standing wave while loaded, stronger during a tug, invisible when slack.
-            var fish=tool.HookedFish;
-            float pull=fighting?Mathf.Clamp01(fish.TugStrength):0;
+            float pull=fighting?Mathf.Clamp01(fight.tug):0;
             if(fighting && taut) sag=Mathf.Min(sag,.004f);
             // A taut wire is still. A tug plucks it once: a short twang that dies within a third of a second.
-            if(fighting && fish.TugSequence!=cableTug){cableTug=fish.TugSequence;twangKick=.018f*Mathf.Clamp01(length/3f);}
+            if(!fight.SameTarget(lastFight)){cableTug=0;twangKick=0;}
+            lastFight=fight;
+            if(fighting && fight.tugSequence!=cableTug){cableTug=fight.tugSequence;twangKick=.018f*Mathf.Clamp01(length/3f);}
             twangKick=Mathf.Lerp(twangKick,0,1-Mathf.Exp(-Time.unscaledDeltaTime*9));
             float wantThrum=twangKick+(taut?0:shownLoad*.003f*Mathf.Clamp01(length/3f));
             thrum=Mathf.Lerp(thrum,wantThrum,1-Mathf.Exp(-Time.unscaledDeltaTime*18));
@@ -290,6 +292,7 @@ namespace Raid
         void Clear()
         {
             Phase=CablePhase.Idle;attached=null;inFlightContact=default;lastLength=0;
+            lastFight=default;cableTug=0;twangKick=0;
             if(cable!=null)cable.enabled=false;if(flightBolt!=null)flightBolt.gameObject.SetActive(false);if(loadedBolt!=null)loadedBolt.gameObject.SetActive(true);
         }
 

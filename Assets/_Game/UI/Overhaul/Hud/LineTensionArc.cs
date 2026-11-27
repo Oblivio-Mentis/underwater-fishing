@@ -16,12 +16,15 @@ namespace Raid.UI
         static readonly Color32 Critical = new(255, 100, 92, 255);
         static readonly Color32 Ivory = new(247, 251, 245, 255);
         float load;
+        internal float Load => load;
+        internal bool Warning { get; private set; }
 
-        public void ShowLoad(float value)
+        public void ShowLoad(float value,bool warning=false)
         {
             float next = Mathf.Clamp01(value);
-            if (Mathf.Abs(load - next) < .0005f) return;
+            if (Mathf.Abs(load - next) < .0005f && Warning==warning) return;
             load = next;
+            Warning=warning;
             SetVerticesDirty();
         }
 
@@ -36,7 +39,7 @@ namespace Raid.UI
             mesh.Clear();
             Ring(mesh, 0f, 1f, 9f, Underlay);
             Ring(mesh, 0f, Caution - .006f, 5f, Easy);
-            Ring(mesh, Caution + .006f, Danger - .006f, 5f, Loaded);
+            Ring(mesh, Caution + .006f, Danger - .006f, Warning?7f:5f, Loaded);
             Ring(mesh, Danger + .006f, 1f, 5.5f, Critical);
 
             // Fixed index marks distinguish high load even without colour.
@@ -44,7 +47,7 @@ namespace Raid.UI
                 Tick(mesh, Mathf.Lerp(Danger, 1f, i * .5f), 3f, 8f, 2.3f, Critical);
 
             Tick(mesh, load, -11f, 13f, 7f, Underlay);
-            Tick(mesh, load, -9f, 11f, 3.3f, Ivory);
+            Tick(mesh, load, -9f, 11f, 3.3f, Warning?Loaded:Ivory);
         }
 
         static void Ring(VertexHelper mesh, float from, float to, float thickness, Color32 ink)

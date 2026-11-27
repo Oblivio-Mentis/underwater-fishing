@@ -13,7 +13,7 @@ namespace Raid
         ThreatDirector threats;
         FishActor fish;
         int hookSequence, tugSequence, biteSequence;
-        int defenseTarget;
+        int defenseTarget, defenseTug;
         int carriedCount;
         Camera eye;
         float nextLookup;
@@ -67,19 +67,31 @@ namespace Raid
                 wasCoordinated = fish != null && fish.Coordinated;
             }
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
-            if(tool && tool.TryHookedDefense(out var predator) && controlling)
+            if(tool && tool.TryFishingFight(out var fight) && fight.predatorId>0 && controlling)
             {
-                Vector3 toward=predator.position-owner.transform.position;
+                Vector3 toward=fight.position-owner.transform.position;
                 Vector3 local=eye?eye.transform.InverseTransformDirection(toward.normalized):Vector3.forward;
-                float strain=Mathf.Clamp01(tool.LineTension*.9f+predator.effort*.68f);
-                ui.PullEdge(new Vector2(local.x,local.y).normalized,strain*.62f);
-                if(defenseTarget!=predator.id)
+                float strain=Mathf.Clamp01(tool.LineTension*.9f+fight.tug*.8f+(fight.Warning?.25f:0));
+                var direction=new Vector2(local.x,local.y);
+                float pull=Mathf.Clamp01(fight.tug*1.1f+(tool.Reeling?tool.LineTension*.35f:0));
+                ui.PullEdge(direction.normalized,pull*(.35f+.65f*Mathf.Clamp01(direction.magnitude*2)));
+                if(defenseTarget!=fight.predatorId)
                 {
                     ui.HitMark(UI.UiTheme.Cyan,1.15f);
                     ui.PushFishingPunch(6.5f*Setting(s=>s.hitImpulse));
+                    defenseTug=fight.tugSequence;
+                }
+                else if(defenseTug!=fight.tugSequence)
+                {
+                    defenseTug=fight.tugSequence;
+                    if(fight.Surging)
+                    {
+                        ui.PushFishingPunch(3.5f*Setting(s=>s.fishingCamera));
+                        if(camera)camera.Hit(.018f+.020f*fight.tug,2.4f,Mathf.Sign(local.x));
+                    }
                 }
                 if(camera)camera.SetStrain(strain*Setting(s=>s.cameraShake));
-                defenseTarget=predator.id;
+                defenseTarget=fight.predatorId;
                 return;
             }
             defenseTarget=0;

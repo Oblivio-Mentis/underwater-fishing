@@ -106,7 +106,7 @@ namespace Raid.UI
             {
                 shownLoad = Mathf.Clamp01(LoadOf(tool, fish));
                 shownStamina = targetStamina;
-                arc.ShowLoad(shownLoad);
+                arc.ShowLoad(shownLoad,defense && predator.fightPhase==FishBehaviour.SurgeWindup);
                 UiKit.Fraction(stamina, shownStamina);
             }
 
@@ -129,11 +129,13 @@ namespace Raid.UI
                 SetVisible(false);
                 return;
             }
+            bool warning=false;
             if(lastDefense>0)
             {
                 if(!lineOwner.TryHookedDefense(out var predator) || predator.id!=lastDefense)
                 {SetVisible(false);return;}
                 targetStamina=predator.fightRemaining;
+                warning=predator.fightPhase==FishBehaviour.SurgeWindup;
             }
             else if(!lastFish || lineOwner.HookedFish!=lastFish || lastFish.Mode<FishMode.Hooked || lastFish.Mode>FishMode.Tired)
             {SetVisible(false);return;}
@@ -143,7 +145,7 @@ namespace Raid.UI
             shownLoad = targetLoad >= LineTensionArc.Danger && shownLoad < LineTensionArc.Danger
                 ? targetLoad : Mathf.Lerp(shownLoad, targetLoad, blend);
             shownStamina = Mathf.Lerp(shownStamina, targetStamina, blend);
-            arc.ShowLoad(shownLoad);
+            arc.ShowLoad(shownLoad,warning);
             UiKit.Fraction(stamina, shownStamina);
         }
     }

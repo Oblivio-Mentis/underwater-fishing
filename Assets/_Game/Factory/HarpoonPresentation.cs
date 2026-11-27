@@ -35,6 +35,7 @@ namespace Raid
         Renderer statusLamp;
         Vector3 sway, tugPull, fightOffset;
         Vector3 fightAngles;
+        FishingFightView lastFight;
         float searchAt,recoil,recoilVelocity,monitorRest,fightTremble;
         int seenHookKick; float hookKickAt=-10; Vector3 hookKickDir;
         int observedTug; float tugVelocity,tugKick;
@@ -112,34 +113,39 @@ namespace Raid
             Vector2 look=controlling&&mouse!=null?mouse.delta.ReadValue():Vector2.zero;
             Vector3 desiredSway=new Vector3(Mathf.Clamp(-look.x*.00005f,-.0035f,.0035f),Mathf.Clamp(-look.y*.00004f,-.0025f,.0025f),0);
             sway=Vector3.Lerp(sway,desiredSway,1-Mathf.Exp(-12*dt));
-            bool hasLine=(viewedTool.HookedFish!=null&&viewedTool.HookedFish.Mode>=FishMode.Hooked&&viewedTool.HookedFish.Mode<=FishMode.Tired)||viewedTool.OwnsFriendTether||viewedTool.HasBallLine;
+            bool hasFight=viewedTool.TryFishingFight(out var fight);
+            bool hasLine=hasFight||viewedTool.HasDefenseLine||viewedTool.OwnsFriendTether||viewedTool.HasBallLine;
             if(actor!=owner&&observedShot!=viewedTool.ShotSequence)recoilVelocity+=1.05f;
             observedShot=viewedTool.ShotSequence;
             // A confirmed tug yanks the forearms a few centimetres and rolls the receiver; it never changes aim.
-            var hooked=viewedTool.HookedFish;
-            if(hooked!=null && hooked.TugSequence!=observedTug)
+            if(!fight.SameTarget(lastFight))
             {
-                observedTug=hooked.TugSequence;
-                float strength=Mathf.Clamp01(hooked.TugStrength);
-                tugVelocity-= (hooked.RequiresPartner?.5f:.9f)*(0.35f+strength);
+                observedTug=0;
+                seenHookKick=0;
             }
-            else if(hooked==null) observedTug=0;
+            lastFight=fight;
+            if(hasFight && fight.tugSequence!=observedTug)
+            {
+                observedTug=fight.tugSequence;
+                float strength=Mathf.Clamp01(fight.tug);
+                tugVelocity-=(fight.partner?.5f:.9f)*(.35f+strength);
+            }
             float remainingTug=dt;
             while(remainingTug>0)
             {
                 float step=Mathf.Min(remainingTug,.008f);remainingTug-=step;
                 tugVelocity+=(-tugKick*180-tugVelocity*19)*step;tugKick=Mathf.Clamp(tugKick+tugVelocity*step,-.03f,.05f);
             }
-            float tensionPull=hooked!=null && hooked.Mode>=FishMode.Hooked&&hooked.Mode<=FishMode.Tired?viewedTool.LineTension:0;
+            float tensionPull=hasFight?viewedTool.LineTension:0;
             tugPull=Vector3.Lerp(tugPull,Vector3.back*(tensionPull*.012f),1-Mathf.Exp(-dt*8));
             // Fight pose: the line of pull drags the gun and both arms toward the fish, reeling
             // braces the receiver back into the shoulder with the barrel up, a tired fish lets the
             // arms sink. Tremble grows with tension. Aim is untouched: only the viewmodel moves.
             Vector3 wantOffset=Vector3.zero, wantAngles=Vector3.zero; float wantTremble=0;
-            if(hooked!=null && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired && actor!=null)
+            if(hasFight)
             {
-                Vector3 toFish=view.transform.InverseTransformDirection((hooked.transform.position-view.transform.position).normalized);
-                float pull=Mathf.Clamp01(hooked.TugStrength);
+                Vector3 toFish=view.transform.InverseTransformDirection((fight.position-view.transform.position).normalized);
+                float pull=Mathf.Clamp01(fight.tug);
                 float load=Mathf.Clamp01(tensionPull);
                 float reach=.035f+.075f*pull+.03f*load;
                 wantOffset+=new Vector3(toFish.x,toFish.y,Mathf.Max(0,toFish.z))*reach;      // arms stretch toward the pull
@@ -149,27 +155,26 @@ namespace Raid
                     wantOffset+=new Vector3(.012f,-.006f,-.045f);                                 // brace into the shoulder
                     wantAngles+=new Vector3(-5.5f,0,2.5f);                                       // barrel up, slight cant
                 }
-                if(hooked.Behaviour==FishBehaviour.Weakened || hooked.Mode==FishMode.Tired)
+                if(fight.tired)
                 {
                     wantOffset+=new Vector3(0,-.02f,-.015f);
                     wantAngles+=new Vector3(4f,0,0);                                             // arms sink, barrel dips
                 }
-                if(hooked.Behaviour==FishBehaviour.SurgeWindup)
+                if(fight.Warning)
                 {
                     wantOffset+=new Vector3(0,.006f,.012f);                                      // leaning in, expecting it
                 }
-                wantTremble=(load*load*.0028f+pull*.0022f)*hooked.tuning.fightTrembleMultiplier;
+                wantTremble=(load*load*.0028f+pull*.0022f)*fight.tremble;
             }
-            if(hooked!=null && hooked.HookSequence!=seenHookKick)
+            if(hasFight && fight.hookSequence!=seenHookKick)
             {
-                seenHookKick=hooked.HookSequence;
-                if(seenHookKick>0){hookKickAt=Time.unscaledTime;hookKickDir=view.transform.InverseTransformDirection((hooked.transform.position-view.transform.position).normalized);}
+                seenHookKick=fight.hookSequence;
+                if(seenHookKick>0){hookKickAt=Time.unscaledTime;hookKickDir=view.transform.InverseTransformDirection((fight.position-view.transform.position).normalized);}
             }
-            if(hooked==null)seenHookKick=0;
             float kickAge=Time.unscaledTime-hookKickAt;
             float hookKick=kickAge<0?0:kickAge<.07f?1f:Mathf.Exp(-(kickAge-.07f)*13f);
             if(kickAge>.6f)hookKick=0;
-            float poseRate=hooked!=null && hooked.Surging?14f:5f;
+            float poseRate=hasFight && fight.Surging?14f:5f;
             fightOffset=Vector3.Lerp(fightOffset,wantOffset,1-Mathf.Exp(-dt*poseRate));
             fightAngles=Vector3.Lerp(fightAngles,wantAngles,1-Mathf.Exp(-dt*poseRate));
             fightTremble=Mathf.Lerp(fightTremble,wantTremble,1-Mathf.Exp(-dt*6));

@@ -28,11 +28,13 @@ namespace Raid
             public int id, victim, group, slot;
             public DefenseSpecies kind;
             public AttackerPose pose;
+            public FishBehaviour fightPhase;
+            public int fightTug;
             public DefenseUrgency urgency;
             public Vector3 position, forward, impactOffset, snatchPoint, tongueAim, remoraPull;
             public float scale, effort, fightRemaining;
             public byte hookCount;
-            public double poseAt, stolenAt, tongueGripAt, tongueReleasedAt;
+            public double poseAt, stolenAt, tongueGripAt, tongueReleasedAt, fightAt;
             public string stolenSpecies;
             public long stolenId;
         }

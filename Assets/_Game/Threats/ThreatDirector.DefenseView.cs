@@ -226,18 +226,27 @@ namespace Raid
             bool carrying=snapshot.stolenId>0;
             float bite=snapshot.pose==AttackerPose.Snatch
                 ?Mathf.Clamp01((float)(DefenseClock-snapshot.poseAt)/defenseTuning.snatchSeconds):0;
+            float fightAge=Mathf.Max(0,(float)(DefenseClock-snapshot.fightAt));
+            var fight=snapshot.fightPhase;
+            float fightingStroke=fight switch {
+                FishBehaviour.HookShock=>Mathf.Lerp(.80f,.33f,Mathf.Clamp01(fightAge/.18f)),
+                FishBehaviour.SurgeWindup=>.28f,
+                FishBehaviour.Surge or FishBehaviour.LastEscape=>Mathf.Lerp(.75f,1,snapshot.effort),
+                FishBehaviour.Weakened=>Mathf.Lerp(.10f,.25f,pace),
+                _=>Mathf.Lerp(.36f,.74f,pace)
+            };
             float strength=snapshot.pose switch {
                 AttackerPose.Latch=>.10f,
                 AttackerPose.Windup=>.43f,
                 AttackerPose.Strike=>1f,
                 AttackerPose.Snatch=>Mathf.Lerp(.24f,1,bite),
                 AttackerPose.Carry when carrying=>1,
-                AttackerPose.Fight=>.62f+snapshot.effort*.38f,
+                AttackerPose.Fight=>fightingStroke,
                 _=>Mathf.Lerp(.20f,.84f,pace)
             };
             view.stroke=Mathf.MoveTowards(view.stroke,strength,frame*4f);
             float frequency=carrying?Mathf.Lerp(9,15,pace):
-                snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?Mathf.Lerp(7,13,view.stroke):Mathf.Lerp(3.6f,9,pace);
+                snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?Mathf.Lerp(4,13,view.stroke):Mathf.Lerp(3.6f,9,pace);
             view.phase=Mathf.Repeat(view.phase+frame*frequency,Mathf.PI*2);
             float tailWave=CatchFishModel.SwimWave(view.phase,.79f,view.stroke);
             float tipWave=CatchFishModel.SwimWave(view.phase,1,view.stroke);
@@ -254,6 +263,13 @@ namespace Raid
             float poseAge=Mathf.Max(0,(float)(DefenseClock-snapshot.poseAt));
             float compression=snapshot.pose==AttackerPose.Windup?Mathf.SmoothStep(0,.15f,poseAge/.95f):
                 snapshot.pose==AttackerPose.Strike?-.17f*Mathf.Exp(-poseAge*2.9f):0;
+            if(snapshot.pose==AttackerPose.Fight && snapshot.kind!=DefenseSpecies.Remora)
+                compression=fight switch {
+                    FishBehaviour.HookShock=>.13f*Mathf.Exp(-fightAge*12),
+                    FishBehaviour.SurgeWindup=>Mathf.SmoothStep(0,.16f,Mathf.Clamp01(fightAge/.35f)),
+                    FishBehaviour.Surge=>-.12f*Mathf.Exp(-fightAge*6),
+                    _=>0
+                };
             if(view.body)view.body.localScale=Vector3.Scale(view.bodyRest,new Vector3(
                 1+compression*.5f,1+compression*.5f,1-compression));
             if(view.tail)view.tail.localRotation=view.tailRest*Quaternion.Euler(4*tipWave,tailWave*31+view.turn*.47f,0);

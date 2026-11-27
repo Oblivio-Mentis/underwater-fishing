@@ -12,7 +12,10 @@ namespace Raid
         {
             public HarpoonTool tool;
             public FishingLine line;
+            public HarpoonContact contact;
             public float obstructed, tension;
+            public Vector3 anchor;
+            public float distance;
         }
 
         sealed class DefenseAttacker
@@ -33,6 +36,8 @@ namespace Raid
             public Collider[] hitShapes;
             public CharacterController captiveController;
             public readonly List<DefenseHook> hooks=new(4);
+            public FishFightBrain fight;
+            public double nextFightDeflection;
         }
 
         void SpawnAttacker(DefenseTuning.Species card,Vector3 point,int slot,int group,bool large)

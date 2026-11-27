@@ -56,9 +56,14 @@ namespace Raid.UI
             if(owner && owner.TryHookedDefense(out var predator))
             {
                 if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Стабилизировать напарника"));
-                bool release=owner.LineTension>=LineTensionArc.Danger || predator.effort>.66f;
-                string pull=release?"Отпустить на рывке":predator.victim>=0?"Освободить напарника":"Подтягивать хищника";
-                return new HudHint(Mark.Spear,new(release?Key.LiftLeft:Key.Left,pull),new(Key.R,"Освободить трос")){caution=release};
+                bool danger=owner.LineTension>=LineTensionArc.Danger;
+                bool release=danger || predator.fightPhase is FishBehaviour.Surge or FishBehaviour.LastEscape;
+                bool warning=predator.fightPhase==FishBehaviour.SurgeWindup;
+                string pull=danger?"Ослабить леску":release?"Отпустить на рывке":
+                    warning?"Приготовиться отпустить":predator.victim>=0?"Освободить напарника":
+                    predator.fightPhase==FishBehaviour.Weakened?"Подтянуть к себе":"Подтягивать хищника";
+                return new HudHint(Mark.Spear,new(release?Key.LiftLeft:Key.Left,pull),new(Key.R,"Освободить трос"))
+                    {caution=release||warning};
             }
             if(hooked && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired)
             {
