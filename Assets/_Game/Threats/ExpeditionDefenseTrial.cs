@@ -281,7 +281,7 @@ namespace Raid
                 $"The dry cabin is already dark during the countdown (work lights {warningGain:F3}, haze {warningHaze:F2}).");
             var center=d.DefenseCenter;
             float departureRange=Vector3.ProjectOnPlane(d.Defense.approachStart-center,Vector3.up).magnitude;
-            float wingRange=Vector3.ProjectOnPlane(d.Defense.approachEnd-center,Vector3.up).magnitude;
+            float wingRange=Nereid.DefenseAtmosphereView.Stock.handoffRadius;
             report.Check(departureRange is >=120 and <=151 && wingRange is >=28 and <=36,
                 $"The distant formation begins at {departureRange:F0} m and hands off its wing near {wingRange:F0} m.");
             float interval=team.hungerRemaining;
@@ -323,6 +323,9 @@ namespace Raid
             var firstAttacker=d.DefenseActorAt(0);
             report.Check(firstAttacker.slot>=0 && (d.Defense.promoted&(1UL<<firstAttacker.slot))!=0,
                 "The first active attacker continues from an existing swarm swimmer.");
+            float liveRange=Vector3.ProjectOnPlane(firstAttacker.position-center,Vector3.up).magnitude;
+            report.Check(liveRange is >=26 and <=39 && firstAttacker.velocity.sqrMagnitude>.25f,
+                $"The live wing is already moving at handoff, {liveRange:F1} m from the submarine.");
             await SwarmFrame(folder,host,d,"03-assault-cabin");
             report.Check(Mathf.Abs(lighting.WorkLightGain-warningGain)<.02f &&
                 Mathf.Abs(Shader.GetGlobalFloat("_RaidDryHaze")-warningHaze)<.025f,
@@ -445,7 +448,9 @@ namespace Raid
             if(!d.DefenseFixtureSpawn(DefenseSpecies.Remora,false,1,8))throw new InvalidOperationException("No remora entry");
             await Wait(()=>d.DefenseActorCount==1 && d.DefenseActorAt(0).pose==AttackerPose.Latch,"remora attached",14);
             var remora=d.DefenseActorAt(0);
-            var outward=(remora.position-d.DefenseCenter).normalized;
+            await Wait(()=>d.DefenseFixtureContact(remora.id,out _,out _),"remora jaw centered on a lit shield cell",3);
+            d.DefenseFixtureContact(remora.id,out _,out var firstAnchor);
+            var outward=(remora.position-firstAnchor).normalized;
             host.Teleport(remora.position+outward*2.8f-Vector3.up*.48f);
             host.LookAtConsole(remora.position);
             await Awaitable.WaitForSecondsAsync(.16f);
@@ -486,6 +491,9 @@ namespace Raid
             }
             report.Check(d.DefenseFixtureStretch(remora.id,tool.FishingAnchor,out extension),
                 $"The remora stretches {extension:F2} metres toward the pulling line while its jaw stays anchored.");
+            report.Check(d.DefenseFixtureContact(remora.id,out float jawGap,out var pullAnchor) &&
+                (pullAnchor-firstAnchor).sqrMagnitude<.0001f,
+                $"The glowing contact stays pinned while reeling. Wet jaw clearance {jawGap:F3} m.");
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-stretched.png"));
             float deadline=Time.realtimeSinceStartup+15;
             float peakTension=0;
@@ -648,17 +656,33 @@ namespace Raid
             float start=Time.realtimeSinceStartup;
             int before=tool.CatchCount;
             bool winding=true;
+            double warningAt=0;
+            float maxNeedle=0;
+            bool sawTug=false;
+            var arc=UnityEngine.Object.FindAnyObjectByType<UI.LineTensionArc>();
             while(tool.HasDefenseLine && Time.realtimeSinceStartup-start<7)
             {
                 if(tool.LineTension>.71f)winding=false;
                 if(tool.LineTension<.40f)winding=true;
-                tool.DefenseFixtureWind(winding);
+                if(tool.TryHookedDefense(out var fight))
+                {
+                    if(fight.fightPhase==FishBehaviour.SurgeWindup && arc && arc.Warning)
+                    {
+                        if(warningAt==0)UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-shared-reel-warning.png"));
+                        warningAt=fight.fightAt;
+                    }
+                    if(fight.fightTug>0 && warningAt>0 && fight.fightAt-warningAt>.28)sawTug=true;
+                    tool.DefenseFixtureWind(winding && fight.fightPhase!=FishBehaviour.Surge);
+                }
+                else tool.DefenseFixtureWind(winding);
+                if(arc)maxNeedle=Mathf.Max(maxNeedle,arc.Load);
                 if(d.TryDefenseAnchor(hunter,out var point))host.LookAtConsole(point);
                 await Awaitable.NextFrameAsync();
             }
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && tool.CatchCount==before+1,
                 $"The swimming predator uses the physical spool and lands in inventory in {Time.realtimeSinceStartup-start:F2} seconds.");
+            report.Check(sawTug && maxNeedle>.08f,"The ordinary fishing needle loads and warns before a real predator tug.");
         }
 
         static async Awaitable PlaySolo(Report report,string folder)
