@@ -169,13 +169,13 @@ namespace Raid
             var vessel=NereidVessel.Active;
             var center=DefenseCenter;
             Vector3 broadside=vessel.transform.right*((seed&1)==0?1:-1);
-            Vector3 higher=center+Vector3.up*1.25f;
+            Vector3 higher=center+Vector3.up*3.7f;
             for(int i=0;i<12;i++)
             {
                 float angle=(i/2%3)*24*(i%2==0?-1:1);
                 Vector3 heading=Quaternion.AngleAxis(angle,Vector3.up)*broadside*(i<6?1:-1);
-                Vector3 near=higher+heading*15f+Vector3.down*.9f;
-                Vector3 far=higher+heading*34f+Vector3.up*.64f;
+                Vector3 near=higher+heading*15f-Vector3.up*.12f;
+                Vector3 far=higher+heading*34f+Vector3.up*1.25f;
                 if(!MarineSpawn.InOpenWater(depthTier,near,.9f) || !MarineSpawn.InOpenWater(depthTier,far,.9f) ||
                     !DefensePathClear(far,near) || !FindPath(near,FieldContact(near),out _))continue;
                 start=far;end=near;return;
@@ -324,12 +324,19 @@ namespace Raid
         bool TryArrival(int lane,DefenseSpecies species,out Vector3 point,out int slot)
         {
             Vector3 center=DefenseCenter;
+            int count=DefenseAtmosphereView.SwarmSlotCount;
             if(groupSerial==0 && Defense.phase==DefensePhase.Assault && Defense.approachEnd!=Vector3.zero)
             {
-                Vector3 across=Vector3.Cross(Vector3.up,(Defense.approachStart-Defense.approachEnd).normalized);
-                var entry=Defense.approachEnd+across*((lane%5-2)*.82f);
-                if(MarineSpawn.InOpenWater(depthTier,entry,.70f) && FindPath(entry,FieldContact(entry),out _))
-                {point=entry;slot=-1;return true;}
+                for(int i=0;i<count;i++)
+                {
+                    slot=(lane+i)%count;
+                    if((Defense.promoted&(1UL<<slot))!=0)continue;
+                    var pose=DefenseAtmosphereView.SampleApproach(Defense.seed,slot,SwarmAge,
+                        Defense.approachStart,Defense.approachEnd,1);
+                    if(pose.Kind!=(int)species || !NereidVessel.Active.OutsideDefenseHull(pose.Position,pose.Forward,pose.Scale) ||
+                        !MarineSpawn.InOpenWater(depthTier,pose.Position,.70f) || !FindPath(pose.Position,FieldContact(pose.Position),out _))continue;
+                    point=pose.Position;return true;
+                }
             }
             var authored=SpawnLayout?.defenseApproaches;
             if(authored!=null)
@@ -342,7 +349,6 @@ namespace Raid
                     {point=marker.position;slot=-1;return true;}
                 }
             }
-            int count=DefenseAtmosphereView.SwarmSlotCount;
             for(int attempt=0;attempt<count;attempt++)
             {
                 slot=(lane+attempt)%count;
@@ -350,7 +356,8 @@ namespace Raid
                 var orbit=DefenseAtmosphereView.SampleOrbit(Defense.seed,slot,SwarmAge,center);
                 if(orbit.Kind!=(int)species)continue;
                 point=orbit.Position;
-                if(Vector3.Distance(point,center)<7 || !MarineSpawn.InOpenWater(depthTier,point,.4f) ||
+                if(!NereidVessel.Active.OutsideDefenseHull(point,orbit.Forward,orbit.Scale) ||
+                    Vector3.Distance(point,center)<7 || !MarineSpawn.InOpenWater(depthTier,point,.4f) ||
                     !ReefHabitats.CanArrive(point,7,12))continue;
                 if(FindPath(point,FieldContact(point),out _))return true;
             }
@@ -392,7 +399,12 @@ namespace Raid
 
         Vector3 FieldContact(Vector3 from,float outwardOffset=0)
         {
-            if(fieldView)return fieldView.ContactWorld(from,outwardOffset);
+            if(fieldView)
+            {
+                Vector3 localPoint=fieldView.transform.InverseTransformPoint(from);
+                localPoint.y=Mathf.Min(localPoint.y,fieldView.RimHeight-.92f);
+                return fieldView.ContactWorld(fieldView.transform.TransformPoint(localPoint),outwardOffset);
+            }
             Vector3 center=DefenseCenter;
             Quaternion rotation=fieldAnchor?fieldAnchor.rotation:Quaternion.identity;
             var local=fieldAnchor?fieldAnchor.InverseTransformPoint(from):from-center;

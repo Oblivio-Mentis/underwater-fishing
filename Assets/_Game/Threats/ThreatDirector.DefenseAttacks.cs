@@ -35,6 +35,11 @@ namespace Raid
             if(large || AvailableBudget()>=card.cost+1 && activeRaid.budget>17 && raidRandom.NextDouble()<defenseTuning.titanChance)
                 size=defenseTuning.large*1.16f;
             var orbit=slot>=0?DefenseAtmosphereView.SampleOrbit(Defense.seed,slot,SwarmAge,DefenseCenter):default;
+            if(slot>=0 && group==1 && Defense.phase==DefensePhase.Assault && Defense.approachEnd!=Vector3.zero)
+            {
+                var arrival=DefenseAtmosphereView.SampleApproach(Defense.seed,slot,SwarmAge,Defense.approachStart,Defense.approachEnd,1);
+                if((point-arrival.Position).sqrMagnitude<1)orbit=arrival;
+            }
             int cost=card.cost+(size>defenseTuning.large && AvailableBudget()>card.cost?1:0);
             var go=new GameObject("Defense target");
             go.transform.SetParent(transform,true);
@@ -144,13 +149,18 @@ namespace Raid
                     a.nextRoute=0;
                 }
                 var candidate=a.data.position+motion;
-                if(!mayCrossShield && ShieldContains(candidate))candidate=FieldContact(candidate,.06f);
+                if(!mayCrossShield && ShieldContains(candidate))
+                {
+                    candidate=fieldView?fieldView.ContactWorld(candidate,.06f):FieldContact(candidate,.06f);
+                    if(!DefensePathClear(a.data.position,candidate)){a.nextRoute=0;return false;}
+                }
+                var facing=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
                 var vessel=NereidVessel.Active;
-                if((vessel && !vessel.OutsideDefenseHull(candidate,direction,a.data.scale)) ||
+                if((vessel && !vessel.OutsideDefenseHull(candidate,facing,a.data.scale)) ||
                     Physics.CheckSphere(candidate,defenseTuning.sceneryClearance,obstacleMask,QueryTriggerInteraction.Ignore))
                 {a.nextRoute=0;return false;}
                 a.data.position=candidate;
-                a.data.forward=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
+                a.data.forward=facing;
                 a.collider.transform.SetPositionAndRotation(candidate,Quaternion.LookRotation(a.data.forward));
             }
             return (goal-a.data.position).sqrMagnitude<.62f*.62f;
@@ -325,7 +335,7 @@ namespace Raid
                 a.goal=a.exit;SetPose(a,AttackerPose.Retreat,a.card.cooldown);
                 return;
             }
-            var at=a.data.position+a.data.forward*.55f-Vector3.up*.77f;
+            var at=a.data.position+a.data.forward*(.71f*a.data.scale)-Vector3.up*(1.12f*a.data.scale);
             var delta=at-victim.transform.position;
             if(delta.sqrMagnitude>12 || !ClearDefenseLine(a.data.position,victim.transform.position+Vector3.up*.55f,victim))
             {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,.8f);return;}

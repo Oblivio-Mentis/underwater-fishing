@@ -97,6 +97,22 @@ namespace Raid.Nereid
             return new Vector3(Mathf.Cos(angle)*swimRadius,Mathf.Clamp(y-1.1f,-6.8f,7.9f),Mathf.Sin(angle)*swimRadius*1.12f);
         }
 
+        public static OrbitPose SampleApproach(int seed,int slot,float time,Vector3 start,Vector3 end,float fraction,
+            DefenseAtmosphereSettings profile=null)
+        {
+            if(!profile)profile=Stock;
+            uint key=unchecked((uint)seed+(uint)slot*15731u);
+            uint sizing=unchecked((uint)seed*0x9e3779b9u+(uint)slot*0x85ebca6bu);
+            Vector3 heading=(end-start).normalized;
+            Vector3 lateral=Vector3.Cross(Vector3.up,heading).normalized;
+            Vector3 school=Vector3.Lerp(start,end,Mathf.SmoothStep(0,1,fraction));
+            float row=(slot%3-1)*2.9f+Mathf.Sin(time*.53f+slot*.81f)*.78f;
+            Vector3 point=school+lateral*(row+(Unit(key+19)-.5f)*3.1f)+
+                Vector3.up*((Unit(key+31)-.5f)*4.7f+Mathf.Sin(time*.9f+slot*.47f)*.28f)-heading*(Unit(key+43)*8.5f);
+            float scale=Mathf.Lerp(1-profile.sizeVariation,1+profile.sizeVariation,Unit(sizing+17));
+            return new OrbitPose(point,heading,scale,slot%SpeciesCount);
+        }
+
         static float Unit(uint number)
         {
             unchecked
@@ -203,9 +219,6 @@ namespace Raid.Nereid
             var vessel=NereidVessel.Active;
             bool advancing=phase<=3 && (approachEnd-approachStart).sqrMagnitude>1;
             float spreadOut=phase==3?Mathf.SmoothStep(0,1,phaseAge/13f):0;
-            Vector3 lead=advancing?(approachEnd-approachStart).normalized:Vector3.forward;
-            Vector3 lateral=Vector3.Cross(Vector3.up,lead).normalized;
-            Vector3 school=Vector3.Lerp(approachStart,approachEnd,Mathf.SmoothStep(0,1,approachFraction));
             for (int i = 0; i < slots; i++)
             {
                 if ((promoted & (1UL << i)) != 0) continue;
@@ -214,13 +227,9 @@ namespace Raid.Nereid
                 Vector3 heading = pose.Forward;
                 if(advancing && spreadOut<1)
                 {
-                    uint key=unchecked((uint)raidSeed+(uint)i*15731u);
-                    float fin=Unit(key+19)-.5f;
-                    float row=(i%3-1)*2.9f+Mathf.Sin(orbitAge*.53f+i*.81f)*.78f;
-                    Vector3 formed=school+lateral*(row+fin*3.1f)+Vector3.up*((Unit(key+31)-.5f)*4.7f+
-                        Mathf.Sin(orbitAge*.9f+i*.47f)*.28f)-lead*(Unit(key+43)*8.5f);
-                    point=Vector3.Lerp(formed,point,spreadOut);
-                    heading=Vector3.Slerp(lead,heading,spreadOut);
+                    var formed=SampleApproach(raidSeed,i,orbitAge,approachStart,approachEnd,approachFraction,profile);
+                    point=Vector3.Lerp(formed.Position,point,spreadOut);
+                    heading=Vector3.Slerp(formed.Forward,heading,spreadOut);
                 }
                 Vector3 away = point-observer;
                 float distanceSquared = away.sqrMagnitude;

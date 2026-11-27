@@ -77,8 +77,12 @@ namespace Raid
                     var focus=DefenseApproachFocus;
                     if(snapshot.phase==DefensePhase.Assault)
                     {
+                        int priority=int.MaxValue;
+                        AttackerSnapshot threat=default;
                         foreach(var attacker in defenseActors)
-                            if(attacker.group==1){focus=Vector3.Lerp(focus,attacker.position,.74f);break;}
+                            if(attacker.group<priority && attacker.pose!=AttackerPose.Retreat)
+                            {priority=attacker.group;threat=attacker;}
+                        if(threat.id>0)focus=threat.position;
                     }
                     defenseLighting.Present(DefenseAlarm,focus,DefenseClock);
                 }

@@ -153,8 +153,14 @@ namespace Raid
             var vessel=Nereid.NereidVessel.Active;
             var center=director.DefenseCenter;
             float side=Vector3.Dot(director.Defense.approachEnd-center,vessel.transform.right)<0?-1:1;
-            var at=vessel.transform.TransformPoint(new Vector3(side*4.30f,side<0?1.55f:.06f,-2.58f));
+            var layout=Nereid.NereidDeckNavigation.Active.rooms;
+            Transform observation=null;
+            foreach(var volume in layout.dryCompartments)
+                if(volume.room && volume.room.name=="ObservationHall"){observation=volume.room;break;}
+            if(!observation)throw new InvalidOperationException("The observation hall is absent.");
+            var at=observation.TransformPoint(new Vector3(side<0?-4.68f:3.24f,side<0?1.55f:.06f,-.35f));
             player.Teleport(at);
+            await Awaitable.NextFrameAsync();
             player.LookAtConsole(director.DefenseApproachFocus);
             await Awaitable.WaitForSecondsAsync(.28f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
@@ -196,6 +202,8 @@ namespace Raid
             await Wait(()=>team.feedingCycle==1,"first completed meal");
             report.Check(!d.DefenseActive && team.RequiredFood(world.progression)>initial,"A complete meal prevents a raid and advances appetite only once.");
             await Shot(folder,host,d,d.DefenseCenter,"01-field");
+            await Awaitable.WaitForSecondsAsync(.75f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"01-field-pattern-motion.png"));
             await Broadside(folder,host,d);
             ReportPhase("underfed cycle",report,folder);
             team.offeringPoints=team.RequiredFood(world.progression)/3;
@@ -212,8 +220,9 @@ namespace Raid
             report.Check(lighting && lighting.AlarmActive && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
                 "The alarm and exterior spotlights follow the synchronized approaching school before the first attack.");
             await SwarmFrame(folder,host,d);
-            report.Check(host.IsInside && Shader.GetGlobalFloat("_RaidDryHaze")>.32f,
-                "A dry observation deck camera still sees the exterior haze.");
+            float glassHaze=Shader.GetGlobalFloat("_RaidDryHaze");
+            report.Check(host.IsInside && glassHaze>.32f,
+                $"A dry observation deck camera sees the exterior haze. Inside={host.IsInside}, haze={glassHaze:F2}.");
             await Shot(folder,host,d,d.DefenseApproachFocus,"02-encirclement");
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
@@ -241,6 +250,13 @@ namespace Raid
                 }
             }
             report.Check(report.species==31,"All five interactive creature profiles appeared in the main level.");
+            for(int i=0;i<d.DefenseActorCount;i++)
+            {
+                var a=d.DefenseActorAt(i);
+                if(!Nereid.NereidVessel.Active.OutsideDefenseHull(a.position,a.forward,a.scale))
+                    throw new InvalidOperationException("An attacker entered a sealed hull compartment: "+a.kind);
+            }
+            report.Check(true,"All sampled attackers swim outside the sealed hull.");
             await RecordFrameTime(report);
             d.DefenseFixtureEnd();
             await Wait(()=>!d.DefenseActive,"successful recovery",22);
@@ -335,7 +351,7 @@ namespace Raid
             var actor=d.DefenseActorAt(d.DefenseActorCount-1);
             outward=(actor.position-d.DefenseCenter).normalized;
             var side=Vector3.Cross(Vector3.up,outward).normalized;
-            Vector3 victimStart=actor.position+side*.9f-Vector3.up*.60f;
+            Vector3 victimStart=actor.position+side*.9f-Vector3.up*1.13f;
             Vector3 gunnerStart=victimStart+side*3.2f+outward*.55f;
             if(!MarineSpawn.InOpenWater(world.CurrentDepth,gunnerStart+Vector3.up*.55f,.60f))
             {

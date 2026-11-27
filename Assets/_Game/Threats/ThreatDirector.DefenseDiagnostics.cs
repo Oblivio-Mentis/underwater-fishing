@@ -17,10 +17,12 @@ namespace Raid
             var card=defenseTuning.For(species);
             if(card==null)return false;
             var center=DefenseCenter;
+            var vessel=Nereid.NereidVessel.Active;
             for(int i=0;i<24;i++)
             {
                 float angle=(i*15+group*38)*Mathf.Deg2Rad;
                 var at=center+new Vector3(Mathf.Sin(angle)*distance,-1.8f,Mathf.Cos(angle)*distance);
+                if(vessel && !vessel.OutsideDefenseHull(at,(center-at).normalized,large?1.46f:1.2f))continue;
                 if(!MarineSpawn.InOpenWater(depthTier,at,.4f) || !DefensePathClear(at,FieldContact(at)))continue;
                 SpawnAttacker(card,at,-1,group,large);
                 PublishAttackers();
