@@ -32,21 +32,31 @@ namespace Raid
             host.CameraImpulse.BeginBackgroundQa(60);
             await Wait(()=>d.DefenseCountdown<7.7f,"film begins with the incoming school",50);
             ReportPhase("film observation window",report,folder);
-            await SwarmFrame(folder,host,d,"film-reference");
+            var vessel=Nereid.NereidVessel.Active;
             Vector3 bearing=Vector3.ProjectOnPlane(d.Defense.approachEnd-d.DefenseCenter,Vector3.up).normalized;
             Vector3 arrival=d.DefenseCenter+bearing*55+Vector3.up*3.8f;
+            float broadside=Vector3.Dot(bearing,vessel.transform.right)<0?-1:1;
+            var room=vessel.ObservationRoom();
+            var window=room?room.Find(broadside<0?"Port observation window 2":"Starboard observation window 2"):null;
+            if(!window)throw new InvalidOperationException("Film needs the port or starboard observation window");
+            host.Teleport(window.position-vessel.transform.right*(1.64f*broadside)-Vector3.up*.64f);
+            await Awaitable.WaitForSecondsAsync(.24f);
             await Clip(folder,"01-window",5,host,()=>arrival);
 
             ReportPhase("film exterior approach",report,folder);
             Vector3 side=Vector3.Cross(Vector3.up,bearing);
-            for(int step=0;step<12;step++)
+            bool exterior=false;
+            for(int step=0;step<16;step++)
             {
-                var point=d.DefenseCenter+bearing*(12+step*.8f)+side*(step%2==0?6:-6)+Vector3.up*(1.4f+step*.25f);
-                if(!MarineSpawn.InOpenWater(depth,point,.66f) ||
-                    !MarineSpawn.ClearLeg(point,arrival,.18f,Vector3.Distance(point,arrival)*.82f))continue;
+                var point=d.DefenseCenter+bearing*(15+step*.9f)+side*(step%2==0?7:-7)+Vector3.up*(2.4f+step*.38f);
+                var eye=point+Vector3.up*.6f;
+                if(vessel.ContainsSealed(eye) || !MarineSpawn.InOpenWater(depth,point,.66f) ||
+                    !MarineSpawn.ClearLeg(eye,arrival,.18f,Vector3.Distance(eye,arrival)*.87f))continue;
                 host.Teleport(point);
+                exterior=true;
                 break;
             }
+            if(!exterior)throw new InvalidOperationException("Film needs a clear exterior view of the attack lane");
             await Clip(folder,"02-outside",7,host,()=>arrival);
 
             ReportPhase("film shield contact",report,folder);
