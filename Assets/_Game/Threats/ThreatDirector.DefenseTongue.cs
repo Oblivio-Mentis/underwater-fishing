@@ -31,7 +31,11 @@ namespace Raid
             }
             if(distance>defenseTuning.squidTongueRange*.96f || !TonguePathClear(mouth,chest,a.target))
             {
-                Steer(a,chest,a.card.speed,dt,Defense.breached,a.target);
+                Vector3 away=(mouth-chest).normalized;
+                Vector3 standoff=chest+away*(defenseTuning.squidTongueRange*.85f);
+                Vector3 goal=distance>defenseTuning.squidTongueRange*.96f && DefensePathClear(a.data.position,standoff,a.target)
+                    ?standoff:chest;
+                Steer(a,goal,a.card.speed,dt,Defense.breached,a.target);
                 return;
             }
             a.data.tongueAim=chest;

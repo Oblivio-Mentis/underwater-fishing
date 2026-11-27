@@ -104,6 +104,7 @@ namespace Raid
                     defenseLighting.Present(DefenseAlarm,focus,DefenseClock,DefenseBlackout);
                 }
             }
+            PresentRaidPressure(snapshot,field);
             PresentRaidInk();
             visibleIds.Clear();
             foreach(var current in defenseActors)
@@ -510,6 +511,7 @@ namespace Raid
             if(inkMaterial){Destroy(inkMaterial);inkMaterial=null;}
             if(atmosphere){Destroy(atmosphere.gameObject);atmosphere=null;}
             if(raidWakeMaterial){Destroy(raidWakeMaterial);raidWakeMaterial=null;}
+            ClearRaidPressure();
         }
     }
 }

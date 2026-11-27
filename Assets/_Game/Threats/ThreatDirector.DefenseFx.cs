@@ -9,9 +9,16 @@ namespace Raid
 
         void PresentRaiderWake(VisibleAttacker view,AttackerSnapshot actor,float pace)
         {
-            bool rushing=actor.pose is AttackerPose.Strike or AttackerPose.Snatch or AttackerPose.Tongue ||
+            bool rushing=actor.pose is AttackerPose.Strike or AttackerPose.Snatch ||
                 actor.pose==AttackerPose.Carry && (actor.stolenId>0 || actor.victim>=0) ||
                 actor.pose==AttackerPose.Retreat && Defense.phase==DefensePhase.Resolution;
+            var style=actor.kind switch {
+                DefenseSpecies.Rammer=>(.57f,.57f,.68f,new Color(.56f,.84f,.89f)),
+                DefenseSpecies.Remora=>(.24f,.25f,.39f,new Color(.45f,.76f,.72f)),
+                DefenseSpecies.Thief=>(.78f,.30f,.52f,new Color(.46f,.72f,.77f)),
+                DefenseSpecies.Abductor=>(.48f,.37f,.36f,new Color(.52f,.62f,.74f)),
+                _=>(.43f,.36f,.50f,new Color(.50f,.81f,.92f))
+            };
             if(view.wake==null && rushing)
             {
                 if(!raidWakeMaterial)
@@ -27,12 +34,12 @@ namespace Raid
                     node.transform.SetParent(view.root,false);
                     var trail=view.wake[i]=node.AddComponent<TrailRenderer>();
                     trail.sharedMaterial=raidWakeMaterial;
-                    trail.time=i==0?.64f:.48f;
+                    trail.time=style.Item1*(i==0?1:.73f);
                     trail.minVertexDistance=.10f;
                     trail.widthCurve=new AnimationCurve(new Keyframe(0,.42f),new Keyframe(.19f,1),new Keyframe(1,0));
                     trail.colorGradient=new Gradient{
-                        colorKeys=new[]{new GradientColorKey(new Color(.58f,.94f,1),0),new GradientColorKey(new Color(.15f,.43f,.70f),1)},
-                        alphaKeys=new[]{new GradientAlphaKey(.76f,0),new GradientAlphaKey(.40f,.50f),new GradientAlphaKey(0,1)}};
+                        colorKeys=new[]{new GradientColorKey(style.Item4,0),new GradientColorKey(style.Item4*.51f,1)},
+                        alphaKeys=new[]{new GradientAlphaKey(style.Item3,0),new GradientAlphaKey(style.Item3*.45f,.45f),new GradientAlphaKey(0,1)}};
                     trail.shadowCastingMode=ShadowCastingMode.Off;
                     trail.receiveShadows=false;
                 }
@@ -41,9 +48,10 @@ namespace Raid
             for(int i=0;i<view.wake.Length;i++)
             {
                 var trail=view.wake[i];
-                trail.transform.localPosition=new Vector3((i==0?-1:1)*(.23f+.065f*Mathf.Sin(view.phase)),.10f,-.78f);
-                trail.widthMultiplier=Mathf.Lerp(.23f,.63f,pace)*actor.scale;
-                trail.emitting=rushing && pace>.16f;
+                float spacing=actor.kind==DefenseSpecies.Rammer?.38f:.22f;
+                trail.transform.localPosition=new Vector3((i==0?-1:1)*(spacing+.073f*Mathf.Sin(view.phase)),.08f,-.76f);
+                trail.widthMultiplier=style.Item2*Mathf.Lerp(.28f,1,pace)*actor.scale;
+                trail.emitting=rushing && pace>(actor.kind==DefenseSpecies.Remora?.36f:.19f);
             }
         }
 
@@ -77,7 +85,8 @@ namespace Raid
             Vector3 origin=contact && view.mouth?view.mouth.localPosition:new Vector3(0,0,-.80f);
             view.thrust.transform.localPosition=origin;
             view.thrust.transform.localRotation=Quaternion.Euler(contact?-55:18,contact?0:180,0);
-            view.thrust.Emit(actor.pose==AttackerPose.Tongue?13:contact?27:actor.kind==DefenseSpecies.Rammer?35:21);
+            view.thrust.Emit(actor.pose==AttackerPose.Tongue?13:contact?14:actor.kind==DefenseSpecies.Rammer?35:
+                actor.kind==DefenseSpecies.Remora?9:17);
         }
     }
 }

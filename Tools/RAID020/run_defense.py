@@ -16,7 +16,7 @@ def read_report(path):
         return {}
 
 
-def run(executable, destination, crew, combat=False, solo=False):
+def run(executable, destination, crew, combat=False, solo=False, film_depth=0):
     executable = executable.resolve(strict=True)
     output = destination.resolve() / ("defense-" + uuid.uuid4().hex[:8])
     output.mkdir(parents=True)
@@ -39,7 +39,10 @@ def run(executable, destination, crew, combat=False, solo=False):
         processes.append(subprocess.Popen(args, cwd=executable.parent, startupinfo=startup))
 
     try:
-        stage = ("-raid-defense-solo",) if solo else ("-raid-defense-combat",) if combat else ()
+        if film_depth:
+            stage = ("-raid-defense-film",) + (("-raid-film-depth-2",) if film_depth == 2 else ())
+        else:
+            stage = ("-raid-defense-solo",) if solo else ("-raid-defense-combat",) if combat else ()
         launch("host", "host", "-raid-save", str(output / "campaign.json"),
                "-raid-defense-trial", str(output), str(crew), *stage)
         deadline = time.monotonic() + 60
@@ -72,6 +75,12 @@ def run(executable, destination, crew, combat=False, solo=False):
             if report.get("status") == "failed":
                 raise RuntimeError(report["error"])
             if report.get("status") == "passed":
+                if film_depth:
+                    clips = ("01-window", "02-outside", "03-shield", "04-breach")
+                    if any(len(list((output / name).glob("*.png"))) < 30 for name in clips):
+                        raise RuntimeError("Missing a complete defense film sequence")
+                    print(f"Depth {film_depth}: {len(clips)} film sequences", flush=True)
+                    return
                 for path in guests:
                     state = read_report(path)
                     if combat:
@@ -107,5 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--crew", type=int, choices=(2, 3, 4), default=2)
     parser.add_argument('--combat', action='store_true')
     parser.add_argument('--solo', action='store_true')
+    parser.add_argument('--film-depth', type=int, choices=(1, 2), default=0)
     options = parser.parse_args()
-    run(options.player, options.output, 1 if options.solo else options.crew, options.combat, options.solo)
+    run(options.player, options.output, 1 if options.solo or options.film_depth else options.crew,
+        options.combat, options.solo, options.film_depth)

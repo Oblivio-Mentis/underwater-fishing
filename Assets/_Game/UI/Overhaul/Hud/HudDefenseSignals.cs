@@ -58,7 +58,7 @@ namespace Raid.UI
                                 if(diver && diver.OwnerId==actor.victim){point=diver.transform.position+Vector3.up*.95f;break;}
                         }
                         float distance=Vector3.Distance(eye.transform.position,point);
-                        if(distance>155 || distance<1.2f)continue;
+                        if(distance>155 || distance<1.2f && actor.urgency!=DefenseUrgency.Rescue)continue;
                         Vector3 view=eye.WorldToViewportPoint(point);
                         Vector2 centre=new(.5f,.5f);
                         Vector2 direction=(Vector2)view-centre;

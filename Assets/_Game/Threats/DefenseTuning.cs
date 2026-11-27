@@ -45,14 +45,14 @@ namespace Raid
         [Min(.2f)] public float snatchSeconds=.44f;
         [Min(1)] public float escapeSpeedMultiplier=1.42f;
         [Min(10)] public float escapeSightDistance=42f;
-        [Min(1)] public float carrySeconds=8, inkSeconds=5;
-        [Min(1)] public float soloCarrySeconds=8f;
+        [Min(1)] public float carrySeconds=11, inkSeconds=5;
+        [Min(1)] public float soloCarrySeconds=11f;
         [Min(.45f)] public float soloEscapeSeconds=.95f;
         [Min(.25f)] public float inkRadius=4;
-        [Min(.5f)] public float captiveCarrySpeed=4.15f, harpoonRangeMargin=1.4f;
-        [Min(2)] public float squidTongueRange=7.4f;
-        [Min(.1f)] public float squidTongueSeconds=.28f;
-        [Min(1)] public float squidMinimumPullSeconds=2.8f;
+        [Min(.5f)] public float captiveCarrySpeed=3.8f, harpoonRangeMargin=1.4f;
+        [Min(2)] public float squidTongueRange=10.5f;
+        [Min(.1f)] public float squidTongueSeconds=.4f;
+        [Min(1)] public float squidMinimumPullSeconds=4.8f;
         [Min(.1f)] public float rescuePullSeconds=.74f;
         [Range(.3f,1)] public float small=.85f;
         [Range(1,2)] public float large=1.20f;
@@ -62,7 +62,7 @@ namespace Raid
             new(){kind=DefenseSpecies.Rammer,cost=3,simultaneous=3,health=85,speed=5.8f,burstSpeed=12.5f,shieldDamage=10,diverDamage=28,windup=1.2f,cooldown=5.8f,fightSeconds=5.5f,counterChance=.48f},
             new(){kind=DefenseSpecies.Remora,cost=2,simultaneous=4,health=53,speed=4.6f,burstSpeed=6.2f,shieldDamage=1.5f,diverDamage=9,windup=.42f,cooldown=4.5f,fightSeconds=5.1f,counterChance=.15f,silhouetteScale=.92f},
             new(){kind=DefenseSpecies.Thief,cost=1,simultaneous=4,health=36,speed=7.7f,burstSpeed=10.2f,shieldDamage=1.5f,diverDamage=6,windup=.42f,cooldown=6.4f,fightSeconds=3.1f,counterChance=.08f,silhouetteScale=.75f},
-            new(){kind=DefenseSpecies.Abductor,cost=3,simultaneous=2,health=91,speed=4.9f,burstSpeed=8.3f,shieldDamage=2.5f,diverDamage=19,windup=.95f,cooldown=6.7f,fightSeconds=6.2f,counterChance=.5f,silhouetteScale=1.13f},
+            new(){kind=DefenseSpecies.Abductor,cost=3,simultaneous=2,health=91,speed=4.9f,burstSpeed=8.3f,shieldDamage=2.5f,diverDamage=19,windup=1.1f,cooldown=6.7f,fightSeconds=6.2f,counterChance=.5f,silhouetteScale=1.13f},
             new(){kind=DefenseSpecies.Stalker,cost=2,simultaneous=3,health=64,speed=6.3f,burstSpeed=11,shieldDamage=4,diverDamage=23,windup=.7f,cooldown=6,fightSeconds=4.6f,counterChance=.42f}
         };
 

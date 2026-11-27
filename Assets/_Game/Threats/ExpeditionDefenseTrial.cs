@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Raid
 {
     // A fixture runs only with an isolated campaign path and a development player.
-    static class ExpeditionDefenseTrial
+    static partial class ExpeditionDefenseTrial
     {
         [Serializable] sealed class Report
         {
@@ -47,7 +47,8 @@ namespace Raid
                 await Wait(()=>RaidWorld.Instance && RaidWorld.Instance.NetworkObject && RaidWorld.Instance.IsServerInitialized && RaidWorld.Instance.Team!=null &&
                     RaidWorld.Instance.TravelRemaining<=0 && DiverMotor.ServerDivers.Count==peers && UI.UiRoot.Instance &&
                     UI.UiRoot.Instance.Context.Player!=null,"LAN crew",90);
-                if(Array.IndexOf(args,"-raid-defense-solo")>=0)await PlaySolo(report,folder);
+                if(Array.IndexOf(args,"-raid-defense-film")>=0)await Film(report,folder,args);
+                else if(Array.IndexOf(args,"-raid-defense-solo")>=0)await PlaySolo(report,folder);
                 else if(Array.IndexOf(args,"-raid-defense-combat")>=0)await PlayCombat(report,folder,peers);
                 else await Play(report,folder,peers);
                 report.status="passed";
@@ -280,8 +281,9 @@ namespace Raid
                 $"The dry cabin is already dark during the countdown (work lights {warningGain:F3}, haze {warningHaze:F2}).");
             var center=d.DefenseCenter;
             float departureRange=Vector3.ProjectOnPlane(d.Defense.approachStart-center,Vector3.up).magnitude;
-            report.Check(departureRange>=105 && Nereid.DefenseAtmosphereView.Stock.cloudDistanceScale==3,
-                $"The main swarm is three times farther out, and the attack wing starts {departureRange:F0} m from the ship.");
+            float wingRange=Vector3.ProjectOnPlane(d.Defense.approachEnd-center,Vector3.up).magnitude;
+            report.Check(departureRange is >=120 and <=151 && wingRange is >=28 and <=36,
+                $"The distant formation begins at {departureRange:F0} m and hands off its wing near {wingRange:F0} m.");
             float interval=team.hungerRemaining;
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"school approach",d.defenseTuning.warningSeconds+4);
             await Awaitable.WaitForSecondsAsync(2f);
@@ -510,21 +512,31 @@ namespace Raid
             if(!guest)throw new InvalidOperationException("An independent diver is required");
             tool.DefenseFixtureSelect(0);
             await Wait(()=>tool.ActiveSlot==0,"equipped harpoon");
-            if(!d.DefenseFixtureSpawn(DefenseSpecies.Abductor,false,3,12))throw new InvalidOperationException("No abductor entry");
+            if(!d.DefenseFixtureOpenWaterDuel(DefenseSpecies.Abductor,guest,3,out int squidId))
+                throw new InvalidOperationException("No open-water abductor lane");
             var actor=d.DefenseActorAt(d.DefenseActorCount-1);
-            outward=(actor.position-d.DefenseCenter).normalized;
+            report.Check(actor.id==squidId,"The open-water attacker was replicated to the crew.");
+            Vector3 victimStart=guest.transform.position;
+            outward=Vector3.ProjectOnPlane(victimStart-actor.position,Vector3.up).normalized;
             var side=Vector3.Cross(Vector3.up,outward).normalized;
-            Vector3 victimStart=actor.position+side*.9f-Vector3.up*1.13f;
-            Vector3 gunnerStart=victimStart+side*3.2f+outward*.55f;
+            var gunnerStart=victimStart+side*3.2f+outward*.35f;
             if(!MarineSpawn.InOpenWater(world.CurrentDepth,gunnerStart+Vector3.up*.55f,.60f))
-            {
-                victimStart-=side*1.8f;
-                gunnerStart=victimStart-side*3.2f+outward*.55f;
-            }
-            guest.Teleport(victimStart);
+                gunnerStart=victimStart-side*3.2f+outward*.35f;
             host.Teleport(gunnerStart);
             Physics.SyncTransforms();
             if(!d.DefenseFixtureCapture(guest))throw new InvalidOperationException("Could not secure a victim in open water");
+            float grabbedAt=Time.realtimeSinceStartup;
+            await Wait(()=>d.DefenseFixtureTongueWrap(actor.id,out _,out var center) &&
+                Vector3.Distance(center,guest.transform.position)<.25f,"the other diver is visibly wrapped by the tongue",2);
+            host.LookAtConsole(guest.transform.position+Vector3.up*.23f);
+            await Awaitable.NextFrameAsync();
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-squid-rescue.png"));
+            while(Time.realtimeSinceStartup-grabbedAt<4.05f)
+            {
+                host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
+                await Awaitable.NextFrameAsync();
+            }
+            report.Check(guest.IsTrapped && !guest.IsDead,"The crew still has a chance to rescue after four seconds.");
             host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
             deadline=Time.realtimeSinceStartup+3.5f;
             string sightline="no contact";
@@ -548,12 +560,6 @@ namespace Raid
             report.Check(guest.IsTrapped,"The diver remains captive before the teammate reels. "+sightline);
             await Wait(()=>d.TryDefenseFight(actor.id,out var held) && held.urgency==DefenseUrgency.Rescue,
                 "the rescue contact is visible to the crew",1);
-            await Wait(()=>d.DefenseFixtureTongueWrap(actor.id,out _,out var center) &&
-                Vector3.Distance(center,guest.transform.position)<.25f,"the other diver is visibly wrapped by the tongue",1);
-            report.Check(true,"The observer sees the tongue physically wrap the captive diver.");
-            host.LookAtConsole(guest.transform.position+Vector3.up*.23f);
-            await Awaitable.NextFrameAsync();
-            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-squid-rescue.png"));
             deadline=Time.realtimeSinceStartup+4;
             while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)
             {
@@ -729,8 +735,10 @@ namespace Raid
             if(!d.DefenseFixtureOpenWaterDuel(DefenseSpecies.Abductor,player,4,out int next))
                 throw new InvalidOperationException("The next squid needs an open approach");
             await Wait(()=>player.RaidGripVisual==next,"squid catches the unresisting diver",12);
-            await Wait(()=>player.IsDead && player.IsConsumed,"the squid pulls a captive into its mouth",9);
-            report.Check(true,"Arrival at the beak is lethal when nobody breaks the tongue grip.");
+            float startPull=Time.realtimeSinceStartup;
+            await Wait(()=>player.IsDead && player.IsConsumed,"the squid pulls a captive into its mouth",12);
+            float elapsed=Time.realtimeSinceStartup-startPull;
+            report.Check(elapsed>=4.65f && elapsed<11,"The unrescued diver has a readable pull window and dies at the beak.");
             report.phase="done";
         }
 

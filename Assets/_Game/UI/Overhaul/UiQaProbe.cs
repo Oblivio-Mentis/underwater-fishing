@@ -369,7 +369,7 @@ namespace Raid.UI
             return rect.TransformPoint(location);
         }
 
-        public static void CapturePeerCamera(string path)
+        public static void CapturePeerCamera(string path,int imageWidth=0,bool showHud=true)
         {
             if(SystemInfo.graphicsDeviceType==GraphicsDeviceType.Null)
                 throw new InvalidOperationException("A graphics device is required for a peer camera capture");
@@ -383,6 +383,11 @@ namespace Raid.UI
                 .Select(c=>(canvas:c,previousCamera:c.worldCamera,distance:c.planeDistance,rotation:c.transform.localRotation,
                     scale:c.transform.localScale,position:c.transform.localPosition)).ToArray();
             int width=Screen.width>1?Screen.width:1280, height=Screen.height>1?Screen.height:720;
+            if(imageWidth>0)
+            {
+                height=Mathf.Max(1,Mathf.RoundToInt(height*(imageWidth/(float)width)));
+                width=imageWidth;
+            }
             var target=RenderTexture.GetTemporary(width,height,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.sRGB);
             var previousTarget=camera.targetTexture;
             var previousActive=RenderTexture.active;
@@ -392,6 +397,7 @@ namespace Raid.UI
                 camera.targetTexture=target;
                 foreach(var overlay in overlays)
                 {
+                    if(!showHud){overlay.canvas.enabled=false;continue;}
                     overlay.canvas.renderMode=RenderMode.ScreenSpaceCamera;
                     overlay.canvas.worldCamera=camera;
                     overlay.canvas.planeDistance=camera.nearClipPlane+.02f;
@@ -415,6 +421,7 @@ namespace Raid.UI
                 {
                     var canvas=overlay.canvas;
                     if(canvas==null)continue;
+                    if(!showHud){canvas.enabled=true;continue;}
                     canvas.planeDistance=overlay.distance;
                     canvas.worldCamera=overlay.previousCamera;
                     canvas.renderMode=RenderMode.ScreenSpaceOverlay;

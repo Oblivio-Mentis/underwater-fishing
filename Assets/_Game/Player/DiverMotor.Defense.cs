@@ -8,6 +8,7 @@ namespace Raid
         int raidCaptive;
         double raidCaptureSafeUntil;
         readonly SyncVar<int> raidGripView=new();
+        readonly SyncVar<double> raidGripStartedAt=new();
         readonly SyncVar<int> raidBreakSequence=new();
         int seenRaidBreak;
         float raidBreakAt=-10;
@@ -21,13 +22,15 @@ namespace Raid
             raidCaptive=0;
             raidCaptureSafeUntil=0;
             raidGripView.Value=0;
+            raidGripStartedAt.Value=0;
             raidBreakSequence.Value=0;
         }
 
-        internal bool BeginRaidCarry(int id,bool solo)
+        internal bool BeginRaidCarry(int id,bool solo,double startedAt)
         {
             if(!IsServerInitialized || IsDead || IsInside || IsHelpless || IsTrapped || !CanBeRaidCaptive || id<=0)return false;
             raidCaptive=id;
+            raidGripStartedAt.Value=startedAt;
             raidGripView.Value=solo?-id:id;
             return true;
         }
@@ -45,8 +48,10 @@ namespace Raid
             if(!IsServerInitialized)return;
             ApplyTetherMotion(away*.55f);
             swimVelocity=away*3.2f;
-            raidBreakSequence.Value++;
+            PresentRaidReleasePose();
         }
+
+        internal void PresentRaidReleasePose() { if(IsServerInitialized)raidBreakSequence.Value++; }
 
         internal void ConsumeBySquid()
         {
@@ -64,7 +69,10 @@ namespace Raid
             float progress=0;
             if(caught && TryGetComponent<RescueTool>(out var rescue) && rescue.DisplayTargetOwnerId==OwnerId)
                 progress=rescue.DisplayProgress;
-            brace=caught?Mathf.Lerp(.22f,1,progress):0;
+            var director=ThreatDirector.Instance;
+            float held=caught && director && director.defenseTuning
+                ?Mathf.Clamp01((float)(director.DefenseClock-raidGripStartedAt.Value)/director.defenseTuning.squidMinimumPullSeconds):0;
+            brace=caught?Mathf.Lerp(.22f,1,Mathf.Max(.66f*held,progress)):0;
             float t=Mathf.Clamp01((Time.unscaledTime-raidBreakAt)/.58f);
             push=t<1?Mathf.SmoothStep(0,1,t/.18f)*(1-Mathf.SmoothStep(0,1,(t-.20f)/.8f)):0;
             return caught || push>.001f;

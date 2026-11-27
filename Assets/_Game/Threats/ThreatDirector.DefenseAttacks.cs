@@ -404,7 +404,8 @@ namespace Raid
                 if(diver && diver.IsServerInitialized && !diver.IsDead)able++;
             foreach(var actor in attackers)if(actor.data.victim>=0)held++;
             bool solo=able==1;
-            if(held>=Mathf.Clamp(able/2,1,2) || !victim.BeginRaidCarry(a.data.id,solo))return false;
+            double now=DefenseClock;
+            if(held>=Mathf.Clamp(able/2,1,2) || !victim.BeginRaidCarry(a.data.id,solo,now))return false;
             a.data.victim=victim.OwnerId;
             a.target=victim;
             a.captiveController=victim.GetComponent<CharacterController>();
@@ -413,7 +414,7 @@ namespace Raid
             a.data.tongueReleasedAt=0;
             a.captureDistance=Vector3.Distance(SquidMouth(a.data),a.data.tongueAim);
             float carry=solo?defenseTuning.soloCarrySeconds:defenseTuning.carrySeconds;
-            a.captureStarted=DefenseClock;
+            a.captureStarted=now;
             a.data.tongueGripAt=a.captureStarted;
             a.captureUntil=a.captureStarted+carry;
             a.rescuePull=0;
@@ -440,7 +441,7 @@ namespace Raid
             {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,.8f);return;}
             if(!linked)return;
             float age=(float)(DefenseClock-a.captureStarted);
-            float speed=defenseTuning.captiveCarrySpeed*Mathf.SmoothStep(.44f,1.20f,age/2);
+            float speed=defenseTuning.captiveCarrySpeed*Mathf.SmoothStep(.37f,1,age/2.4f);
             if(victim.TryGetComponent<HarpoonTool>(out var harpoon) && harpoon.TeammateReelsThisDiver)
                 speed*=.27f;
             else if(a.rescuePull>0 && a.hooks.Count>0)
@@ -457,7 +458,8 @@ namespace Raid
                 EndTonguePass(a);
                 return;
             }
-            float approach=Mathf.SmoothStep(0,1,Mathf.Clamp01(age/defenseTuning.squidMinimumPullSeconds));
+            float fraction=Mathf.Clamp01(age/defenseTuning.squidMinimumPullSeconds);
+            float approach=fraction*Mathf.Lerp(.24f,1,fraction);
             float clearance=Mathf.Lerp(a.captureDistance,.28f,approach);
             float movement=Mathf.Min(dt*speed,remaining-clearance);
             if(movement>0)victim.ApplyTetherMotion(delta*(movement/remaining));
@@ -486,7 +488,7 @@ namespace Raid
             if(!IsServerInitialized || !victim || victim.RaidCaptive<=0)return false;
             foreach(var a in attackers)
                 if(a.data.id==victim.RaidCaptive && a.target==victim)
-                {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,1.4f);return true;}
+                {victim.PresentRaidReleasePose();ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,1.4f);return true;}
             return false;
         }
 

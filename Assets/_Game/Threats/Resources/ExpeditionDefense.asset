@@ -42,15 +42,15 @@ MonoBehaviour:
   snatchSeconds: 0.44
   escapeSpeedMultiplier: 1.42
   escapeSightDistance: 42
-  carrySeconds: 8
-  soloCarrySeconds: 8
+  carrySeconds: 11
+  soloCarrySeconds: 11
   soloEscapeSeconds: 0.95
   inkSeconds: 5
   inkRadius: 4
-  captiveCarrySpeed: 4.15
-  squidTongueRange: 7.4
-  squidTongueSeconds: 0.28
-  squidMinimumPullSeconds: 2.8
+  captiveCarrySpeed: 3.8
+  squidTongueRange: 10.5
+  squidTongueSeconds: 0.4
+  squidMinimumPullSeconds: 4.8
   harpoonRangeMargin: 1.4
   rescuePullSeconds: 0.74
   small: 0.85
@@ -106,7 +106,7 @@ MonoBehaviour:
     burstSpeed: 8.3
     shieldDamage: 2.5
     diverDamage: 19
-    windup: 0.95
+    windup: 1.1
     cooldown: 6.7
     fightSeconds: 6.2
     counterChance: 0.5

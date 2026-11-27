@@ -20,6 +20,9 @@ namespace Raid.Nereid
         // RAID-018 one-shot impacts: a single kick per server-confirmed hook, tug or bite.
         float hitAt=-10, hitMetres, hitDegrees, hitDirection;
         float blastAt=-10,blastStrength,blastSide;
+        float fieldAt=-10,fieldStrength,fieldDuration;
+        bool fieldBreak;
+        Vector3 fieldPoint;
 
         Vector3 blastPoint;
         float refractionStrength;
@@ -39,9 +42,30 @@ namespace Raid.Nereid
             blastStrength=strength*shakeScale;
             blastSide=Vector3.Dot(transform.right,delta.normalized);
         }
-        void DisplayRefraction(float age)
+        internal bool FieldImpact(Vector3 point,float strength,bool breach,float age)
         {
-            bool active=owner && !owner.IsInside && age>=0 && age<1 && !UI.UiInputGate.Modal;
+            if(!owner)return false;
+            float radius=breach?23:owner.IsInside?18:13;
+            float distance=Vector3.Distance(transform.position,point);
+            float power=Mathf.Pow(Mathf.Clamp01(1-distance/radius),.85f)*Mathf.Clamp01(strength);
+            float start=Time.unscaledTime-age+distance/(owner.IsInside?78:45);
+            float duration=breach?.55f:owner.IsInside?.26f:.32f;
+            if(power<.025f || age>.7f || !breach && start-fieldAt<.19f && power<fieldStrength)return false;
+            fieldAt=start;
+            fieldPoint=point;
+            fieldStrength=power;
+            fieldBreak=breach;
+            fieldDuration=duration;
+            return true;
+        }
+
+        void DisplayRefraction(float age, float fieldAge=-1)
+        {
+            var options=UI.UiRoot.Instance?.Settings;
+            bool blast=age>=0 && age<1;
+            bool breach=fieldBreak && fieldAge>=0 && fieldAge<fieldDuration && shakeScale>.001f &&
+                options?.reduceInterfaceMotion!=true;
+            bool active=owner && !owner.IsInside && (blast || breach) && !UI.UiInputGate.Modal;
             if(!active){if(refraction)refraction.enabled=false;return;}
             if(!refraction)
             {
@@ -67,10 +91,13 @@ namespace Raid.Nereid
             var pane=refraction.transform;
             pane.localPosition=Vector3.forward*distance;
             pane.localScale=new Vector3(height*eye.aspect*1.03f,height*1.03f,1);
-            var center=eye.WorldToViewportPoint(blastPoint);
-            if(center.z<.1f)center=new Vector3(.5f-Vector3.Dot(eye.transform.right,(blastPoint-transform.position).normalized)*.55f,.50f,0);
+            Vector3 origin=breach?fieldPoint:blastPoint;
+            var center=eye.WorldToViewportPoint(origin);
+            if(center.z<.1f)center=new Vector3(.5f-Vector3.Dot(eye.transform.right,(origin-transform.position).normalized)*.55f,.50f,0);
+            float waveAge=breach?fieldAge/fieldDuration:age;
+            float wavePower=breach?fieldStrength*.64f*shakeScale:refractionStrength;
             refractionMaterial.SetVector("_Wave",new Vector4(Mathf.Clamp(center.x,-.4f,1.4f),
-                Mathf.Clamp(center.y,-.2f,1.2f),age,refractionStrength));
+                Mathf.Clamp(center.y,-.2f,1.2f),waveAge,wavePower));
             refraction.enabled=true;
         }
 
@@ -139,23 +166,33 @@ namespace Raid.Nereid
             float hitAge=Time.unscaledTime-hitAt;
             float hit=hitAge>=0 && hitAge<.42f ? Mathf.Exp(-hitAge*7.5f) : 0;
             float blastAge=Time.unscaledTime-blastAt;
-            DisplayRefraction(blastAge);
+            float fieldAge=Time.unscaledTime-fieldAt;
+            DisplayRefraction(blastAge,fieldAge);
             float shock=blastAge>=0 && blastAge<1f
                 ?blastStrength*Mathf.SmoothStep(0,1,blastAge/.036f)*Mathf.Exp(-5.1f*blastAge):0;
             if(hitAge>=.42f){hitMetres=hitDegrees=0;}
             owner.RaidStrugglePose(out float brace,out float escape);
-            float grapple=(brace*.78f+escape)*shakeScale;
-            if(amplitude<.00001f && hit<=0 && shock<=0 && grapple<=0)return;
+            float grapple=(brace*.52f+escape)*shakeScale;
+            float field=0;
+            if(fieldAge>=0 && fieldAge<fieldDuration)
+            {
+                float fraction=fieldAge/fieldDuration;
+                field=fieldStrength*uiShake*Mathf.Sin(fraction*Mathf.PI*2.5f)*Mathf.Pow(1-fraction,1.9f);
+            }
+            if(amplitude<.00001f && hit<=0 && shock<=0 && grapple<=0 && Mathf.Abs(field)<.0001f)return;
             float t=Time.time;Vector3 noise=new Vector3(Mathf.Sin(t*47)+.35f*Mathf.Sin(t*79+.3f),Mathf.Sin(t*61+.7f)+.3f*Mathf.Sin(t*97),Mathf.Sin(t*37)*.35f)/1.35f;
             // DiverMotor has already written the live eye pose for this frame. Apply it once here.
             var eyeRotation=transform.localRotation;
-            CurrentOffset=noise*(amplitude+.077f*shock)
+            Vector3 fieldDirection=(transform.position-fieldPoint).normalized;
+            float fieldSide=Vector3.Dot(transform.right,fieldDirection);
+            CurrentOffset=noise*(amplitude+.077f*shock)+transform.parent.InverseTransformDirection(fieldDirection)*(field*(fieldBreak?.10f:.07f))
                 + eyeRotation * (Vector3.right*(hit*hitMetres*hitDirection) + Vector3.up*(hit*hitMetres*.35f)
                 + new Vector3(Mathf.Sin(t*10.5f)*.02f,.028f*escape,-.062f*escape)*grapple);
             Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*(amplitude*17+shock*6.7f)
                 + new Vector3(-hit*hitDegrees,hit*hitDegrees*hitDirection,hit*hitDegrees*.4f*hitDirection)
                 + shock*new Vector3(-4.4f,blastSide*2.6f,blastSide*3.2f)
-                + grapple*new Vector3(4.8f*brace-9*escape,2.4f*Mathf.Sin(t*7.8f),7.6f*Mathf.Sin(t*10.5f));
+                + field*new Vector3(-1.6f,fieldSide*1.85f,fieldSide*(fieldBreak?4.2f:2.6f))
+                + grapple*new Vector3(3.2f*brace-9*escape,1.95f*Mathf.Sin(t*7.8f),5.8f*Mathf.Sin(t*10.5f));
             var rotation=eyeRotation*Quaternion.Euler(angles);
             transform.SetLocalPositionAndRotation(transform.localPosition+CurrentOffset,rotation);
             AppliedThisFrame=true;

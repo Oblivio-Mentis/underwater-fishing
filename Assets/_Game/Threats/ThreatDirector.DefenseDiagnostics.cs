@@ -67,7 +67,8 @@ namespace Raid
             {
                 var outward=Quaternion.AngleAxis(sector*20f,Vector3.up)*ship.transform.right;
                 var predator=center+outward*(17f+ring*3)+Vector3.up*(1.8f+ring*.78f);
-                var captain=predator+outward*3.15f-Vector3.up*.60f;
+                float distance=kind==DefenseSpecies.Abductor?defenseTuning.squidTongueRange*.91f:5.45f;
+                var captain=predator+outward*distance-Vector3.up*.60f;
                 if(!MarineSpawn.InOpenWater(depthTier,predator,.7f) || !MarineSpawn.InOpenWater(depthTier,captain,.66f) ||
                     !ship.OutsideDefenseHull(predator,outward,1.46f) ||
                     !ship.OutsideDefenseHull(captain+Vector3.up*.6f,outward,1.46f) ||
@@ -90,7 +91,7 @@ namespace Raid
                 if(a.data.kind!=DefenseSpecies.Abductor || a.data.victim>=0 || a.hooks.Count!=0)continue;
                 var away=(a.data.position-DefenseCenter).normalized;
                 a.exit=a.data.position+away*10;
-                if(TryCapture(a,victim))return true;
+                if(TonguePathClear(SquidMouth(a.data),CaptiveChest(victim),victim) && TryCapture(a,victim))return true;
             }
             return false;
         }
