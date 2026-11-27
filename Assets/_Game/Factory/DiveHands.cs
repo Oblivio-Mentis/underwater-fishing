@@ -129,7 +129,7 @@ namespace Raid
                 ?null:inventionStack.kind;
             var caught=ball||cuddling||salvage!=null||heldKind!=null?null:displayedHeavy?equipment.CarriedFish:equipment.FishInSlot(displaySlot);
             long nextId=caught==null?0:displayedHeavy?equipment.HeldCargoId:equipment.CatchIdInSlot(displaySlot);
-            UpdateFish(caught?.SpeciesId,nextId);
+            UpdateFish(caught?displayedHeavy?caught.SpeciesId:equipment.CatchSpeciesInSlot(displaySlot):null,nextId);
             stride.Advance(actor,Time.deltaTime);
             float freedom=(1f-aim)*(1f-push);
             float breath=Mathf.Sin(Time.time*1.7f)*Mathf.Lerp(.0024f,.00035f,aim);
@@ -308,7 +308,11 @@ namespace Raid
             if(next==species && id==catchId)return;
             species=next;catchId=id;
             if(fish!=null){fish.SetActive(false);Object.Destroy(fish);fish=null;}
-            if(species!=null)fish=CatchFishModel.Create(fishAnchor,species,catchId);
+            if(species!=null)
+            {
+                if(DefenseCreatureAssets.ReadKey(species,out var kind))fish=DefenseCreatureAssets.Model(kind,fishAnchor);
+                if(!fish)fish=CatchFishModel.Create(fishAnchor,species,catchId);
+            }
         }
 
         public void Release(){if(root!=null)Object.Destroy(root.gameObject);}

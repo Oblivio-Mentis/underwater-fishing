@@ -156,7 +156,7 @@ namespace Raid
                 Shader.SetGlobalVector(WaterTintShader,(Vector4)waterTint);
                 if(camera!=null)camera.backgroundColor=RenderSettings.fogColor;
             }
-            else {ResetFog();Shader.SetGlobalFloat("_RaidConcealment",0);}
+            else ResetFog();
             Shader.SetGlobalFloat(WaterShader,wetBlend);
             if(oceanFill!=null)
             {
@@ -199,6 +199,7 @@ namespace Raid
             RenderSettings.fogDensity=initialDensity;RenderSettings.fogColor=initialColor;
             if(camera!=null)camera.backgroundColor=initialColor;
             appliedFog=false;Shader.SetGlobalFloat(WaterShader,0);
+            Shader.SetGlobalFloat("_RaidConcealment",0);
         }
 
         void RestoreOceanSettings()

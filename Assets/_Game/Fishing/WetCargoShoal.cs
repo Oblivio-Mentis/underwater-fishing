@@ -37,6 +37,7 @@ namespace Raid
         NereidVessel vessel;
         Factory.FactoryVisuals factory;
         Transform reservoir;
+        DefenseFieldView containment;
         TeamProgress manifest;
         int cageCount;
         float deliveryProgress;
@@ -67,7 +68,9 @@ namespace Raid
             {
                 reservoir=new GameObject("Aquarium · delivered catches").transform;
                 var rail=vessel.authoredRail;
-                if(rail && rail.aquarium) reservoir.SetParent(rail.aquarium,false);
+                containment=vessel.GetComponentInChildren<DefenseFieldView>(true);
+                if(containment)reservoir.SetParent(containment.transform,false);
+                else if(rail && rail.aquarium) reservoir.SetParent(rail.aquarium,false);
                 else
                 {
                     reservoir.SetParent(vessel.transform,false);
@@ -355,6 +358,7 @@ namespace Raid
             if(rail && rail.aquarium)
             {
                 var radii=rail.aquariumSwimRadii;
+                if(containment)radii=Vector3.Min(radii,Vector3.Max(containment.radii,Vector3.one*.05f)*.81f);
                 float ring=.45f+.55f*fish.Ring;
                 return reservoir.TransformPoint(new Vector3(Mathf.Cos(a)*radii.x*ring,
                     ((fish.Depth-.5f)*1.6f+Mathf.Sin(a*1.7f)*.16f)*radii.y, Mathf.Sin(a)*radii.z*ring));

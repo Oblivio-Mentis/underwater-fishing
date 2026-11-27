@@ -42,6 +42,7 @@ namespace Raid
         [Min(1)] public float carrySeconds=8, inkSeconds=5;
         [Min(.25f)] public float inkRadius=4;
         [Min(.5f)] public float captiveCarrySpeed=2.5f, harpoonRangeMargin=1.4f;
+        [Min(.1f)] public float rescuePullSeconds=.74f;
         [Range(.3f,1)] public float small=.85f;
         [Range(1,2)] public float large=1.20f;
         [Range(0,1)] public float titanChance=.085f;

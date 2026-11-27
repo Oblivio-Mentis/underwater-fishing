@@ -120,7 +120,7 @@ namespace Raid.UI
                     return new(Mark.Spear,note:"Рыба уже зацеплена");
             }
             if(tool.HandsFull || kind==DroppedKind.Catch)
-                return new(Icon(kind),new(Key.Q,"Выбросить"),note:tool.CarriedSalvage!=null?tool.CarriedSalvage.DisplayName:ReelReadout.Species((tool.HoldingHeavyCatch?tool.CarriedFish:tool.FishInSlot(tool.ActiveSlot))?.SpeciesId));
+                return new(Icon(kind),new(Key.Q,"Выбросить"),note:tool.CarriedSalvage!=null?tool.CarriedSalvage.DisplayName:ReelReadout.Species(tool.HoldingHeavyCatch?tool.CarriedFish?.SpeciesId:tool.CatchSpeciesInSlot(tool.ActiveSlot)));
             var chamber=Nereid.NereidAirlock.Active;
             if(chamber && chamber.Contains(player.transform.position))
             {

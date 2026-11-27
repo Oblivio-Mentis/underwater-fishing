@@ -152,7 +152,7 @@ namespace Raid
                 int slot=fish.RequiresPartner?1:FreePocket();
                 if(slot<0)return;
                 world.RemoveDrop(id);
-                var carried=new PocketItem {species=item.species,id=id};
+                var carried=new PocketItem {species=item.species,id=id,defenseSpecies=item.defenseSpecies};
                 if(fish.RequiresPartner)_liftedHeavy.Value=carried;
                 else SetPocket(slot,carried);
                 EquipSlot(slot);

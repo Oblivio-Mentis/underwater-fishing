@@ -14,11 +14,11 @@ namespace Raid
         {
             public DefensePhase phase;
             public FieldCondition condition;
-            public int seed, budget, spent, wave, lost, returned, impact, inkSequence;
+            public int seed, budget, spent, wave, lost, returned, impact;
             public ulong promoted;
             public float integrity, maximum, severity;
-            public double phaseAt, beginsAt, impactAt, inkAt;
-            public Vector3 impactPoint, inkPoint;
+            public double phaseAt, beginsAt, impactAt;
+            public Vector3 impactPoint;
             public bool breached;
             public float Ratio => maximum>0?Mathf.Clamp01(integrity/maximum):1;
         }
@@ -38,6 +38,14 @@ namespace Raid
         readonly SyncList<AttackerSnapshot> defenseActors=new(new SyncTypeSettings(.115f));
         readonly List<DefenseAttacker> attackers=new();
         readonly List<DefenseTuning.Species> eligibleAttacks=new();
+        public struct InkCloud
+        {
+            public int id;
+            public double at;
+            public Vector3 center, forward;
+        }
+        readonly SyncList<InkCloud> inkClouds=new();
+        int inkSerial;
         DefenseRecord activeRaid;
         System.Random raidRandom;
         bool ownsDefenseTuning;
@@ -76,7 +84,7 @@ namespace Raid
         void ResetDefense()
         {
             foreach(var a in attackers){ReleaseVictim(a);ClearHooks(a,false);if(a.collider)Destroy(a.collider.gameObject);}
-            attackers.Clear();defenseActors.Clear();activeRaid=null;
+            attackers.Clear();defenseActors.Clear();inkClouds.Clear();activeRaid=null;
             defenseState.Value=new DefenseSnapshot{integrity=defenseTuning.maximumIntegrity,maximum=defenseTuning.maximumIntegrity};
         }
 
@@ -162,6 +170,7 @@ namespace Raid
             }
             if(!DefenseActive || activeRaid==null)return;
             double now=DefenseClock;
+            if(inkClouds.Count>0 && now-inkClouds[0].at>=defenseTuning.inkSeconds)inkClouds.RemoveAt(0);
             var snapshot=Defense;
             float age=(float)(now-snapshot.phaseAt);
             switch(snapshot.phase)
@@ -316,15 +325,23 @@ namespace Raid
             position=default;return false;
         }
 
+        bool ShieldContains(Vector3 point)
+        {
+            if(!NereidVessel.Active || Defense.breached && Defense.phase!=DefensePhase.Recovery)return false;
+            Vector3 local=fieldAnchor?fieldAnchor.InverseTransformPoint(point):point-DefenseCenter;
+            return new Vector3(local.x/fieldRadii.x,local.y/fieldRadii.y,local.z/fieldRadii.z).sqrMagnitude<1;
+        }
+
         Vector3 FieldContact(Vector3 from)
         {
             Vector3 center=DefenseCenter;
             Quaternion rotation=fieldAnchor?fieldAnchor.rotation:Quaternion.identity;
-            var local=Quaternion.Inverse(rotation)*(from-center);
+            var local=fieldAnchor?fieldAnchor.InverseTransformPoint(from):from-center;
             if(local.sqrMagnitude<.01f)local=Vector3.down;
             local.y=Mathf.Min(local.y,-.18f);
             var normalized=new Vector3(local.x/fieldRadii.x,local.y/fieldRadii.y,local.z/fieldRadii.z);
-            return center+rotation*(local/Mathf.Max(.001f,normalized.magnitude));
+            var surface=local/Mathf.Max(.001f,normalized.magnitude);
+            return fieldAnchor?fieldAnchor.TransformPoint(surface):center+rotation*surface;
         }
 
         void HitField(float amount,Vector3 impact)

@@ -236,6 +236,7 @@ namespace Raid
         void SwimEel(ref ReefSnapshot reef,Vector3 goal,float speed,float dt)
         {
             var step = SwimToward(reef.Eel,goal,speed * dt,.36f);
+            if(ShieldContains(step))step=reef.Eel;
             var travel = step - reef.Eel;
             if (travel.sqrMagnitude > .00001f)
                 reef.EelHeading = Vector3.RotateTowards(reef.EelHeading,travel.normalized,dt * 4.7f,0);
@@ -320,6 +321,7 @@ namespace Raid
 
         bool PredatorClear(Vector3 start,Vector3 end,float radius)
         {
+            if(ShieldContains(end))return false;
             if (ReefHabitats.InShelter(end)) return false;
             Vector3 path = end - start;
             if (path.sqrMagnitude < .00001f) return true;

@@ -36,6 +36,7 @@ namespace Raid
             public NetworkObject species;
             public long id;
             public bool ball;
+            public byte defenseSpecies;
             public TechSlot invention;
         }
         private readonly SyncList<PocketItem> pockets = new();
@@ -58,6 +59,7 @@ namespace Raid
         private float _friendObstructed, _friendLastPull, _friendRefuseUntil, _friendExpiresAt;
         private bool _ownsFriendTuning;
         private bool _primaryConsumedUntilRelease;
+        float raidRescueWinding;
 
         public struct LineReadout { public float length, tension; }
         readonly SyncVar<LineReadout> _lineReadout = new();
@@ -116,6 +118,11 @@ namespace Raid
         PocketItem Pocket(int slot) => slot>=2 && slot-2<pockets.Count ? pockets[slot-2] : default;
         void SetPocket(int slot,PocketItem item) => pockets[slot-2]=item;
         // A pocketed fish can already be torn down when the scene unloads: a destroyed object reads as empty.
+        public string CatchSpeciesInSlot(int slot)
+        {
+            byte kind=Pocket(slot).defenseSpecies;
+            return kind>0?DefenseCreatureAssets.Key((DefenseSpecies)(kind-1)):FishInSlot(slot)?.SpeciesId;
+        }
         public FishActor FishInSlot(int slot) { var species = Pocket(slot).species; return species != null ? species.GetComponent<FishActor>() : null; }
         public long CatchIdInSlot(int slot) => Pocket(slot).id;
         public bool HasBallInSlot(int slot) => Pocket(slot).ball;
@@ -333,7 +340,6 @@ namespace Raid
                 RaidWorld.Instance?.TryHookBall(this,ball,hit,out contact);
             else if(friend!=null)
             {
-                ThreatDirector.Instance?.RescueDefenseVictim(friend);
                 if(TryHookFriend(friend.GetComponent<HarpoonTool>()))
                     contact=HarpoonContact.FromHit(friend.NetworkObject,friend.transform,false,hit,Motor.AimDirection);
             }
@@ -480,9 +486,13 @@ namespace Raid
         private bool EmptyPocket(int slot, bool showEscape)
         {
             if(CatchIdInSlot(slot)==0)return false;
+            var item=Pocket(slot);
             var fish=FishInSlot(slot);
             SetPocket(slot,default);
-            if (showEscape && fish != null && !Motor.IsInside)
+            if(showEscape && item.defenseSpecies>0 && RaidWorld.Instance && RaidWorld.Instance.CanRegisterDrop(item.id))
+                RaidWorld.Instance.RegisterDrop(new DroppedItem{id=item.id,kind=DroppedKind.Catch,species=item.species,
+                    position=transform.position,yaw=transform.eulerAngles.y,dead=true,roll=78,defenseSpecies=item.defenseSpecies});
+            else if (showEscape && fish != null && !Motor.IsInside)
                 FishReleasedObservers(fish.SpeciesId, transform.position, transform.rotation);
             return true;
         }
@@ -622,7 +632,7 @@ namespace Raid
             if (Vector3.Distance(transform.position, target.transform.position) > TetherMaxRange || !FriendLineVisible(target)) return false;
             _friendTarget.Value = target.NetworkObject;
             target._friendSource.Value = NetworkObject;
-            _friendObstructed = 0; _friendLastPull = Time.unscaledTime;
+            _friendObstructed = 0; _friendLastPull = Time.unscaledTime;raidRescueWinding=0;
             _friendExpiresAt = Time.unscaledTime + Safe(friendTetherTuning.maximumDuration, 10, 1, 20);
             _assistHeld = false;
             return true;
@@ -660,6 +670,14 @@ namespace Raid
                 return;
             }
             _friendLastPull = Time.unscaledTime;
+            if(target.Motor.RaidCaptive>0)
+            {
+                var raid=ThreatDirector.Instance;
+                raidRescueWinding+=Time.fixedDeltaTime*Mathf.Max(.5f,ReelMultiplier);
+                if(!raid || raidRescueWinding<raid.defenseTuning.rescuePullSeconds)return;
+                raid.RescueDefenseVictim(target.Motor);
+                raidRescueWinding=0;
+            }
             float separation = Safe(friendTetherTuning.stopDistance, 1.8f, .8f, Mathf.Max(.8f, TetherMaxRange - .25f));
             if (distance <= separation) return;
             float step = Mathf.Min(distance - separation, Safe(friendTetherTuning.pullSpeed, 2.5f, .1f, 4) * Time.fixedDeltaTime);

@@ -135,7 +135,7 @@ namespace Raid
             gun.gameObject.SetActive(!diver.IsDead && !cuddling && !held && !helper && throwFollow<=0 && tool.OwnsHarpoon && displaySlot==0);
             var shownFish=tool.HoldingHeavyCatch?tool.LiftedHeavy:pocket;
             long shownId=tool.HoldingHeavyCatch?tool.HeldCargoId:tool.CatchIdInSlot(displaySlot);
-            UpdateFish(!diver.IsDead?shownFish?.SpeciesId:null,shownFish!=null?shownId:0);
+            UpdateFish(!diver.IsDead && shownFish?tool.HoldingHeavyCatch?shownFish.SpeciesId:tool.CatchSpeciesInSlot(displaySlot):null,shownFish!=null?shownId:0);
             avatar.BeginPose();
             arms[0].Upper.localPosition=leftShoulderRest;
             if(diver.IsDead)
@@ -274,7 +274,11 @@ namespace Raid
         {
             if(species==fishSpecies && id==visibleCatchId)return;
             fishSpecies=species;visibleCatchId=id;if(fishModel!=null){fishModel.SetActive(false);Destroy(fishModel);fishModel=null;}
-            if(species!=null)fishModel=CatchFishModel.Create(fishAnchor,species,id);
+            if(species!=null)
+            {
+                if(DefenseCreatureAssets.ReadKey(species,out var kind))fishModel=DefenseCreatureAssets.Model(kind,fishAnchor);
+                if(!fishModel)fishModel=CatchFishModel.Create(fishAnchor,species,id);
+            }
         }
 
         static void Pose(Limb chain,float pitch,float yaw,float roll,float hinge,float twist,float wrist)

@@ -10,9 +10,8 @@ namespace Raid
             foreach(var a in attackers)
             {
                 if(hit.collider!=a.collider || a.hooks.Count>=4)continue;
-                ReleaseVictim(a);
                 a.hooks.Add(new DefenseHook{tool=tool,line=new FishingLine(Vector3.Distance(tool.FishingAnchor,a.data.position))});
-                a.target=null;
+                if(a.data.victim<0)a.target=null;
                 a.data.impactOffset=Quaternion.Inverse(Quaternion.LookRotation(a.data.forward))*(hit.point-a.data.position);
                 tool.AttachDefenseLine(a.data.id);
                 var s=state.Value;s.WaveHits++;state.Value=s;
@@ -46,6 +45,11 @@ namespace Raid
         void OnDefenseEscape(DefenseAttacker a,DiverMotor diver)
         {
             a.progress*=.56f;
+            if(a.data.victim>=0)
+            {
+                SetPose(a,AttackerPose.Carry,Mathf.Max(0,(float)(a.captureUntil-DefenseClock)));
+                return;
+            }
             if(Defense.phase!=DefensePhase.Assault){SetPose(a,AttackerPose.Carry,0);return;}
             if(a.attached && a.data.kind==DefenseSpecies.Remora)
             {
@@ -63,6 +67,8 @@ namespace Raid
             DiverMotor escapedFrom=null;
             float nearest=float.MaxValue,totalWinding=0;
             int engaged=0;
+            Vector3 pull=Vector3.zero;
+            if(a.data.victim>=0 && DefenseClock>=a.captureUntil)ReleaseVictim(a);
             // A short readable strain window twice per fight. Slack or a partner makes it safe to wind.
             float agitation=Mathf.Max(0,Mathf.Sin((a.life+a.data.id*.57f)*3.3f));
             float surge=agitation>.65f?Mathf.InverseLerp(.65f,1,agitation):0;
@@ -108,7 +114,9 @@ namespace Raid
                     float damp=Mathf.Clamp(world.SkillFactor(tool.Motor,SkillLine.Damper),0,.65f);
                     tool.Motor.ApplyTetherMotion((a.data.position-position).normalized*dt*surge*(1-damp)*(tool.IsAssisted?1.2f:2.35f));
                 }
-                totalWinding+=reel*teamwork*(1+world.SkillFactor(tool.Motor,SkillLine.Tip)*.55f);
+                float strength=reel*teamwork*(1+world.SkillFactor(tool.Motor,SkillLine.Tip)*.55f);
+                totalWinding+=strength;
+                pull+=(position-a.data.position).normalized*strength;
                 engaged++;
                 if(distance<nearest){nearest=distance;strongest=tool;}
             }
@@ -120,12 +128,20 @@ namespace Raid
             a.data.pose=AttackerPose.Fight;
             a.data.effort=surge;
             if(!strongest)return true;
-            float combined=engaged<=1?totalWinding:Mathf.Min(totalWinding,2.7f);
+            float agreement=Mathf.Clamp01(pull.magnitude/Mathf.Max(.01f,totalWinding));
+            float combined=(engaged<=1?totalWinding:Mathf.Min(totalWinding,2.7f))*Mathf.Lerp(.66f,1,agreement);
+            if(a.data.victim>=0)
+            {
+                a.rescuePull+=dt*combined;
+                if(a.rescuePull>=defenseTuning.rescuePullSeconds)ReleaseVictim(a);
+                else return true;
+            }
             float needed=a.card.fightSeconds*Mathf.Lerp(.81f,1.18f,Mathf.InverseLerp(.78f,1.34f,a.data.scale))*(a.attached?1.12f:1);
             a.progress+=dt*combined*Mathf.Lerp(1,.60f,surge);
             if(!a.attached && nearest>1.55f)
             {
                 var hand=strongest.FishingAnchor+Vector3.up*Mathf.Sin(a.life*5)*.19f+strongest.transform.right*Mathf.Sin(a.life*3.8f)*.37f;
+                if(engaged>1 && pull.sqrMagnitude>.04f)hand=Vector3.Lerp(hand,a.data.position+pull.normalized*nearest,.55f);
                 Steer(a,hand,Mathf.Min(strongest.tuning.reelSpeed*combined,4.6f)*(1-surge*.72f),dt);
             }
             else if(a.attached)
@@ -135,11 +151,7 @@ namespace Raid
             }
             a.data.effort=Mathf.Max(surge,.22f);
             if(a.progress<needed || !a.attached && nearest>Mathf.Max(2.45f,strongest.tuning.captureRange))return true;
-            if(a.attached)
-            {
-                var s=Defense;s.inkAt=DefenseClock;s.inkPoint=a.data.position;s.inkSequence++;
-                defenseState.Value=s;
-            }
+            if(a.attached)TearRemora(a);
             RemoveAttacker(index,true,false,strongest);
             return true;
         }

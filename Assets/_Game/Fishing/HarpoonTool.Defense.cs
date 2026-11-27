@@ -24,12 +24,12 @@ namespace Raid
             if(HasDefenseLine)ThreatDirector.Instance?.ReleaseDefenseHook(this);
         }
 
-        internal bool StoreDefenseCatch(FishActor template,long id)
+        internal bool StoreDefenseCatch(FishActor template,long id,DefenseSpecies kind)
         {
             if(!IsServerInitialized || !template || HandsFull)return false;
             int slot=FreePocket();
             if(slot<0)return false;
-            SetPocket(slot,new PocketItem{species=template.NetworkObject,id=id});
+            SetPocket(slot,new PocketItem{species=template.NetworkObject,id=id,defenseSpecies=(byte)((int)kind+1)});
             EquipSlot(slot);
             Motor.ConfirmInteraction();
             return true;

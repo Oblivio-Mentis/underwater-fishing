@@ -61,7 +61,7 @@ namespace Raid.UI
             return label;
         }
 
-        internal static string Species(string id) => id switch
+        internal static string Species(string id) => DefenseCreatureAssets.ReadKey(id,out var kind)?DefenseCreatureAssets.Name(kind):id switch
         {
             "Bristlefish" => "Щетинник", "Sailray" => "Парусный скат", "Lanternfish" => "Фонарная рыба",
             "Needlefish" => "Иглорыба", _ => "Улов"

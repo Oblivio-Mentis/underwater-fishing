@@ -86,7 +86,7 @@ namespace Raid
             var item=new CatchItem(id,rules.salvageBiomass,0,rules.salvageOffering,1,CurrentDepth,
                 species:DefenseCreatureAssets.Key(kind));
             defenseLoot.Add(id,item);
-            if(cutter && cutter.StoreDefenseCatch(defenseSpecimen,id))return;
+            if(cutter && cutter.StoreDefenseCatch(defenseSpecimen,id,kind))return;
             var corpse=new DroppedItem {
                 id=id, kind=DroppedKind.Catch, species=defenseSpecimen.NetworkObject,
                 position=at, yaw=facing.sqrMagnitude>.01f?Quaternion.LookRotation(facing).eulerAngles.y:0,

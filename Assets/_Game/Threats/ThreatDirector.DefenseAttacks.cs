@@ -18,9 +18,9 @@ namespace Raid
             public AttackerSnapshot data;
             public DefenseTuning.Species card;
             public int cost, slot;
-            public float vitality, progress, windAim, latchTick, life;
-            public double until, nextRoute;
-            public bool counter, attached;
+            public float vitality, progress, windAim, latchTick, life, rescuePull;
+            public double until, nextRoute, captureUntil;
+            public bool counter, attached, ramHit;
             public Vector3 goal, waypoint, exit;
             public DiverMotor target;
             public CatchItem catchItem;
@@ -55,6 +55,7 @@ namespace Raid
         void SetPose(DefenseAttacker a,AttackerPose pose,float seconds)
         {
             a.data.pose=pose;
+            if(pose==AttackerPose.Strike)a.ramHit=false;
             a.until=DefenseClock+seconds;
             a.nextRoute=0;
         }
@@ -133,12 +134,7 @@ namespace Raid
                     a.nextRoute=0;
                 }
                 var candidate=a.data.position+motion;
-                if(!mayCrossShield && !Defense.breached)
-                {
-                    var surface=FieldContact(candidate);
-                    if((candidate-DefenseCenter).sqrMagnitude < (surface-DefenseCenter).sqrMagnitude &&
-                        candidate.y<=DefenseCenter.y+.25f)candidate=surface;
-                }
+                if(!mayCrossShield && ShieldContains(candidate))candidate=FieldContact(candidate);
                 a.data.position=candidate;
                 a.data.forward=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
                 a.collider.transform.position=candidate;
@@ -172,7 +168,7 @@ namespace Raid
                 return;
             }
 
-            var contact=FieldContact(a.data.position);
+            var contact=a.data.kind==DefenseSpecies.Remora?FreeLatchPoint(a):FieldContact(a.data.position);
             var outwards=(contact-DefenseCenter).normalized;
             if(a.data.pose==AttackerPose.Retreat)
             {
@@ -189,6 +185,22 @@ namespace Raid
             TickStrike(a,contact,outwards,dt);
         }
 
+        Vector3 FreeLatchPoint(DefenseAttacker a)
+        {
+            var along=a.data.position-DefenseCenter;
+            const float spacing=1.30f;
+            for(int i=0;i<7;i++)
+            {
+                float angle=i==0?0:(i+1)/2*(i%2==0?-28:28);
+                var at=FieldContact(DefenseCenter+Quaternion.AngleAxis(angle,Vector3.up)*along);
+                bool taken=false;
+                foreach(var other in attackers)
+                    if(other!=a && other.attached && (other.goal-at).sqrMagnitude<spacing*spacing){taken=true;break;}
+                if(!taken)return at;
+            }
+            return FieldContact(a.data.position);
+        }
+
         void TickStrike(DefenseAttacker a,Vector3 contact,Vector3 outwards,float dt)
         {
             double now=DefenseClock;
@@ -197,6 +209,19 @@ namespace Raid
                 bool hunts=a.counter || a.data.kind is DefenseSpecies.Abductor or DefenseSpecies.Stalker;
                 if(hunts && a.target==null)a.target=ChooseDefenseVictim(a,a.counter?11f:7f);
                 if(!EligibleVictim(a.target))a.target=null;
+                if(a.data.kind==DefenseSpecies.Stalker && a.target)
+                {
+                    var view=a.target.AimDirection;
+                    var line=(a.data.position-a.target.transform.position).normalized;
+                    if(Vector3.Dot(view,line)>.86f && (a.data.position-a.target.transform.position).sqrMagnitude<45)
+                    {
+                        var flank=Vector3.Cross(Vector3.up,line).normalized;
+                        a.target=null;
+                        a.goal=a.data.position+flank*(a.data.id%2==0?6:-6)+Vector3.down*1.25f;
+                        SetPose(a,AttackerPose.Retreat,1.65f);
+                        return;
+                    }
+                }
                 Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:contact+outwards*.54f;
                 float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:1.65f;
                 if((destination-a.data.position).sqrMagnitude>trigger*trigger)
@@ -216,7 +241,24 @@ namespace Raid
                 }
                 SetPose(a,AttackerPose.Strike,1.1f);
             }
+            var prior=a.data.position;
             bool close=Steer(a,a.goal,a.card.burstSpeed,dt);
+            if(a.data.kind==DefenseSpecies.Rammer && a.target==null && !a.ramHit)
+            {
+                var sweep=a.data.position-prior;
+                if(sweep.sqrMagnitude>.0001f)
+                    foreach(var diver in DiverMotor.ServerDivers)
+                    {
+                        if(!EligibleVictim(diver))continue;
+                        var chest=diver.transform.position+Vector3.up*.66f;
+                        float along=Mathf.Clamp01(Vector3.Dot(chest-prior,sweep)/sweep.sqrMagnitude);
+                        if((prior+sweep*along-chest).sqrMagnitude>1.21f)continue;
+                        a.ramHit=true;
+                        diver.DamageFromCreature(a.card.diverDamage*a.data.scale);
+                        diver.ApplyTetherMotion(a.data.forward*.86f);
+                        break;
+                    }
+            }
             if(!close && now<a.until)return;
             if(a.target)
             {
@@ -253,6 +295,8 @@ namespace Raid
             a.data.victim=victim.OwnerId;
             a.target=victim;
             a.goal=a.exit;
+            a.captureUntil=DefenseClock+defenseTuning.carrySeconds;
+            a.rescuePull=0;
             SetPose(a,AttackerPose.Carry,defenseTuning.carrySeconds);
             return true;
         }
@@ -261,7 +305,7 @@ namespace Raid
         {
             var victim=a.target;
             if(!victim || !victim.IsServerInitialized || victim.IsDead || victim.IsInside || victim.RaidCaptive!=a.data.id ||
-                DefenseClock>=a.until || Steer(a,a.exit,defenseTuning.captiveCarrySpeed,dt))
+                DefenseClock>=a.captureUntil || Steer(a,a.exit,defenseTuning.captiveCarrySpeed,dt))
             {
                 ReleaseVictim(a);
                 a.goal=a.exit;SetPose(a,AttackerPose.Retreat,a.card.cooldown);
@@ -279,7 +323,7 @@ namespace Raid
         {
             if(a.data.victim<0)return;
             if(a.target)a.target.EndRaidCarry(a.data.id);
-            a.target=null;a.data.victim=-1;
+            a.target=null;a.data.victim=-1;a.rescuePull=0;
         }
 
         internal bool RescueDefenseVictim(DiverMotor victim)
@@ -341,6 +385,13 @@ namespace Raid
             if(world.ArchiveDefense() && loot)world.CreateDefenseCatch(a.data.kind,a.data.position,a.data.forward,catcher);
         }
 
+        void TearRemora(DefenseAttacker a)
+        {
+            if(inkClouds.Count>=4)inkClouds.RemoveAt(0);
+            inkClouds.Add(new InkCloud{id=++inkSerial,at=DefenseClock,center=a.data.position,forward=a.data.forward});
+            a.attached=false;
+        }
+
         internal void BlastDefense(Vector3 origin,float radius,float damage)
         {
             if(!IsServerInitialized || !DefenseActive || radius<=0 || damage<=0)return;
@@ -351,7 +402,7 @@ namespace Raid
                 if(intensity<=0 || !ClearDefenseLine(origin,a.data.position))continue;
                 a.vitality-=damage*Mathf.Lerp(.40f,1f,intensity);
                 ReleaseVictim(a);
-                if(a.vitality<=0)RemoveAttacker(i,true,false);
+                if(a.vitality<=0){if(a.attached)TearRemora(a);RemoveAttacker(i,true,false);}
                 else if(a.hooks.Count==0)SetPose(a,AttackerPose.Stagger,1.7f);
             }
         }

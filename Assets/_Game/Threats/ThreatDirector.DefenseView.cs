@@ -19,7 +19,14 @@ namespace Raid
         readonly HashSet<int> visibleIds=new();
         readonly List<int> retiredViews=new();
         DefenseFieldView fieldView;
-        Transform vapor;
+        sealed class InkView
+        {
+            public Transform vapor, front, rear;
+            public Renderer fog;
+        }
+        readonly Dictionary<int,InkView> inkViews=new();
+        readonly List<int> retiredInk=new();
+        readonly HashSet<int> liveInk=new();
         Material inkMaterial;
         MaterialPropertyBlock inkProperties;
         DefenseAtmosphereView atmosphere;
@@ -60,7 +67,7 @@ namespace Raid
                 field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge));
             }
             PresentDefenseAtmosphere(snapshot);
-            PresentRaidInk(snapshot);
+            PresentRaidInk();
             visibleIds.Clear();
             foreach(var current in defenseActors)
             {
@@ -168,39 +175,89 @@ namespace Raid
 
         public float DefenseInkAt(Vector3 point)
         {
-            var s=Defense;
-            if(s.inkSequence<=0 || !defenseTuning)return 0;
-            float age=(float)(DefenseClock-s.inkAt);
-            if(age<0 || age>=defenseTuning.inkSeconds)return 0;
-            float spread=Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
-            float distance=Vector3.Distance(s.inkPoint,point);
-            return Mathf.SmoothStep(1,0,Mathf.InverseLerp(defenseTuning.inkRadius*.20f*spread,
-                defenseTuning.inkRadius*spread,distance))*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.4f);
+            if(!defenseTuning)return 0;
+            float density=0;
+            foreach(var cloud in inkClouds)
+            {
+                float age=(float)(DefenseClock-cloud.at);
+                if(age<0 || age>=defenseTuning.inkSeconds)continue;
+                float spread=Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
+                float distance=Vector3.Distance(cloud.center+Vector3.up*age*.11f,point);
+                float fog=Mathf.SmoothStep(1,0,Mathf.InverseLerp(defenseTuning.inkRadius*.20f*spread,
+                    defenseTuning.inkRadius*spread,distance))*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.4f);
+                density=Mathf.Max(density,fog);
+            }
+            return density;
         }
 
-        void PresentRaidInk(DefenseSnapshot s)
+        InkView FindInk(InkCloud cloud)
         {
-            float age=(float)(DefenseClock-s.inkAt);
-            bool show=s.inkSequence>0 && age>=0 && age<defenseTuning.inkSeconds;
-            if(!show){if(vapor)vapor.gameObject.SetActive(false);return;}
-            if(!vapor)
+            if(inkViews.TryGetValue(cloud.id,out var alive))return alive;
+            if(!inkMaterial)
             {
                 var shader=Resources.Load<Shader>("ExpeditionInk");
-                if(!shader)return;
+                if(!shader)return null;
                 inkMaterial=new Material(shader){name="Remora ink"};
                 inkProperties=new MaterialPropertyBlock();
-                var textureless=GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                textureless.name="Remora ink · water cloud";
-                var collider=textureless.GetComponent<Collider>();collider.enabled=false;Destroy(collider);
-                vapor=textureless.transform;vapor.SetParent(transform,false);
-                textureless.GetComponent<MeshRenderer>().sharedMaterial=inkMaterial;
             }
-            vapor.gameObject.SetActive(true);
-            vapor.position=s.inkPoint+Vector3.up*age*.11f;
-            float radius=defenseTuning.inkRadius*Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
-            vapor.localScale=Vector3.Scale(Vector3.one*radius*2,new Vector3(1,.81f,.94f));
-            inkProperties.SetFloat(InkDensity,Mathf.Clamp01(age*4)*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.5f));
-            vapor.GetComponent<MeshRenderer>().SetPropertyBlock(inkProperties);
+            var bubble=GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            bubble.name="Remora ink · water cloud";
+            var collider=bubble.GetComponent<Collider>();collider.enabled=false;Destroy(collider);
+            bubble.transform.SetParent(transform,false);
+            var fog=bubble.GetComponent<MeshRenderer>();fog.sharedMaterial=inkMaterial;
+            var ink=new InkView{vapor=bubble.transform,fog=fog};
+            inkViews.Add(cloud.id,ink);
+            var front=DefenseCreatureAssets.Model(DefenseSpecies.Remora,transform);
+            var rear=DefenseCreatureAssets.Model(DefenseSpecies.Remora,transform);
+            if(front && rear)
+            {
+                ink.front=front.transform;ink.rear=rear.transform;
+                foreach(string piece in new[]{"Body","Tail","FinLeft","FinRight"})
+                {
+                    var node=ink.front.Find(piece);if(node)node.gameObject.SetActive(false);
+                }
+                var jaw=ink.rear.Find("Jaw");if(jaw)jaw.gameObject.SetActive(false);
+            }
+            return ink;
+        }
+
+        void PresentRaidInk()
+        {
+            liveInk.Clear();
+            foreach(var cloud in inkClouds)
+            {
+                float age=Mathf.Max(0,(float)(DefenseClock-cloud.at));
+                if(age>=defenseTuning.inkSeconds)continue;
+                var ink=FindInk(cloud);
+                if(ink==null)continue;
+                liveInk.Add(cloud.id);
+                ink.vapor.position=cloud.center+Vector3.up*age*.11f;
+                float radius=defenseTuning.inkRadius*Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
+                ink.vapor.localScale=Vector3.Scale(Vector3.one*radius*2,new Vector3(1,.81f,.94f));
+                inkProperties.SetFloat(InkDensity,Mathf.Clamp01(age*4)*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.5f));
+                ink.fog.SetPropertyBlock(inkProperties);
+                if(ink.front && ink.rear)
+                {
+                    float debris=Mathf.Clamp01(age/1.4f);
+                    var forward=cloud.forward.sqrMagnitude>.01f?cloud.forward:Vector3.forward;
+                    var rotation=Quaternion.LookRotation(forward);
+                    ink.front.SetPositionAndRotation(cloud.center+forward*debris*1.4f+Vector3.up*debris*.42f,
+                        rotation*Quaternion.Euler(debris*55,0,debris*38));
+                    ink.rear.SetPositionAndRotation(cloud.center-forward*debris*1.4f-Vector3.up*debris*.38f,
+                        rotation*Quaternion.Euler(-debris*42,0,-debris*60));
+                    ink.front.localScale=ink.rear.localScale=Vector3.one*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.62f,1,debris)));
+                }
+            }
+            retiredInk.Clear();
+            foreach(var pair in inkViews)if(!liveInk.Contains(pair.Key)){RemoveInk(pair.Value);retiredInk.Add(pair.Key);}
+            foreach(int id in retiredInk)inkViews.Remove(id);
+        }
+
+        void RemoveInk(InkView ink)
+        {
+            if(ink.vapor)Destroy(ink.vapor.gameObject);
+            if(ink.front)Destroy(ink.front.gameObject);
+            if(ink.rear)Destroy(ink.rear.gameObject);
         }
 
         void StopDefensePresentation()
@@ -208,7 +265,8 @@ namespace Raid
             foreach(var v in visibleAttackers.Values)if(v.root)Destroy(v.root.gameObject);
             visibleAttackers.Clear();
             if(fieldView)fieldView.Apply(1,1,0,default,100);
-            if(vapor)vapor.gameObject.SetActive(false);
+            foreach(var ink in inkViews.Values)RemoveInk(ink);
+            inkViews.Clear();
             if(atmosphere){Destroy(atmosphere.gameObject);atmosphere=null;}
         }
     }
