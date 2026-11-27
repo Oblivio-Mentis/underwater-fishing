@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 namespace Raid.Nereid
 {
     public enum PipeLine { Inlet, Process, Feed }
+    public enum PipeCircuit { Cargo, Processing, Feeding, GoshaDelivery, GoshaPassage }
     public enum PipeSection { Glass, Metal, ElbowFlange, Hanger, Valve }
 
     [Serializable]
@@ -29,6 +30,12 @@ namespace Raid.Nereid
         [Range(3,48)] public int curveSteps = 12;
         [Range(6,40)] public int circumference = 16;
         public Material sightGlass, metal, enamel;
+        [Header("Pipe collision")]
+        [Tooltip("Cook a hollow wall from the same pipe cross-sections. The bore and the ends remain open.")]
+        public bool solidWall = true;
+        [Min(.008f)] public float wallThickness = .036f;
+        Mesh wallMesh;
+        MeshCollider wallCollider;
 
         [Header("Outlet isolation gate")]
         public Transform valveFrame, portLeaf, starboardLeaf;
@@ -53,6 +60,18 @@ namespace Raid.Nereid
         MeshRenderer shell;
         PipeInteriorWater interiorWater;
         static readonly int FlowActive = Shader.PropertyToID("_FlowActive");
+        public PipeCircuit Circuit
+        {
+            get
+            {
+                if (line == PipeLine.Process) return PipeCircuit.Processing;
+                if (line == PipeLine.Feed) return PipeCircuit.Feeding;
+                var gosha = GetComponentInParent<GoshaReceiver>(true);
+                if (!gosha) return PipeCircuit.Cargo;
+                return gosha.ServicePipe == this ? PipeCircuit.GoshaPassage : PipeCircuit.GoshaDelivery;
+            }
+        }
+
         public bool IsConnected => source && destination && knots.Count >= 2;
         public float Length { get { EnsureCurrent(); return distances.Count == 0 ? 0 : distances[^1]; } }
 
@@ -111,7 +130,8 @@ namespace Raid.Nereid
                 GetComponent<MeshFilter>().sharedMesh = skin;
             }
             skin.Clear();
-            if (knots.Count < 2) return;
+            if(wallCollider)wallCollider.sharedMesh=null;
+            if(knots.Count<2)return;
             previousStart = LocalPoint(0);
             previousEnd = LocalPoint(knots.Count-1);
             samples.Add(previousStart);
@@ -137,6 +157,18 @@ namespace Raid.Nereid
             }
             shell = GetComponent<MeshRenderer>();
             shell.sharedMaterials = build.Apply(skin);
+            if(solidWall && distances[^1]>.01f && gameObject.scene.IsValid())
+            {
+                if(!wallCollider)
+                {
+                    wallCollider=gameObject.AddComponent<MeshCollider>();
+                    wallCollider.hideFlags=HideFlags.DontSave;
+                }
+                wallMesh??=new Mesh{name="Hollow pressure line wall",hideFlags=HideFlags.DontSave,indexFormat=IndexFormat.UInt32};
+                wallMesh.Clear();
+                build.ApplyCollision(wallMesh,Mathf.Max(.008f,wallThickness));
+                wallCollider.sharedMesh=wallMesh;
+            }
             shell.shadowCastingMode = ShadowCastingMode.Off;
             PositionValve();
             interiorWater?.Rebuild(samples,distances,radius*waterFillRadius);
@@ -190,10 +222,29 @@ namespace Raid.Nereid
 
         internal void HideWater()=>interiorWater?.Hide();
 
+        void OnDestroy()
+        {
+            if(!wallCollider)return;
+            if(Application.isPlaying)Destroy(wallCollider);
+#if UNITY_EDITOR
+            else
+            {
+                var transient=wallCollider;
+                UnityEditor.EditorApplication.delayCall+=() =>
+                {
+                    if(transient)DestroyImmediate(transient);
+                };
+            }
+#endif
+        }
+
         void OnDisable()
         {
             interiorWater?.Dispose();
             interiorWater=null;
+            if(wallCollider)wallCollider.sharedMesh=null;
+            if(wallMesh){if(Application.isPlaying)Destroy(wallMesh);else DestroyImmediate(wallMesh);}
+            wallMesh=null;
             if (!skin) return;
             var filter=GetComponent<MeshFilter>();
             if (filter && filter.sharedMesh == skin) filter.sharedMesh = null;
