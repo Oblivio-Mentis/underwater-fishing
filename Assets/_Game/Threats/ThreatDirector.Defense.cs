@@ -32,6 +32,8 @@ namespace Raid
             public int fightTug;
             public DefenseUrgency urgency;
             public Vector3 position, forward, impactOffset, snatchPoint, tongueAim, remoraPull;
+            public Vector3 velocity, shieldContact;
+            public bool shieldAttached;
             public float scale, effort, fightRemaining;
             public byte hookCount;
             public double poseAt, stolenAt, tongueGripAt, tongueReleasedAt, fightAt;
@@ -412,6 +414,7 @@ namespace Raid
             {
                 var actor=attackers[i];
                 var data=actor.data;
+                data.shieldAttached=actor.attached;
                 data.hookCount=(byte)actor.hooks.Count;
                 data.fightRemaining=1-Mathf.Clamp01(actor.progress/FightWork(actor));
                 data.urgency=actor.data.victim>=0?DefenseUrgency.Rescue:

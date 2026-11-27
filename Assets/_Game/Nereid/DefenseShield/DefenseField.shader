@@ -37,6 +37,8 @@ Shader "RAID/Defense/Containment membrane"
             float4 _FieldState, _FieldRadii, _BreakAxis, _Impact0, _Impact1, _Impact2, _ImpactPower;
             float4 _PipePoints[12], _PipeAxes[12];
             float _GridScale, _BodyOpacity, _RimOpacity, _CellOpacity, _SillCharge, _PipeBandWidth, _PipeContactCount;
+            float4 _RaiderPoints[4], _RaiderPressures;
+            float _RaiderContactCount;
             CBUFFER_END
             float3 _NereidReefClarity;
 
@@ -49,6 +51,11 @@ Shader "RAID/Defense/Containment membrane"
                 float3 normalWS : TEXCOORD2;
             };
 
+            float RaiderDistance(float3 local, float4 contact)
+            {
+                return length(local - contact.xyz) / max(.06, contact.w);
+            }
+
             Interpolators Vert(Attributes v)
             {
                 Interpolators o;
@@ -56,7 +63,14 @@ Shader "RAID/Defense/Containment membrane"
                 float interference = sin(p.x * 8.1 + p.z * 12.4 - _Time.y * 5.3)
                     * sin(p.y * 10.1 - p.z * 7.4 + _Time.y * 3.2);
                 float worn = 1 - smoothstep(.04,.68,_FieldState.x);
-                p *= 1 + interference * worn * .022;
+                float3 local = p * _FieldRadii.xyz + float3(0,_FieldRadii.w,0);
+                float contactHold = 0;
+                [loop] for (int index = 0; index < (int)_RaiderContactCount; index++)
+                {
+                    float distance = RaiderDistance(local,_RaiderPoints[index]);
+                    contactHold = max(contactHold, (1-smoothstep(.75,1.8,distance))*_RaiderPressures[index]);
+                }
+                p *= 1 + interference * worn * lerp(.022,.005,contactHold);
                 float breakup = (1-step(.001,_FieldState.x)) * (1-_FieldState.z);
                 float scanId = floor(p.y*13+p.z*4.2);
                 float slip = sin(scanId*5.719+floor(_Time.y*19)*2.17);
@@ -119,6 +133,22 @@ Shader "RAID/Defense/Containment membrane"
                     seal = max(seal,glow);
                 }
                 return seal;
+            }
+
+            float2 RaiderSeal(float3 local)
+            {
+                float2 signal = 0;
+                [loop] for (int index = 0; index < (int)_RaiderContactCount; index++)
+                {
+                    float distance = RaiderDistance(local,_RaiderPoints[index]);
+                    float pressure = _RaiderPressures[index];
+                    float movement = .92+.08*sin(_Time.y*7.8+dot(_RaiderPoints[index].xyz,float3(2.3,4.1,3.2)));
+                    float ridge = (distance-.67)*6.4;
+                    float ring = exp2(-ridge*ridge);
+                    float centre = exp2(-3.8*distance*distance);
+                    signal = max(signal,float2(centre,ring)*pressure*movement);
+                }
+                return signal;
             }
 
             half4 Frag(Interpolators i, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
@@ -184,9 +214,11 @@ Shader "RAID/Defense/Containment membrane"
                 float feed = .63 + .37 * pow(saturate(.55 + .45 * sin(local.z * 2.8 + local.x * .38 - _Time.y * 1.85)),3);
                 float sillPower = sill * feed * _SillCharge * lerp(1,.66,critical);
                 float seal = PipeSeal(local) * lerp(1,.60,critical);
+                float2 grip = RaiderSeal(local);
+                float contact = grip.x*(.14+.32*grid)+grip.y*.26;
                 float joint = 1-smoothstep(1.0005,1.0105,abs(unit.z));
                 float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34 + surge*.26
-                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + fault*.68;
+                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + contact + fault*.68;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * joint * front * contrast);
@@ -194,7 +226,8 @@ Shader "RAID/Defense/Containment membrane"
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
                 half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
                     + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 2.3 + hit.y * 1.18 + assembly * .68 + arc + sillPower * 2.4)
-                    + _PipeGlowTint.rgb*seal*1.3 + lerp(half3(.18,1,1.6),half3(1.4,.22,.54),tear)*fault*2.9;
+                    + _PipeGlowTint.rgb*(seal*1.3+grip.x*(.3+.58*grid)+grip.y*.65)
+                    + lerp(half3(.18,1,1.6),half3(1.4,.22,.54),tear)*fault*2.9;
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }

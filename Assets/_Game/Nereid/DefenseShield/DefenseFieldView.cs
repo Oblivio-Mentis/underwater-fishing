@@ -11,9 +11,13 @@ namespace Raid.Nereid
         static readonly int ImpactPower = Shader.PropertyToID("_ImpactPower");
         static readonly int ImpactNormals = Shader.PropertyToID("_ImpactNormals");
         const int MaxPipeContacts = 12;
+        const int MaxRaiderContacts = 4;
         static readonly int PipeContactCount = Shader.PropertyToID("_PipeContactCount");
         static readonly int PipePoints = Shader.PropertyToID("_PipePoints");
         static readonly int PipeAxes = Shader.PropertyToID("_PipeAxes");
+        static readonly int RaiderContactCountProperty = Shader.PropertyToID("_RaiderContactCount");
+        static readonly int RaiderPoints = Shader.PropertyToID("_RaiderPoints");
+        static readonly int RaiderPressures = Shader.PropertyToID("_RaiderPressures");
         static readonly int FieldState = Shader.PropertyToID("_FieldState");
         static readonly int FieldRadii = Shader.PropertyToID("_FieldRadii");
         static readonly int BreakAxis = Shader.PropertyToID("_BreakAxis");
@@ -47,6 +51,17 @@ namespace Raid.Nereid
         bool pipesReady;
         internal int PipeSealCount => pipeContactCount;
         internal Vector3 PipeSealWorld(int index) => transform.TransformPoint((Vector3)pipePoints[index]);
+
+        struct RaiderContact
+        {
+            public int Id, Frame;
+            public Vector4 Point;
+            public float Pressure, Strength;
+        }
+
+        readonly RaiderContact[] raiderContacts = new RaiderContact[MaxRaiderContacts];
+        readonly Vector4[] raiderPoints = new Vector4[MaxRaiderContacts];
+        internal int RaiderContactCount { get; private set; }
         readonly float[] impactTimes = { float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity };
         MaterialPropertyBlock state;
         int lastSequence, impactSlot;
@@ -113,14 +128,19 @@ namespace Raid.Nereid
         /// <summary>Projects a source to the exposed membrane, optionally offset along its outward normal.</summary>
         public Vector3 ContactWorld(Vector3 source, float outwardOffset = 0)
         {
+            Vector3 point = ContactFrame(source, out var outward);
+            return point + outward * outwardOffset;
+        }
+
+        internal Vector3 ContactFrame(Vector3 source, out Vector3 outward)
+        {
             Vector3 unit = Boundary(ToUnit(source));
             Vector3 scale = EnvelopeScale;
             var point = transform.TransformPoint(Vector3.Scale(unit, scale) + Vector3.up * RimHeight);
-            if (outwardOffset == 0) return point;
-
             var normal = UnitNormal(unit);
             normal = new Vector3(normal.x/scale.x, normal.y/scale.y, normal.z/scale.z);
-            return point + transform.worldToLocalMatrix.transpose.MultiplyVector(normal).normalized * outwardOffset;
+            outward = transform.worldToLocalMatrix.transpose.MultiplyVector(normal).normalized;
+            return point;
         }
 
         internal static Vector3 UnitNormal(Vector3 point)
@@ -149,7 +169,49 @@ namespace Raid.Nereid
             presentedDimensions = Vector3.zero;
             pipesReady = false;
             for (int i = 0; i < RecentImpactCount; i++) impactTimes[i] = float.NegativeInfinity;
+            System.Array.Clear(raiderContacts, 0, raiderContacts.Length);
             Apply(1, 1, 0, Vector3.zero, float.PositiveInfinity);
+        }
+
+        internal void StageRaiderContact(int id, Vector3 world, float radius, float pressure)
+        {
+            int slot = -1;
+            for (int i = 0; i < raiderContacts.Length; i++)
+            {
+                if (raiderContacts[i].Id == id) { slot = i; break; }
+                if (raiderContacts[i].Id == 0 || raiderContacts[i].Frame != Time.frameCount)
+                {
+                    if (slot < 0 || raiderContacts[i].Strength < raiderContacts[slot].Strength) slot = i;
+                }
+            }
+            if (slot < 0) return;
+            ref var contact = ref raiderContacts[slot];
+            if (contact.Id != id) contact.Strength = 0;
+            contact.Id = id;
+            contact.Frame = Time.frameCount;
+            var local = transform.InverseTransformPoint(world);
+            contact.Point = new Vector4(local.x, local.y, local.z, radius);
+            contact.Pressure = Mathf.Clamp01(pressure);
+        }
+
+        void ApplyRaiderContacts(MaterialPropertyBlock block)
+        {
+            RaiderContactCount = 0;
+            Vector4 pressures = default;
+            for (int i = 0; i < raiderContacts.Length; i++)
+            {
+                ref var contact = ref raiderContacts[i];
+                bool present = contact.Id != 0 && contact.Frame == Time.frameCount;
+                contact.Strength = Mathf.MoveTowards(contact.Strength, present ? contact.Pressure : 0,
+                    Time.deltaTime * (present ? 9f : 5.5f));
+                if (contact.Strength <= .001f) continue;
+                raiderPoints[RaiderContactCount] = contact.Point;
+                pressures[RaiderContactCount++] = contact.Strength;
+            }
+            block.SetFloat(RaiderContactCountProperty, RaiderContactCount);
+            if (RaiderContactCount == 0) return;
+            block.SetVectorArray(RaiderPoints, raiderPoints);
+            block.SetVector(RaiderPressures, pressures);
         }
 
         /// <summary>Present the server's field state and most recent impact, with age in seconds.</summary>
@@ -209,6 +271,7 @@ namespace Raid.Nereid
                 state.SetVectorArray(PipeAxes,pipeAxes);
             }
             state.SetVector(BreakAxis, breakAxis);
+            ApplyRaiderContacts(state);
             bool activeSparks = false;
             float lastHitAge = ImpactLifetime;
             for (int i = 0; i < RecentImpactCount; i++)

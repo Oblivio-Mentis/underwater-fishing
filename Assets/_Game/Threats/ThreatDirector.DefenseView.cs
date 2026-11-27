@@ -11,7 +11,7 @@ namespace Raid
         {
             public Transform root, body, tail, tip, left, right, jaw, mouth, cargo;
             public Quaternion tailRest,tipRest,leftRest,rightRest,jawRest,cargoRotation;
-            public Vector3 bodyRest, previousPosition, currentHeading,cargoOrigin;
+            public Vector3 bodyRest, currentHeading,cargoOrigin;
             public float phase, stroke, turn;
             public TrailRenderer[] wake;
             public ParticleSystem thrust;
@@ -94,6 +94,7 @@ namespace Raid
                     ?Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds)
                     :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.65f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
+                PresentShieldContacts(field);
                 field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
                 if(defenseLighting)PresentDefenseSearchlights(snapshot);
             }
@@ -140,7 +141,6 @@ namespace Raid
                     visual.tailRest=visual.tail?visual.tail.localRotation:Quaternion.identity;
                     visual.tipRest=visual.tip?visual.tip.localRotation:Quaternion.identity;
                     visual.bodyRest=visual.body?visual.body.localScale:Vector3.one;
-                    visual.previousPosition=root.position;
                     visual.currentHeading=root.forward;
                     visual.phase=stroke;
                     visual.handoffAt=introducedAt;
@@ -168,13 +168,13 @@ namespace Raid
                     }
                     visibleAttackers.Add(current.id,visual);
                 }
+                UpdateAttackModel(current,visual);
                 if(visual.lastPose!=current.pose)
                 {
                     if(current.pose is AttackerPose.Strike or AttackerPose.Latch or AttackerPose.Snatch or AttackerPose.Tongue)
                         BurstRaider(visual,current);
                     visual.lastPose=current.pose;
                 }
-                UpdateAttackModel(current,visual);
                 PresentPromotion(visual);
                 bool danger=current.urgency!=DefenseUrgency.None && visual.handoffAt<0;
                 var local=UI.UiRoot.Instance?.Context?.Player;
@@ -187,6 +187,17 @@ namespace Raid
                 if(!visibleIds.Contains(pair.Key)){Destroy(pair.Value.root.gameObject);retiredViews.Add(pair.Key);}
             foreach(int id in retiredViews)visibleAttackers.Remove(id);
             PresentDefenseAtmosphere(snapshot);
+        }
+
+        void PresentShieldContacts(DefenseFieldView field)
+        {
+            if(Defense.breached)return;
+            foreach(var actor in defenseActors)
+            {
+                if(!actor.shieldAttached)continue;
+                float pressure=.69f+.27f*Mathf.Clamp01(actor.remoraPull.magnitude);
+                field.StageRaiderContact(actor.id,actor.shieldContact,.53f*actor.scale,pressure);
+            }
         }
 
         static void AddArms(VisibleAttacker view,Transform group,float side)
@@ -288,10 +299,17 @@ namespace Raid
             Vector3 next=Vector3.Lerp(root.position,snapshot.position,blend);
             var vessel=NereidVessel.Active;
             float hullScale=snapshot.scale*(snapshot.kind==DefenseSpecies.Abductor?1.30f:1f);
-            root.position=vessel && !vessel.OutsideDefenseHull(next,snapshot.forward,hullScale)?snapshot.position:next;
+            bool attached=snapshot.shieldAttached && !Defense.breached;
+            Quaternion attachedRotation=Quaternion.identity;
+            if(attached)
+            {
+                next=ContactPosition(snapshot,snapshot.shieldContact,out var normal);
+                attachedRotation=Quaternion.LookRotation(-normal);
+            }
+            else if(vessel && !vessel.OutsideDefenseHull(next,snapshot.forward,hullScale))
+                next=snapshot.position;
             float frame=Mathf.Max(.0001f,Time.deltaTime);
-            float pace=Mathf.InverseLerp(.15f,8f,Vector3.Distance(root.position,view.previousPosition)/frame);
-            view.previousPosition=root.position;
+            float pace=Mathf.InverseLerp(.15f,8f,snapshot.velocity.magnitude);
             bool carrying=snapshot.stolenId>0;
             float bite=snapshot.pose==AttackerPose.Snatch
                 ?Mathf.Clamp01((float)(DefenseClock-snapshot.poseAt)/defenseTuning.snatchSeconds):0;
@@ -320,15 +338,28 @@ namespace Raid
             float tailWave=CatchFishModel.SwimWave(view.phase,.79f,view.stroke);
             float tipWave=CatchFishModel.SwimWave(view.phase,1,view.stroke);
             float finWave=CatchFishModel.SwimWave(view.phase,.39f,view.stroke);
-            if(snapshot.forward.sqrMagnitude>.01f)
+            Quaternion rotation=root.rotation;
+            if(attached)
+            {
+                view.currentHeading=attachedRotation*Vector3.forward;
+                view.turn=0;
+                rotation=attachedRotation;
+            }
+            else if(snapshot.forward.sqrMagnitude>.01f)
             {
                 float yaw=Vector3.SignedAngle(Vector3.ProjectOnPlane(view.currentHeading,Vector3.up),
                     Vector3.ProjectOnPlane(snapshot.forward,Vector3.up),Vector3.up);
                 view.turn=Mathf.Lerp(view.turn,Mathf.Clamp(yaw*1.75f,-28,28),blend);
                 view.currentHeading=Vector3.Slerp(view.currentHeading,snapshot.forward,blend);
                 var look=Quaternion.LookRotation(view.currentHeading)*Quaternion.Euler(0,0,-view.turn+finWave*8);
-                root.rotation=Quaternion.Slerp(root.rotation,look,blend);
+                rotation=Quaternion.Slerp(root.rotation,look,blend);
             }
+            if(!attached && !FitsOutsideShield(snapshot,next,rotation))
+            {
+                next=snapshot.position;
+                rotation=Quaternion.LookRotation(snapshot.forward);
+            }
+            root.SetPositionAndRotation(next,rotation);
             float poseAge=Mathf.Max(0,(float)(DefenseClock-snapshot.poseAt));
             float compression=snapshot.pose==AttackerPose.Windup?Mathf.SmoothStep(0,.15f,poseAge/.95f):
                 snapshot.pose==AttackerPose.Strike?-.17f*Mathf.Exp(-poseAge*2.9f):0;

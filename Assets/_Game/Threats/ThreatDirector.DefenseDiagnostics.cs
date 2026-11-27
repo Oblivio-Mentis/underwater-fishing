@@ -112,6 +112,19 @@ namespace Raid
                 view.tongue.TrialWrap(out span,out center);
         }
 
+        internal bool DefenseFixtureContact(int id,out float gap,out Vector3 anchor)
+        {
+            gap=float.PositiveInfinity;
+            anchor=default;
+            if(!fieldView || fieldView.RaiderContactCount==0 ||
+                !TryDefenseFight(id,out var actor) || !actor.shieldAttached ||
+                !visibleAttackers.TryGetValue(id,out var view))return false;
+            anchor=actor.shieldContact;
+            gap=Vector3.Distance(anchor,view.root.TransformPoint(ShieldSnout(actor.kind)));
+            return gap<=.087f && FitsOutsideShield(actor,view.root.position,view.root.rotation) &&
+                FitsOutsideShield(actor,actor.position,Quaternion.LookRotation(actor.forward));
+        }
+
         internal bool DefenseFixtureStretch(int id,Vector3 towards,out float extension)
         {
             extension=0;

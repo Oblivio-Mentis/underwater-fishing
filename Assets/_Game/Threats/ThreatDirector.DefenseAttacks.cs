@@ -28,7 +28,7 @@ namespace Raid
             public double until, nextRoute, captureUntil, captureStarted, recoilUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
             public bool hasFleeRoute;
             public bool counter, attached, ramHit, breachPursuit, breachPursuitUsed,seekingStock;
-            public Vector3 goal, waypoint, exit, fleeGoal;
+            public Vector3 goal, waypoint, pathGoal, exit, fleeGoal;
             public Vector3? stockApproach;
             public DiverMotor target;
             public CatchItem catchItem;
@@ -67,6 +67,7 @@ namespace Raid
             var a=new DefenseAttacker {
                 data=new AttackerSnapshot{id=++actorSerial,kind=card.kind,position=point,
                     forward=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized,
+                    velocity=slot>=0?swimmer.Velocity:Vector3.zero,
                     scale=slot>=0?swimmer.Scale:size*card.silhouetteScale,
                     slot=slot,victim=-1,group=group},
                 card=card,cost=cost,vitality=card.health*size,collider=hit,exit=point,
@@ -84,6 +85,8 @@ namespace Raid
             a.data.poseAt=DefenseClock;
             if(pose==AttackerPose.Strike)a.ramHit=false;
             if(pose==AttackerPose.Approach)a.data.tongueAim=default;
+            if(!a.attached && pose is (AttackerPose.Approach or AttackerPose.Retreat or AttackerPose.Stagger))
+                a.data.shieldContact=default;
             a.until=DefenseClock+seconds;
             a.nextRoute=0;
         }
@@ -177,40 +180,119 @@ namespace Raid
             next=from;return false;
         }
 
-        bool Steer(DefenseAttacker a,Vector3 goal,float speed,float dt,bool mayCrossShield=false,DiverMotor prey=null)
+        // Measured from the head silhouette of the swimming meshes. MouthSocket sits inside the jaw.
+        static Vector3 ShieldSnout(DefenseSpecies kind)=>kind switch {
+            DefenseSpecies.Rammer=>new(-.053f,-.018f,1.160f),
+            DefenseSpecies.Remora=>new(.269f,-.245f,1.025f),
+            DefenseSpecies.Thief=>new(.010f,-.212f,1.155f),
+            DefenseSpecies.Abductor=>new(.413f,.147f,1.855f),
+            _=>new(-.073f,.350f,1.275f)
+        };
+
+        Vector3 ContactPosition(AttackerSnapshot actor,Vector3 point,out Vector3 outward)
         {
-            if(DefenseClock>=a.nextRoute || (a.data.position-a.waypoint).sqrMagnitude<.5f)
+            if(fieldView)point=fieldView.ContactFrame(point,out outward);
+            else outward=(point-DefenseCenter).normalized;
+            return point+outward*.042f-Quaternion.LookRotation(-outward)*(ShieldSnout(actor.kind)*actor.scale);
+        }
+
+        bool FitsOutsideShield(AttackerSnapshot actor,Vector3 position,Quaternion rotation)
+        {
+            if(!fieldView || Defense.breached)return !ShieldContains(position);
+            var nose=ShieldSnout(actor.kind)*actor.scale;
+            var fore=position+rotation*nose;
+            float beam=actor.scale*(actor.kind==DefenseSpecies.Abductor?.98f:.53f);
+            float keel=actor.scale*(actor.kind==DefenseSpecies.Abductor?.61f:.37f);
+            Vector3 side=rotation*Vector3.right*beam;
+            Vector3 height=rotation*Vector3.up*keel;
+            Vector3 cheek=Vector3.Lerp(position,fore,.62f);
+            Vector3 tail=position-rotation*Vector3.forward*(1.22f*actor.scale);
+            return !fieldView.ContainsWorld(position) && !fieldView.ContainsWorld(fore) &&
+                !fieldView.ContainsWorld(cheek+side*.63f) && !fieldView.ContainsWorld(cheek-side*.63f) &&
+                !fieldView.ContainsWorld(position+side) && !fieldView.ContainsWorld(position-side) &&
+                !fieldView.ContainsWorld(position+height) && !fieldView.ContainsWorld(position-height) &&
+                !fieldView.ContainsWorld(tail) && !fieldView.ContainsWorld(tail+side*.40f) &&
+                !fieldView.ContainsWorld(tail-side*.40f);
+        }
+
+        static float SwimmingAcceleration(DefenseSpecies kind)=>kind switch {
+            DefenseSpecies.Rammer=>7.8f,
+            DefenseSpecies.Remora=>8.9f,
+            DefenseSpecies.Thief=>12.5f,
+            DefenseSpecies.Abductor=>7.2f,
+            _=>10.6f
+        };
+
+        void SetAttackerPosition(DefenseAttacker a,Vector3 position,Vector3 facing)
+        {
+            a.data.position=position;
+            a.data.forward=facing;
+            a.collider.transform.SetPositionAndRotation(position,Quaternion.LookRotation(facing));
+        }
+
+        bool Steer(DefenseAttacker a,Vector3 goal,float speed,float dt,bool mayCrossShield=false,
+            DiverMotor prey=null,float arrival=.62f)
+        {
+            if(DefenseClock>=a.nextRoute || (a.data.position-a.waypoint).sqrMagnitude<.5f ||
+                (a.pathGoal-goal).sqrMagnitude>2.25f)
             {
                 FindPath(a.data.position,goal,out a.waypoint,prey);
+                a.pathGoal=goal;
                 a.nextRoute=DefenseClock+.35;
             }
-            var motion=Vector3.ClampMagnitude(a.waypoint-a.data.position,speed*dt);
-            if(motion.sqrMagnitude>.00001f)
+            Vector3 previous=a.data.position;
+            Vector3 leg=a.waypoint-previous;
+            float distance=leg.magnitude;
+            if(distance<.015f)
             {
-                float span=motion.magnitude;
-                var direction=motion/span;
-                if(DefenseObstacle(a.data.position,direction,span+.033f,prey,out var obstacle))
-                {
-                    motion=direction*Mathf.Max(0,obstacle.distance-.033f);
-                    a.nextRoute=0;
-                }
-                var candidate=a.data.position+motion;
-                if(!mayCrossShield && ShieldContains(candidate))
-                {
-                    candidate=fieldView?fieldView.ContactWorld(candidate,.06f):FieldContact(candidate,.06f);
-                    if(!DefensePathClear(a.data.position,candidate,prey)){a.nextRoute=0;return false;}
-                }
-                var facing=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
-                var vessel=NereidVessel.Active;
-                float hullScale=a.data.scale*(a.data.kind==DefenseSpecies.Abductor?1.30f:1f);
-                if((vessel && !vessel.OutsideDefenseHull(candidate,facing,hullScale)) ||
-                    DefenseOccupied(candidate,prey))
-                {a.nextRoute=0;return false;}
-                a.data.position=candidate;
-                a.data.forward=facing;
-                a.collider.transform.SetPositionAndRotation(candidate,Quaternion.LookRotation(a.data.forward));
+                a.data.velocity*=Mathf.Exp(-dt*9);
+                return (goal-previous).sqrMagnitude<arrival*arrival;
             }
-            return (goal-a.data.position).sqrMagnitude<.62f*.62f;
+
+            float accel=SwimmingAcceleration(a.data.kind);
+            float currentSpeed=a.data.velocity.magnitude;
+            Vector3 intent=leg/distance;
+            float rhythm=a.life*2.32f+a.data.id*1.83f;
+            bool committing=a.data.pose==AttackerPose.Strike;
+            if(distance>3.2f && a.data.pose==AttackerPose.Approach)
+            {
+                intent=Quaternion.AngleAxis(Mathf.Sin(rhythm)*5.5f,Vector3.up)*intent;
+                intent=(intent+Vector3.up*(Mathf.Sin(rhythm*.74f)*.06f)).normalized;
+                speed*=.96f+.08f*Mathf.Cos(rhythm);
+            }
+            float turnRate=Mathf.Lerp(5.6f,3.15f,Mathf.InverseLerp(1f,11f,currentSpeed));
+            Vector3 heading=Vector3.RotateTowards(currentSpeed>.20f?a.data.velocity/currentSpeed:a.data.forward,
+                intent,turnRate*dt,0).normalized;
+            float aligned=Mathf.InverseLerp(-.25f,.92f,Vector3.Dot(heading,intent));
+            float stoppingSpeed=Mathf.Sqrt(2*accel*(committing?2.1f:1.45f)*distance);
+            float desired=Mathf.Min(stoppingSpeed,speed)*Mathf.Lerp(.13f,1,aligned);
+            float pace=Mathf.MoveTowards(currentSpeed,desired,accel*(desired<currentSpeed?1.85f:committing?2.75f:1f)*dt);
+            float span=Mathf.Min(distance,pace*dt);
+            if(DefenseObstacle(previous,heading,span+.035f,prey,out var obstacle))
+            {
+                span=Mathf.Max(0,obstacle.distance-.035f);
+                pace*=.25f;
+                a.nextRoute=0;
+            }
+            Vector3 candidate=previous+heading*span;
+            Vector3 facing=Vector3.RotateTowards(a.data.forward,heading,5.1f*dt,0).normalized;
+            var rotation=Quaternion.LookRotation(facing);
+            var vessel=NereidVessel.Active;
+            float hullScale=a.data.scale*(a.data.kind==DefenseSpecies.Abductor?1.30f:1f);
+            if((vessel && !vessel.OutsideDefenseHull(candidate,facing,hullScale)) || DefenseOccupied(candidate,prey) ||
+                !mayCrossShield && (!FitsOutsideShield(a.data,candidate,rotation) ||
+                    span>.28f && !FitsOutsideShield(a.data,Vector3.Lerp(previous,candidate,.5f),rotation)))
+            {
+                a.data.velocity*=.18f;
+                a.nextRoute=0;
+                if(mayCrossShield || FitsOutsideShield(a.data,previous,rotation))
+                    SetAttackerPosition(a,previous,facing);
+                return (goal-previous).sqrMagnitude<arrival*arrival;
+            }
+
+            a.data.velocity=heading*Mathf.Min(pace,span/Mathf.Max(.0001f,dt));
+            SetAttackerPosition(a,candidate,facing);
+            return (goal-candidate).sqrMagnitude<arrival*arrival;
         }
 
         void TickAttacker(int index,float dt)
@@ -301,10 +383,38 @@ namespace Raid
                 var at=FieldContact(DefenseCenter+Quaternion.AngleAxis(angle,Vector3.up)*along);
                 bool taken=false;
                 foreach(var other in attackers)
-                    if(other!=a && other.attached && (other.goal-at).sqrMagnitude<spacing*spacing){taken=true;break;}
+                {
+                    if(other==a || other.data.kind!=DefenseSpecies.Remora || other.data.shieldContact==Vector3.zero)continue;
+                    if(other.attached || other.data.pose is AttackerPose.Windup or AttackerPose.Strike)
+                        if((other.data.shieldContact-at).sqrMagnitude<spacing*spacing){taken=true;break;}
+                }
                 if(!taken)return at;
             }
             return FieldContact(a.data.position);
+        }
+
+        void PrepareAttackStroke(DefenseAttacker a,Vector3 look,float dt)
+        {
+            Vector3 desired=(look-a.data.position).normalized;
+            if(desired.sqrMagnitude<.01f)desired=a.data.forward;
+            var facing=Vector3.RotateTowards(a.data.forward,desired,dt*7.2f,0).normalized;
+            float age=(float)(DefenseClock-a.data.poseAt);
+            float progress=Mathf.Clamp01(age/a.card.windup);
+            float windPull=a.data.kind==DefenseSpecies.Rammer?.88f:.23f;
+            var brake=-facing*(windPull*Mathf.Sin(progress*Mathf.PI));
+            var glide=Vector3.MoveTowards(a.data.velocity,brake,dt*25f);
+            var next=a.data.position+glide*dt;
+            var vessel=NereidVessel.Active;
+            if(DefensePathClear(a.data.position,next,a.target) &&
+                !DefenseOccupied(next,a.target) &&
+                (!vessel || vessel.OutsideDefenseHull(next,facing,a.data.scale)) &&
+                FitsOutsideShield(a.data,next,Quaternion.LookRotation(facing)))
+            {
+                a.data.velocity=glide;
+                SetAttackerPosition(a,next,facing);
+                return;
+            }
+            a.data.velocity=Vector3.zero;
         }
 
         void TickStrike(DefenseAttacker a,Vector3 contact,Vector3 outwards,float dt)
@@ -328,7 +438,8 @@ namespace Raid
                         return;
                     }
                 }
-                Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:FieldContact(contact,.70f*a.data.scale);
+                Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:
+                    ContactPosition(a.data,contact,out _);
                 if(a.data.kind==DefenseSpecies.Abductor && a.target)
                 {
                     BeginTongueWindup(a,destination,dt);
@@ -336,10 +447,20 @@ namespace Raid
                 }
                 float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:a.target?3.1f:1.65f;
                 if((destination-a.data.position).sqrMagnitude>trigger*trigger)
-                {Steer(a,destination,a.card.speed,dt,prey:a.target);return;}
+                {
+                    Vector3 approach=destination;
+                    if(a.target && a.data.kind==DefenseSpecies.Stalker)
+                    {
+                        var side=Vector3.Cross(Vector3.up,(destination-a.data.position).normalized);
+                        approach+=side*((a.data.id%2==0?1:-1)*Mathf.Min(2.35f,
+                            Vector3.Distance(destination,a.data.position)*.28f));
+                    }
+                    Steer(a,approach,a.card.speed,dt,prey:a.target);
+                    return;
+                }
                 a.goal=destination;
+                if(!a.target)a.data.shieldContact=contact;
                 a.windAim=a.data.kind==DefenseSpecies.Rammer?1:.62f;
-                a.data.forward=(a.goal-a.data.position).normalized;
                 SetPose(a,AttackerPose.Windup,a.card.windup);
                 return;
             }
@@ -354,12 +475,17 @@ namespace Raid
                 if(now<a.until)
                 {
                     if(a.target && a.windAim<1)a.goal=Vector3.Lerp(a.goal,a.target.transform.position+Vector3.up*.55f,dt*3f);
+                    PrepareAttackStroke(a,a.goal,dt);
                     return;
                 }
                 SetPose(a,AttackerPose.Strike,1.1f);
             }
             var prior=a.data.position;
-            bool close=Steer(a,a.goal,a.card.burstSpeed,dt,prey:a.target);
+            bool strikingField=!a.target && a.data.shieldContact!=Vector3.zero && !Defense.breached;
+            Vector3 normal=outwards;
+            Vector3 destinationAtImpact=strikingField?ContactPosition(a.data,a.data.shieldContact,out normal):a.goal;
+            float speed=strikingField && a.data.kind==DefenseSpecies.Remora?a.card.burstSpeed*.7f:a.card.burstSpeed;
+            bool close=Steer(a,destinationAtImpact,speed,dt,prey:a.target,arrival:strikingField?.24f:.62f);
             if(a.data.kind==DefenseSpecies.Rammer && a.target==null && !a.ramHit)
             {
                 var sweep=a.data.position-prior;
@@ -385,20 +511,38 @@ namespace Raid
                     a.target.ApplyTetherMotion(a.data.forward*.52f);
                 }
             }
-            else if(close)
+            else if(close && strikingField)
             {
+                var vessel=NereidVessel.Active;
+                bool fits=(!vessel || vessel.OutsideDefenseHull(destinationAtImpact,-normal,a.data.scale)) &&
+                    DefensePathClear(a.data.position,destinationAtImpact) &&
+                    FitsOutsideShield(a.data,destinationAtImpact,Quaternion.LookRotation(-normal));
+                if(!fits && now<a.until)return;
+                if(fits)
+                {
+                    SetAttackerPosition(a,destinationAtImpact,-normal);
+                    a.data.velocity=Vector3.zero;
+                }
                 if(a.data.kind==DefenseSpecies.Remora)
                 {
-                    a.goal=contact;a.latchTick=0;a.attached=true;
-                    SetPose(a,AttackerPose.Latch,0);
-                    return;
+                    if(fits)
+                    {
+                        a.goal=a.data.shieldContact;a.latchTick=0;a.attached=true;
+                        SetPose(a,AttackerPose.Latch,0);
+                        return;
+                    }
                 }
-                HitField(a.card.shieldDamage*a.data.scale,contact);
-                if(Defense.breached)return;
+                else if(fits)
+                {
+                    HitField(a.card.shieldDamage*a.data.scale,a.data.shieldContact);
+                    if(Defense.breached)return;
+                    if(a.data.kind==DefenseSpecies.Rammer)a.data.velocity=normal*(a.card.burstSpeed*.31f);
+                }
             }
             a.counter=false;a.target=null;
-            a.goal=a.data.position+outwards*(a.data.kind==DefenseSpecies.Stalker?8f:4.4f)+
-                (a.data.kind==DefenseSpecies.Stalker?Vector3.down*1.4f:Vector3.zero);
+            Vector3 sweepAway=Vector3.Cross(Vector3.up,normal)*((a.data.id%2==0?1:-1)*2.2f);
+            a.goal=a.data.position+normal*(a.data.kind==DefenseSpecies.Stalker?8f:4.4f)+sweepAway+
+                Vector3.up*(a.data.kind==DefenseSpecies.Stalker?-1.4f:.38f);
             SetPose(a,AttackerPose.Retreat,a.card.cooldown);
         }
 
