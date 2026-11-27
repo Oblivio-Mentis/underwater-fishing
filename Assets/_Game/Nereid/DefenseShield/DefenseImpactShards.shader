@@ -22,7 +22,8 @@ Shader "RAID/Defense/Impact shards"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Assets/_Game/Nereid/Resources/NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
-            float4 _FieldState, _FieldRadii, _Impact0, _Impact1, _Impact2;
+            float4 _FieldState, _FieldRadii, _Impact0, _Impact1, _Impact2, _ImpactPower;
+            float4 _ImpactNormals[3];
             half4 _ShardTint;
             CBUFFER_END
             float3 _NereidReefClarity;
@@ -33,30 +34,30 @@ Shader "RAID/Defense/Impact shards"
 
             Interpolators Vert(Attributes a)
             {
-                float4 impact = a.seed.y < .5 ? _Impact0 : a.seed.y < 1.5 ? _Impact1 : _Impact2;
+                int slot = (int)(a.seed.y+.5);
+                float4 impact = slot == 0 ? _Impact0 : slot == 1 ? _Impact1 : _Impact2;
+                float power = _ImpactPower[slot];
                 float seed = a.seed.x;
-                float t = saturate((impact.w - Hash(seed + 6.1) * .072) / (.30 + Hash(seed + 3.8) * .36));
+                float t = saturate((impact.w - Hash(seed + 6.1) * .054) / (.36 + Hash(seed + 3.8) * .43));
                 float3 axis = dot(impact.xyz,impact.xyz) > .0001 ? impact.xyz : float3(0,-1,0);
-                float2 p2 = axis.xz * axis.xz;
-                float horizontal4 = max(.0001, pow(dot(p2*p2,p2), 2.0/3.0));
-                float3 slope = float3(p2.x*p2.x*axis.x / horizontal4, axis.y, p2.y*p2.y*axis.z / horizontal4);
-                float3 normal = normalize(slope / _FieldRadii.xyz);
+                float3 normal = power > 0 ? _ImpactNormals[slot].xyz : float3(0,-1,0);
                 float3 tangent = normalize(cross(abs(normal.y) > .92 ? float3(1,0,0) : float3(0,1,0), normal));
                 float3 bitangent = cross(normal, tangent);
                 float angle = Hash(seed + 1.3) * 6.283185;
                 float3 radial = tangent * cos(angle) + bitangent * sin(angle);
                 float breach = 1 - smoothstep(0,.18,_FieldState.x);
-                float reach = (1 - exp2(-t * 3.3)) * (.28 + .94 * Hash(seed + 7.4)) * (1 + breach * .7);
+                float reach = (1 - exp2(-t * 4.4)) * (.40 + 1.34 * Hash(seed + 7.4))
+                    * (.44 + power*.74) * (1 + breach * .7);
                 float3 center = axis * _FieldRadii.xyz + float3(0,_FieldRadii.w,0) + radial * reach + normal * (.03 + .35 * t);
                 center.y += .45 * t * t;
-                float size = (.019 + Hash(seed + 0.7) * .043) * (1 - .68 * t);
+                float size = (.023 + Hash(seed + 0.7) * .063) * (.45+power*.7) * (1 - .68 * t);
                 float3 spin = radial * a.shape.x + bitangent * a.shape.y + normal * a.shape.z;
                 Interpolators o;
                 o.positionWS = TransformObjectToWorld(center + spin * size);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
-                half alpha = (1 - smoothstep(.15,.87,t)) * step(.006,t);
+                half alpha = (1 - smoothstep(.15,.87,t)) * step(.006,t) * saturate(power*1.4);
                 half3 tint = lerp(_ShardTint.rgb,half3(1,.48,.21), breach * .62);
-                o.color = half4(tint * (1.03 + a.shape.x * .27), alpha);
+                o.color = half4(tint * (1.25 + a.shape.x * .38 + power*.5), alpha);
                 return o;
             }
 

@@ -6,8 +6,14 @@ namespace Raid.Nereid
     public sealed class DefenseFieldView : MonoBehaviour
     {
         const int RecentImpactCount = 3;
-        const float ImpactLifetime = 1.42f;
-        const float SparkLifetime = .68f;
+        const float ImpactLifetime = 1.75f;
+        const float SparkLifetime = .83f;
+        static readonly int ImpactPower = Shader.PropertyToID("_ImpactPower");
+        static readonly int ImpactNormals = Shader.PropertyToID("_ImpactNormals");
+        const int MaxPipeContacts = 12;
+        static readonly int PipeContactCount = Shader.PropertyToID("_PipeContactCount");
+        static readonly int PipePoints = Shader.PropertyToID("_PipePoints");
+        static readonly int PipeAxes = Shader.PropertyToID("_PipeAxes");
         static readonly int FieldState = Shader.PropertyToID("_FieldState");
         static readonly int FieldRadii = Shader.PropertyToID("_FieldRadii");
         static readonly int BreakAxis = Shader.PropertyToID("_BreakAxis");
@@ -33,6 +39,14 @@ namespace Raid.Nereid
         internal float RimHeight => Mathf.Max(0, rimHeight);
 
         readonly Vector3[] impactDirections = new Vector3[RecentImpactCount];
+        readonly float[] impactPowers = new float[RecentImpactCount];
+        readonly Vector4[] impactNormals = new Vector4[RecentImpactCount];
+        readonly Vector4[] pipePoints = new Vector4[MaxPipeContacts];
+        readonly Vector4[] pipeAxes = new Vector4[MaxPipeContacts];
+        int pipeContactCount;
+        bool pipesReady;
+        internal int PipeSealCount => pipeContactCount;
+        internal Vector3 PipeSealWorld(int index) => transform.TransformPoint((Vector3)pipePoints[index]);
         readonly float[] impactTimes = { float.NegativeInfinity, float.NegativeInfinity, float.NegativeInfinity };
         MaterialPropertyBlock state;
         int lastSequence, impactSlot;
@@ -41,19 +55,18 @@ namespace Raid.Nereid
         Vector3 breakAxis = Vector3.down;
         Vector3 presentedDimensions;
 
-        // The mesh and server queries use the same cross-section: a sixth-power rounded
-        // rectangle in plan, curved in Y like a half ellipse and closed at the hull sill.
-        static float HorizontalRadius(Vector3 unit)
-        {
-            float x2 = unit.x * unit.x, z2 = unit.z * unit.z;
-            return Mathf.Pow(x2*x2*x2 + z2*z2*z2, 1f/6);
-        }
+        const float KeelFore = .12f;
+        internal const float AftEdge = -1.006f;
+
+        internal static float SectionWidth(float depth) => Mathf.Sqrt(Mathf.Max(0,1-depth*depth));
+        internal static float BowLimit(float depth) => KeelFore+(1-KeelFore)*SectionWidth(depth);
+        internal static float DepthAt(float z) => Mathf.SmoothStep(.928f,1,Mathf.InverseLerp(-1,-.52f,z));
+        internal static float BeamAt(float z) => Mathf.SmoothStep(.996f,1,Mathf.InverseLerp(-1,-.52f,z));
 
         internal static Vector3 RimDirection(float angle)
         {
             float x = Mathf.Cos(angle), z = Mathf.Sin(angle);
-            return new Vector3(Mathf.Sign(x) * Mathf.Pow(Mathf.Abs(x),1f/3), 0,
-                Mathf.Sign(z) * Mathf.Pow(Mathf.Abs(z),1f/3));
+            return new Vector3(x,0,z)/Mathf.Max(Mathf.Abs(x),Mathf.Abs(z));
         }
 
         Vector3 ToUnit(Vector3 worldPoint)
@@ -65,18 +78,30 @@ namespace Raid.Nereid
 
         static Vector3 Boundary(Vector3 unit)
         {
-            unit.y = Mathf.Min(0, unit.y);
-            float horizontal = HorizontalRadius(unit);
-            float distance = Mathf.Sqrt(horizontal*horizontal + unit.y*unit.y);
-            return distance > .0001f ? unit / distance : Vector3.down;
+            unit.y = Mathf.Min(-.004f, unit.y);
+            float span = Mathf.Max(Mathf.Max(Mathf.Abs(unit.x),-unit.y),Mathf.Max(unit.z,unit.z/AftEdge));
+            Vector3 point = unit / span;
+            float low = 0, high = 1;
+            for (int i = 0; i < 13; i++)
+            {
+                float middle = (low+high)*.5f;
+                if (InsideSection(point*middle)) low = middle;
+                else high = middle;
+            }
+            return point*((low+high)*.5f);
         }
 
         /// <summary>Tests the closed field volume without making a wall for the crew or their gear.</summary>
         public bool ContainsWorld(Vector3 point)
         {
-            var unit = ToUnit(point);
-            float horizontal = HorizontalRadius(unit);
-            return unit.y <= 0 && horizontal*horizontal + unit.y*unit.y < 1;
+            return InsideSection(ToUnit(point));
+        }
+
+        static bool InsideSection(Vector3 unit)
+        {
+            if (unit.y > 0 || unit.z <= AftEdge || unit.z >= BowLimit(-unit.y)) return false;
+            float depth = -unit.y/DepthAt(unit.z);
+            return depth < 1 && Mathf.Abs(unit.x) < BeamAt(unit.z)*SectionWidth(depth);
         }
 
         /// <summary>Projects a source to the exposed membrane, optionally offset along its outward normal.</summary>
@@ -94,12 +119,12 @@ namespace Raid.Nereid
 
         internal static Vector3 UnitNormal(Vector3 point)
         {
-            float x2 = point.x * point.x, z2 = point.z * point.z;
-            float horizontal = HorizontalRadius(point);
-            float h2 = horizontal * horizontal;
-            float h4 = Mathf.Max(.0001f,h2*h2);
-            return new Vector3(x2*x2*point.x/h4, point.y, z2*z2*point.z/h4).normalized;
+            if (point.z <= AftEdge+.001f) return Vector3.back;
+            if (point.z >= BowLimit(-point.y)-.001f) return BowNormal(-point.y);
+            return new Vector3(point.x,point.y,0).normalized;
         }
+
+        internal static Vector3 BowNormal(float depth) => new Vector3(0,-(1-KeelFore)*depth,SectionWidth(depth)).normalized;
 
         void OnEnable()
         {
@@ -108,12 +133,13 @@ namespace Raid.Nereid
             recovering = 0;
             breakAxis = Vector3.down;
             presentedDimensions = Vector3.zero;
+            pipesReady = false;
             for (int i = 0; i < RecentImpactCount; i++) impactTimes[i] = float.NegativeInfinity;
             Apply(1, 1, 0, Vector3.zero, float.PositiveInfinity);
         }
 
         /// <summary>Present the server's field state and most recent impact, with age in seconds.</summary>
-        public void Apply(float integrity01, float formation01, int impactSequence, Vector3 impactWorldPoint, float impactAge)
+        public void Apply(float integrity01, float formation01, int impactSequence, Vector3 impactWorldPoint, float impactAge, float impactStrength = 1)
         {
             if (!surface) return;
 
@@ -128,7 +154,9 @@ namespace Raid.Nereid
                 surface.transform.localScale = dimensions;
                 surface.transform.localPosition = rim;
                 if (sparks) sparks.localBounds = new Bounds(Vector3.zero, (dimensions + Vector3.one * 2.6f) * 2);
+                pipesReady = false;
             }
+            if (!pipesReady) CachePipeSeals();
 
             if (impactSequence != 0 && impactSequence != lastSequence)
             {
@@ -136,6 +164,9 @@ namespace Raid.Nereid
                 if (impactAge >= 0 && impactAge < ImpactLifetime)
                 {
                     impactDirections[impactSlot] = Boundary(ToUnit(impactWorldPoint));
+                    impactPowers[impactSlot] = Mathf.Clamp(impactStrength,.12f,1.25f);
+                    Vector3 n = UnitNormal(impactDirections[impactSlot]);
+                    impactNormals[impactSlot] = new Vector3(n.x/dimensions.x,n.y/dimensions.y,n.z/dimensions.z).normalized;
                     breakAxis = impactDirections[impactSlot];
                     impactTimes[impactSlot] = now - impactAge;
                     impactSlot = (impactSlot + 1) % RecentImpactCount;
@@ -150,6 +181,14 @@ namespace Raid.Nereid
             state.Clear();
             state.SetVector(FieldState, new Vector4(integrity01, formation01, recovering, 0));
             state.SetVector(FieldRadii, new Vector4(dimensions.x, dimensions.y, dimensions.z, RimHeight));
+            state.SetVector(ImpactPower, new Vector4(impactPowers[0],impactPowers[1],impactPowers[2],0));
+            state.SetVectorArray(ImpactNormals,impactNormals);
+            state.SetFloat(PipeContactCount,pipeContactCount);
+            if (pipeContactCount > 0)
+            {
+                state.SetVectorArray(PipePoints,pipePoints);
+                state.SetVectorArray(PipeAxes,pipeAxes);
+            }
             state.SetVector(BreakAxis, breakAxis);
             bool activeSparks = false;
             float lastHitAge = ImpactLifetime;
@@ -176,6 +215,42 @@ namespace Raid.Nereid
             ApplyLenses(contactLenses);
         }
 
+        void CachePipeSeals()
+        {
+            pipesReady = true;
+            pipeContactCount = 0;
+            var vessel = GetComponentInParent<NereidVessel>(true);
+            if (!vessel) return;
+            foreach (var route in vessel.GetComponentsInChildren<NereidPipeRoute>(true))
+            {
+                if (!route.IsConnected || !route.gameObject.activeInHierarchy) continue;
+                int samples = Mathf.Clamp(Mathf.CeilToInt(route.Length/.12f),16,160);
+                bool lastInside = ContainsWorld(route.WorldPoint(0));
+                for (int i = 1; i <= samples && pipeContactCount < MaxPipeContacts; i++)
+                {
+                    float to = (float)i/samples;
+                    bool inside = ContainsWorld(route.WorldPoint(to));
+                    if (lastInside == inside) continue;
+                    float from = (float)(i-1)/samples;
+                    for (int step = 0; step < 7; step++)
+                    {
+                        float middle = (from+to)*.5f;
+                        if (ContainsWorld(route.WorldPoint(middle)) == inside) to = middle;
+                        else from = middle;
+                    }
+                    lastInside = inside;
+                    float t = (from+to)*.5f;
+                    Vector3 local = transform.InverseTransformPoint(route.WorldPoint(t));
+                    Vector3 axis = transform.InverseTransformVector(route.WorldPoint(t+.003f)-route.WorldPoint(t-.003f)).normalized;
+                    float radius = transform.InverseTransformVector(route.transform.TransformVector(Vector3.right*route.radius)).magnitude;
+                    if (axis.sqrMagnitude < .5f || local.y >= RimHeight-.03f &&
+                        Mathf.Abs(local.x) < radii.x-radius && local.z > -radii.z+radius && local.z < radii.z-radius) continue;
+                    pipePoints[pipeContactCount] = new Vector4(local.x,local.y,local.z,radius);
+                    pipeAxes[pipeContactCount++] = axis;
+                }
+            }
+        }
+
         void ApplyLenses(MeshRenderer[] lenses)
         {
             if (lenses == null) return;
@@ -197,8 +272,12 @@ namespace Raid.Nereid
                 Gizmos.DrawLine(RimDirection(a),RimDirection(b));
                 if (i >= steps / 2) continue;
                 Gizmos.DrawLine(new Vector3(Mathf.Cos(a),-Mathf.Sin(a),0),new Vector3(Mathf.Cos(b),-Mathf.Sin(b),0));
-                Gizmos.DrawLine(new Vector3(0,-Mathf.Sin(a),Mathf.Cos(a)),new Vector3(0,-Mathf.Sin(b),Mathf.Cos(b)));
+                float depthA=Mathf.Sin(a), depthB=Mathf.Sin(b);
+                Gizmos.DrawLine(new Vector3(0,-depthA,BowLimit(depthA)),new Vector3(0,-depthB,BowLimit(depthB)));
             }
+            Gizmos.DrawLine(new Vector3(0,0,AftEdge),new Vector3(0,-DepthAt(AftEdge),AftEdge));
+            Gizmos.DrawLine(new Vector3(0,-DepthAt(AftEdge),AftEdge),new Vector3(0,-1,-.52f));
+            Gizmos.DrawLine(new Vector3(0,-1,-.52f),new Vector3(0,-1,KeelFore));
             Gizmos.matrix = saved;
             Gizmos.color = color;
         }

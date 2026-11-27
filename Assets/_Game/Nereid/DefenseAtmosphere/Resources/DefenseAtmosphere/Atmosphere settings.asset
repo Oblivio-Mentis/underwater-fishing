@@ -29,8 +29,8 @@ MonoBehaviour:
   - {fileID: 4300000, guid: 9bafd87b8d2ee9ecb54f686bb3174bf6, type: 2}
   - {fileID: 4300000, guid: 233bc529ac5bd3064b83ccd22d97dcdd, type: 2}
   - {fileID: 4300000, guid: e6233cf5b9830d8f0582ec7b63ff7141, type: 2}
-  soundLevel: 0.8
-  scoreLevel: 0.22
+  soundLevel: 0
+  scoreLevel: 0
   swarmVolume: 0.42
   swarmCallInterval: 4.7
   effectsOutput: {fileID: 0}

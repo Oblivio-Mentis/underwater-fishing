@@ -66,7 +66,7 @@ namespace Raid
                     ?Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds)
                     :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.15f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
-                field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge));
+                field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
             }
             PresentDefenseAtmosphere(snapshot);
             PresentRaidInk();

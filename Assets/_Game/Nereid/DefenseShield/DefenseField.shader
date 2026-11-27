@@ -9,6 +9,8 @@ Shader "RAID/Defense/Containment membrane"
         _RimOpacity("Rim opacity", Range(0,.65)) = .43
         _SillCharge("Sill illumination", Range(0,.45)) = .24
         _CellOpacity("Lattice opacity", Range(0,.4)) = .125
+        [HDR] _PipeGlowTint("Pipe seal glow", Color) = (.15,1.05,1.28,1)
+        _PipeBandWidth("Pipe seal width", Range(.018,.22)) = .065
         [HideInInspector] _FieldState("Integrity, formation, recovery", Vector) = (1,1,0,0)
         [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
         [HideInInspector] _BreakAxis("Breach direction", Vector) = (0,-1,0,0)
@@ -31,9 +33,10 @@ Shader "RAID/Defense/Containment membrane"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Assets/_Game/Nereid/Resources/NereidWaterColumn.hlsl"
             CBUFFER_START(UnityPerMaterial)
-            half4 _FieldTint, _WarningTint;
-            float4 _FieldState, _FieldRadii, _BreakAxis, _Impact0, _Impact1, _Impact2;
-            float _GridScale, _BodyOpacity, _RimOpacity, _CellOpacity, _SillCharge;
+            half4 _FieldTint, _WarningTint, _PipeGlowTint;
+            float4 _FieldState, _FieldRadii, _BreakAxis, _Impact0, _Impact1, _Impact2, _ImpactPower;
+            float4 _PipePoints[12], _PipeAxes[12];
+            float _GridScale, _BodyOpacity, _RimOpacity, _CellOpacity, _SillCharge, _PipeBandWidth, _PipeContactCount;
             CBUFFER_END
             float3 _NereidReefClarity;
 
@@ -83,17 +86,35 @@ Shader "RAID/Defense/Containment membrane"
             }
 
             // x: impact flash, y: a sharp leading edge followed by a wider, weaker return wave.
-            float2 Hit(float3 unit, float4 origin)
+            float2 Hit(float3 unit, float4 origin, float power)
             {
-                if (origin.w > 1.42) return 0;
+                if (origin.w > 1.75 || power <= 0) return 0;
                 float d = length((unit - origin.xyz) * _FieldRadii.xyz);
                 float t = max(0, origin.w);
-                float peak = exp2(-d * d * 5.2) * (1 - smoothstep(.035,.30,t));
-                float advance = d - t * 6.5;
-                float first = exp2(-advance * advance * 37);
-                float second = exp2(-(advance + .30) * (advance + .30) * 18) * .3;
-                float fade = smoothstep(0,.075,t) * (1 - smoothstep(.44,1.42,t));
-                return float2(peak, (first + second) * fade);
+                float peak = exp2(-d * d * lerp(10,2.4,saturate(power))) * (1 - smoothstep(.045,.36,t));
+                float advance = d - t * lerp(3.7,8.4,saturate(power));
+                float first = exp2(-advance * advance * 23);
+                float second = exp2(-(advance + .48) * (advance + .48) * 11) * .42;
+                float wake = exp2(-(advance + .70) * (advance + .70) * 2) * .22;
+                float fade = smoothstep(0,.055,t) * (1 - smoothstep(.55,1.65,t));
+                return float2(peak, (first + second + wake) * fade) * power;
+            }
+
+            float PipeSeal(float3 local)
+            {
+                float seal = 0;
+                [loop] for (int p = 0; p < (int)_PipeContactCount; p++)
+                {
+                    float3 offset = local - _PipePoints[p].xyz;
+                    float along = dot(offset, _PipeAxes[p].xyz);
+                    float radius = _PipePoints[p].w;
+                    float radial = length(offset - along * _PipeAxes[p].xyz) - radius;
+                    float band = max(0,radial-.014) / max(_PipeBandWidth,.018);
+                    float glow = exp2(-band*band) * smoothstep(-.025,.035,radial);
+                    glow *= 1-smoothstep(radius*1.62+.12,radius*3.2+.3,abs(along));
+                    seal = max(seal,glow);
+                }
+                return seal;
             }
 
             half4 Frag(Interpolators i, FRONT_FACE_TYPE face : FRONT_FACE_SEMANTIC) : SV_Target
@@ -124,7 +145,8 @@ Shader "RAID/Defense/Containment membrane"
                     + .19 * sin(local.z * 34 + local.y * 17 + _Time.y * 11);
                 float arc = LinearTrace(dischargeCoord) * critical
                     * smoothstep(.78, .96, flutter) * step(.81, patch);
-                float2 hit = saturate(Hit(unit,_Impact0) + Hit(unit,_Impact1) + Hit(unit,_Impact2));
+                float2 hit = saturate(Hit(unit,_Impact0,_ImpactPower.x) + Hit(unit,_Impact1,_ImpactPower.y)
+                    + Hit(unit,_Impact2,_ImpactPower.z));
 
                 // Assembly sweeps out from the hull. On breach the lattice fragments from the impact.
                 float relativeHeight = -unit.y;
@@ -141,15 +163,19 @@ Shader "RAID/Defense/Containment membrane"
                 float sill = exp2(-sillDepth * sillDepth * 27);
                 float feed = .63 + .37 * pow(saturate(.55 + .45 * sin(local.z * 2.8 + local.x * .38 - _Time.y * 1.85)),3);
                 float sillPower = sill * feed * _SillCharge * lerp(1,.66,critical);
-                float accent = hit.x * .36 + hit.y * (.073 + grid * .29) + arc * .34
-                    + assembly * (.13 + grid * .22) + sillPower;
+                float seal = PipeSeal(local) * lerp(1,.60,critical);
+                float aftDistance = (unit.z+1.003)*_FieldRadii.z*17;
+                float aftSeal = exp2(-aftDistance*aftDistance);
+                float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34
+                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + aftSeal*.18;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * front * contrast);
 
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
                 half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
-                    + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 1.48 + hit.y * .65 + assembly * .68 + arc + sillPower * 2.4);
+                    + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 2.3 + hit.y * 1.18 + assembly * .68 + arc + sillPower * 2.4)
+                    + _PipeGlowTint.rgb*(seal*1.3+aftSeal*.31);
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }

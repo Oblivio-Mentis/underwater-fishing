@@ -225,32 +225,38 @@ namespace Raid.Nereid.Editor
             }
 
             string tag=label+" · pressure penetration";
-            if(wall.Find(tag))return;
-            var filter=wall.GetComponent<MeshFilter>();
-            if(!filter || !filter.sharedMesh)return;
+            var owner=wall.Find(tag);
+            if(!owner)
+            {
+                var filter=wall.GetComponent<MeshFilter>();
+                if(!filter || !filter.sharedMesh)return;
+                var mesh=DrillMesh(filter.sharedMesh,wall,hull,at,u,v,axis,halfU,halfV,depth);
+                if(!mesh)return;
 
-            var owner=new GameObject(tag).transform;
-            Undo.RegisterCreatedObjectUndo(owner.gameObject,"Fit pressure passage");
-            owner.SetParent(wall,false);
-            var original=filter.sharedMesh;
-            var mesh=DrillMesh(original,wall,hull,at,u,v,axis,halfU,halfV,depth);
-            if(!mesh){Object.DestroyImmediate(owner.gameObject);return;}
-            Undo.RecordObject(filter,"Open pressure penetration");
-            filter.sharedMesh=Store(mesh,label+" opened wall.asset");
-            PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
+                owner=new GameObject(tag).transform;
+                Undo.RegisterCreatedObjectUndo(owner.gameObject,"Fit pressure passage");
+                owner.SetParent(wall,false);
+                Undo.RecordObject(filter,"Open pressure penetration");
+                filter.sharedMesh=Store(mesh,label+" opened wall.asset");
+                PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
 
-            var affected=wall.GetComponentsInChildren<BoxCollider>(true)
-                .Where(box=>box.enabled && !box.transform.IsChildOf(owner)).ToArray();
-            foreach(var box in affected)SplitCollider(hull,owner,box,at,u,v,axis,halfU,halfV,depth);
+                var affected=wall.GetComponentsInChildren<BoxCollider>(true)
+                    .Where(box=>box.enabled && !box.transform.IsChildOf(owner)).ToArray();
+                foreach(var box in affected)SplitCollider(hull,owner,box,at,u,v,axis,halfU,halfV,depth);
+                owner.gameObject.AddComponent<MeshFilter>();
+                owner.gameObject.AddComponent<MeshRenderer>().sharedMaterials=new[]{route.metal,route.enamel};
+                owner.gameObject.AddComponent<MeshCollider>();
+            }
             var slope=Vector3.zero;
             if(Crossing(hull,route,axis,at[axis]-.035f,out var before) &&
                Crossing(hull,route,axis,at[axis]+.035f,out var after))
                 slope=(after-before)/.07f;
             var sleeve=SleeveMesh(hull,owner,at,slope,route.radius,u,v,axis,halfU,halfV,sleeveDepth);
-            owner.gameObject.AddComponent<MeshFilter>().sharedMesh=Store(sleeve,label+" sleeve flange.asset");
-            owner.gameObject.AddComponent<MeshRenderer>().sharedMaterials=new[]{route.metal,route.enamel};
-            var shell=owner.gameObject.AddComponent<MeshCollider>();
-            shell.sharedMesh=owner.GetComponent<MeshFilter>().sharedMesh;
+            var saved=Store(sleeve,label+" sleeve flange.asset");
+            owner.GetComponent<MeshFilter>().sharedMesh=saved;
+            var shell=owner.GetComponent<MeshCollider>();
+            shell.sharedMesh=null;
+            shell.sharedMesh=saved;
         }
 
         // Clip only triangles within the thickness of this particular plate. Surrounding trim is preserved.
@@ -349,6 +355,7 @@ namespace Raid.Nereid.Editor
             int u,int v,int axis,float halfU,float halfV,float depth)
         {
             const int n=24;
+            var rings=new List<Vector3>();
             var verts=new List<Vector3>();
             var metal=new List<int>();var paint=new List<int>();
             // The hole has square corners. The face covers them and tapers into an open circular bore.
@@ -367,13 +374,15 @@ namespace Raid.Nereid.Editor
                     point[u]+=ring.face?x*(halfU+rim)*outer:x*bore+slope[u]*offset;
                     point[v]+=ring.face?y*(halfV+rim)*outer:y*bore+slope[v]*offset;
                     point[axis]+=offset;
-                    verts.Add(owner.InverseTransformPoint(hull.TransformPoint(point)));
+                    rings.Add(owner.InverseTransformPoint(hull.TransformPoint(point)));
                 }
             for(int row=0;row<4;row++)
                 for(int i=0;i<n;i++)
                 {
                     var j=(i+1)%n;var next=(row+1)%4;
-                    int a=row*n+i,b=row*n+j,c=next*n+j,d=next*n+i;
+                    int a=verts.Count,b=a+1,c=a+2,d=a+3;
+                    verts.Add(rings[row*n+i]);verts.Add(rings[row*n+j]);
+                    verts.Add(rings[next*n+j]);verts.Add(rings[next*n+i]);
                     var indices=row==1?paint:metal;
                     // Axis order differs between a hull wall and a horizontal deck plate.
                     if(axis!=1)indices.AddRange(new[]{a,c,b,a,d,c});

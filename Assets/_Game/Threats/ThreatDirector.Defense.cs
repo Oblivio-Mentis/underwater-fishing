@@ -16,7 +16,7 @@ namespace Raid
             public FieldCondition condition;
             public int seed, budget, spent, wave, lost, returned, impact;
             public ulong promoted;
-            public float integrity, maximum, severity;
+            public float integrity, maximum, severity, impactStrength;
             public double phaseAt, beginsAt, impactAt;
             public Vector3 impactPoint;
             public bool breached, provoked;
@@ -358,6 +358,7 @@ namespace Raid
             value.impact++;
             value.impactAt=DefenseClock;
             value.impactPoint=impact;
+            value.impactStrength=Mathf.Clamp(Mathf.Sqrt(amount/8f),.13f,1.25f);
             activeRaid.integrity=value.integrity;
             defenseState.Value=value;
             if(value.integrity>0)return;

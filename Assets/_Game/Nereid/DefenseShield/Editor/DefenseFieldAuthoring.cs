@@ -179,38 +179,27 @@ namespace Raid.Nereid.Editor
 
         static Mesh Envelope()
         {
-            const int levels = 14, slices = 64;
-            var points = new List<Vector3>(levels*slices+1);
-            var normals = new List<Vector3>(points.Capacity);
-            var triangles = new List<int>((levels*2-1)*slices*3);
-            for (int level = 0; level < levels; level++)
-            {
-                float angle = Mathf.PI * .5f * level / levels;
-                float radius = Mathf.Cos(angle);
-                for (int ring = 0; ring < slices; ring++)
-                {
-                    float meridian = Mathf.PI * 2 * ring / slices;
-                    var point = DefenseFieldView.RimDirection(meridian) * radius;
-                    point.y = -Mathf.Sin(angle);
-                    points.Add(point);
-                    normals.Add(DefenseFieldView.UnitNormal(point));
-                }
-            }
+            const int crossSections = 32, stations = 24;
+            var points = new List<Vector3>();
+            var normals = new List<Vector3>();
+            var triangles = new List<int>();
 
-            points.Add(Vector3.down);
-            normals.Add(Vector3.down);
-            int pole = points.Count - 1;
-            for (int ring = 0; ring < slices; ring++)
+            AddSurface(crossSections, stations, (u,v) =>
             {
-                int next = (ring + 1) % slices;
-                Face(pole, pole - slices + next, pole - slices + ring);
-                for (int level = 0; level < levels - 1; level++)
-                {
-                    int a = level*slices, b = a + slices;
-                    Face(a + ring, b + ring, a + next);
-                    Face(a + next, b + ring, b + next);
-                }
-            }
+                float angle = (u-.5f)*Mathf.PI;
+                float depth = Mathf.Max(0,Mathf.Cos(angle));
+                float x = Mathf.Sin(angle);
+                float z = Mathf.Lerp(DefenseFieldView.AftEdge,DefenseFieldView.BowLimit(depth),v);
+                return (new Vector3(x*DefenseFieldView.BeamAt(z),-depth*DefenseFieldView.DepthAt(z),z),
+                    new Vector3(x,-depth,0));
+            });
+            AddSurface(crossSections, crossSections/2, (u,v) =>
+            {
+                float depth = Mathf.Sin(v*Mathf.PI*.5f);
+                float x = (2*u-1)*DefenseFieldView.SectionWidth(depth);
+                return (new Vector3(x,-depth,DefenseFieldView.BowLimit(depth)),DefenseFieldView.BowNormal(depth));
+            });
+
             var mesh = new Mesh { name = "Hull-conforming membrane" };
             mesh.SetVertices(points);
             mesh.SetNormals(normals);
@@ -218,9 +207,28 @@ namespace Raid.Nereid.Editor
             mesh.RecalculateBounds();
             return mesh;
 
+            void AddSurface(int width,int length,System.Func<float,float,(Vector3 point,Vector3 normal)> sample)
+            {
+                int start = points.Count;
+                for (int y = 0; y <= length; y++)
+                for (int x = 0; x <= width; x++)
+                {
+                    var (point,normal) = sample((float)x/width,(float)y/length);
+                    points.Add(point);
+                    normals.Add(normal);
+                    if (x == 0 || y == 0) continue;
+                    int b = start + y*(width+1) + x;
+                    int a = b-width-2;
+                    Face(a,b-1,b);
+                    Face(a,b,a+1);
+                }
+            }
+
             void Face(int a,int b,int c)
             {
-                bool reverse = Vector3.Dot(Vector3.Cross(points[b]-points[a],points[c]-points[a]),normals[a]) < 0;
+                Vector3 area = Vector3.Cross(points[b]-points[a],points[c]-points[a]);
+                if (area.sqrMagnitude < 1e-12f) return;
+                bool reverse = Vector3.Dot(area,normals[a]) < 0;
                 triangles.Add(a);
                 triangles.Add(reverse ? c : b);
                 triangles.Add(reverse ? b : c);
