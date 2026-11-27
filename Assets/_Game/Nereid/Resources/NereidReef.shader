@@ -203,11 +203,57 @@ Shader "RAID/Nereid Reef"
                 half3 result=lerp(outside,murk,max(_NereidTurbidity,glassHaze))+workLight*workTransmission;
                 // A close mask lamp should still reveal the companion's shell markings.
                 if (_PigmentLightCap>0) result=min(result,base*_PigmentLightCap+.022+rgb*_Wreck*.38);
+                if(_RemoraJaw.w>0)
+                {
+                    half tension=saturate(length(_RemoraPull.xyz)*_RemoraJaw.w);
+                    half aft=saturate(dot(_RemoraJaw.xyz-i.pos,_RemoraForward.xyz)*_RemoraJaw.w);
+                    result+=half3(.086,.18,.20)*tension*rim*sin(aft*3.14159)*exp2(-d*d*.006);
+                }
                 return half4(result,1);
             }
             ENDHLSL
         }
         UsePass "Universal Render Pipeline/Lit/ShadowCaster"
-        UsePass "Universal Render Pipeline/Lit/DepthOnly"
+        Pass
+        {
+            Name "DepthOnly"
+            Tags {"LightMode"="DepthOnly"}
+            ZWrite On
+            ColorMask R
+            HLSLPROGRAM
+            #pragma vertex VertDepth
+            #pragma fragment FragDepth
+            #pragma multi_compile_instancing
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/_Game/Threats/Resources/RemoraStretch.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+            float4 _Tint;
+            float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck, _EncounterClearance, _RaidPromotion;
+            float4 _WreckDirection, _WreckLampOrigin;
+            float4 _RemoraJaw, _RemoraForward, _RemoraPull;
+            CBUFFER_END
+            struct DepthInput {float3 position:POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID};
+            struct DepthOutput {float4 clip:SV_POSITION; float3 world:TEXCOORD0;};
+            DepthOutput VertDepth(DepthInput v)
+            {
+                UNITY_SETUP_INSTANCE_ID(v);
+                DepthOutput o;
+                o.world=StretchRemora(TransformObjectToWorld(v.position),_RemoraJaw,_RemoraForward.xyz,_RemoraPull.xyz);
+                o.clip=TransformWorldToHClip(o.world);
+                return o;
+            }
+            half FragDepth(DepthOutput i):SV_Target
+            {
+                if(_RaidPromotion<.9999 || _EncounterClearance>.01)
+                {
+                    float d=distance(i.world,GetCameraPositionWS());
+                    float keep=_EncounterClearance>.01?smoothstep(_EncounterClearance*.70,_EncounterClearance,d):1;
+                    float pattern=frac(52.9829189*frac(dot(floor(i.clip.xy),float2(.06711056,.00583715))));
+                    clip(min(keep,_RaidPromotion)-pattern-.001);
+                }
+                return i.clip.z;
+            }
+            ENDHLSL
+        }
     }
 }

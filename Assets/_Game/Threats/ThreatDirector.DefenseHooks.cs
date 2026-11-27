@@ -101,8 +101,11 @@ namespace Raid
                     a.hooks.RemoveAt(j);continue;
                 }
                 var position=tool.FishingAnchor;
-                hook.anchor=DefenseLineAnchor(a,hook);
-                hook.distance=Vector3.Distance(hook.anchor,position);
+                Vector3 attachment=a.collider.transform.TransformPoint(hook.contact.localPoint);
+                hook.anchor=a.attached?DefenseLineAnchor(a,attachment):attachment;
+                // Stretch follows the loaded line. Measuring load against the moving skin
+                // lets the effect shorten its own line and switch itself off every other tick.
+                hook.distance=Vector3.Distance(attachment,position);
                 bool clear=ClearDefenseLine(position,hook.anchor);
                 hook.obstructed=clear?0:hook.obstructed+dt;
                 if(hook.distance>tool.tuning.maxRange+defenseTuning.harpoonRangeMargin || hook.obstructed>.7f)
@@ -191,10 +194,10 @@ namespace Raid
                 Vector3 stretch=Vector3.zero;
                 if(totalWinding>.01f && pull.sqrMagnitude>.01f)
                 {
-                    float strain=Mathf.Clamp01(.28f+.46f*(loadedTension/totalWinding)+.55f*a.progress/needed);
-                    stretch=(pull/totalWinding)*(strain*1.24f*a.data.scale);
+                    float strain=Mathf.Clamp01(.53f+.52f*(loadedTension/totalWinding)+.54f*a.progress/needed);
+                    stretch=(pull/totalWinding)*(strain*1.86f*a.data.scale);
                 }
-                a.data.remoraPull=Vector3.MoveTowards(a.data.remoraPull,stretch,dt*5.5f);
+                a.data.remoraPull=Vector3.Lerp(a.data.remoraPull,stretch,1-Mathf.Exp(-dt*(totalWinding>.01f?8.5f:4.2f)));
             }
             if(strongest==null)
             {
@@ -215,19 +218,18 @@ namespace Raid
             if(a.progress<needed)return true;
             float reach=Mathf.Max(PredatorHandReach,strongest.tool.tuning.captureRange);
             if(!a.attached && (brain.Surging || !strongest.line.AtHand(
-                Vector3.Distance(strongest.tool.FishingAnchor,DefenseLineAnchor(a,strongest)),reach,.48f)))return true;
+                Vector3.Distance(strongest.tool.FishingAnchor,strongest.anchor),reach,.48f)))return true;
             if(a.attached)TearRemora(a);
             RemoveAttacker(index,true,false,strongest.tool);
             return true;
         }
 
-        static Vector3 DefenseLineAnchor(DefenseAttacker a,DefenseHook hook)
+        static Vector3 DefenseLineAnchor(DefenseAttacker a,Vector3 point)
         {
-            Vector3 point=a.collider.transform.TransformPoint(hook.contact.localPoint);
-            if(!a.attached || a.data.remoraPull.sqrMagnitude<.00001f)return point;
+            if(a.data.remoraPull.sqrMagnitude<.00001f)return point;
             return new RemoraStretch {
-                direction=a.data.forward, mouth=a.goal, displacement=a.data.remoraPull,
-                inverseLength=1/Mathf.Max(.2f,1.68f*a.data.scale)
+                direction=a.data.forward, mouth=a.collider.transform.TransformPoint(ShieldSnout(a.data.kind)),
+                displacement=a.data.remoraPull, inverseLength=RemoraStretch.InverseLength(a.data.scale)
             }.Point(point);
         }
 

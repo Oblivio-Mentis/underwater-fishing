@@ -161,10 +161,10 @@ namespace Raid
                     {
                         visual.remoraSkin=root.GetComponentsInChildren<Renderer>();
                         visual.remoraMaterial=new MaterialPropertyBlock();
-                        if(root.TryGetComponent<SkinnedMeshRenderer>(out var skin))
+                        foreach(var skin in visual.remoraSkin)
                         {
                             var bounds=skin.localBounds;
-                            bounds.Expand(2.6f);
+                            bounds.Expand(4.4f);
                             skin.localBounds=bounds;
                         }
                     }
@@ -274,7 +274,7 @@ namespace Raid
             atmosphere.SetSwarmAge(SwarmAge);
             atmosphere.SetApproach(snapshot.approachStart,snapshot.approachEnd,(float)(DefenseClock-snapshot.assaultAt),
                 defenseTuning.encirclementSeconds,1-Mathf.InverseLerp(defenseTuning.encirclementSeconds,
-                    defenseTuning.encirclementSeconds+11,DefenseCountdown));
+                    defenseTuning.encirclementSeconds+DefenseAtmosphereView.WarningDrift,DefenseCountdown));
             // The list and the raid mask can be delivered on different network ticks.
             // Hold a slot until its active model is ready, or until the mask settles.
             if(committedSlots!=snapshot.promoted)
@@ -340,6 +340,13 @@ namespace Raid
             float tailWave=CatchFishModel.SwimWave(view.phase,.79f,view.stroke);
             float tipWave=CatchFishModel.SwimWave(view.phase,1,view.stroke);
             float finWave=CatchFishModel.SwimWave(view.phase,.39f,view.stroke);
+            if(attached && snapshot.kind==DefenseSpecies.Remora)
+            {
+                float held=Mathf.Lerp(1,.26f,Mathf.Clamp01(snapshot.remoraPull.magnitude/1.25f));
+                tailWave*=held;
+                tipWave*=held;
+                finWave*=held;
+            }
             Quaternion rotation=root.rotation;
             if(attached)
             {
@@ -487,10 +494,15 @@ namespace Raid
             stretch.displacement=Vector3.Lerp(stretch.displacement,actor.remoraPull,blend);
             if(stretch.displacement.sqrMagnitude<.00001f && actor.remoraPull.sqrMagnitude<.00001f)stretch.displacement=Vector3.zero;
             stretch.direction=view.root.forward;
-            stretch.inverseLength=stretch.displacement.sqrMagnitude>0?1/Mathf.Max(.2f,1.68f*actor.scale):0;
-            stretch.mouth=view.mouth?view.mouth.position:view.root.TransformPoint(new Vector3(0,0,.86f));
-            stretch.Apply(view.remoraMaterial);
-            foreach(var part in view.remoraSkin)if(part)part.SetPropertyBlock(view.remoraMaterial);
+            stretch.inverseLength=stretch.displacement.sqrMagnitude>0?RemoraStretch.InverseLength(actor.scale):0;
+            stretch.mouth=view.root.TransformPoint(ShieldSnout(DefenseSpecies.Remora));
+            foreach(var part in view.remoraSkin)
+            {
+                if(!part)continue;
+                part.GetPropertyBlock(view.remoraMaterial);
+                stretch.Apply(view.remoraMaterial);
+                part.SetPropertyBlock(view.remoraMaterial);
+            }
             view.remora=stretch;
         }
 

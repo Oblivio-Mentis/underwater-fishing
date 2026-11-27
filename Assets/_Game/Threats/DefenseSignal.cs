@@ -69,6 +69,7 @@ namespace Raid
                 pass=baked;
             }
             else pass=DroppedItemView.OutlinePart(source.transform,mesh,material);
+            pass.localBounds=source.localBounds;
             var paints=new Material[mesh.subMeshCount];
             System.Array.Fill(paints,material);
             pass.sharedMaterials=paints;

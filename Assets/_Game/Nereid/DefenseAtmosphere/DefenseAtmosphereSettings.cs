@@ -24,7 +24,7 @@ namespace Raid.Nereid
         [Min(35)] public float cloudDrawingDistance=64;
         [Range(.1f,.48f)] public float cloudOrbitSpeed=.12f;
         [Header("Suspended sediment")]
-        [Range(0f,.32f)] public float currentOpacity=.20f;
+        [Range(0f,.32f)] public float currentOpacity=.24f;
         [Min(4f)] public float currentLength=23f;
         [Min(1f)] public float currentHeight=5.8f;
         public Material silhouetteMaterial;

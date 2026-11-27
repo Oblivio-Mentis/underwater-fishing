@@ -4,8 +4,12 @@
 float3 StretchRemora(float3 world, float4 jaw, float3 direction, float3 pull)
 {
     if(jaw.w<=0)return world;
-    float aft=dot(jaw.xyz-world,direction)*jaw.w;
-    return world+pull*smoothstep(.06,.98,aft);
+    float3 fromJaw=world-jaw.xyz;
+    float along=dot(fromJaw,direction);
+    float weight=smoothstep(.05,.97,-along*jaw.w);
+    float load=saturate(length(pull)*jaw.w);
+    float taper=load*weight*(.61-.26*weight);
+    return world+pull*weight-(fromJaw-direction*along)*taper;
 }
 
 #endif

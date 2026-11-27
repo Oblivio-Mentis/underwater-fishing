@@ -9,9 +9,11 @@ namespace Raid
 
         void PresentRaiderWake(VisibleAttacker view,AttackerSnapshot actor,float pace)
         {
+            bool openingPass=actor.group==1 && actor.slot>=0 && actor.pose==AttackerPose.Approach &&
+                Defense.phase==DefensePhase.Assault && DefenseAge<7;
             bool rushing=actor.pose is AttackerPose.Strike or AttackerPose.Snatch ||
                 actor.pose==AttackerPose.Carry && (actor.stolenId>0 || actor.victim>=0) ||
-                actor.pose==AttackerPose.Retreat && Defense.phase==DefensePhase.Resolution;
+                actor.pose==AttackerPose.Retreat && Defense.phase==DefensePhase.Resolution || openingPass;
             var style=actor.kind switch {
                 DefenseSpecies.Rammer=>(.57f,.57f,.68f,new Color(.56f,.84f,.89f)),
                 DefenseSpecies.Remora=>(.24f,.25f,.39f,new Color(.45f,.76f,.72f)),

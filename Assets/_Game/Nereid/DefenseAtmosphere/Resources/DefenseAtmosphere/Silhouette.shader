@@ -62,6 +62,7 @@ Shader "RAID/Defense/Swarm Silhouette"
                 half beat : TEXCOORD3;
                 float2 halo : TEXCOORD4;
                 half visibility : TEXCOORD5;
+                half emergence : TEXCOORD6;
             };
 
             Varyings Vert(Attributes v)
@@ -71,10 +72,13 @@ Shader "RAID/Defense/Swarm Silhouette"
                 float3 root = TransformObjectToWorld(float3(0,0,0));
                 int index = (int)v.bank.x;
                 float4 motion=_Motion;
+                o.emergence=1;
                 if(_CloudBatch>.5)
                 {
                     root=_CloudPoints[index].xyz;
                     motion=_CloudMotion[index];
+                    o.emergence=saturate(frac(motion.z)*1.25);
+                    motion.z=floor(motion.z);
                 }
                 float beat=motion.x, effort=motion.y;
                 float shell=saturate(.54-v.position.z);
@@ -136,13 +140,14 @@ Shader "RAID/Defense/Swarm Silhouette"
                     float haloRadius=dot(i.halo,i.halo);
                     // Keep a tight iris inside the scattered light at subpixel distances.
                     half falloff=exp2(-8*haloRadius)*.25 + exp2(-49*haloRadius)*1.46;
-                    half halo=saturate(1-haloRadius)*falloff*limit*_Fade*i.visibility;
+                    half halo=saturate(1-haloRadius)*falloff*limit*_Fade*i.visibility*smoothstep(.04,.65,i.emergence);
                     halo*=exp2(-d2*.000055);
                     half3 seaScatter=lerp(i.pigment,half3(.24,.55,.62),saturate(haloRadius*2.8));
                     return half4(seaScatter*halo*_EyeGlow*i.beat,0);
                 }
                 // Depth-tested opaque fragments keep the finest brackets behind the hull and window frames.
-                half coverage = limit * smoothstep(2.5,5.6,distanceToEye) * _Fade;
+                half emergence=lerp(smoothstep(.28,.96,i.emergence),smoothstep(.04,.68,i.emergence),luminous);
+                half coverage = limit * smoothstep(2.5,5.6,distanceToEye) * _Fade * emergence;
                 float dither = frac(52.9829189 * frac(dot(floor(i.clip.xy), float2(.06711056,.00583715))));
                 clip(coverage - dither - .002);
                 if(_Handoff>0)clip(dither-_Handoff);

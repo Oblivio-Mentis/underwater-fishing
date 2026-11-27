@@ -30,7 +30,7 @@ namespace Raid
             team.ongoingDefense=record;
             d.ResumeDefense(record);
             host.CameraImpulse.BeginBackgroundQa(60);
-            await Wait(()=>d.DefenseCountdown<7.7f,"film begins with the incoming school",50);
+            await Wait(()=>d.DefenseCountdown<20.8f,"film begins with the first glints beyond the window",50);
             ReportPhase("film observation window",report,folder);
             var vessel=Nereid.NereidVessel.Active;
             Vector3 bearing=Vector3.ProjectOnPlane(d.Defense.approachEnd-d.DefenseCenter,Vector3.up).normalized;
@@ -43,7 +43,8 @@ namespace Raid
             var camera=host.GetComponentInChildren<Camera>();
             if(!host.IsInside || Vector3.Distance(camera.transform.position,eyeAtWindow)>.32f)
                 throw new InvalidOperationException($"The diver did not settle at the observation window: eye {camera.transform.position:F2}, expected {eyeAtWindow:F2}");
-            await Clip(folder,"01-window",5,host,()=>windowFocus);
+            await Clip(folder,"01-window",9,host,()=>windowFocus);
+            await Wait(()=>d.DefenseCountdown<4.4f,"the wing banks away from the reserve",22);
 
             ReportPhase("film exterior approach",report,folder);
             Vector3 side=Vector3.Cross(Vector3.up,bearing);
@@ -67,7 +68,7 @@ namespace Raid
             }
             if(best<3)throw new InvalidOperationException("Film needs a clear exterior view of the attack lane");
             host.Teleport(exterior);
-            await Clip(folder,"02-outside",7,host,()=>arrival);
+            await Clip(folder,"02-outside",9,host,()=>Vector3.Lerp(arrival,d.DefenseApproachFocus,.26f));
 
             ReportPhase("film shield contact",report,folder);
             await Wait(()=>d.Defense.phase==DefensePhase.Assault,"film assault",10);

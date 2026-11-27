@@ -368,6 +368,7 @@ namespace Raid
             d.DefenseFixtureEnd();
             await Wait(()=>!d.DefenseActive,"successful recovery",22);
             report.Check(team.tank.Count==20 && team.ongoingDefense==null && d.Defense.Ratio==1,"Successful defense keeps the manifest and restores the shield.");
+            report.Check(d.DefenseBlackout>.9f,"The scene stays dark after the shield and gameplay have recovered.");
             report.Check(team.hungerRemaining<interval || Mathf.Abs(team.hungerRemaining-interval)<.05f,"The clock restarts with a single next cycle.");
 
             ReportPhase("breach and real theft",report,folder);
@@ -514,6 +515,8 @@ namespace Raid
                 host.LookAtConsole(remora.position);
                 break;
             }
+            await Awaitable.NextFrameAsync();
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-at-rest.png"));
             float stretchDeadline=Time.realtimeSinceStartup+2;
             float extension=0;
             while(!d.DefenseFixtureStretch(remora.id,tool.FishingAnchor,out extension) &&
@@ -542,6 +545,7 @@ namespace Raid
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
                 $"Reeling tears the attached remora, releases the line and creates one catch and local ink. Line={tool.HasDefenseLine}, catch={tool.CatchCount}, ink={d.DefenseInkAt(remora.position)}, peak={peakTension:0.00}, actors={d.DefenseActorCount}");
+            report.Check(tool.ActiveSlot==0 && tool.HarpoonInHands,"Landing the remora fills a pocket without changing the owner's equipped slot.");
             long remoraCatch=tool.CatchIdInSlot(2);
             await Awaitable.WaitForSecondsAsync(.36f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));

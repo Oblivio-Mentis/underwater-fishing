@@ -6,7 +6,7 @@ namespace Raid.Nereid
     public sealed partial class DefenseAtmosphereView
     {
         static readonly int CurrentId=Shader.PropertyToID("_Current");
-        readonly MeshRenderer[] currentStrips=new MeshRenderer[PodCount+1];
+        readonly MeshRenderer[] currentStrips=new MeshRenderer[PodCount+3];
         Mesh currentMesh;
         Material currentMaterial;
         MaterialPropertyBlock currentBlock;
@@ -28,24 +28,26 @@ namespace Raid.Nereid
             var inherited=transform.lossyScale;
             for(int index=0;index<currentStrips.Length;index++)
             {
-                bool wing=index==PodCount;
-                float front=wing?Mathf.SmoothStep(0,1,Mathf.InverseLerp(-7,-2.3f,approach))*
-                    (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.3f,7,approach))):fade;
+                bool wing=index>=PodCount;
+                int slot=wing?3+index-PodCount:SlotCapacity+index*SpeciesCount;
+                float lag=wing?LeadRun(slot)*.67f:0;
+                float front=wing?Mathf.SmoothStep(0,1,Mathf.InverseLerp(-7.2f+lag,-3.5f+lag,approach))*
+                    (1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.4f,4.6f,approach))):fade;
+                if(!wing && phase==1)front*=SwimmerEmergence(raidSeed,slot,index,warningReveal);
                 var strip=currentStrips[index];
                 strip.enabled=front>.008f;
                 if(!strip.enabled)continue;
 
-                int slot=wing?3:SlotCapacity+index*SpeciesCount;
                 var fish=SampleShoal(raidSeed,slot,approach,approachSeconds,anchor,approachStart,approachEnd,
                     retreat,!wing,profile);
                 float key=Unit(SlotKey(raidSeed,slot+21));
-                float length=profile.currentLength*(wing?.86f:Mathf.Lerp(.81f,1.22f,key));
-                float height=profile.currentHeight*(wing?.66f:Mathf.Lerp(.72f,1.16f,key));
+                float length=profile.currentLength*(wing?Mathf.Lerp(.62f,1.10f,key):Mathf.Lerp(.81f,1.22f,key));
+                float height=profile.currentHeight*(wing?.56f:Mathf.Lerp(.72f,1.16f,key));
                 Vector3 trail=-fish.Forward;
                 strip.transform.SetPositionAndRotation(fish.Position+trail*(wing?4.5f:6.8f)-Vector3.up*.7f,
                     Quaternion.LookRotation(trail)*Quaternion.AngleAxis(fish.Bank*.33f,Vector3.forward));
                 strip.transform.localScale=new Vector3(height/inherited.x,height/inherited.y,length/inherited.z);
-                currentBlock.SetVector(CurrentId,new Vector4(front*profile.currentOpacity*(wing?1:.65f),
+                currentBlock.SetVector(CurrentId,new Vector4(front*profile.currentOpacity*(wing?1.32f:.78f),
                     key*17f,wing?.75f:.18f,wing?1:0));
                 strip.SetPropertyBlock(currentBlock);
             }

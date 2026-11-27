@@ -11,7 +11,7 @@ namespace Raid.Nereid
         internal const int LeadSlots = 10;
         internal const float HandoffSeconds = .18f;
         const int PodCount = 8;
-        const float WarningDrift = 11f;
+        internal const float WarningDrift = 15f;
         static readonly float[] PodBearings = { 0, -36, 52, -77, 97, 143, -142, 177 };
         static readonly float[] PodTiers = { .10f, -.31f, .56f, .18f, .83f, .42f, -.12f, .69f };
         const float Tau = 2 * Mathf.PI;
@@ -93,8 +93,9 @@ namespace Raid.Nereid
             float level=end.y-center.y;
             float offset=PhaseOffset(key,distant,pod==0);
             float clock=age+offset;
-            var position=Path(clock,withdrawal,pod,podKey,key,closing,initial,shelf,level,axis,distant,profile);
-            var next=Path(clock+sampleStep,withdrawal>0?withdrawal+sampleStep:0,pod,podKey,key,
+            int leadRun=LeadRun(slot);
+            var position=Path(clock,withdrawal,pod,leadRun,podKey,key,closing,initial,shelf,level,axis,distant,profile);
+            var next=Path(clock+sampleStep,withdrawal>0?withdrawal+sampleStep:0,pod,leadRun,podKey,key,
                 closing,initial,shelf,level,axis,distant,profile);
             Vector3 velocity;
             float bank;
@@ -106,7 +107,7 @@ namespace Raid.Nereid
             }
             else
             {
-                var previous=Path(clock-sampleStep,Mathf.Max(0,withdrawal-sampleStep),pod,podKey,key,
+                var previous=Path(clock-sampleStep,Mathf.Max(0,withdrawal-sampleStep),pod,leadRun,podKey,key,
                     closing,initial,shelf,level,axis,distant,profile);
                 velocity=(next-previous)/(2*sampleStep);
                 float yaw=Vector3.SignedAngle(Vector3.ProjectOnPlane(position-previous,Vector3.up),
@@ -120,7 +121,7 @@ namespace Raid.Nereid
         static uint SlotKey(int seed,int slot) => unchecked((uint)seed*0x9e3779b9u+(uint)slot*0x85ebca6bu);
         static float PhaseOffset(uint key,bool distant,bool lead) => (Unit(key+41)-.5f)*(distant?3.4f:lead?.42f:1.4f);
 
-        static Vector3 Path(float age,float withdrawal,int pod,uint podKey,uint key,float closing,float initial,float shelf,
+        static Vector3 Path(float age,float withdrawal,int pod,int leadRun,uint podKey,uint key,float closing,float initial,float shelf,
             float level,Vector3 axis,bool distant,DefenseAtmosphereSettings profile)
         {
             bool wing=pod==0 && !distant;
@@ -182,10 +183,13 @@ namespace Raid.Nereid
                 if(wing)
                 {
                     // The fast pod peels into three offset runs before the server takes over.
-                    float fork=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-4.9f,-.35f,age));
-                    int split=(int)(key%3)-1;
-                    scatter+=split*5.6f*fork;
-                    height+=(1.5f-split*1.35f)*fork;
+                    int split=leadRun;
+                    float release=split*.67f;
+                    float fork=Mathf.SmoothStep(0,1,Mathf.InverseLerp(-6.4f+release,-.25f+release,age));
+                    float sweep=Mathf.Sin(fork*Mathf.PI);
+                    scatter+=split*(8.4f*fork+2.2f*sweep);
+                    height+=(2.0f-split*2.0f)*fork-2.4f*sweep*(split==0?1:.24f);
+                    radial+=split*3.1f*fork;
                 }
             }
             float spacing=wing?Mathf.SmoothStep(.25f,1,Mathf.InverseLerp(.65f,3.3f,Mathf.Abs(age))):1;
@@ -205,6 +209,16 @@ namespace Raid.Nereid
         {
             float t2=t*t,t3=t2*t;
             return (2*t3-3*t2+1)*a+(t3-2*t2+t)*da*duration+(-2*t3+3*t2)*b+(t3-t2)*db*duration;
+        }
+
+        static int LeadRun(int slot) => slot%3-1;
+
+        static float SwimmerEmergence(int seed,int slot,int pod,float warning)
+        {
+            // The glints emerge first. A slight lag across adjacent pods carries the
+            // reveal around the boat, with variation inside each moving group.
+            float lead=pod*.046f+Unit(SlotKey(seed,slot+153))*.19f;
+            return Mathf.SmoothStep(0,1,Mathf.InverseLerp(lead,lead+.38f,warning));
         }
 
         // Integral of a cubic ease between angular velocities. The heading stays
@@ -347,7 +361,6 @@ namespace Raid.Nereid
             {
                 var block=blocks[species,surface];
                 block.SetFloat(EyePass,surface);
-                block.SetFloat(Fade,reveal);
                 block.SetFloat(Glow,profile.eyeGlow);
                 block.SetFloat(Range,range);
                 block.SetVector(Billow,new Vector4(SwimBeat[species],FinFlex[species],0,0));
@@ -369,9 +382,11 @@ namespace Raid.Nereid
                 Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(pose.Bank,Vector3.forward);
                 swimmer.transform.SetPositionAndRotation(point,bank);
                 swimmer.transform.localScale=unit*pose.Scale;
+                float emerge=phase==1?SwimmerEmergence(raidSeed,i,i<LeadSlots?0:1+(i-LeadSlots)%(PodCount-1),warningReveal):1;
                 for(int surface=0;surface<Mathf.Min(meshes[pose.Kind].subMeshCount,2);surface++)
                 {
                     var block=blocks[pose.Kind,surface];
+                    block.SetFloat(Fade,reveal*emerge);
                     float handoff=handoffs!=null && handoffs[i]>0?Mathf.Clamp01((Time.time-handoffs[i])/HandoffSeconds):0;
                     block.SetFloat(Handoff,handoff);
                     block.SetVector(Motion,SampleStroke(raidSeed,i,pose,orbitAge,agedApproach));
@@ -388,7 +403,7 @@ namespace Raid.Nereid
             float rhythm=SwimBeat[pose.Kind]*Mathf.Lerp(.84f,1.16f,Unit(key+71));
             float stroke=age*rhythm+Unit(key+73)*Tau+Mathf.Sin(age*.75f+Unit(key+79)*Tau)*.52f;
             float effort=Mathf.Lerp(.49f,1.03f,Mathf.InverseLerp(.9f,8f,pose.Velocity.magnitude));
-            float alertCenter=slot<LeadSlots?-3.25f+slot*.17f:-4.40f+Unit(key+97)*1.7f;
+            float alertCenter=slot<LeadSlots?-5.35f+LeadRun(slot)*.67f+(slot/3)*.28f:-4.40f+Unit(key+97)*1.7f;
             float flash=approachTime-alertCenter;
             float recruitment=Mathf.Exp(-(flash*flash)*(slot<LeadSlots?7.5f:18f));
             return new Vector4(stroke,effort,pose.Kind,Mathf.Lerp(.72f,1.08f,Unit(key+83))+

@@ -37,6 +37,14 @@ Shader "RAID/Defense/Suspended shoal sediment"
                 return o;
             }
 
+            float DriftSpeck(float2 p)
+            {
+                float2 cell=floor(p);
+                float salt=frac(sin(dot(cell,float2(72.17,218.65)))*29716.44);
+                float2 dust=frac(p)-float2(.27+salt*.46,.26+frac(salt*17)*.48);
+                return saturate(1-length(dust*float2(1.3,2.7))*6)*smoothstep(.48,.93,salt);
+            }
+
             half4 Frag(Varyings i) : SV_Target
             {
                 float time=_Time.y*(.21+_Current.z);
@@ -56,9 +64,11 @@ Shader "RAID/Defense/Suspended shoal sediment"
                 half range=smoothstep(5,20,depth)*(1-smoothstep(143,195,depth));
                 half beam=saturate(RaidSearchBeam(i.world)*2.5);
                 half3 water=WaterColumnColor(SafeNormalize(i.world-GetCameraPositionWS()),_NereidReefClarity.x);
-                half3 sediment=water*1.18+lerp(half3(.027,.070,.080),half3(.090,.21,.24),beam);
-                half alpha=density*fade*soft*range*_Current.x*lerp(.67,1.52,beam)*(1+_Current.w*.15);
-                return half4(sediment*alpha,alpha);
+                half3 sediment=water*1.18+lerp(half3(.032,.082,.110),half3(.12,.28,.31),beam);
+                half alpha=density*fade*soft*range*_Current.x*lerp(.72,1.6,beam)*(1+_Current.w*.19);
+                float2 speck=float2(along*70-time*7+_Current.y,across*13+sin(p.x*.31)*.43);
+                half dust=DriftSpeck(speck)*fade*soft*range*_Current.x*lerp(.52,1.35,beam);
+                return half4(sediment*alpha+half3(.25,.54,.60)*dust,saturate(alpha+dust*.42));
             }
             ENDHLSL
         }

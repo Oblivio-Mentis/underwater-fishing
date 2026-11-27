@@ -168,7 +168,7 @@ namespace Raid
             Vector3 tail=s.mouth-s.direction/s.inverseLength;
             Vector3 delta=s.Point(tail)-tail;
             extension=delta.magnitude;
-            return extension>.32f && Vector3.Dot(delta.normalized,(towards-view.root.position).normalized)>.85f &&
+            return extension>.83f && Vector3.Dot(delta.normalized,(towards-view.root.position).normalized)>.85f &&
                 (s.Point(s.mouth)-s.mouth).sqrMagnitude<.00001f;
         }
 

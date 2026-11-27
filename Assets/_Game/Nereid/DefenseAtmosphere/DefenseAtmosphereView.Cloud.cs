@@ -121,7 +121,7 @@ namespace Raid.Nereid
         void PresentCloud(DefenseAtmosphereSettings profile,float age,float approach,float retreat)
         {
             if(CloudCount==0)return;
-            float arrival=phase==1?Mathf.SmoothStep(0,1,Mathf.InverseLerp(.07f,.88f,warningReveal)):1;
+            float arrival=phase==1?Mathf.SmoothStep(0,1,Mathf.InverseLerp(.015f,.28f,warningReveal)):1;
             float fade=arrival*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(1.6f,8f,retreat)));
             if(fade<.015f){HideCloud();return;}
             float range=profile.cloudDrawingDistance*profile.cloudDistanceScale;
@@ -138,7 +138,11 @@ namespace Raid.Nereid
                     var heading=pose.Forward;
                     batch.points[i]=new Vector4(position.x,position.y,position.z,pose.Scale);
                     batch.headings[i]=new Vector4(heading.x,heading.y,heading.z,pose.Bank*Mathf.Deg2Rad);
-                    batch.motion[i]=SampleStroke(raidSeed,slot+SlotCapacity,pose,age,approach);
+                    var swimming=SampleStroke(raidSeed,slot+SlotCapacity,pose,age,approach);
+                    float emerge=phase==1?SwimmerEmergence(raidSeed,slot+SlotCapacity,((slot+SlotCapacity)/SpeciesCount)%PodCount,warningReveal):1;
+                    // Pack a fractional emergence value alongside the integral species index.
+                    swimming.z+=emerge*.80f;
+                    batch.motion[i]=swimming;
                 }
                 for(int pass=0;pass<batch.properties.Length;pass++)
                 {

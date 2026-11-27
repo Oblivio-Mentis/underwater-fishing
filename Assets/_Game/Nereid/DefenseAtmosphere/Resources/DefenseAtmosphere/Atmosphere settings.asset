@@ -28,7 +28,7 @@ MonoBehaviour:
   cloudHeight: 23
   cloudDrawingDistance: 64
   cloudOrbitSpeed: 0.12
-  currentOpacity: 0.2
+  currentOpacity: 0.24
   currentLength: 23
   currentHeight: 5.8
   silhouetteMaterial: {fileID: 2100000, guid: 16dec4a992bb51228b7c881468a2a56f, type: 2}

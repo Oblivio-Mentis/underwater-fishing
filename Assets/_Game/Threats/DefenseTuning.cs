@@ -41,6 +41,8 @@ namespace Raid
         [Min(8)] public float schoolTravelDistance=96;
         [Min(0)] public float schoolHeight=3.7f;
         [Range(0,1)] public float concealment=.85f;
+        [Min(0)] public float blackoutHoldSeconds=6;
+        [Min(.25f)] public float blackoutFadeSeconds=9;
         [Header("Captures")]
         [Min(.2f)] public float snatchSeconds=.44f;
         [Min(1)] public float escapeSpeedMultiplier=1.42f;

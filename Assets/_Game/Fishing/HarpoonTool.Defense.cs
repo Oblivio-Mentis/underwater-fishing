@@ -92,7 +92,6 @@ namespace Raid
             int slot=FreePocket();
             if(slot<0)return false;
             SetPocket(slot,new PocketItem{species=template.NetworkObject,id=id,defenseSpecies=(byte)((int)kind+1)});
-            EquipSlot(slot);
             Motor.ConfirmInteraction();
             return true;
         }

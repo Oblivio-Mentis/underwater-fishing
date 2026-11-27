@@ -39,6 +39,8 @@ MonoBehaviour:
   schoolTravelDistance: 96
   schoolHeight: 3.7
   concealment: 0.85
+  blackoutHoldSeconds: 6
+  blackoutFadeSeconds: 9
   snatchSeconds: 0.44
   escapeSpeedMultiplier: 1.42
   escapeSightDistance: 42

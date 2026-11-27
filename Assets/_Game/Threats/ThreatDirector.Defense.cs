@@ -17,7 +17,7 @@ namespace Raid
             public int seed, budget, spent, wave, lost, returned, impact;
             public ulong promoted;
             public float integrity, maximum, severity, impactStrength;
-            public double phaseAt, beginsAt, impactAt, assaultAt;
+            public double phaseAt, beginsAt, impactAt, assaultAt, blackoutFadeAt;
             public Vector3 impactPoint, approachStart, approachEnd;
             public bool breached, provoked;
             public float Ratio => maximum>0?Mathf.Clamp01(integrity/maximum):1;
@@ -74,8 +74,9 @@ namespace Raid
         {
             DefensePhase.Warning or DefensePhase.Encirclement=>Mathf.SmoothStep(0,1,SwarmAge/.85f),
             DefensePhase.Assault or DefensePhase.Resolution=>1,
-            DefensePhase.Recovery=>1-Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds),
-            _=>0
+            _=>Defense.blackoutFadeAt>0
+                ?1-Mathf.SmoothStep(0,1,(float)(DefenseClock-Defense.blackoutFadeAt)/defenseTuning.blackoutFadeSeconds)
+                :0
         };
         internal Vector3 DefenseApproachFocus => DefenseActive?SampleDefenseSlot(0).Position:DefenseCenter;
         public Vector3 DefenseCenter => fieldAnchor?fieldAnchor.position:
@@ -98,11 +99,12 @@ namespace Raid
             if(!defenseTuning){defenseTuning=ScriptableObject.CreateInstance<DefenseTuning>();ownsDefenseTuning=true;}
         }
 
-        void ResetDefense()
+        void ResetDefense(double blackoutFadeAt=0)
         {
             foreach(var a in attackers){ReleaseVictim(a);ClearHooks(a,false);if(a.collider)Destroy(a.collider.gameObject);}
             attackers.Clear();defenseActors.Clear();inkClouds.Clear();activeRaid=null;
-            defenseState.Value=new DefenseSnapshot{integrity=defenseTuning.maximumIntegrity,maximum=defenseTuning.maximumIntegrity};
+            defenseState.Value=new DefenseSnapshot{integrity=defenseTuning.maximumIntegrity,
+                maximum=defenseTuning.maximumIntegrity,blackoutFadeAt=blackoutFadeAt};
         }
 
         internal bool BeginDefense(HungerReport report,bool provoked=false)
@@ -154,6 +156,7 @@ namespace Raid
                 integrity=Mathf.Clamp(record.integrity,0,defenseTuning.maximumIntegrity),maximum=defenseTuning.maximumIntegrity,
                 severity=record.deficit, phase=record.resolutionComplete?DefensePhase.Recovery:record.breached?DefensePhase.Resolution:DefensePhase.Warning,
                 breached=record.breached, provoked=record.provoked, beginsAt=now,phaseAt=now,
+                blackoutFadeAt=record.resolutionComplete?now+defenseTuning.blackoutHoldSeconds:0,
                 assaultAt=now+defenseTuning.warningSeconds+defenseTuning.encirclementSeconds,
                 approachStart=approachStart,approachEnd=approachEnd,
                 condition=record.breached?FieldCondition.Broken:FieldCondition.Normal
@@ -293,6 +296,7 @@ namespace Raid
             var current=Defense;
             current.phase=phase;
             current.phaseAt=DefenseClock;
+            if(phase==DefensePhase.Recovery)current.blackoutFadeAt=current.phaseAt+defenseTuning.blackoutHoldSeconds;
             defenseState.Value=current;
             SetDefenseMessage(text);
         }
@@ -348,7 +352,7 @@ namespace Raid
                     {
                         var world=RaidWorld.Instance;
                         if(world?.Team!=null)world.Team.ongoingDefense=null;
-                        ResetDefense();
+                        ResetDefense(recovering.blackoutFadeAt);
                         SetDefenseMessage("Поле восстановлено. Экспедиция продолжается.");
                         world?.ArchiveDefense();
                     }
