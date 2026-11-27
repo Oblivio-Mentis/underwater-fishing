@@ -311,8 +311,11 @@ namespace Raid
             }
             if(kind=="cage")drive.localPosition=new Vector3(0,.48f,-.65f);
             lamp.localPosition=BeaconOrigin(kind);
-            sound=gameObject.AddComponent<AudioSource>();sound.spatialBlend=1;sound.minDistance=2;sound.maxDistance=18;sound.playOnAwake=false;
-            if(!click)click=Tone("Защёлка",160,.08f);if(!chirp)chirp=Tone("Сигнал",740,.15f);
+            if(kind!="charge")
+            {
+                sound=gameObject.AddComponent<AudioSource>();sound.spatialBlend=1;sound.minDistance=2;sound.maxDistance=18;sound.playOnAwake=false;
+                if(!click)click=Tone("Защёлка",160,.08f);if(!chirp)chirp=Tone("Сигнал",740,.15f);
+            }
         }
         static AudioClip Tone(string name,float hz,float seconds)
         {
@@ -328,9 +331,9 @@ namespace Raid
                 transform.position=snap?rig.position:Vector3.Lerp(transform.position,rig.position,1-Mathf.Exp(-Time.deltaTime*14));
                 transform.rotation=Quaternion.Euler(0,rig.yaw,model=="cage" && rig.contents.Count>0?Mathf.Sin(Time.time*7)*2:0);
             }
-            if(rig.mode!=lastMode && lastMode!=null)
+            if(sound && rig.mode!=lastMode && lastMode!=null)
             {
-                var cue=rig.mode is "armed" or "captured" or "fuse"?chirp:click;
+                var cue=rig.mode is "armed" or "captured"?chirp:click;
                 if(cue)sound.PlayOneShot(cue);
             }
             lastMode=rig.mode;
