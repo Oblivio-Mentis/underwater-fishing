@@ -46,7 +46,8 @@ namespace Raid
                 await Wait(()=>RaidWorld.Instance && RaidWorld.Instance.NetworkObject && RaidWorld.Instance.IsServerInitialized && RaidWorld.Instance.Team!=null &&
                     RaidWorld.Instance.TravelRemaining<=0 && DiverMotor.ServerDivers.Count==peers && UI.UiRoot.Instance &&
                     UI.UiRoot.Instance.Context.Player!=null,"LAN crew",90);
-                await Play(report,folder,peers);
+                if(Array.IndexOf(args,"-raid-defense-combat")>=0)await PlayCombat(report,folder,peers);
+                else await Play(report,folder,peers);
                 report.status="passed";
             }
             catch(Exception ex){report.status="failed";report.error=ex.ToString();}
@@ -97,7 +98,8 @@ namespace Raid
                 float angle=(i*15+45)*Mathf.Deg2Rad;
                 var at=center+new Vector3(range*Mathf.Sin(angle),-2.15f,range*Mathf.Cos(angle));
                 if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.55f))continue;
-                if(!MarineSpawn.ClearLeg(at+Vector3.up*.6f,look,.12f,float.PositiveInfinity))continue;
+                var eye=at+Vector3.up*.6f;
+                if(!MarineSpawn.ClearLeg(eye,look,.12f,Mathf.Max(0,Vector3.Distance(eye,look)-.85f)))continue;
                 diver.Teleport(at);
                 diver.LookAtConsole(look);
                 return;
@@ -107,8 +109,27 @@ namespace Raid
 
         static async Awaitable Shot(string output,DiverMotor host,ThreatDirector director,Vector3 point,string name)
         {
-            WatchField(host,director,point);
-            await Awaitable.WaitForSecondsAsync(.27f);
+            if(name.StartsWith("04-",StringComparison.Ordinal) || name=="05-carrier")
+            {
+                bool placed=false;
+                for(int i=0;i<18;i++)
+                {
+                    float angle=i*Mathf.PI/9;
+                    var at=point+new Vector3(Mathf.Sin(angle)*3.5f,-.75f,Mathf.Cos(angle)*3.5f);
+                    var eye=at+Vector3.up*.6f;
+                    if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.5f) ||
+                        !MarineSpawn.ClearLeg(eye,point,.12f,Mathf.Max(.1f,Vector3.Distance(eye,point)-.9f)))continue;
+                    host.Teleport(at);host.LookAtConsole(point);placed=true;break;
+                }
+                if(!placed)WatchField(host,director,point);
+                await Awaitable.WaitForSecondsAsync(.135f);
+            }
+            else
+            {
+                WatchField(host,director,point);
+                await Awaitable.WaitForSecondsAsync(.22f);
+            }
+
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(output,name+".png"));
         }
 
@@ -139,6 +160,9 @@ namespace Raid
             float interval=team.hungerRemaining;
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"encirclement");
             await Shot(folder,host,d,d.DefenseCenter,"02-encirclement");
+            host.LookAtConsole(host.transform.position+(host.transform.position-d.DefenseCenter)*3);
+            await Awaitable.WaitForSecondsAsync(.18f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm.png"));
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
@@ -177,7 +201,12 @@ namespace Raid
                 !d.DefenseFixtureSpawn(DefenseSpecies.Thief,false,4,14f))throw new InvalidOperationException("Could not stage fleeing carriers");
             d.DefenseFixtureSetIntegrity(0);
             report.Check(d.Defense.breached && team.ongoingDefense.lossLimit>0 && team.tank.Count==20,"A breach opens theft without instantly removing stock.");
-            await Wait(()=>d.DefenseActorCount>0 && team.ongoingDefense?.inTransit.Count>0,"a thief collects the original fish",13);
+            bool CarryVisible()
+            {
+                for(int i=0;i<d.DefenseActorCount;i++)if(d.DefenseActorAt(i).stolenId>0)return true;
+                return false;
+            }
+            await Wait(CarryVisible,"a thief collects the original fish and the snapshot shows it",13);
             for(int i=0;i<d.DefenseActorCount;i++)
             {
                 var actor=d.DefenseActorAt(i);
@@ -195,6 +224,66 @@ namespace Raid
                 "The manifest loses only escaped catches and preserves recovered ones.");
             report.Check(team.ongoingDefense==null && d.Defense.Ratio==1,"Field and ordinary loop recover after theft.");
             await Shot(folder,host,d,d.DefenseCenter,"06-restored");
+            report.phase="done";
+        }
+
+        static async Awaitable PlayCombat(Report report,string folder,int peers)
+        {
+            var world=RaidWorld.Instance;var d=world.threats;
+            var host=UI.UiRoot.Instance.Context.Player;
+            var tool=host.GetComponent<HarpoonTool>();
+            report.peers=peers;
+            if(!d.DefenseFixtureBegin(.7f,6000))throw new InvalidOperationException("Combat fixture could not start.");
+            d.DefenseFixtureForceAssault();d.DefenseFixturePauseGroups();
+            ReportPhase("latch and harpoon",report,folder);
+            if(!d.DefenseFixtureSpawn(DefenseSpecies.Remora,false,1,8))throw new InvalidOperationException("No remora entry");
+            await Wait(()=>d.DefenseActorCount==1 && d.DefenseActorAt(0).pose==AttackerPose.Latch,"remora attached",14);
+            var remora=d.DefenseActorAt(0);
+            var outward=(remora.position-d.DefenseCenter).normalized;
+            host.Teleport(remora.position+outward*2.8f-Vector3.up*.48f);
+            host.LookAtConsole(remora.position);
+            await Awaitable.WaitForSecondsAsync(.16f);
+            tool.DefenseFixtureFire();
+            await Wait(()=>tool.HasDefenseLine,"server validated the shot into the remora",3);
+            report.Check(d.DefenseActorCount==1,"A harpoon strike does not remove an attached remora on impact.");
+            float deadline=Time.realtimeSinceStartup+13;
+            while(tool.HasDefenseLine && Time.realtimeSinceStartup<deadline)
+            {
+                tool.DefenseFixtureWind(true);
+                await Awaitable.NextFrameAsync();
+            }
+            tool.DefenseFixtureWind(false);
+            report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
+                "Reeling tears the attached remora, releases the line and creates one catch and local ink.");
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));
+
+            ReportPhase("captive rescue",report,folder);
+            DiverMotor guest=null;
+            foreach(var diver in DiverMotor.ServerDivers)if(diver && diver!=host){guest=diver;break;}
+            if(!guest)throw new InvalidOperationException("An independent diver is required");
+            tool.DefenseFixtureSelect(0);
+            await Wait(()=>tool.ActiveSlot==0,"equipped harpoon");
+            if(!d.DefenseFixtureSpawn(DefenseSpecies.Abductor,false,3,8))throw new InvalidOperationException("No abductor entry");
+            var actor=d.DefenseActorAt(d.DefenseActorCount-1);
+            outward=(actor.position-d.DefenseCenter).normalized;
+            var side=Vector3.Cross(Vector3.up,outward).normalized;
+            guest.Teleport(actor.position+side*.9f-Vector3.up*.45f);
+            host.Teleport(guest.transform.position+side*3.2f);
+            if(!d.DefenseFixtureCapture(guest))throw new InvalidOperationException("Could not secure a victim in open water");
+            host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
+            tool.DefenseFixtureFire();
+            await Wait(()=>tool.OwnsFriendTether,"existing friendly line attaches to captive",4);
+            report.Check(guest.IsTrapped,"An attached friendly line releases the captive only under load.");
+            deadline=Time.realtimeSinceStartup+4;
+            while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)
+            {
+                tool.DefenseFixtureWind(true);
+                await Awaitable.NextFrameAsync();
+            }
+            tool.DefenseFixtureWind(false);
+            report.Check(!guest.IsTrapped,"Winding a friendly line releases the other diver.");
+            d.DefenseFixtureEnd();
+            await Wait(()=>!d.DefenseActive && !guest.IsTrapped,"defense and all transport cleanup",13);
             report.phase="done";
         }
 

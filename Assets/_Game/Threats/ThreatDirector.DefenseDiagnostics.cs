@@ -29,6 +29,19 @@ namespace Raid
             return false;
         }
 
+        internal void DefenseFixturePauseGroups()
+        {
+            if(IsServerInitialized && DefenseActive)nextGroupAt=DefenseClock+90;
+        }
+
+        internal bool DefenseFixtureCapture(DiverMotor victim)
+        {
+            if(!IsServerInitialized || !DefenseActive)return false;
+            foreach(var a in attackers)
+                if(a.data.kind==DefenseSpecies.Abductor && a.data.victim<0 && a.hooks.Count==0 && TryCapture(a,victim))return true;
+            return false;
+        }
+
         internal void DefenseFixtureSetIntegrity(float integrity)
         {
             if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault)return;

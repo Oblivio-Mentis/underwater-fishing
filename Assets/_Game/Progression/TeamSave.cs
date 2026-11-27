@@ -66,6 +66,9 @@ namespace Raid
                     progress.schemaVersion=TeamProgress.CurrentSchema;
                 }
                 if(progress.schemaVersion==7)progress.schemaVersion=TeamProgress.CurrentSchema;
+                // Unity's inline serialization materializes an absent class as an empty object.
+                if(progress.ongoingDefense is {seed:0,budget:0,appetite:0,spent:0,lost:0} idle &&
+                    (idle.inTransit==null || idle.inTransit.Count==0))progress.ongoingDefense=null;
                 progress.Validate();
                 return progress;
             }

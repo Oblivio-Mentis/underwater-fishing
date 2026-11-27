@@ -143,12 +143,12 @@ namespace Raid
                 float concealment=raid?raid.DefenseConcealment:0;
                 float ink=raid && camera?raid.DefenseInkAt(camera.transform.position):0;
                 float murk=Mathf.Clamp01(concealment+ink*.55f);
-                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density+wetBlend*(concealment*.065f+ink*.16f),wetBlend);
+                RenderSettings.fogDensity=Mathf.Lerp(initialDensity,density+wetBlend*(concealment*.043f+ink*.16f),wetBlend);
                 var waterTint=Color.Lerp(Color.Lerp(state.tintTop,state.tintBottom,lowerWater),new Color(.006f,.013f,.021f),murk);
                 Shader.SetGlobalFloat("_RaidConcealment",murk*wetBlend);
                 // Custom reef and hull transmission follows the camera through the same layers.
                 var clarity=Vector4.Lerp(state.clarityTop,state.clarityBottom,lowerWater);
-                clarity.x=Mathf.Lerp(clarity.x,Mathf.Max(.018f,clarity.x),murk);
+                clarity.x=Mathf.Lerp(clarity.x,Mathf.Max(.013f,clarity.x),murk);
                 Shader.SetGlobalVector(ReefClarityShader,clarity);
                 // RenderSettings accepts a display-space colour. Our scattering shaders use scene radiance.
                 var fogTint=!abyss && QualitySettings.activeColorSpace==ColorSpace.Linear?waterTint.gamma:waterTint;

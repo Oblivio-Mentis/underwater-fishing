@@ -24,6 +24,12 @@ namespace Raid
             if(HasDefenseLine)ThreatDirector.Instance?.ReleaseDefenseHook(this);
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void DefenseFixtureSelect(int slot) => SelectSlotServer(slot);
+        internal void DefenseFixtureFire() => FireServer();
+        internal void DefenseFixtureWind(bool held) => SetControlsServer(held,false);
+#endif
+
         internal bool StoreDefenseCatch(FishActor template,long id,DefenseSpecies kind)
         {
             if(!IsServerInitialized || !template || HandsFull)return false;

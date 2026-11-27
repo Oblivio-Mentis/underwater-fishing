@@ -16,7 +16,7 @@ def read_report(path):
         return {}
 
 
-def run(executable, destination, crew):
+def run(executable, destination, crew, combat=False):
     executable = executable.resolve(strict=True)
     output = destination.resolve() / ("defense-" + uuid.uuid4().hex[:8])
     output.mkdir(parents=True)
@@ -39,8 +39,9 @@ def run(executable, destination, crew):
         processes.append(subprocess.Popen(args, cwd=executable.parent, startupinfo=startup))
 
     try:
+        stage = ("-raid-defense-combat",) if combat else ()
         launch("host", "host", "-raid-save", str(output / "campaign.json"),
-               "-raid-defense-trial", str(output), str(crew))
+               "-raid-defense-trial", str(output), str(crew), *stage)
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             log = output / "host.log"
@@ -72,13 +73,15 @@ def run(executable, destination, crew):
                 raise RuntimeError(report["error"])
             if report.get("status") == "passed":
                 for path in guests:
+                    if combat:
+                        continue
                     state = read_report(path)
                     if state.get("phases", 0) & 62 != 62 or state.get("hits", 0) == 0 or state.get("species") != 31:
                         raise RuntimeError(f"Client did not observe the phases, live hits and all species: {path.name}: {state}")
                     if state.get("losses", 0) != report["losses"]:
                         raise RuntimeError(f"Client losses differ: {path.name}: {state}")
                 screenshots = sorted(output.glob("*.png"))
-                if len(screenshots) < 10:
+                if len(screenshots) < (1 if combat else 10):
                     raise RuntimeError(f"Expected 10 game frames, got {len(screenshots)}")
                 print(f"{crew} peers, {len(report['checks'])} checks, {len(screenshots)} game captures", flush=True)
                 return
@@ -99,5 +102,6 @@ if __name__ == "__main__":
     parser.add_argument("player", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("--crew", type=int, choices=(2, 3, 4), default=2)
+    parser.add_argument('--combat', action='store_true')
     options = parser.parse_args()
-    run(options.player, options.output, options.crew)
+    run(options.player, options.output, options.crew, options.combat)

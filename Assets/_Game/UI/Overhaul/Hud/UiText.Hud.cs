@@ -43,7 +43,7 @@ namespace Raid.UI
         public const string HudPressureDangerHint="Вернитесь к безопасной глубине. Скорость снижена";
         public const string HudPressureWarning="ДАВЛЕНИЕ РАСТЁТ";
         public const string HudPressureWarningHint="Двигайтесь к безопасной глубине";
-        public const string HudWave="НАПАДЕНИЕ НА РЕЗЕРВУАР";
+        public const string HudWave="АТАКА НА ЗАЩИТНОЕ ПОЛЕ";
         public const string HudWaveHint="Защитите необработанный улов гарпунами";
         public const string HudWaveEnded="Оборона завершена. Начался новый срок кормления";
         public static string HudCrewCount(int value) => HudCrew+"  "+value+" / 5";
