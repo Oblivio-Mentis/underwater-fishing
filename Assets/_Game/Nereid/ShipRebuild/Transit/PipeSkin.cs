@@ -7,6 +7,7 @@ namespace Raid.Nereid
     {
         readonly List<Vector3> vertices = new();
         readonly List<Vector2> uv = new();
+        readonly List<(Vector3 centre,Vector3 lateral,Vector3 up)> frames = new();
         readonly List<Material> materials = new();
         readonly List<List<int>> faces = new();
         readonly Material frame, enamel;
@@ -34,18 +35,25 @@ namespace Raid.Nereid
                 if (forward.sqrMagnitude < .5f) forward = Vector3.forward;
                 side = Vector3.ProjectOnPlane(side,forward).normalized;
                 if (side.sqrMagnitude < .5f) side = Basis(forward);
-                int row=Ring(p,side,Vector3.Cross(forward,side),radius,travel);
+                var up=Vector3.Cross(forward,side);
+                if(frames.Count==i)frames.Add((p,side,up));
+                int row=Ring(p,side,up,radius,travel);
                 if (previous>=0) Join(previous,row,surface);
                 previous=row;
                 if (j < steps) travel+=Vector3.Distance(p,points[i+1]);
             }
 
             Vector3 direction=(points[start+1]-points[start]).normalized;
-            if(direction.sqrMagnitude>.1f) Collar(points[start],direction,radius,frame);
+            if(direction.sqrMagnitude>.1f)
+            {
+                if(start==0) SocketCollar(points[start],direction);
+                else if(start>steps || Vector3.Distance(points[start],points[0])>radius*.94f)
+                    Collar(points[start],direction,radius,frame);
+            }
             if (start+steps==points.Count-1)
             {
                 direction=(points[^1]-points[^2]).normalized;
-                if(direction.sqrMagnitude>.1f) Collar(points[^1],direction,radius,frame);
+                if(direction.sqrMagnitude>.1f) SocketCollar(points[^1],-direction);
             }
             int mid=start+steps/2;
             direction=(points[mid+1]-points[mid-1]).normalized;
@@ -73,6 +81,72 @@ namespace Raid.Nereid
                     var spoke=Quaternion.AngleAxis(i*120,outward)*arm*radius*.48f;
                     Rod(hub,hub+spoke,radius*.045f,enamel);
                 }
+            }
+        }
+
+        // A shallow compression fitting with a rebate for the glass. The centre stays open.
+        void SocketCollar(Vector3 at,Vector3 intoPipe)
+        {
+            var tangent=Basis(intoPipe);
+            var bitangent=Vector3.Cross(intoPipe,tangent);
+            float r=radius;
+            var face=at-intoPipe*(r*.12f);
+            var seat=at+intoPipe*(r*.11f);
+            var shoulder=at+intoPipe*(r*.34f);
+            var taper=at+intoPipe*(r*.55f);
+            int inner=Ring(face,tangent,bitangent,r*.87f,0);
+            int edge=Ring(face,tangent,bitangent,r*1.22f,.2f);
+            int back=Ring(seat,tangent,bitangent,r*1.22f,.3f);
+            int seal=Ring(shoulder,tangent,bitangent,r*1.10f,.45f);
+            int end=Ring(taper,tangent,bitangent,r*.985f,.6f);
+            Join(inner,edge,frame);Join(edge,back,frame);Join(back,seal,enamel);Join(seal,end,frame);
+            for(int i=0;i<8;i++)
+            {
+                float angle=(i+.5f)*Mathf.PI*.25f;
+                var radial=tangent*Mathf.Cos(angle)+bitangent*Mathf.Sin(angle);
+                Rod(face+radial*r*1.095f-intoPipe*r*.045f,face+radial*r*1.095f,r*.052f,frame);
+            }
+        }
+
+        internal void ApplyCollision(Mesh mesh,float wallThickness)
+        {
+            var solids=new List<Vector3>(frames.Count*sides*2);
+            var indices=new List<int>(frames.Count*sides*12);
+            float inside=Mathf.Max(radius*.50f,radius-wallThickness);
+            foreach(var ring in frames)
+                foreach(float r in new[]{radius,inside})
+                    for(int i=0;i<sides;i++)
+                    {
+                        float angle=i*Mathf.PI*2/sides;
+                        solids.Add(ring.centre+r*(ring.lateral*Mathf.Cos(angle)+ring.up*Mathf.Sin(angle)));
+                    }
+
+            for(int ring=1;ring<frames.Count;ring++)
+            {
+                int first=(ring-1)*sides*2,next=ring*sides*2;
+                for(int i=0;i<sides;i++)
+                {
+                    int j=(i+1)%sides;
+                    Quad(first+i,first+j,next+j,next+i);
+                    Quad(first+sides+j,first+sides+i,next+sides+i,next+sides+j);
+                }
+            }
+            if(frames.Count>1)
+                for(int i=0;i<sides;i++)
+                {
+                    int j=(i+1)%sides,last=(frames.Count-1)*sides*2;
+                    Quad(j,i,sides+i,sides+j);
+                    Quad(last+i,last+j,last+sides+j,last+sides+i);
+                }
+
+            mesh.SetVertices(solids);
+            mesh.SetTriangles(indices,0);
+            mesh.RecalculateBounds();
+
+            void Quad(int a,int b,int c,int d)
+            {
+                indices.Add(a);indices.Add(b);indices.Add(c);
+                indices.Add(a);indices.Add(c);indices.Add(d);
             }
         }
 

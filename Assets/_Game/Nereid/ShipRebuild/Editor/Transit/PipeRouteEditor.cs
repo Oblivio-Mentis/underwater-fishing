@@ -45,7 +45,7 @@ namespace Raid.Nereid.Editor
             if(!route){EditorGUILayout.HelpBox("Select an installed line.",MessageType.Info);EditorGUILayout.EndScrollView();return;}
             var data=new SerializedObject(route);
             data.Update();
-            foreach(string field in new[]{"source","destination","radius","smoothing","curveSteps","circumference","sightGlass","metal","enamel","valveFrame","portLeaf","starboardLeaf","valveAt","valveSeconds",
+            foreach(string field in new[]{"source","destination","radius","solidWall","wallThickness","smoothing","curveSteps","circumference","sightGlass","metal","enamel","valveFrame","portLeaf","starboardLeaf","valveAt","valveSeconds",
                 "flowWaterMaterial","waterReceiver","waterFillRadius","spillWidth","spillHeight","spillDuration"})
                 EditorGUILayout.PropertyField(data.FindProperty(field));
             int count=route.knots.Count;
