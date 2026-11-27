@@ -164,7 +164,8 @@ namespace Raid.Nereid
                     wallCollider=gameObject.AddComponent<MeshCollider>();
                     wallCollider.hideFlags=HideFlags.DontSave;
                 }
-                wallMesh??=new Mesh{name="Hollow pressure line wall",hideFlags=HideFlags.DontSave,indexFormat=IndexFormat.UInt32};
+                if(!wallMesh)
+                    wallMesh=new Mesh{name="Hollow pressure line wall",hideFlags=HideFlags.DontSave,indexFormat=IndexFormat.UInt32};
                 wallMesh.Clear();
                 build.ApplyCollision(wallMesh,Mathf.Max(.008f,wallThickness));
                 wallCollider.sharedMesh=wallMesh;
