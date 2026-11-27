@@ -29,6 +29,10 @@ namespace Raid.Nereid
                 optical.SetFloat("_FloodIndex",i);
                 optical.SetFloat("_DefenseBeam",1);
                 volumes[i].SetPropertyBlock(optical);
+                var lamp=searchlights[i];
+                var scale=lamp.transform.lossyScale;
+                float radius=lamp.range*Mathf.Tan(lamp.spotAngle*.5f*Mathf.Deg2Rad);
+                volumes[i].transform.localScale=new Vector3(radius/scale.x,radius/scale.y,lamp.range/scale.z);
             }
         }
 

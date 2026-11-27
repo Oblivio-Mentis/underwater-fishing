@@ -221,8 +221,10 @@ namespace Raid
                 "The alarm and exterior spotlights follow the synchronized approaching school before the first attack.");
             await SwarmFrame(folder,host,d);
             float glassHaze=Shader.GetGlobalFloat("_RaidDryHaze");
-            report.Check(host.IsInside && glassHaze>.32f,
-                $"A dry observation deck camera sees the exterior haze. Inside={host.IsInside}, haze={glassHaze:F2}.");
+            var look=UnderwaterLook.Instance;
+            bool dryCamera=look && look.DiverCamera && !look.EyeSubmerged;
+            report.Check(dryCamera && glassHaze>.32f,
+                $"A dry observation deck camera sees the exterior haze. Dry={dryCamera}, haze={glassHaze:F2}.");
             await Shot(folder,host,d,d.DefenseApproachFocus,"02-encirclement");
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");

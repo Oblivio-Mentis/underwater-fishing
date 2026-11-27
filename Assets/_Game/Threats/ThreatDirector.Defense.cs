@@ -169,8 +169,10 @@ namespace Raid
             var vessel=NereidVessel.Active;
             var center=DefenseCenter;
             Vector3 broadside=vessel.transform.right*((seed&1)==0?1:-1);
-            Vector3 higher=center+Vector3.up*defenseTuning.schoolHeight;
-            float finishDistance=Mathf.Max(10,defenseTuning.arrivalDistance*.72f);
+            Vector3 extent=fieldView?fieldView.transform.lossyScale:Vector3.one;
+            float hullSide=fieldView?fieldView.radii.x*extent.x:10;
+            Vector3 higher=center+Vector3.up*(defenseTuning.schoolHeight*extent.y);
+            float finishDistance=Mathf.Max(hullSide+6,defenseTuning.arrivalDistance);
             var observation=vessel.ObservationRoom();
             Vector3 port=WindowSight(-1),starboard=WindowSight(1);
             var markers=SpawnLayout?.defenseApproaches;
@@ -204,13 +206,14 @@ namespace Raid
                 Vector3 outward=vessel.transform.right*side;
                 var window=observation?observation.Find(side<0?"Port observation window 2":"Starboard observation window 2"):null;
                 var eye=window?window.position:higher;
-                return eye+outward*(7.85f-Vector3.Dot(eye-center,outward));
+                return eye+outward*(hullSide+1.5f-Vector3.Dot(eye-center,outward));
             }
 
             bool Valid(Vector3 far,Vector3 near)
             {
                 Vector3 glass=Vector3.Dot(near-center,vessel.transform.right)<0?port:starboard;
                 return MarineSpawn.InOpenWater(depthTier,near,.9f) && MarineSpawn.InOpenWater(depthTier,far,.9f) &&
+                    !Physics.CheckSphere(glass,.35f,obstacleMask,QueryTriggerInteraction.Ignore) &&
                     DefensePathClear(far,near) && DefensePathClear(glass,near) && DefensePathClear(glass,far);
             }
         }

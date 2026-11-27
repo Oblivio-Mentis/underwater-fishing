@@ -107,7 +107,9 @@ namespace Raid
             if(camera==null || viewed==null) return false;
             var chamber=Nereid.NereidAirlock.Active;
             var eye=camera.transform.position;
-            return chamber!=null && chamber.Contains(eye)?chamber.IsSubmerged(eye):!viewed.IsInside;
+            if(chamber!=null && chamber.Contains(eye))return chamber.IsSubmerged(eye);
+            var vessel=Nereid.NereidVessel.Active;
+            return !viewed.IsInside && (!vessel || !vessel.ContainsSealed(eye));
         }
 
         bool InAirlock()
