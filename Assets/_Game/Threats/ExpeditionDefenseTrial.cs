@@ -331,12 +331,20 @@ namespace Raid
             if(!guest)throw new InvalidOperationException("An independent diver is required");
             tool.DefenseFixtureSelect(0);
             await Wait(()=>tool.ActiveSlot==0,"equipped harpoon");
-            if(!d.DefenseFixtureSpawn(DefenseSpecies.Abductor,false,3,8))throw new InvalidOperationException("No abductor entry");
+            if(!d.DefenseFixtureSpawn(DefenseSpecies.Abductor,false,3,12))throw new InvalidOperationException("No abductor entry");
             var actor=d.DefenseActorAt(d.DefenseActorCount-1);
             outward=(actor.position-d.DefenseCenter).normalized;
             var side=Vector3.Cross(Vector3.up,outward).normalized;
-            guest.Teleport(actor.position+side*.9f-Vector3.up*.45f);
-            host.Teleport(guest.transform.position+side*3.2f);
+            Vector3 victimStart=actor.position+side*.9f-Vector3.up*.60f;
+            Vector3 gunnerStart=victimStart+side*3.2f+outward*.55f;
+            if(!MarineSpawn.InOpenWater(world.CurrentDepth,gunnerStart+Vector3.up*.55f,.60f))
+            {
+                victimStart-=side*1.8f;
+                gunnerStart=victimStart-side*3.2f+outward*.55f;
+            }
+            guest.Teleport(victimStart);
+            host.Teleport(gunnerStart);
+            Physics.SyncTransforms();
             if(!d.DefenseFixtureCapture(guest))throw new InvalidOperationException("Could not secure a victim in open water");
             host.LookAtConsole(guest.transform.position+Vector3.up*.55f);
             deadline=Time.realtimeSinceStartup+3.5f;
@@ -358,7 +366,7 @@ namespace Raid
             }
             report.Check(tool.OwnsFriendTether,"Existing friendly line attaches to captive. First contact: "+sightline);
 
-            report.Check(guest.IsTrapped,"An attached friendly line releases the captive only under load.");
+            report.Check(guest.IsTrapped,"The diver remains captive before the teammate reels. "+sightline);
             deadline=Time.realtimeSinceStartup+4;
             while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)
             {

@@ -85,11 +85,12 @@ namespace Raid
             return choice;
         }
 
-        bool ClearDefenseLine(Vector3 from,Vector3 to)
+        bool ClearDefenseLine(Vector3 from,Vector3 to,DiverMotor endpoint=null)
         {
             var leg=to-from;
-            return leg.sqrMagnitude<.01f || !Physics.Raycast(from,leg.normalized,Mathf.Max(0,leg.magnitude-.42f),
-                obstacleMask,QueryTriggerInteraction.Ignore);
+            if(leg.sqrMagnitude<.01f || !Physics.Raycast(from,leg.normalized,out var hit,Mathf.Max(0,leg.magnitude-.42f),
+                obstacleMask,QueryTriggerInteraction.Ignore))return true;
+            return endpoint && hit.collider.GetComponentInParent<DiverMotor>()==endpoint;
         }
 
         bool DefensePathClear(Vector3 from,Vector3 to)
@@ -262,7 +263,7 @@ namespace Raid
             if(!close && now<a.until)return;
             if(a.target)
             {
-                if(EligibleVictim(a.target) && (a.target.transform.position+Vector3.up*.55f-a.data.position).sqrMagnitude<2.8f && ClearDefenseLine(a.data.position,a.target.transform.position))
+                if(EligibleVictim(a.target) && (a.target.transform.position+Vector3.up*.55f-a.data.position).sqrMagnitude<2.8f && ClearDefenseLine(a.data.position,a.target.transform.position+Vector3.up*.55f,a.target))
                 {
                     if(a.data.kind==DefenseSpecies.Abductor && TryCapture(a,a.target))return;
                     a.target.DamageFromCreature(a.card.diverDamage*a.data.scale);
@@ -313,7 +314,7 @@ namespace Raid
             }
             var at=a.data.position+a.data.forward*.55f-Vector3.up*.77f;
             var delta=at-victim.transform.position;
-            if(delta.sqrMagnitude>12 || !ClearDefenseLine(a.data.position,victim.transform.position))
+            if(delta.sqrMagnitude>12 || !ClearDefenseLine(a.data.position,victim.transform.position+Vector3.up*.55f,victim))
             {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,.8f);return;}
             victim.ApplyTetherMotion(Vector3.ClampMagnitude(delta,dt*(defenseTuning.captiveCarrySpeed+3f)));
             victim.DamageFromCreature(a.card.diverDamage*.085f*dt);
