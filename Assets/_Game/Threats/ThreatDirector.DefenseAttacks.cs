@@ -215,6 +215,15 @@ namespace Raid
                 !fieldView.ContainsWorld(tail-side*.40f);
         }
 
+        bool OutsideAttackEntry(DefenseSpecies kind,Vector3 position,Vector3 direction,float scale)
+        {
+            if(direction.sqrMagnitude<.0001f)return false;
+            var ship=NereidVessel.Active;
+            float hullScale=scale*(kind==DefenseSpecies.Abductor?1.3f:1);
+            return (!ship || ship.OutsideDefenseHull(position,direction,hullScale)) &&
+                FitsOutsideShield(new AttackerSnapshot{kind=kind,scale=scale},position,Quaternion.LookRotation(direction));
+        }
+
         static float SwimmingAcceleration(DefenseSpecies kind)=>kind switch {
             DefenseSpecies.Rammer=>7.8f,
             DefenseSpecies.Remora=>8.9f,

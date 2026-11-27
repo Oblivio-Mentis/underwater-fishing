@@ -17,12 +17,14 @@ namespace Raid
             var card=defenseTuning.For(species);
             if(card==null)return false;
             var center=DefenseCenter;
-            var vessel=Nereid.NereidVessel.Active;
+            float shape=Mathf.Max(defenseTuning.small,defenseTuning.large)*card.silhouetteScale;
+            for(int shell=0;shell<4;shell++)
             for(int i=0;i<24;i++)
             {
                 float angle=(i*15+group*38)*Mathf.Deg2Rad;
-                var at=center+new Vector3(Mathf.Sin(angle)*distance,-1.8f,Mathf.Cos(angle)*distance);
-                if(vessel && !vessel.OutsideDefenseHull(at,(center-at).normalized,large?1.46f:1.2f))continue;
+                float radius=distance+shell*2.25f;
+                var at=center+new Vector3(Mathf.Sin(angle)*radius,-1.8f,Mathf.Cos(angle)*radius);
+                if(!OutsideAttackEntry(species,at,(center-at).normalized,shape))continue;
                 if(!MarineSpawn.InOpenWater(depthTier,at,.4f) || !DefensePathClear(at,FieldContact(at)))continue;
                 SpawnAttacker(card,at,-1,group,large);
                 PublishAttackers();
@@ -121,6 +123,7 @@ namespace Raid
                 Vector3 fit=ContactPosition(a.data,contact,out var normal);
                 string state=$"{a.data.pose} position {a.data.position:F2} velocity {a.data.velocity:F2} " +
                     $"goal {a.goal:F2} waypoint {a.waypoint:F2} prospective {fit:F2} " +
+                    $"wet {FitsOutsideShield(a.data,a.data.position,Quaternion.LookRotation(a.data.forward))} " +
                     $"fit {FitsOutsideShield(a.data,fit,Quaternion.LookRotation(-normal))} " +
                     $"hull {Nereid.NereidVessel.Active.OutsideDefenseHull(fit,-normal,a.data.scale)}";
                 if(victim)state+=$" target {a.target?.OwnerId} eligible {EligibleVictim(victim)} " +

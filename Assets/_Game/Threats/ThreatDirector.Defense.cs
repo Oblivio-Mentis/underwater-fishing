@@ -375,7 +375,7 @@ namespace Raid
                         : (lane+i)%count;
                     if((Defense.promoted&(1UL<<slot))!=0 || slot%DefenseAtmosphereView.SpeciesCount!=(int)species)continue;
                     var pose=SampleDefenseSlot(slot);
-                    if(!NereidVessel.Active.OutsideDefenseHull(pose.Position,pose.Forward,pose.Scale) ||
+                    if(!OutsideAttackEntry(species,pose.Position,pose.Forward,pose.Scale) ||
                         !MarineSpawn.InOpenWater(depthTier,pose.Position,.70f) ||
                         !FindPath(pose.Position,FieldContact(pose.Position),out _))continue;
                     point=pose.Position;return true;
@@ -388,6 +388,7 @@ namespace Raid
                 {
                     var marker=authored[(i+lane)%authored.Length];
                     if(marker && Vector3.Distance(marker.position,center)>=7 && MarineSpawn.InOpenWater(depthTier,marker.position,.4f) &&
+                        OutsideAttackEntry(species,marker.position,(center-marker.position).normalized,1.38f) &&
                         !CrewSeesEscape(marker.position,DefenseAtmosphereView.Stock.darkDrawingDistance) &&
                         ReefHabitats.CanArrive(marker.position,7,12) && FindPath(marker.position,FieldContact(marker.position),out _))
                     {point=marker.position;slot=-1;return true;}
@@ -400,6 +401,7 @@ namespace Raid
                 var direction=Quaternion.AngleAxis(angle,Vector3.up)*Vector3.forward;
                 var candidate=center+direction*(27+attempt%3*9)+Vector3.up*(2+attempt%4*1.7f);
                 if(!MarineSpawn.InOpenWater(depthTier,candidate,.7f) ||
+                    !OutsideAttackEntry(species,candidate,(center-candidate).normalized,1.38f) ||
                     CrewSeesEscape(candidate,DefenseAtmosphereView.Stock.darkDrawingDistance) ||
                     !FindPath(candidate,FieldContact(candidate),out _))continue;
                 point=candidate;slot=-1;return true;
