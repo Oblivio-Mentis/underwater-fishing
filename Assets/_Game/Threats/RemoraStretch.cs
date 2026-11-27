@@ -27,9 +27,11 @@ namespace Raid
             float along=Vector3.Dot(fromJaw,direction);
             float aft=-along*inverseLength;
             float weight=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.05f,.97f,aft));
-            float load=Mathf.Clamp01(displacement.magnitude*inverseLength);
-            float taper=load*weight*(.61f-.26f*weight);
-            return world+displacement*weight-(fromJaw-direction*along)*taper;
+            float travel=displacement.magnitude;
+            float load=Mathf.Clamp01(travel*inverseLength);
+            float taper=load*weight*(.80f-.31f*weight);
+            Vector3 draw=displacement-direction*(travel*.24f*weight);
+            return world+draw*weight-(fromJaw-direction*along)*taper;
         }
     }
 }

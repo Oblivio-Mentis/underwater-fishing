@@ -68,6 +68,7 @@ namespace Raid
             }
             if(best<3)throw new InvalidOperationException("Film needs a clear exterior view of the attack lane");
             host.Teleport(exterior);
+            await Awaitable.WaitForSecondsAsync(.44f);
             await Clip(folder,"02-outside",9,host,()=>Vector3.Lerp(arrival,d.DefenseApproachFocus,.26f));
 
             ReportPhase("film shield contact",report,folder);
