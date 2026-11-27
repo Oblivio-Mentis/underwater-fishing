@@ -134,7 +134,7 @@ namespace Raid
                     a.nextRoute=0;
                 }
                 var candidate=a.data.position+motion;
-                if(!mayCrossShield && ShieldContains(candidate))candidate=FieldContact(candidate);
+                if(!mayCrossShield && ShieldContains(candidate))candidate=FieldContact(candidate,.06f);
                 a.data.position=candidate;
                 a.data.forward=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
                 a.collider.transform.position=candidate;
@@ -222,7 +222,7 @@ namespace Raid
                         return;
                     }
                 }
-                Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:contact+outwards*.54f;
+                Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:FieldContact(contact,.70f*a.data.scale);
                 float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:1.65f;
                 if((destination-a.data.position).sqrMagnitude>trigger*trigger)
                 {Steer(a,destination,a.card.speed,dt);return;}

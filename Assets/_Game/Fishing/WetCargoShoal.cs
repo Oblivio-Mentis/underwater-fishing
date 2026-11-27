@@ -354,11 +354,19 @@ namespace Raid
         Vector3 TankPoint(Swimmer fish,float time)
         {
             float a=time*(fish.Speed*.49f)+fish.Phase;
+            if(containment)
+            {
+                float ring=.28f+.51f*fish.Ring;
+                float depth=Mathf.Lerp(-.10f,-containment.DepthBelowCenter*.80f,fish.Depth);
+                var point=reservoir.TransformPoint(new Vector3(Mathf.Cos(a)*containment.radii.x*ring,
+                    depth+Mathf.Sin(a*1.7f)*.22f,Mathf.Sin(a)*containment.radii.z*ring));
+                if(containment.ContainsWorld(point))return point;
+                return Vector3.Lerp(reservoir.position,containment.ContactWorld(point),.85f);
+            }
             var rail=vessel.authoredRail;
             if(rail && rail.aquarium)
             {
                 var radii=rail.aquariumSwimRadii;
-                if(containment)radii=Vector3.Min(radii,Vector3.Max(containment.radii,Vector3.one*.05f)*.81f);
                 float ring=.45f+.55f*fish.Ring;
                 return reservoir.TransformPoint(new Vector3(Mathf.Cos(a)*radii.x*ring,
                     ((fish.Depth-.5f)*1.6f+Mathf.Sin(a*1.7f)*.16f)*radii.y, Mathf.Sin(a)*radii.z*ring));

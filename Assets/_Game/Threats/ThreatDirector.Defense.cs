@@ -331,12 +331,14 @@ namespace Raid
         bool ShieldContains(Vector3 point)
         {
             if(!NereidVessel.Active || Defense.breached && Defense.phase!=DefensePhase.Recovery)return false;
+            if(fieldView)return fieldView.ContainsWorld(point);
             Vector3 local=fieldAnchor?fieldAnchor.InverseTransformPoint(point):point-DefenseCenter;
             return new Vector3(local.x/fieldRadii.x,local.y/fieldRadii.y,local.z/fieldRadii.z).sqrMagnitude<1;
         }
 
-        Vector3 FieldContact(Vector3 from)
+        Vector3 FieldContact(Vector3 from,float outwardOffset=0)
         {
+            if(fieldView)return fieldView.ContactWorld(from,outwardOffset);
             Vector3 center=DefenseCenter;
             Quaternion rotation=fieldAnchor?fieldAnchor.rotation:Quaternion.identity;
             var local=fieldAnchor?fieldAnchor.InverseTransformPoint(from):from-center;
@@ -344,7 +346,8 @@ namespace Raid
             local.y=Mathf.Min(local.y,-.18f);
             var normalized=new Vector3(local.x/fieldRadii.x,local.y/fieldRadii.y,local.z/fieldRadii.z);
             var surface=local/Mathf.Max(.001f,normalized.magnitude);
-            return fieldAnchor?fieldAnchor.TransformPoint(surface):center+rotation*surface;
+            Vector3 contact=fieldAnchor?fieldAnchor.TransformPoint(surface):center+rotation*surface;
+            return contact+(contact-center).normalized*outwardOffset;
         }
 
         void HitField(float amount,Vector3 impact)
