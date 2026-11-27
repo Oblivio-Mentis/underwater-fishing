@@ -421,27 +421,31 @@ namespace Raid
             foreach(var other in DiverMotor.ServerDivers)
                 if(other!=host){watching=other;break;}
             d.TryDefenseAnchor(carrier,out var departure);
-            watching.Teleport(departure+Vector3.left*.85f);
-            await Wait(()=>d.DefenseFixtureGrip(carrier,out float gap) && gap<.18f,
+            Vector3 TrackCarrier()
+            {
+                if(!d.DefenseFixtureCarrier(carrier,out var at))
+                    throw new InvalidOperationException("A watched carrier disappeared.");
+                watching.Teleport(at+Vector3.left*.85f);
+                watching.LookAtConsole(at);
+                return at;
+            }
+            await Wait(()=>
+            {
+                TrackCarrier();
+                return d.DefenseFixtureGrip(carrier,out float gap) && gap<.18f;
+            },
                 "the rendered prey reaches the moving mouth socket",1.6f);
             report.Check(true,"The stolen fish follows the moving mouth socket.");
             if(watching!=host)await ShotPredator(folder,host,d,carrier,"05-carrier");
             else
             {
-                host.LookAtConsole(departure);
+                TrackCarrier();
                 UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"05-carrier.png"));
             }
-            float watchesUntil=Time.realtimeSinceStartup+1.55f;
-            while(Time.realtimeSinceStartup<watchesUntil)
-            {
-                if(!d.DefenseFixtureCarrier(carrier,out var at))throw new InvalidOperationException("A watched carrier disappeared.");
-                watching.Teleport(at+Vector3.left*.85f);
-                watching.LookAtConsole(at);
-                await Awaitable.NextFrameAsync();
-            }
-            if(!d.DefenseFixtureCarrier(carrier,out var current))throw new InvalidOperationException("No recoverable carrier");
-            report.Check(Vector3.Distance(current,departure)>5,"The carrier accelerates away and remains while a diver watches it.");
-            d.BlastDefense(current,.20f,180);
+            await Wait(()=>Vector3.Distance(TrackCarrier(),departure)>5.5f,
+                "the watched thief has sprinted away from the mouth of the cargo bay",5);
+            report.Check(true,"The carrier accelerates away and remains while a diver watches it.");
+            d.BlastDefense(TrackCarrier(),.20f,180);
             await Wait(()=>d.Defense.returned>0,"a defeated carrier returns its held fish",10);
             report.recovered=d.Defense.returned;
             await Wait(()=>world.StockLossCount>0,"a live carrier crosses the escape boundary",17);

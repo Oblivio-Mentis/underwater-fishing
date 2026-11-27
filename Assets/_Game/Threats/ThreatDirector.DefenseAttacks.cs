@@ -390,10 +390,13 @@ namespace Raid
             if(a.data.shieldContact!=Vector3.zero)return a.data.shieldContact;
             var along=a.data.position-DefenseCenter;
             const float spacing=1.30f;
-            for(int i=0;i<7;i++)
+            for(int i=0;i<11;i++)
             {
-                float angle=i==0?0:(i+1)/2*(i%2==0?-28:28);
-                var at=FieldContact(DefenseCenter+Quaternion.AngleAxis(angle,Vector3.up)*along);
+                int sector=i%7;
+                float angle=(sector+1)/2*(sector%2==0?-25:25);
+                var bearing=Quaternion.AngleAxis(angle,Vector3.up)*along;
+                if(i>=7)bearing.y+=((i%2)*2-1)*2.2f;
+                var at=FieldContact(DefenseCenter+bearing);
                 bool taken=false;
                 foreach(var other in attackers)
                 {
@@ -403,15 +406,21 @@ namespace Raid
                 }
                 if(taken)continue;
                 Vector3 pose=ContactPosition(a.data,at,out var normal);
+                Vector3 entry=LatchEntry(pose,normal);
+                var facing=Quaternion.LookRotation(-normal);
                 var ship=NereidVessel.Active;
-                if((ship && !ship.OutsideDefenseHull(pose,-normal,a.data.scale)) ||
-                    !FitsOutsideShield(a.data,pose,Quaternion.LookRotation(-normal)) ||
-                    !DefensePathClear(pose+normal*.85f,pose))continue;
+                if((ship && (!ship.OutsideDefenseHull(pose,-normal,a.data.scale) ||
+                    !ship.OutsideDefenseHull(entry,-normal,a.data.scale))) ||
+                    !FitsOutsideShield(a.data,pose,facing) || !FitsOutsideShield(a.data,entry,facing) ||
+                    DefenseOccupied(pose,null) || DefenseOccupied(entry,null) ||
+                    !DefensePathClear(entry,pose) || !DefensePathClear(a.data.position,entry))continue;
                 if(a.data.pose==AttackerPose.Approach)a.data.shieldContact=at;
                 return at;
             }
             return FieldContact(a.data.position);
         }
+
+        static Vector3 LatchEntry(Vector3 pose,Vector3 normal) => pose+normal*1.52f;
 
         void PrepareAttackStroke(DefenseAttacker a,Vector3 look,float dt,Vector3 contactFacing=default)
         {
@@ -467,9 +476,11 @@ namespace Raid
                     return;
                 }
                 float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:a.target?3.1f:1.65f;
-                if((destination-a.data.position).sqrMagnitude>trigger*trigger)
+                bool settingLatch=a.data.kind==DefenseSpecies.Remora && !a.target && a.data.shieldContact!=Vector3.zero;
+                Vector3 approach=settingLatch?LatchEntry(destination,approachNormal):destination;
+                float entryRadius=settingLatch?.48f:trigger;
+                if((approach-a.data.position).sqrMagnitude>entryRadius*entryRadius)
                 {
-                    Vector3 approach=destination;
                     if(a.target && a.data.kind==DefenseSpecies.Stalker)
                     {
                         var side=Vector3.Cross(Vector3.up,(destination-a.data.position).normalized);
