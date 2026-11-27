@@ -102,8 +102,9 @@ namespace Raid
                 float jawLoad=a.attached?1.27f:1;
                 bool taut=hook.line.Loaded(distance,tool.tuning.slackAllowance);
                 bool winding=tool.Reeling && clear && taut;
+                if(!winding)hook.line.Slip(distance);
                 hook.tension=Mathf.Clamp01(hook.tension+(winding
-                    ? (.057f+surge*.29f)*jawLoad*a.data.scale*dt/(cable*teamwork)
+                    ? (.065f+surge*.34f)*jawLoad*a.data.scale*dt/(cable*teamwork)
                     : -tool.tuning.tensionRelease*dt));
                 if(hook.tension>=1 && tool.TryStabilizeDeepLine())hook.tension=.58f;
                 if(hook.tension>=1)
@@ -111,7 +112,7 @@ namespace Raid
                 tool.UpdateFishingLine(hook.line.PaidOut,hook.tension);
                 if(!winding)continue;
                 float reel=Mathf.Clamp(tool.ReelMultiplier,.5f,2.2f);
-                hook.line.Wind(distance,tool.tuning.slackAllowance,tool.tuning.reelSpeed*reel*teamwork,dt);
+                hook.line.Wind(distance,tool.tuning.slackAllowance,tool.tuning.reelSpeed*1.58f*reel*teamwork,dt);
                 if(surge>.1f && a.data.kind is DefenseSpecies.Rammer or DefenseSpecies.Abductor)
                 {
                     float damp=Mathf.Clamp(world.SkillFactor(tool.Motor,SkillLine.Damper),0,.65f);
@@ -130,7 +131,18 @@ namespace Raid
             }
             a.data.pose=AttackerPose.Fight;
             a.data.effort=surge;
-            if(!strongest)return true;
+            if(!strongest)
+            {
+                if(!a.attached && a.data.victim<0)
+                {
+                    var anchor=a.hooks[0].tool.FishingAnchor;
+                    var away=(a.data.position-anchor).normalized;
+                    Vector3 flank=Vector3.Cross(Vector3.up,away);
+                    Steer(a,a.data.position+away*1.2f+flank*(Mathf.Sin(a.life*3.6f)*.72f),
+                        Mathf.Lerp(.9f,3.8f,surge),dt,Defense.breached);
+                }
+                return true;
+            }
             float agreement=Mathf.Clamp01(pull.magnitude/Mathf.Max(.01f,totalWinding));
             float combined=(engaged<=1?totalWinding:Mathf.Min(totalWinding,2.7f))*Mathf.Lerp(.66f,1,agreement);
             if(a.data.victim>=0)
@@ -139,13 +151,15 @@ namespace Raid
                 if(a.rescuePull>=defenseTuning.rescuePullSeconds)ReleaseVictim(a);
                 else return true;
             }
-            float needed=a.card.fightSeconds*Mathf.Lerp(.81f,1.18f,Mathf.InverseLerp(.78f,1.34f,a.data.scale))*(a.attached?1.12f:1);
-            a.progress+=dt*combined*Mathf.Lerp(1,.60f,surge);
+            float needed=a.card.fightSeconds*Mathf.Lerp(.41f,.59f,Mathf.InverseLerp(.78f,1.34f,a.data.scale));
+            a.progress+=dt*combined*Mathf.Lerp(1,.71f,surge);
+            float reach=Mathf.Max(2.45f,strongest.tuning.captureRange);
             if(!a.attached && nearest>1.55f)
             {
                 var hand=strongest.FishingAnchor+Vector3.up*Mathf.Sin(a.life*5)*.19f+strongest.transform.right*Mathf.Sin(a.life*3.8f)*.37f;
                 if(engaged>1 && pull.sqrMagnitude>.04f)hand=Vector3.Lerp(hand,a.data.position+pull.normalized*nearest,.55f);
-                Steer(a,hand,Mathf.Min(strongest.tuning.reelSpeed*combined,4.6f)*(1-surge*.72f),dt);
+                Steer(a,hand,Mathf.Min(strongest.tuning.reelSpeed*combined*1.48f,7.5f)*(1-surge*.48f),dt,
+                    Defense.breached,strongest.Motor);
             }
             else if(a.attached)
             {
@@ -153,10 +167,18 @@ namespace Raid
                     (DefenseCenter-a.data.position).normalized,dt*3,1);
             }
             a.data.effort=Mathf.Max(surge,.22f);
-            if(a.progress<needed || !a.attached && nearest>Mathf.Max(2.45f,strongest.tuning.captureRange))return true;
+            if(a.progress<needed)return true;
+            if(!a.attached && (!FindReadyHook() || nearest>reach))return true;
             if(a.attached)TearRemora(a);
             RemoveAttacker(index,true,false,strongest);
             return true;
+
+            bool FindReadyHook()
+            {
+                foreach(var hook in a.hooks)
+                    if(hook.tool==strongest && hook.line.AtHand(nearest,reach,.48f))return true;
+                return false;
+            }
         }
     }
 }

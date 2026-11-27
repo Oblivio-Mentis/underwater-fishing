@@ -13,6 +13,7 @@ namespace Raid.UI
         readonly Canvas canvas;
         readonly HudWarningEdges edges;
         readonly Image glyph,rule;
+        readonly Image escapeTrack,escapeFill;
         readonly TMP_Text title,detail;
         Signal signal;
         DiverMotor observed;
@@ -34,6 +35,8 @@ namespace Raid.UI
             title=UiKit.Label(card,"Alert Title","",21);title.fontStyle=FontStyles.Bold;
             title.alignment=TextAlignmentOptions.MidlineLeft;title.textWrappingMode=TextWrappingModes.NoWrap;
             detail=UiKit.Label(card,"Alert Detail","",17,UiTheme.Text);detail.alignment=TextAlignmentOptions.MidlineLeft;
+            escapeTrack=UiKit.Panel(card,"Escape track",UiTheme.Edge);
+            escapeFill=UiKit.Panel(escapeTrack.rectTransform,"Escape effort",UiTheme.Cyan);
             card.gameObject.SetActive(false);
         }
         internal void Refresh(UiContext c,float air)
@@ -87,12 +90,22 @@ namespace Raid.UI
             float scale=HudEdgePanel.ReadableScale(canvas);card.localScale=Vector3.one*scale;
             float width=Mathf.Min(350,Mathf.Max(202,safe.rect.width*.39f/scale));
             card.gameObject.SetActive(true);
-            UiKit.Place(card,Vector2.zero,Vector2.zero,new(27,162),new(width,sub?76:44));
+            bool breaking=next==Signal.Trap && p.CanBreakRaidGrip;
+            UiKit.Place(card,Vector2.zero,Vector2.zero,new(27,162),new(width,breaking?87:sub?76:44));
             HudEdgePanel.AtTop(glyph.rectTransform,12,sub?-13:-7,30,30);
             HudEdgePanel.AtTop(title.rectTransform,49,sub?-7:-6,width-59,32);
             HudEdgePanel.AtTop(detail.rectTransform,49,-35,width-58,36);
             glyph.color=rule.color=title.color=tint;glyph.sprite=DiveInstruments.Art(mark);
             UiKit.Set(title,name);detail.gameObject.SetActive(sub);if(sub)UiKit.Set(detail,advice);
+            escapeTrack.gameObject.SetActive(breaking);
+            if(breaking)
+            {
+                float progress=p.TryGetComponent<RescueTool>(out var rescue)?rescue.DisplayProgress:0;
+                HudEdgePanel.AtTop(escapeTrack.rectTransform,49,-73,width-65,5);
+                escapeFill.rectTransform.anchorMin=Vector2.zero;
+                escapeFill.rectTransform.anchorMax=new Vector2(progress,1);
+                escapeFill.rectTransform.offsetMin=escapeFill.rectTransform.offsetMax=Vector2.zero;
+            }
             edges.enabled=next!=Signal.Dead;Animate();
         }
         Signal Choose(UiContext c,float now)

@@ -13,6 +13,8 @@ namespace Raid
             public Quaternion tailRest,tipRest,leftRest,rightRest,jawRest,cargoRotation;
             public Vector3 bodyRest, previousPosition, currentHeading,cargoOrigin;
             public float phase, stroke, turn;
+            public TrailRenderer[] wake;
+            public ParticleSystem thrust;
             public long stolen;
             public AttackerPose lastPose;
         }
@@ -35,6 +37,7 @@ namespace Raid
         MaterialPropertyBlock inkProperties;
         DefenseAtmosphereView atmosphere;
         internal int VisibleDefenseSwarm => atmosphere?atmosphere.VisibleCount:0;
+        internal int DefenseCloudCount => atmosphere?atmosphere.CloudCount:0;
         static readonly int InkDensity=Shader.PropertyToID("_Density");
 
         DefenseFieldView LocateDefenseField()
@@ -71,7 +74,7 @@ namespace Raid
             {
                 float formation=snapshot.phase==DefensePhase.Recovery && snapshot.breached
                     ?Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds)
-                    :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.15f):1;
+                    :snapshot.breached?1-Mathf.SmoothStep(0,1,DefenseAge/1.65f):1;
                 float impactAge=snapshot.impact==0?100:(float)(DefenseClock-snapshot.impactAt);
                 field.Apply(snapshot.Ratio,formation,snapshot.impact,snapshot.impactPoint,Mathf.Max(0,impactAge),snapshot.impactStrength);
                 if(defenseLighting)
@@ -86,7 +89,7 @@ namespace Raid
                             {priority=attacker.group;threat=attacker;}
                         if(threat.id>0)focus=threat.position;
                     }
-                    defenseLighting.Present(DefenseAlarm,focus,DefenseClock);
+                    defenseLighting.Present(DefenseAlarm,focus,DefenseClock,DefenseBlackout);
                 }
             }
             PresentDefenseAtmosphere(snapshot);
@@ -115,13 +118,11 @@ namespace Raid
                     visual.rightRest=visual.right?visual.right.localRotation:Quaternion.identity;
                     visual.jawRest=visual.jaw?visual.jaw.localRotation:Quaternion.identity;
                     visibleAttackers.Add(current.id,visual);
-                    CueAttacker(current,0);
                 }
                 if(visual.lastPose!=current.pose)
                 {
-                    int cue=current.pose switch {AttackerPose.Windup=>0,AttackerPose.Strike=>1,AttackerPose.Latch or AttackerPose.Carry=>2,
-                        AttackerPose.Retreat=>3,_=>-1};
-                    if(cue>=0)CueAttacker(current,cue);
+                    if(current.pose is AttackerPose.Strike or AttackerPose.Latch or AttackerPose.Snatch)
+                        BurstRaider(visual,current);
                     visual.lastPose=current.pose;
                 }
                 UpdateAttackModel(current,visual);
@@ -148,17 +149,7 @@ namespace Raid
             ulong promoted=0;
             foreach(var a in defenseActors)if(a.slot>=0)promoted|=1UL<<a.slot;
             atmosphere.SetPromotedSlots(promoted);
-            atmosphere.SetShieldState(snapshot.Ratio,snapshot.breached && snapshot.phase!=DefensePhase.Recovery);
-            atmosphere.SetImpactSequence(snapshot.impact);
-            var bow=expeditionLayout?expeditionLayout.flameOutlet:null;
-            if(bow)atmosphere.SetWarningOrigin(bow.position);
-            float elapsed=snapshot.impact>0?Mathf.Max(0,(float)(DefenseClock-snapshot.impactAt)):100;
-            atmosphere.Apply(snapshot.seed,(int)snapshot.phase,DefenseAge,snapshot.severity,DefenseCenter,DefenseConcealment,elapsed,snapshot.impactPoint);
-        }
-
-        void CueAttacker(AttackerSnapshot attacker,int cue)
-        {
-            if(atmosphere)atmosphere.PlayCreatureCue((int)attacker.kind,(DefenseAtmosphereView.CreatureCue)cue,attacker.position);
+            atmosphere.Apply(snapshot.seed,(int)snapshot.phase,DefenseAge,DefenseCenter,DefenseConcealment);
         }
 
         void UpdateAttackModel(AttackerSnapshot snapshot,VisibleAttacker view)
@@ -199,7 +190,11 @@ namespace Raid
                 var look=Quaternion.LookRotation(view.currentHeading)*Quaternion.Euler(0,0,-view.turn+finWave*8);
                 root.rotation=Quaternion.Slerp(root.rotation,look,blend);
             }
-            if(view.body)view.body.localScale=Vector3.Scale(view.bodyRest,new Vector3(1-snapshot.stretch*.13f,1-snapshot.stretch*.13f,1+snapshot.stretch*.28f));
+            float poseAge=Mathf.Max(0,(float)(DefenseClock-snapshot.poseAt));
+            float compression=snapshot.pose==AttackerPose.Windup?Mathf.SmoothStep(0,.15f,poseAge/.95f):
+                snapshot.pose==AttackerPose.Strike?-.17f*Mathf.Exp(-poseAge*2.9f):0;
+            if(view.body)view.body.localScale=Vector3.Scale(view.bodyRest,new Vector3(
+                1-snapshot.stretch*.13f+compression*.5f,1-snapshot.stretch*.13f+compression*.5f,1+snapshot.stretch*.28f-compression));
             if(view.tail)view.tail.localRotation=view.tailRest*Quaternion.Euler(4*tipWave,tailWave*31+view.turn*.47f,0);
             if(view.tip)view.tip.localRotation=view.tipRest*Quaternion.Euler(0,tipWave*25-tailWave*9,0);
             if(view.left)view.left.localRotation=view.leftRest*Quaternion.Euler(0,view.turn*.22f,finWave*34);
@@ -210,10 +205,12 @@ namespace Raid
                     (1-Mathf.SmoothStep(0,.75f,Mathf.InverseLerp(.72f,1,bite))),
                 _ when carrying=>Mathf.Lerp(13,7,Mathf.Clamp01(gripAge/.27f))+tipWave*1.8f,
                 AttackerPose.Windup or AttackerPose.Strike=>19+tipWave*9,
+                AttackerPose.Stagger=>21*Mathf.Exp(-poseAge*3.2f),
                 AttackerPose.Carry=>8,
                 _=>tipWave*4
             };
             if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(jawAngle,0,0);
+            PresentRaiderWake(view,snapshot,pace);
 
             if(snapshot.stolenId!=view.stolen)
             {
@@ -362,6 +359,7 @@ namespace Raid
             foreach(var ink in inkViews.Values)RemoveInk(ink);
             inkViews.Clear();
             if(atmosphere){Destroy(atmosphere.gameObject);atmosphere=null;}
+            if(raidWakeMaterial){Destroy(raidWakeMaterial);raidWakeMaterial=null;}
         }
     }
 }

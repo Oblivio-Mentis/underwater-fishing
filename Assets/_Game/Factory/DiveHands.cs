@@ -96,6 +96,11 @@ namespace Raid
                 lastLaunch=RaidWorld.Instance!=null?RaidWorld.Instance.Gosha.BallLaunch:0;
                 stride.Reset();
             }
+            if(actor.RaidStrugglePose(out float brace,out float breakKick))
+            {
+                AnimateRaidGrip(brace,breakKick,dt);
+                return false;
+            }
             if(targetSlot!=equipment.ActiveSlot||targetHeavy!=equipment.HandsFull)
             {
                 targetSlot=equipment.ActiveSlot;targetHeavy=equipment.HandsFull;switchTime=GoshaBallGrip.SwapDuration;
@@ -256,6 +261,27 @@ namespace Raid
                 stride.Moving?Action.Walk:Action.Idle;
             avatar.FinishPose(motion,dt);
             return ranged&&!panelPress;
+        }
+
+        void AnimateRaidGrip(float brace,float kick,float dt)
+        {
+            BallVisible=false;
+            invention.Present(null,Vector3.zero,Quaternion.identity);
+            UpdateFish(null,0);
+            UpdateSalvage(null,Vector3.zero,1);
+            avatar.BeginPose();
+            for(int i=0;i<2;i++)
+            {
+                int side=i==0?-1:1;
+                float strain=Mathf.Sin(Time.time*10.5f+i*1.7f);
+                var wrist=new Vector3(side*(.20f+.065f*kick),-.20f+.071f*brace+.08f*kick+strain*.023f,
+                    .33f+.18f*brace+.22f*kick+strain*.065f*(.38f+.62f*brace));
+                (i==0?avatar.leftSleeve:avatar.rightSleeve).enabled=true;
+                BendArm(arms[i],side,wrist,false,0);
+                arms[i].Wrist.localRotation=Quaternion.Euler(-35-23*kick,side*(21-15*kick),-side*(32+23*kick));
+                avatar.Arm(i).Drive(arms[i].Upper,arms[i].Sleeve,arms[i].Wrist,Quaternion.identity);
+            }
+            avatar.FinishPose(Action.Swim,dt);
         }
 
         void BendArm(Arm arm,int side,Vector3 target,bool support,float carry)

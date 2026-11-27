@@ -16,7 +16,7 @@ def read_report(path):
         return {}
 
 
-def run(executable, destination, crew, combat=False):
+def run(executable, destination, crew, combat=False, solo=False):
     executable = executable.resolve(strict=True)
     output = destination.resolve() / ("defense-" + uuid.uuid4().hex[:8])
     output.mkdir(parents=True)
@@ -39,7 +39,7 @@ def run(executable, destination, crew, combat=False):
         processes.append(subprocess.Popen(args, cwd=executable.parent, startupinfo=startup))
 
     try:
-        stage = ("-raid-defense-combat",) if combat else ()
+        stage = ("-raid-defense-solo",) if solo else ("-raid-defense-combat",) if combat else ()
         launch("host", "host", "-raid-save", str(output / "campaign.json"),
                "-raid-defense-trial", str(output), str(crew), *stage)
         deadline = time.monotonic() + 60
@@ -81,7 +81,7 @@ def run(executable, destination, crew, combat=False):
                     if state.get("losses", 0) != report["losses"]:
                         raise RuntimeError(f"Client losses differ: {path.name}: {state}")
                 screenshots = sorted(output.glob("*.png"))
-                if len(screenshots) < (1 if combat else 10):
+                if len(screenshots) < (2 if solo else 1 if combat else 10):
                     raise RuntimeError(f"Expected 10 game frames, got {len(screenshots)}")
                 print(f"{crew} peers, {len(report['checks'])} checks, {len(screenshots)} game captures", flush=True)
                 return
@@ -103,5 +103,6 @@ if __name__ == "__main__":
     parser.add_argument("output", type=Path)
     parser.add_argument("--crew", type=int, choices=(2, 3, 4), default=2)
     parser.add_argument('--combat', action='store_true')
+    parser.add_argument('--solo', action='store_true')
     options = parser.parse_args()
-    run(options.player, options.output, options.crew, options.combat)
+    run(options.player, options.output, 1 if options.solo else options.crew, options.combat, options.solo)

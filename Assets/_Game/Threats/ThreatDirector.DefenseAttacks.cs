@@ -6,6 +6,8 @@ namespace Raid
 {
     public sealed partial class ThreatDirector
     {
+        readonly RaycastHit[] pursuitSurfaceHits=new RaycastHit[16];
+        readonly Collider[] pursuitOverlaps=new Collider[16];
         sealed class DefenseHook
         {
             public HarpoonTool tool;
@@ -18,10 +20,10 @@ namespace Raid
             public AttackerSnapshot data;
             public DefenseTuning.Species card;
             public int cost, slot;
-            public float vitality, progress, windAim, latchTick, life, rescuePull;
-            public double until, nextRoute, captureUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
+            public float vitality, progress, windAim, latchTick, life, rescuePull, gripObstruction;
+            public double until, nextRoute, captureUntil, recoilUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
             public bool hasFleeRoute;
-            public bool counter, attached, ramHit;
+            public bool counter, attached, ramHit, breachPursuit, breachPursuitUsed;
             public Vector3 goal, waypoint, exit, fleeGoal;
             public Vector3? stockApproach;
             public DiverMotor target;
@@ -82,7 +84,7 @@ namespace Raid
 
         bool EligibleVictim(DiverMotor diver) =>
             diver && diver.IsServerInitialized && !diver.IsDead && !diver.IsInside && !diver.IsHelpless &&
-            diver.gameObject.scene==gameObject.scene && !diver.IsTrapped && !diver.CheatNoclip;
+            !diver.IsTrapped && !diver.CheatNoclip;
 
         DiverMotor ChooseDefenseVictim(DefenseAttacker a,float range)
         {
@@ -90,7 +92,7 @@ namespace Raid
             float best=range;
             foreach(var diver in DiverMotor.ServerDivers)
             {
-                if(!EligibleVictim(diver))continue;
+                if(!EligibleVictim(diver) || a.data.kind==DefenseSpecies.Abductor && !diver.CanBeRaidCaptive)continue;
                 Vector3 point=diver.transform.position+Vector3.up*.55f;
                 float score=Vector3.Distance(a.data.position,point);
                 if(a.data.kind==DefenseSpecies.Stalker || a.data.kind==DefenseSpecies.Abductor)
@@ -99,7 +101,7 @@ namespace Raid
                     if(tool && (tool.HookedFish || tool.HasDefenseLine))score*=.67f;
                     if(Vector3.Dot(diver.AimDirection,(a.data.position-point).normalized)<.30f)score*=.79f;
                 }
-                if(score>=best || !ClearDefenseLine(a.data.position,point))continue;
+                if(score>=best || !ClearDefenseLine(a.data.position,point,diver))continue;
                 best=score;choice=diver;
             }
             return choice;
@@ -113,38 +115,67 @@ namespace Raid
             return endpoint && hit.collider.GetComponentInParent<DiverMotor>()==endpoint;
         }
 
-        bool DefensePathClear(Vector3 from,Vector3 to)
+        bool DefensePathClear(Vector3 from,Vector3 to,DiverMotor prey=null)
         {
             var leg=to-from;
             if(leg.sqrMagnitude<.015f)return true;
             int steps=Mathf.Max(1,Mathf.CeilToInt(leg.magnitude/1.2f));
             var vessel=NereidVessel.Active;
             if(vessel)for(int i=1;i<=steps;i++)if(vessel.ContainsSealed(from+leg*((float)i/steps)))return false;
-            return !Physics.SphereCast(from,defenseTuning.sceneryClearance,leg.normalized,
-                out _,leg.magnitude,obstacleMask,QueryTriggerInteraction.Ignore);
+            return !DefenseObstacle(from,leg.normalized,leg.magnitude,prey,out _);
         }
 
-        bool FindPath(Vector3 from,Vector3 goal,out Vector3 next)
+        bool DefenseObstacle(Vector3 from,Vector3 direction,float distance,DiverMotor prey,out RaycastHit nearest)
         {
-            if(DefensePathClear(from,goal)){next=goal;return true;}
+            var radius=defenseTuning.sceneryClearance;
+            if(!prey)return Physics.SphereCast(from,radius,direction,out nearest,distance,obstacleMask,QueryTriggerInteraction.Ignore);
+            int count=Physics.SphereCastNonAlloc(from,radius,direction,pursuitSurfaceHits,distance,obstacleMask,QueryTriggerInteraction.Ignore);
+            if(count==pursuitSurfaceHits.Length)
+                return Physics.SphereCast(from,radius,direction,out nearest,distance,obstacleMask,QueryTriggerInteraction.Ignore);
+            nearest=default;
+            float closest=float.PositiveInfinity;
+            for(int i=0;i<count;i++)
+            {
+                var hit=pursuitSurfaceHits[i];
+                if(hit.distance>=closest || hit.collider.GetComponentInParent<DiverMotor>()==prey)continue;
+                closest=hit.distance;
+                nearest=hit;
+            }
+            return nearest.collider;
+        }
+
+        bool DefenseOccupied(Vector3 point,DiverMotor prey)
+        {
+            float radius=defenseTuning.sceneryClearance;
+            if(!prey)return Physics.CheckSphere(point,radius,obstacleMask,QueryTriggerInteraction.Ignore);
+            int count=Physics.OverlapSphereNonAlloc(point,radius,pursuitOverlaps,obstacleMask,QueryTriggerInteraction.Ignore);
+            if(count==pursuitOverlaps.Length)return true;
+            for(int i=0;i<count;i++)
+                if(pursuitOverlaps[i].GetComponentInParent<DiverMotor>()!=prey)return true;
+            return false;
+        }
+
+        bool FindPath(Vector3 from,Vector3 goal,out Vector3 next,DiverMotor prey=null)
+        {
+            if(DefensePathClear(from,goal,prey)){next=goal;return true;}
             var heading=(goal-from).normalized;
             for(int i=0;i<8;i++)
             {
                 float angle=(i/2+1)*42*(i%2==0?1:-1);
                 var detour=from+Quaternion.AngleAxis(angle,Vector3.up)*heading*4+
                     Vector3.up*(i>=4?1.65f:-.62f);
-                if(DefensePathClear(from,detour) && MarineSpawn.Floor(depthTier,detour,out var bed) &&
+                if(DefensePathClear(from,detour,prey) && MarineSpawn.Floor(depthTier,detour,out var bed) &&
                     detour.y>bed.point.y+defenseTuning.sceneryClearance)
                 {next=detour;return true;}
             }
             next=from;return false;
         }
 
-        bool Steer(DefenseAttacker a,Vector3 goal,float speed,float dt,bool mayCrossShield=false)
+        bool Steer(DefenseAttacker a,Vector3 goal,float speed,float dt,bool mayCrossShield=false,DiverMotor prey=null)
         {
             if(DefenseClock>=a.nextRoute || (a.data.position-a.waypoint).sqrMagnitude<.5f)
             {
-                FindPath(a.data.position,goal,out a.waypoint);
+                FindPath(a.data.position,goal,out a.waypoint,prey);
                 a.nextRoute=DefenseClock+.35;
             }
             var motion=Vector3.ClampMagnitude(a.waypoint-a.data.position,speed*dt);
@@ -152,8 +183,7 @@ namespace Raid
             {
                 float span=motion.magnitude;
                 var direction=motion/span;
-                if(Physics.SphereCast(a.data.position,defenseTuning.sceneryClearance,direction,out var obstacle,
-                    span+.033f,obstacleMask,QueryTriggerInteraction.Ignore))
+                if(DefenseObstacle(a.data.position,direction,span+.033f,prey,out var obstacle))
                 {
                     motion=direction*Mathf.Max(0,obstacle.distance-.033f);
                     a.nextRoute=0;
@@ -162,12 +192,12 @@ namespace Raid
                 if(!mayCrossShield && ShieldContains(candidate))
                 {
                     candidate=fieldView?fieldView.ContactWorld(candidate,.06f):FieldContact(candidate,.06f);
-                    if(!DefensePathClear(a.data.position,candidate)){a.nextRoute=0;return false;}
+                    if(!DefensePathClear(a.data.position,candidate,prey)){a.nextRoute=0;return false;}
                 }
                 var facing=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
                 var vessel=NereidVessel.Active;
                 if((vessel && !vessel.OutsideDefenseHull(candidate,facing,a.data.scale)) ||
-                    Physics.CheckSphere(candidate,defenseTuning.sceneryClearance,obstacleMask,QueryTriggerInteraction.Ignore))
+                    DefenseOccupied(candidate,prey))
                 {a.nextRoute=0;return false;}
                 a.data.position=candidate;
                 a.data.forward=facing;
@@ -180,13 +210,24 @@ namespace Raid
         {
             var a=attackers[index];
             a.life+=dt;
+            if(Defense.breached && a.attached)
+            {
+                a.attached=false;
+                RemoveAttacker(index,true,false,fallFromShield:true);
+                return;
+            }
             if(Defense.phase==DefensePhase.Assault && ((int)(a.life/.45f)!=(int)((a.life-dt)/.45f)))
                 FishActor.ScatterFromDefense(a.data.position,3.8f,1.1f,depthTier);
             if(a.hooks.Count>0 && TickDefenseHooks(index,a,dt))return;
             if(a.data.victim>=0){TickCapture(a,dt);return;}
+            if(DefenseClock<a.recoilUntil)
+            {
+                Steer(a,a.goal,(float)(a.recoilUntil-DefenseClock)*8,dt,Defense.breached);
+                return;
+            }
             if(Defense.phase==DefensePhase.Resolution)
             {
-                a.attached=false;
+                if(Defense.breached && TickBreachPursuit(a,dt))return;
                 TickWithdrawal(index,a,dt);
                 return;
             }
@@ -219,6 +260,25 @@ namespace Raid
             TickStrike(a,contact,outwards,dt);
         }
 
+        bool TickBreachPursuit(DefenseAttacker a,float dt)
+        {
+            if(a.breachPursuitUsed || a.catchItem!=null || a.data.kind!=DefenseSpecies.Abductor ||
+                !a.breachPursuit && DefenseAge>8)return false;
+            if(!EligibleVictim(a.target) || !a.target.CanBeRaidCaptive)
+                a.target=ChooseDefenseVictim(a,16f);
+            if(!a.target)return false;
+            if(!a.breachPursuit)
+            {
+                a.breachPursuit=true;
+                SetPose(a,AttackerPose.Approach,0);
+            }
+            var contact=FieldContact(a.data.position);
+            TickStrike(a,contact,(contact-DefenseCenter).normalized,dt);
+            if(a.data.pose is AttackerPose.Carry or AttackerPose.Retreat || DefenseAge>=11)
+                a.breachPursuitUsed=true;
+            return true;
+        }
+
         Vector3 FreeLatchPoint(DefenseAttacker a)
         {
             var along=a.data.position-DefenseCenter;
@@ -241,7 +301,7 @@ namespace Raid
             if(a.data.pose==AttackerPose.Approach)
             {
                 bool hunts=a.counter || a.data.kind is DefenseSpecies.Abductor or DefenseSpecies.Stalker;
-                if(hunts && a.target==null)a.target=ChooseDefenseVictim(a,a.counter?11f:7f);
+                if(hunts && a.target==null)a.target=ChooseDefenseVictim(a,a.counter?15f:a.data.kind==DefenseSpecies.Abductor?15f:10f);
                 if(!EligibleVictim(a.target))a.target=null;
                 if(a.data.kind==DefenseSpecies.Stalker && a.target)
                 {
@@ -257,9 +317,9 @@ namespace Raid
                     }
                 }
                 Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:FieldContact(contact,.70f*a.data.scale);
-                float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:1.65f;
+                float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:a.target?3.1f:1.65f;
                 if((destination-a.data.position).sqrMagnitude>trigger*trigger)
-                {Steer(a,destination,a.card.speed,dt);return;}
+                {Steer(a,destination,a.card.speed,dt,prey:a.target);return;}
                 a.goal=destination;
                 a.windAim=a.data.kind==DefenseSpecies.Rammer?1:.62f;
                 a.data.forward=(a.goal-a.data.position).normalized;
@@ -276,7 +336,20 @@ namespace Raid
                 SetPose(a,AttackerPose.Strike,1.1f);
             }
             var prior=a.data.position;
-            bool close=Steer(a,a.goal,a.card.burstSpeed,dt);
+            if(a.data.kind==DefenseSpecies.Abductor && EligibleVictim(a.target))
+            {
+                var chest=a.target.transform.position+Vector3.up*.58f;
+                a.goal=Vector3.MoveTowards(a.goal,chest,dt*6f);
+            }
+            bool close=Steer(a,a.goal,a.card.burstSpeed,dt,prey:a.target);
+            if(a.data.kind==DefenseSpecies.Abductor && EligibleVictim(a.target))
+            {
+                var chest=a.target.transform.position+Vector3.up*.58f;
+                var leg=a.data.position-prior;
+                float t=Mathf.Clamp01(Vector3.Dot(chest-prior,leg)/Mathf.Max(.0001f,leg.sqrMagnitude));
+                if((chest-prior-leg*t).sqrMagnitude<2.20f && ClearDefenseLine(a.data.position,chest,a.target) &&
+                    TryCapture(a,a.target))return;
+            }
             if(a.data.kind==DefenseSpecies.Rammer && a.target==null && !a.ramHit)
             {
                 var sweep=a.data.position-prior;
@@ -323,15 +396,22 @@ namespace Raid
         bool TryCapture(DefenseAttacker a,DiverMotor victim)
         {
             int able=0,held=0;
-            foreach(var diver in DiverMotor.ServerDivers)if(EligibleVictim(diver))able++;
+            foreach(var diver in DiverMotor.ServerDivers)
+                if(diver && diver.IsServerInitialized && !diver.IsDead)able++;
             foreach(var actor in attackers)if(actor.data.victim>=0)held++;
-            if(able<2 || held>=2 || !victim.BeginRaidCarry(a.data.id))return false;
+            bool solo=able==1;
+            if(held>=Mathf.Clamp(able/2,1,2) || !victim.BeginRaidCarry(a.data.id,solo))return false;
             a.data.victim=victim.OwnerId;
             a.target=victim;
-            a.goal=a.exit;
-            a.captureUntil=DefenseClock+defenseTuning.carrySeconds;
+            Vector3 outward=Vector3.ProjectOnPlane(a.data.position-DefenseCenter,Vector3.up).normalized;
+            if(outward.sqrMagnitude<.01f)outward=a.data.forward;
+            Vector3 toward=a.data.position+outward*17+Vector3.up*1.4f;
+            a.goal=FindPath(a.data.position,toward,out var leg,victim) && (leg-a.data.position).sqrMagnitude>4?leg:a.exit;
+            float carry=solo?defenseTuning.soloCarrySeconds:defenseTuning.carrySeconds;
+            a.captureUntil=DefenseClock+carry;
             a.rescuePull=0;
-            SetPose(a,AttackerPose.Carry,defenseTuning.carrySeconds);
+            a.gripObstruction=0;
+            SetPose(a,AttackerPose.Carry,carry);
             return true;
         }
 
@@ -339,16 +419,32 @@ namespace Raid
         {
             var victim=a.target;
             if(!victim || !victim.IsServerInitialized || victim.IsDead || victim.IsInside || victim.RaidCaptive!=a.data.id ||
-                DefenseClock>=a.captureUntil || Steer(a,a.exit,defenseTuning.captiveCarrySpeed,dt))
+                DefenseClock>=a.captureUntil)
             {
                 ReleaseVictim(a);
                 a.goal=a.exit;SetPose(a,AttackerPose.Retreat,a.card.cooldown);
                 return;
             }
-            var at=a.data.position+a.data.forward*(.71f*a.data.scale)-Vector3.up*(1.12f*a.data.scale);
-            var delta=at-victim.transform.position;
-            if(delta.sqrMagnitude>12 || !ClearDefenseLine(a.data.position,victim.transform.position+Vector3.up*.55f,victim))
+            Vector3 chest=victim.transform.position+Vector3.up*.55f;
+            bool linked=ClearDefenseLine(a.data.position,chest,victim);
+            a.gripObstruction=linked?Mathf.Max(0,a.gripObstruction-dt*2):a.gripObstruction+dt;
+            if(a.gripObstruction>=1.05f || (a.data.position-chest).sqrMagnitude>23)
             {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,.8f);return;}
+            if(!linked)return;
+            float speed=defenseTuning.captiveCarrySpeed;
+            if(victim.TryGetComponent<HarpoonTool>(out var harpoon) && harpoon.TeammateReelsThisDiver)
+                speed*=.27f;
+            else if(victim.CanBreakRaidGrip && victim.TryGetComponent<RescueTool>(out var rescue) &&
+                rescue.DisplayTargetOwnerId==victim.OwnerId)
+                speed*=Mathf.Lerp(1,.39f,rescue.DisplayProgress);
+            if(Steer(a,a.goal,speed,dt,prey:victim))
+            {
+                Vector3 outward=Vector3.ProjectOnPlane(a.data.position-DefenseCenter,Vector3.up).normalized;
+                if(FindPath(a.data.position,a.data.position+outward*11+Vector3.up,out var next,victim))
+                    a.goal=next;
+            }
+            var at=a.data.position+a.data.forward*(.57f*a.data.scale)-Vector3.up*(1.12f*a.data.scale);
+            var delta=at-victim.transform.position;
             victim.ApplyTetherMotion(Vector3.ClampMagnitude(delta,dt*(defenseTuning.captiveCarrySpeed+3f)));
             victim.DamageFromCreature(a.card.diverDamage*.085f*dt);
         }
@@ -366,6 +462,24 @@ namespace Raid
             foreach(var a in attackers)
                 if(a.data.id==victim.RaidCaptive && a.target==victim)
                 {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,1.4f);return true;}
+            return false;
+        }
+
+        internal bool BreakSoloGrip(DiverMotor victim)
+        {
+            if(!IsServerInitialized || !victim || !victim.CanBreakRaidGrip)return false;
+            foreach(var a in attackers)
+            {
+                if(a.data.id!=victim.RaidCaptive || a.target!=victim)continue;
+                Vector3 away=(victim.transform.position-a.data.position).normalized;
+                if(away.sqrMagnitude<.001f)away=-a.data.forward;
+                ReleaseVictim(a);
+                victim.PresentRaidBreak((Vector3.ProjectOnPlane(away,Vector3.up)+Vector3.up*.27f).normalized);
+                a.goal=a.data.position-away*2.6f+Vector3.up*.5f;
+                a.recoilUntil=DefenseClock+.58;
+                SetPose(a,AttackerPose.Stagger,1.25f);
+                return true;
+            }
             return false;
         }
 
@@ -443,7 +557,8 @@ namespace Raid
             return false;
         }
 
-        void RemoveAttacker(int index,bool loot,bool fled,HarpoonTool catcher=null,Vector3? blastOrigin=null,float blastRadius=0)
+        void RemoveAttacker(int index,bool loot,bool fled,HarpoonTool catcher=null,Vector3? blastOrigin=null,float blastRadius=0,
+            bool fallFromShield=false)
         {
             var a=attackers[index];
             var world=RaidWorld.Instance;
@@ -470,7 +585,8 @@ namespace Raid
             defenseState.Value=stateCopy;
             if(a.collider)Destroy(a.collider.gameObject);
             attackers.RemoveAt(index);
-            if(world.ArchiveDefense() && loot)world.CreateDefenseCatch(a.data.kind,a.data.position,a.data.forward,catcher,blastOrigin,blastRadius);
+            if(world.ArchiveDefense() && loot)world.CreateDefenseCatch(a.data.kind,a.data.position,a.data.forward,catcher,
+                blastOrigin,blastRadius,fallFromShield);
         }
 
         void TearRemora(DefenseAttacker a)

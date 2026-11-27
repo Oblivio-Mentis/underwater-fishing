@@ -51,7 +51,6 @@ namespace Raid
         void ApplyAmbient(UnderwaterGrading.State state,float blend)
         {
             RenderSettings.ambientMode=blend>0?UnityEngine.Rendering.AmbientMode.Trilight:deckAmbientMode;
-            if(blend<=0)return;
             RenderSettings.ambientSkyColor=Color.Lerp(deckSky,state.sky,blend);
             RenderSettings.ambientEquatorColor=Color.Lerp(deckHorizon,state.equator,blend);
             RenderSettings.ambientGroundColor=Color.Lerp(deckGround,state.ground,blend);
@@ -130,11 +129,6 @@ namespace Raid
             bool abyss=RaidWorld.Instance!=null && RaidWorld.Instance.CurrentDepth>=2;
             float dryHaze=(1-wetBlend)*concealment;
             Shader.SetGlobalFloat("_RaidDryHaze",dryHaze);
-            if(wetBlend<=0 && !appliedFog && !InAirlock())
-            {
-                PresentSeaThroughGlass(abyss,concealment);
-                return;
-            }
             UpdateDiveLamp(wet);
             bool inLock=InAirlock();
             float height=camera!=null?camera.transform.position.y:0f;
@@ -144,6 +138,15 @@ namespace Raid
             var state=!wet&&inLock?grading.Airlock:abyss?grading.Abyss:grading.Shallow;
             float gradeBlend=wet?wetBlend:inLock?.65f:0f;
             ApplyAmbient(wet?state:grading.Deck,gradeBlend);
+            float cabinNight=(threats?threats.DefenseBlackout:0)*(1-wetBlend);
+            if(cabinNight>.001f)
+            {
+                RenderSettings.ambientMode=UnityEngine.Rendering.AmbientMode.Trilight;
+                float dim=Mathf.Lerp(1,.23f,cabinNight);
+                RenderSettings.ambientSkyColor*=dim;
+                RenderSettings.ambientEquatorColor*=dim;
+                RenderSettings.ambientGroundColor*=dim;
+            }
             if(wetBlend>0)
             {
                 appliedFog=true;
@@ -171,7 +174,7 @@ namespace Raid
                 // A flat 1.5-intensity fill erased every form in the shallows. On deck it stays;
                 // underwater the sea state decides how much skylight replaces it.
                 float target=wetBlend>0?state.oceanFill:Mathf.Lerp(oceanFillBase,state.oceanFill,gradeBlend);
-                oceanFill.intensity=target;
+                oceanFill.intensity=target*Mathf.Lerp(1,.19f,cabinNight);
             }
             // Keep a continuous breathing rhythm as the animal approaches or retreats.
             float danger=wet && viewed!=null && !viewed.IsDead && threats!=null
@@ -186,7 +189,7 @@ namespace Raid
                 if(profile.TryGet<ColorAdjustments>(out var color))
                 {
                     float exposure=Mathf.Lerp(state.exposureTop,state.exposureBottom,lowerWater);
-                    color.postExposure.Override(Mathf.Lerp(deckState.exposureTop,exposure,gradeBlend)+fear*(.43f*breath-.06f));
+                    color.postExposure.Override(Mathf.Lerp(deckState.exposureTop,exposure,gradeBlend)+fear*(.43f*breath-.06f)-cabinNight*.85f);
                     color.saturation.Override(Mathf.Lerp(deckState.saturationTop,Mathf.Lerp(state.saturationTop,state.saturationBottom,lowerWater),gradeBlend));
                     color.contrast.Override(Mathf.Lerp(deckState.contrastTop,Mathf.Lerp(state.contrastTop,state.contrastBottom,lowerWater),gradeBlend));
                 }

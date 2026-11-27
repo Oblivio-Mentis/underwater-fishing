@@ -28,25 +28,27 @@ MonoBehaviour:
   lateBudgetCap: 96
   appetiteExponent: 0.54
   crewMultiplier: 0.34
-  baseActive: 4
+  baseActive: 6
   activePerExtraDiver: 2
-  maximumActive: 12
-  maximumGroup: 3
-  firstGroupGap: 5.7
-  lateGroupGap: 2.9
+  maximumActive: 14
+  maximumGroup: 5
+  firstGroupGap: 3.9
+  lateGroupGap: 2.6
   maximumAssaultSeconds: 104
   arrivalDistance: 21
   sceneryClearance: 0.32
-  schoolTravelDistance: 19
+  schoolTravelDistance: 32
   schoolHeight: 3.7
   concealment: 0.85
   snatchSeconds: 0.44
   escapeSpeedMultiplier: 1.42
   escapeSightDistance: 42
   carrySeconds: 8
+  soloCarrySeconds: 8
+  soloEscapeSeconds: 0.95
   inkSeconds: 5
   inkRadius: 4
-  captiveCarrySpeed: 2.5
+  captiveCarrySpeed: 4.15
   harpoonRangeMargin: 1.4
   rescuePullSeconds: 0.74
   small: 0.85

@@ -717,9 +717,13 @@ namespace Raid
             Vector3 from = transform.position + Vector3.up * .6f, to = target.transform.position + Vector3.up * .6f;
             Vector3 offset = to - from;
             if (offset.sqrMagnitude < .0001f) return true;
-            return !Physics.Raycast(from, offset.normalized, out var hit, offset.magnitude, tuning.hitMask, QueryTriggerInteraction.Ignore)
+            int mask=tuning.hitMask;
+            if(target.Motor.RaidCaptive>0)mask&=~(1<<ThreatDirector.RaiderLayer);
+            return !Physics.Raycast(from, offset.normalized, out var hit, offset.magnitude, mask, QueryTriggerInteraction.Ignore)
                 || hit.collider.GetComponentInParent<DiverMotor>() == target.Motor;
         }
+
+        internal bool TeammateReelsThisDiver => IsPulled && ToolOf(_friendSource.Value) is HarpoonTool source && source.Reeling;
 
         void ReleaseOutgoingFriend()
         {

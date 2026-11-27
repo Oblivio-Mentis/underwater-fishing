@@ -46,7 +46,8 @@ namespace Raid
                 await Wait(()=>RaidWorld.Instance && RaidWorld.Instance.NetworkObject && RaidWorld.Instance.IsServerInitialized && RaidWorld.Instance.Team!=null &&
                     RaidWorld.Instance.TravelRemaining<=0 && DiverMotor.ServerDivers.Count==peers && UI.UiRoot.Instance &&
                     UI.UiRoot.Instance.Context.Player!=null,"LAN crew",90);
-                if(Array.IndexOf(args,"-raid-defense-combat")>=0)await PlayCombat(report,folder,peers);
+                if(Array.IndexOf(args,"-raid-defense-solo")>=0)await PlaySolo(report,folder);
+                else if(Array.IndexOf(args,"-raid-defense-combat")>=0)await PlayCombat(report,folder,peers);
                 else await Play(report,folder,peers);
                 report.status="passed";
             }
@@ -160,7 +161,7 @@ namespace Raid
             }
         }
 
-        static async Awaitable SwarmFrame(string folder,DiverMotor player,ThreatDirector director)
+        static async Awaitable SwarmFrame(string folder,DiverMotor player,ThreatDirector director,string file="02-swarm-through-glass")
         {
             var vessel=Nereid.NereidVessel.Active;
             var center=director.DefenseCenter;
@@ -175,11 +176,35 @@ namespace Raid
                 await Awaitable.NextFrameAsync();
                 player.LookAtConsole(director.DefenseApproachFocus);
             } while(Time.realtimeSinceStartup<ready);
-            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,file+".png"));
             var eye=UnderwaterLook.Instance.DiverCamera;
             Debug.Log($"[DefenseSight] Camera {eye.transform.position:F2} focus {director.DefenseApproachFocus:F2} " +
                 $"viewport {eye.WorldToViewportPoint(director.DefenseApproachFocus):F2} silhouettes {director.VisibleDefenseSwarm} " +
                 $"start {director.Defense.approachStart:F2} arrival {director.Defense.approachEnd:F2}.");
+        }
+
+        static async Awaitable DomeFrame(string folder,DiverMotor player,ThreatDirector director)
+        {
+            var ship=Nereid.NereidVessel.Active;
+            Vector3 center=director.DefenseCenter+Vector3.up*7;
+            int side=Vector3.Dot(director.Defense.approachEnd-center,ship.transform.right)>0?1:-1;
+            for(int i=0;i<12;i++)
+            {
+                float angle=side*(52+16*(i/2)*(i%2==0?1:-1));
+                var heading=Quaternion.AngleAxis(angle,Vector3.up)*ship.transform.forward;
+                var at=center+heading*(54-i*.8f)+Vector3.up*(3.5f+i*.45f);
+                if(!MarineSpawn.InOpenWater(RaidWorld.Instance.CurrentDepth,at,.80f) ||
+                    !MarineSpawn.ClearLeg(at,center,.15f,Vector3.Distance(at,center)*.68f))continue;
+                player.Teleport(at);
+                float end=Time.realtimeSinceStartup+.30f;
+                while(Time.realtimeSinceStartup<end)
+                {
+                    player.LookAtConsole(center);
+                    await Awaitable.NextFrameAsync();
+                }
+                UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-dome.png"));
+                return;
+            }
         }
 
         static async Awaitable RecordFrameTime(Report report)
@@ -205,6 +230,10 @@ namespace Raid
             var host=UI.UiRoot.Instance.Context.Player;
             report.peers=peers;
             report.Check(d && d.defenseTuning && d.Defense.Ratio==1,"Field starts at full integrity in the live level.");
+            report.Check(!Resources.Load<AudioClip>("DefenseAtmosphere/Audio/HullRoar") &&
+                !Resources.Load<AudioClip>("DefenseAtmosphere/Audio/RingPressure") &&
+                !Resources.Load<AudioClip>("KrakenFireBelch") && !Resources.Load<AudioClip>("KrakenRageRoar"),
+                "Authored raid and retaliatory Kraken clips are absent from the player.");
             var prefab=Nereid.NereidVessel.Active.GetComponentInChildren<Nereid.DefenseFieldView>();
             report.Check(prefab && prefab.GetComponentsInChildren<Collider>().Length==0,"The ship has an authored, passable field.");
             FishActor specimen=null;
@@ -233,17 +262,23 @@ namespace Raid
             await Wait(()=>d.Defense.phase==DefensePhase.Encirclement,"school approach",d.defenseTuning.warningSeconds+4);
             await Awaitable.WaitForSecondsAsync(2f);
             var lighting=prefab.GetComponentInChildren<Nereid.NereidDefenseLighting>();
-            int aimed=0;
+            int aimed=0, scanning=0;
             if(lighting)foreach(var lamp in lighting.searchlights)
-                if(lamp.enabled && Vector3.Angle(lamp.transform.forward,lighting.Target-lamp.transform.position)<12)aimed++;
-            report.Check(lighting && lighting.AlarmActive && aimed==2 && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
-                "The alarm and exterior spotlights follow the synchronized approaching school before the first attack.");
+            {
+                if(lamp.enabled)scanning++;
+                if(lamp.enabled && Vector3.Angle(lamp.transform.forward,lighting.Target-lamp.transform.position)<15)aimed++;
+            }
+            report.Check(lighting && lighting.AlarmActive && aimed>=1 && scanning==4 &&
+                lighting.WorkLightGain<.29f && Vector3.Distance(lighting.Target,d.DefenseApproachFocus)<1 && d.DefenseCountdown>0,
+                $"Cabin work lamps dimmed (gain {lighting?.WorkLightGain:F2}) while four searchlights cover different bearings (aimed {aimed}).");
             await SwarmFrame(folder,host,d);
             float glassHaze=Shader.GetGlobalFloat("_RaidDryHaze");
             var look=UnderwaterLook.Instance;
             bool dryCamera=look && look.DiverCamera && !look.EyeSubmerged;
             report.Check(dryCamera && glassHaze>.32f && d.VisibleDefenseSwarm>0,
                 $"A dry observation deck camera sees exterior haze and the swarm. Dry={dryCamera}, haze={glassHaze:F2}, silhouettes={d.VisibleDefenseSwarm}.");
+            report.Check(d.DefenseCloudCount>=400,$"The outer formation loads {d.DefenseCloudCount} shared-mesh figures around the vessel.");
+            await DomeFrame(folder,host,d);
             Vector3 focus=d.DefenseApproachFocus;
             Vector3 towardsShip=(d.DefenseCenter-focus).normalized;
             Vector3 flank=Vector3.Cross(towardsShip,Vector3.up).normalized;
@@ -301,10 +336,24 @@ namespace Raid
             ReportPhase("breach and real theft",report,folder);
             if(!d.DefenseFixtureBegin(1,team.RequiredFood(world.progression)*2))throw new InvalidOperationException("Failure fixture did not start");
             d.DefenseFixtureForceAssault();
+            d.DefenseFixturePauseGroups();
             if(!d.DefenseFixtureThief(1,1,8.5f) || !d.DefenseFixtureThief(4,-1,14f))
                 throw new InvalidOperationException("Could not stage fleeing carriers at the two lateral approaches");
+            if(!d.DefenseFixtureSpawn(DefenseSpecies.Remora,false,9,9))
+                throw new InvalidOperationException("Could not stage a remora before failure");
+            await Wait(()=>
+            {
+                for(int i=0;i<d.DefenseActorCount;i++)
+                    if(d.DefenseActorAt(i).kind==DefenseSpecies.Remora && d.DefenseActorAt(i).pose==AttackerPose.Latch)
+                        return true;
+                return false;
+            },"a remora attaches before its supporting field breaks",14);
             d.DefenseFixtureSetIntegrity(0);
             report.Check(d.Defense.breached && team.ongoingDefense.lossLimit>0 && team.tank.Count==20,"A breach opens theft without instantly removing stock.");
+            WatchField(host,d,d.Defense.impactPoint,10);
+            await Awaitable.WaitForSecondsAsync(.16f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"05-shield-collapse.png"));
+            report.Check(world.DefenseFixtureFallingRemora(),"Attached remora dies and descends as a recoverable body.");
             bool sawSnatch=false;
             int carrier=0;
             bool CarryVisible()
@@ -396,6 +445,7 @@ namespace Raid
             report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
                 $"Reeling tears the attached remora, releases the line and creates one catch and local ink. Line={tool.HasDefenseLine}, catch={tool.CatchCount}, ink={d.DefenseInkAt(remora.position)}, peak={peakTension:0.00}, actors={d.DefenseActorCount}");
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));
+            await LandHunter(folder,report,d,host,tool);
 
             ReportPhase("captive rescue",report,folder);
             DiverMotor guest=null;
@@ -449,6 +499,101 @@ namespace Raid
             report.Check(!guest.IsTrapped,"Winding a friendly line releases the other diver.");
             d.DefenseFixtureEnd();
             await Wait(()=>!d.DefenseActive && !guest.IsTrapped,"defense and all transport cleanup",13);
+            report.phase="done";
+        }
+
+        static async Awaitable LandHunter(string folder,Report report,ThreatDirector d,DiverMotor host,HarpoonTool tool)
+        {
+            ReportPhase("fast hunt and landing",report,folder);
+            tool.DefenseFixtureSelect(0);
+            await Wait(()=>tool.ActiveSlot==0,"re-equip the harpoon");
+            if(!d.DefenseFixtureOpenWaterDuel(DefenseSpecies.Stalker,host,8,out int hunter))
+                throw new InvalidOperationException("No clean Stalker entry");
+            await Awaitable.NextFrameAsync();
+            if(d.TryDefenseAnchor(hunter,out var at))host.LookAtConsole(at);
+            float aimDeadline=Time.realtimeSinceStartup+3f;
+            while(!tool.HasDefenseLine && Time.realtimeSinceStartup<aimDeadline)
+            {
+                if(!d.TryDefenseAnchor(hunter,out var point))break;
+                host.LookAtConsole(point);
+                Physics.SyncTransforms();
+                Vector3 eye=host.transform.position+Vector3.up*.60f;
+                if(HarpoonTool.AimCast(tool.tuning,eye,(point-eye).normalized,out var hit) && hit.collider.name=="Defense target")
+                    tool.DefenseFixtureFire();
+                await Awaitable.NextFrameAsync();
+            }
+            report.Check(tool.HasDefenseLine && tool.AttachedContact.defenseId==hunter,
+                "The ordinary harpoon attaches to a swimming predator.");
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-stalker-hunt.png"));
+            float start=Time.realtimeSinceStartup;
+            int before=tool.CatchCount;
+            bool winding=true;
+            while(tool.HasDefenseLine && Time.realtimeSinceStartup-start<7)
+            {
+                if(tool.LineTension>.71f)winding=false;
+                if(tool.LineTension<.40f)winding=true;
+                tool.DefenseFixtureWind(winding);
+                if(d.TryDefenseAnchor(hunter,out var point))host.LookAtConsole(point);
+                await Awaitable.NextFrameAsync();
+            }
+            tool.DefenseFixtureWind(false);
+            report.Check(!tool.HasDefenseLine && tool.CatchCount==before+1,
+                $"The swimming predator uses the physical spool and lands in inventory in {Time.realtimeSinceStartup-start:F2} seconds.");
+        }
+
+        static async Awaitable PlaySolo(Report report,string folder)
+        {
+            var world=RaidWorld.Instance;
+            var d=world.threats;
+            var player=UI.UiRoot.Instance.Context.Player;
+            report.peers=1;
+            ReportPhase("autonomous abductor",report,folder);
+            if(!d.DefenseFixtureBegin(.75f,6000))throw new InvalidOperationException("Cannot begin the solo raid");
+            d.DefenseFixtureForceAssault();
+            d.DefenseFixturePauseGroups();
+            report.Check(d.DefenseFixtureOpenWaterDuel(DefenseSpecies.Abductor,player,3,out int attacker),
+                "The solo player entered open water near a live abductor.");
+            var actor=d.DefenseActorAt(0);
+            player.CameraImpulse.BeginBackgroundQa(30);
+            Debug.Log($"[SoloGrip] diver scene {player.gameObject.scene.name}, director scene {d.gameObject.scene.name}, diver {player.transform.position:F2}, predator {actor.position:F2}.");
+            AttackerPose? lastPose=null;
+            await Wait(()=>
+            {
+                if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
+                for(int i=0;i<d.DefenseActorCount;i++)
+                {
+                    var sample=d.DefenseActorAt(i);
+                    if(sample.id!=attacker || lastPose==sample.pose)continue;
+                    lastPose=sample.pose;
+                    Debug.Log($"[SoloGrip] {sample.pose} at {sample.position:F2}, diver {player.transform.position:F2}, dry {player.IsInside}, captive {player.RaidGripVisual}.");
+                }
+                return player.RaidGripVisual==attacker && player.CanBreakRaidGrip;
+            },"natural abductor windup, strike and grip",14);
+            report.Check(player.IsTrapped,"The ordinary attack grabbed a solo diver.");
+            Vector3 grabbedAt=player.transform.position;
+            await Wait(()=>
+            {
+                if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
+                return Vector3.Distance(grabbedAt,player.transform.position)>.65f;
+            },"captured diver actively dragged in the current",2);
+            report.Check(player.CanBreakRaidGrip,"The diver remained in the grip while being physically dragged.");
+            var rescue=player.GetComponent<RescueTool>();
+            rescue.QaStruggle(.37f);
+            await Wait(()=>rescue.DisplayProgress>.07f,"F must build real server progress",1.1f);
+            await Wait(()=>rescue.DisplayProgress==0,"released F must cancel progress",1.25f);
+            report.Check(player.CanBreakRaidGrip,"A short tap or released hold cannot complete the breakout.");
+            rescue.QaStruggle(2);
+            await Wait(()=>
+            {
+                if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
+                return rescue.DisplayProgress>.37f;
+            },"visible struggle before release",1.4f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-solo-struggle.png"));
+            await Wait(()=>!player.CanBreakRaidGrip,"a full F hold releases the server grip",2.1f);
+            await Wait(()=>!player.IsTrapped && player.RaidStrugglePose(out _,out float kick) && kick>.18f,
+                "the animated kick follows the release",.58f);
+            report.Check(player.RaidGripVisual==0,"A full F hold frees the diver and starts the release animation.");
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"09-solo-breakout.png"));
             report.phase="done";
         }
 

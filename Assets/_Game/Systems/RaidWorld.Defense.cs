@@ -66,8 +66,18 @@ namespace Raid
 
         internal bool TryGetDefenseLoot(long id,out CatchItem item)=>defenseLoot.TryGetValue(id,out item);
         internal void ForgetDefenseLoot(long id)=>defenseLoot.Remove(id);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal bool DefenseFixtureFallingRemora()
+        {
+            foreach(var item in dropped)
+                if(item.defenseSpecies==(byte)DefenseSpecies.Remora+1 && item.dead &&
+                    looseFishMotion.TryGetValue(item.id,out var motion) && motion.Velocity.y<-.10f)return true;
+            return false;
+        }
+#endif
 
-        internal void CreateDefenseCatch(DefenseSpecies kind,Vector3 at,Vector3 facing,HarpoonTool cutter,Vector3? blastOrigin=null,float blastRadius=0)
+        internal void CreateDefenseCatch(DefenseSpecies kind,Vector3 at,Vector3 facing,HarpoonTool cutter,
+            Vector3? blastOrigin=null,float blastRadius=0,bool fallFromShield=false)
         {
             if(!defenseSpecimen)
             {
@@ -93,6 +103,9 @@ namespace Raid
                 dead=true, roll=82, defenseSpecies=(byte)((int)kind+1)
             };
             if(blastOrigin.HasValue && blastRadius>0)StartFishDrift(ref corpse,blastOrigin.Value,blastRadius);
+            if(fallFromShield)
+                looseFishMotion[id]=new LooseFishMotion{Position=at,Velocity=-Vector3.up*1.8f-facing*.73f,
+                    Yaw=corpse.yaw,Side=1,Turn=18};
             RegisterDrop(corpse);
         }
     }

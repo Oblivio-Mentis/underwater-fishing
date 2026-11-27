@@ -20,15 +20,14 @@ namespace Raid.Nereid
         static DefenseAtmosphereSettings stock;
 
         [SerializeField] DefenseAtmosphereSettings settings;
-        [SerializeField] Transform warningOrigin;
 
         readonly Mesh[] meshes = new Mesh[SpeciesCount];
         readonly MeshRenderer[] swimmers = new MeshRenderer[MaxSlots];
         readonly MaterialPropertyBlock[,] blocks = new MaterialPropertyBlock[SpeciesCount,2];
         Material material;
         int raidSeed, phase;
-        float phaseAge, appliedAt, swarmAge, sampledAt, intensity, shade, impactAge = float.PositiveInfinity;
-        Vector3 anchor, impactPoint;
+        float phaseAge, appliedAt, swarmAge, sampledAt, shade;
+        Vector3 anchor;
         Vector3 approachStart, approachEnd;
         float approachFraction, warningReveal;
         ulong promoted;
@@ -104,8 +103,9 @@ namespace Raid.Nereid
             uint sizing=unchecked((uint)seed*0x9e3779b9u+(uint)slot*0x85ebca6bu);
             Vector3 heading=(end-start).normalized;
             Vector3 lateral=Vector3.Cross(Vector3.up,heading).normalized;
-            Vector3 school=Vector3.Lerp(start,end,Mathf.SmoothStep(0,1,fraction));
-            float row=(slot%3-1)*2.9f+Mathf.Sin(time*.53f+slot*.81f)*.78f;
+            float push=Mathf.InverseLerp(Unit(key+29)*.22f,1,fraction);
+            Vector3 school=Vector3.Lerp(start,end,push*(.23f+.77f*push));
+            float row=(slot%5-2)*2.35f+Mathf.Sin(time*.82f+slot*.81f)*1.42f;
             Vector3 point=school+lateral*(row+(Unit(key+19)-.5f)*3.1f)+
                 Vector3.up*((Unit(key+31)-.5f)*4.7f+Mathf.Sin(time*.9f+slot*.47f)*.28f)-heading*(Unit(key+43)*8.5f);
             float scale=Mathf.Lerp(1-profile.sizeVariation,1+profile.sizeVariation,Unit(sizing+17));
@@ -141,8 +141,7 @@ namespace Raid.Nereid
             warningReveal=Mathf.Clamp01(anticipation);
         }
 
-        public void Apply(int seed,int phase,float phaseAge,float tension,Vector3 vesselCenter,float visibility,
-            float shieldAge,Vector3 newestImpact)
+        public void Apply(int seed,int phase,float phaseAge,Vector3 vesselCenter,float visibility)
         {
             if (seed != raidSeed && (phase == 0 || phase == 1) && Time.frameCount != clockFrame)
                 hasSwarmClock = false;
@@ -150,19 +149,11 @@ namespace Raid.Nereid
             this.phase = Mathf.Clamp(phase,0,5);
             this.phaseAge = Mathf.Max(0,phaseAge);
             appliedAt = Time.time;
-            intensity = Mathf.Clamp01(tension);
             shade = Mathf.Clamp01(visibility);
             anchor = vesselCenter;
-            impactAge = shieldAge;
-            impactPoint = newestImpact;
         }
 
         int clockFrame;
-        public void SetWarningOrigin(Vector3 worldPoint)
-        {
-            sceneRoarPoint = worldPoint;
-            hasSceneRoarPoint = true;
-        }
 
         void BindAssets()
         {
@@ -201,6 +192,7 @@ namespace Raid.Nereid
                 renderer.lightProbeUsage=LightProbeUsage.Off;
                 renderer.enabled=false;
             }
+            BindCloud(profile);
         }
 
         void LateUpdate()
@@ -208,17 +200,16 @@ namespace Raid.Nereid
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return;
             var look = UnderwaterLook.Instance;
             Camera eye = look ? look.DiverCamera : Camera.main;
-            if (!eye || !eye.isActiveAndEnabled){HideSwarm();return;}
+            if (!eye || !eye.isActiveAndEnabled){HideSwarm();HideCloud();return;}
             var profile = Settings;
             Vector3 observer = eye.transform.position;
             float now = Time.time;
             float elapsed = phaseAge + Mathf.Max(0, now-appliedAt);
             float orbitAge = hasSwarmClock ? swarmAge + Mathf.Max(0,now-sampledAt) : elapsed;
-            float volumeInWater = look && !look.EyeSubmerged ? .64f : 1f;
-            UpdateAudio(profile,elapsed,orbitAge,observer,volumeInWater);
 
-            if (phase == 0){HideSwarm();return;}
+            if (phase == 0){HideSwarm();HideCloud();return;}
             BindAssets();
+            PresentCloud(profile,orbitAge,elapsed);
             float reveal = phase == 1 ? warningReveal*.75f
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
             if (!material || reveal < .02f){HideSwarm();return;}
@@ -260,6 +251,14 @@ namespace Raid.Nereid
                     point=Vector3.Lerp(formed.Position,point,spreadOut);
                     heading=Vector3.Slerp(formed.Forward,heading,spreadOut);
                 }
+                if(phase>=4)
+                {
+                    Vector3 leave=Vector3.ProjectOnPlane(point-anchor,Vector3.up).normalized;
+                    float distance=phase==4?phaseAge*6.4f:34+phaseAge*6.4f;
+                    point+=leave*distance+Vector3.up*Mathf.Min(9,distance*.19f);
+                    heading=Vector3.Slerp(heading,(leave+Vector3.up*.19f).normalized,
+                        Mathf.Clamp01(distance/11f));
+                }
                 Vector3 away = point-observer;
                 float distanceSquared = away.sqrMagnitude;
                 if (distanceSquared > range*range){swimmer.enabled=false;continue;}
@@ -273,7 +272,6 @@ namespace Raid.Nereid
                 Vector3 view = eye.WorldToViewportPoint(point);
                 if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f)))
                 {swimmer.enabled=false;continue;}
-                if (phase == 5) point += (pose.Position-anchor).normalized * (4.9f*(1-reveal));
                 if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale) ||
                     Physics.CheckSphere(point,pose.Scale*.40f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                 {swimmer.enabled=false;continue;}
@@ -296,13 +294,8 @@ namespace Raid.Nereid
 
         void OnDisable()
         {
-            if (roarWorld) roarWorld.Stop();
-            if (roarWide) roarWide.Stop();
-            if (fieldLoop) fieldLoop.Stop();
-            if (scoreLoop) scoreLoop.Stop();
-            foreach (var voice in effects) if (voice) voice.Stop();
+            HideCloud();
             HideSwarm();
-            audioObserved = false;
         }
     }
 }

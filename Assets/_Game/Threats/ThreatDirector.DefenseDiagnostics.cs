@@ -54,6 +54,34 @@ namespace Raid
             return false;
         }
 
+        internal bool DefenseFixtureOpenWaterDuel(DefenseSpecies kind,DiverMotor player,int group,out int id)
+        {
+            id=0;
+            if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault || !player)return false;
+            var card=defenseTuning.For(kind);
+            var ship=Nereid.NereidVessel.Active;
+            if(card==null || !ship)return false;
+            var center=DefenseCenter;
+            for(int ring=0;ring<5;ring++)
+            for(int sector=0;sector<18;sector++)
+            {
+                var outward=Quaternion.AngleAxis(sector*20f,Vector3.up)*ship.transform.right;
+                var predator=center+outward*(17f+ring*3)+Vector3.up*(1.8f+ring*.78f);
+                var captain=predator+outward*3.15f-Vector3.up*.60f;
+                if(!MarineSpawn.InOpenWater(depthTier,predator,.7f) || !MarineSpawn.InOpenWater(depthTier,captain,.66f) ||
+                    !ship.OutsideDefenseHull(predator,outward,1.46f) ||
+                    !ship.OutsideDefenseHull(captain+Vector3.up*.6f,outward,1.46f) ||
+                    !DefensePathClear(predator,captain+Vector3.up*.6f) ||
+                    !DefensePathClear(captain+Vector3.up*.55f,predator+outward*8))continue;
+                player.Teleport(captain);
+                SpawnAttacker(card,predator,-1,group,false);
+                id=attackers[attackers.Count-1].data.id;
+                PublishAttackers();
+                return true;
+            }
+            return false;
+        }
+
         internal bool DefenseFixtureCapture(DiverMotor victim)
         {
             if(!IsServerInitialized || !DefenseActive)return false;

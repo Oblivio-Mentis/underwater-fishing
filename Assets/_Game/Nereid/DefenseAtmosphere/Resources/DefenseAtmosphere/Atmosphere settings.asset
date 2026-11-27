@@ -22,6 +22,11 @@ MonoBehaviour:
   darkDrawingDistance: 43
   giveWayDistance: 6
   eyeGlow: 1.35
+  cloudCount: 510
+  cloudRadius: 37
+  cloudHeight: 27
+  cloudDrawingDistance: 104
+  cloudOrbitSpeed: 0.23
   silhouetteMaterial: {fileID: 2100000, guid: 16dec4a992bb51228b7c881468a2a56f, type: 2}
   silhouetteMeshes:
   - {fileID: 4300000, guid: a45e4373af43b6f489cf42735363497b, type: 2}
@@ -29,33 +34,3 @@ MonoBehaviour:
   - {fileID: 4300000, guid: dd4561e5eb0814444889b896963cb030, type: 2}
   - {fileID: 4300000, guid: 26b32aa4b6ebb714d8c48789454cdeab, type: 2}
   - {fileID: 4300000, guid: f20f49821b4757f4b97a36b4667cfba2, type: 2}
-  soundLevel: 0
-  scoreLevel: 0
-  swarmVolume: 0.42
-  swarmCallInterval: 4.7
-  effectsOutput: {fileID: 0}
-  scoreOutput: {fileID: 0}
-  localRoar: {fileID: 8300000, guid: 541e917c1a2d563bb0b1a9d4cc7ad128, type: 3}
-  distantRoar: {fileID: 8300000, guid: 83921ba1aed75ec1a05d3f3c6341a640, type: 3}
-  score: {fileID: 8300000, guid: 3d3b5f8953cb5206a13b3f0ccc9462f9, type: 3}
-  fieldHum: {fileID: 8300000, guid: c101521d0cdc5a2dae727cb7eabc73b8, type: 3}
-  shieldImpact: {fileID: 8300000, guid: 8fb6aad731b25289b742f5ca34f9904d, type: 3}
-  shieldCritical: {fileID: 8300000, guid: 8912bfae16fa55ceabb8cd3e3629e956, type: 3}
-  shieldBreak: {fileID: 8300000, guid: 00a660f8ff325f1e854f62cc69cfb849, type: 3}
-  shieldRestore: {fileID: 8300000, guid: 2e6db5f2dd59591395c740b0dd961339, type: 3}
-  darkCalls:
-  - {fileID: 8300000, guid: 66d14d356bf159c58ca9eeee31da1f43, type: 3}
-  - {fileID: 8300000, guid: 3d6719cc1fba5bc28f30fe414a462a73, type: 3}
-  - {fileID: 8300000, guid: 31695e83356f5338ae534d31e1865a21, type: 3}
-  creatureStrikes:
-  - {fileID: 8300000, guid: 9934a6c151ad5f62928dbbb4584c4395, type: 3}
-  - {fileID: 8300000, guid: c1b7c2afc4f755b3bc74c7793eba67cb, type: 3}
-  - {fileID: 8300000, guid: 8fa5f6475ca55ae58bcf1da8f9a0d12b, type: 3}
-  - {fileID: 8300000, guid: d604e1a263485604a3d0e2d97906ab4f, type: 3}
-  - {fileID: 8300000, guid: 328172c4a25e551a89dbcfcafd868599, type: 3}
-  creatureAbilities:
-  - {fileID: 8300000, guid: eba52fa73282511d808f36285122ace0, type: 3}
-  - {fileID: 8300000, guid: f321deb47969555fac4d27eacae17e0b, type: 3}
-  - {fileID: 8300000, guid: ce0e711c879d521f81888285de138d6b, type: 3}
-  - {fileID: 8300000, guid: cf7eb77d3d5f5ee1abb023f79c14c4d3, type: 3}
-  - {fileID: 8300000, guid: 6b0d19c424bc5dc182173c98d73c1cf4, type: 3}

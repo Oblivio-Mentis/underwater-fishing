@@ -45,4 +45,3 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.DefenseAtmosphereView
   settings: {fileID: 11400000, guid: 6ed85a203c3a5fd4962031f5f8cd95dc, type: 2}
-  warningOrigin: {fileID: 0}

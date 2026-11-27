@@ -145,6 +145,24 @@ namespace Raid
                 for(int i=0;i<2;i++){int s=i==0?-1:1;Pose(arms[i],-11,0,s*(22+idle*2),-17,0,81);Pose(legs[i],s*7,0,s*6,9,0,-6);}
                 ApplyAppearance(Action.Dead,dt);return;
             }
+            if(diver.RaidStrugglePose(out float brace,out float escape))
+            {
+                gun.gameObject.SetActive(false);BallVisible=false;
+                invention.Present(null,Vector3.zero,Quaternion.identity);
+                UpdateFish(null,0);
+                float strain=Mathf.Sin(Time.time*10.9f);
+                body.localPosition=V(0,.08f*brace,.12f*escape);
+                body.localRotation=Quaternion.Euler(13-27*escape+strain*6,5*strain,17*strain*(.65f+.33f*brace));
+                head.localRotation=Quaternion.Euler(-8+12*escape,0,-6*strain);
+                for(int i=0;i<2;i++)
+                {
+                    int side=i==0?-1:1;
+                    Pose(arms[i],-58-19*brace-21*escape+side*strain*12,-side*(18-7*escape),
+                        side*22,-72+44*brace+28*escape,0,58);
+                    Pose(legs[i],side*strain*19-37*escape,0,side*8,36-side*strain*21-19*escape,0,-10);
+                }
+                ApplyAppearance(Action.Swim,dt);return;
+            }
             float lean=Mathf.Lerp(1+run*13f,Mathf.Lerp(32,71,stride),swimming);
             fall=Mathf.MoveTowards(fall,(RaidWorld.Instance?.GoshaKnocked(diver)??false)?1:0,dt*5.5f);
             body.localRotation=Quaternion.Euler(lean-fall*79,beat*run*4f,fall*13+beat*stride*(1-swimming)*2.5f-gait.Lateral*run*4f);

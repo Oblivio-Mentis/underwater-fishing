@@ -63,14 +63,22 @@ namespace Raid
         public float SwarmAge => Mathf.Max(0,(float)(DefenseClock-Defense.beginsAt));
         public float DefenseCountdown => Defense.phase is DefensePhase.Warning or DefensePhase.Encirclement
             ? Mathf.Max(0,(float)(Defense.assaultAt-DefenseClock)) : 0;
-        public bool DefenseAlarm => Defense.phase is DefensePhase.Encirclement or DefensePhase.Assault;
+        public bool DefenseAlarm => Defense.phase is DefensePhase.Encirclement or DefensePhase.Assault or DefensePhase.Resolution;
+        public float DefenseBlackout => Defense.phase switch
+        {
+            DefensePhase.Warning=>Mathf.SmoothStep(.14f,.72f,DefenseAge/11f),
+            DefensePhase.Encirclement=>Mathf.SmoothStep(.72f,1,DefenseAge/2.4f),
+            DefensePhase.Assault or DefensePhase.Resolution=>1,
+            DefensePhase.Recovery=>1-Mathf.SmoothStep(0,1,DefenseAge/defenseTuning.restorationSeconds),
+            _=>0
+        };
         internal Vector3 DefenseApproachFocus
         {
             get
             {
                 var s=Defense;
                 float p=s.phase==DefensePhase.Encirclement?Mathf.Clamp01(DefenseAge/defenseTuning.encirclementSeconds):1;
-                return Vector3.Lerp(s.approachStart,s.approachEnd,Mathf.SmoothStep(0,1,p));
+                return Vector3.Lerp(s.approachStart,s.approachEnd,p*(.23f+.77f*p));
             }
         }
         public Vector3 DefenseCenter => fieldAnchor?fieldAnchor.position:
@@ -320,14 +328,16 @@ namespace Raid
             int crew=0;
             foreach(var diver in DiverMotor.ServerDivers)if(diver && !diver.IsDead && !diver.IsHelpless)crew++;
             int cap=Mathf.Clamp(defenseTuning.baseActive+Mathf.Max(0,crew-1)*defenseTuning.activePerExtraDiver,1,defenseTuning.maximumActive);
-            int size=Mathf.Min(defenseTuning.maximumGroup,cap-attackers.Count,1+activeRaid.budget/9);
+            int size=Mathf.Min(defenseTuning.maximumGroup,cap-attackers.Count,2+activeRaid.budget/6);
             if(size<=0)return false;
             bool any=false;
             int lane=raidRandom.Next(0,60);
             int group=groupSerial+1;
             for(int i=0;i<size && AvailableBudget()>0;i++)
             {
-                var card=ChooseAttacker(AvailableBudget());
+                var card=group==1 && i<2 && AvailableBudget()>=3
+                    ?defenseTuning.For(i==0?DefenseSpecies.Rammer:DefenseSpecies.Remora)
+                    :ChooseAttacker(AvailableBudget());
                 if(card==null)break;
                 if(!TryArrival(lane+i*7,card.kind,out var point,out var slot))continue;
                 SpawnAttacker(card,point,slot,group,false);
@@ -470,8 +480,7 @@ namespace Raid
             defenseState.Value=value;
             foreach(var a in attackers)
             {
-                ReleaseVictim(a);
-                if(a.hooks.Count==0)SetPose(a,AttackerPose.Carry,0);
+                if(a.hooks.Count==0 && a.data.victim<0)SetPose(a,AttackerPose.Carry,0);
             }
             AdvanceDefense(DefensePhase.Resolution,"Поле разрушено! Перехватите воров с рыбой.");
             world.ArchiveDefense();

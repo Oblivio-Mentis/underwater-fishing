@@ -66,7 +66,8 @@ namespace Raid
                 best=score;
                 goal=candidate;
             }
-            return best>float.NegativeInfinity;
+            if(best>float.NegativeInfinity)return true;
+            return FindPath(start,a.exit,out goal) && (start-goal).sqrMagnitude>.35f;
         }
 
         bool CrewSeesEscape(Vector3 point)
@@ -74,7 +75,7 @@ namespace Raid
             float range=defenseTuning.escapeSightDistance;
             foreach(var diver in DiverMotor.ServerDivers)
             {
-                if(!diver || !diver.IsServerInitialized || diver.IsDead || diver.gameObject.scene!=gameObject.scene)continue;
+                if(!diver || !diver.IsServerInitialized || diver.IsDead)continue;
                 Vector3 eye=diver.transform.position+Vector3.up*.60f;
                 Vector3 delta=point-eye;
                 if(delta.sqrMagnitude>range*range)continue;

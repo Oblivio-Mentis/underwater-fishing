@@ -103,6 +103,7 @@ namespace Raid
         public override void OnStartServer()
         {
             ServerDivers.Add(this);
+            ResetRaidGrip();
             departureAir = default;
             usedReserve=false;reserveSeconds=reserveReadyAt=dashUntil=dashReadyAt=dryDuration=0;
             rearmedAtDeck=false;swimVelocity=Vector3.zero;
@@ -136,6 +137,8 @@ namespace Raid
         public override void OnStartClient()
         {
             ClientCrew.Add(this);
+            seenRaidBreak=raidBreakSequence.Value;
+            raidBreakAt=-10;
             if (!IsServerInitialized)
             {
                 transform.SetPositionAndRotation(_state.Value.Position, Quaternion.Euler(0f, _state.Value.Yaw, 0f));

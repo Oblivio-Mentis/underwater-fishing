@@ -18,7 +18,7 @@ namespace Raid.UI
                     ?new HudBinding(Key.Right,"Следующий водолаз"):default;
                 return new(Mark.Helmet,player.CanRespawn?new(Key.E,"Вернуться на борт"):watch,player.CanRespawn?watch:default);
             }
-            if(player.IsHelpless)return default;
+            if(player.IsHelpless || player.RaidGripVisual!=0)return default;
             if(world.LookAtOwnParcel(player,out _))return new HudHint(Mark.Glove,new(Key.E,"Забрать выданный предмет"));
             if(world.AimingAtVendingMachine && c.Interaction!=UiInteraction.DroppedItem)return default;
             if(c.Interaction==UiInteraction.Rescue && c.RescueTarget!=null)
@@ -252,6 +252,8 @@ namespace Raid.UI
             {
                 HudWarnings.Signal.Dead=>(p.Spectating?"Наблюдение · "+UiText.HudPlayerName(p.Spectating):p.IsConsumed?"Вас проглотил левиафан":"Водолаз погиб",
                     !p.IsConsumed && !p.CanRespawn && c.Players.Exists(other=>other && other!=p && !other.IsHelpless)?"Напарник может вас спасти":"",Mark.Helmet,false),
+                HudWarnings.Signal.Trap when p.CanBreakRaidGrip=>("Хищник держит вас","Удерживайте F, чтобы вырваться",Mark.Glove,true),
+                HudWarnings.Signal.Trap when p.RaidGripVisual!=0=>("Хищник тащит вас","Напарник может освободить вас",Mark.Glove,true),
                 HudWarnings.Signal.Trap=>("Костюм зажат","Напарник может разжать створки",Mark.Glove,true),
                 HudWarnings.Signal.Down=>("Нужна помощь","Дождитесь напарника",Mark.Helmet,true),
                 HudWarnings.Signal.Hypoxia=>("Гипоксия","Доберитесь до сухого отсека"+(p.AirReserveSpent&&p.AirReserveCooldown>0?" · резерв через "+p.AirReserveCooldown+" с":""),Mark.Bottle,true),
@@ -263,9 +265,14 @@ namespace Raid.UI
                 HudWarnings.Signal.CriticalPressure=>("Опасное давление","Поднимитесь выше",Mark.Shield,true),
                 HudWarnings.Signal.Pressure=>("Давление растёт","Уменьшите глубину",Mark.Shield,false),
                 _=>c.Threats && c.Threats.DefenseActive
-                    ?c.Threats.Defense.phase==DefensePhase.Encirclement
-                        ?("Стая приближается","Следите за прожекторами",Mark.Shield,true)
-                        :("Атака на щит","Защитите улов гарпуном",Mark.Shield,true)
+                    ?c.Threats.Defense.phase switch
+                    {
+                        DefensePhase.Encirclement=>("Стая приближается","Следите за прожекторами",Mark.Shield,true),
+                        DefensePhase.Resolution when c.Threats.Defense.breached=>
+                            ("Щит разрушен","Перехватите воров с рыбой",Mark.Jaw,true),
+                        DefensePhase.Resolution=>("Хищники отступают","Улов под защитой",Mark.Shield,false),
+                        _=>("Атака на щит","Защитите улов гарпуном",Mark.Shield,true)
+                    }
                     :("Атака на резервуар","Защитите улов гарпуном",Mark.Jaw,true)
             };
         }

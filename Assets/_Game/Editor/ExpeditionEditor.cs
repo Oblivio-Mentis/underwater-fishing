@@ -24,7 +24,7 @@ namespace Raid.Editor
             ("Виды рыб", "t:FishSpeciesProfile", "Assets/_Game"),
             ("Угрозы", "t:ThreatTuning", "Assets/_Game"),
             ("Оборона подлодки", "t:DefenseTuning", "Assets/_Game"),
-            ("Стая и звук обороны", "t:DefenseAtmosphereSettings", "Assets/_Game"),
+            ("Рой хищников", "t:DefenseAtmosphereSettings", "Assets/_Game"),
             ("Удильщик", "t:PredatorProfile", "Assets/_Game"),
             ("Прогрессия", "t:ProgressionTuning", "Assets/_Game"),
             ("Дерево прокачки", "RadialProgressionCatalog", "Assets/_Game"),

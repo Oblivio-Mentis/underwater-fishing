@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.Audio;
 
 namespace Raid.Nereid
 {
@@ -17,21 +16,14 @@ namespace Raid.Nereid
         [Min(10f)] public float darkDrawingDistance = 43f;
         [Min(0f)] public float giveWayDistance = 6f;
         [Range(0f,3f)] public float eyeGlow = 1.35f;
+        [Range(100,550)] public int cloudCount=510;
+        [Min(20)] public float cloudRadius=37;
+        [Min(10)] public float cloudHeight=27;
+        [Min(35)] public float cloudDrawingDistance=104;
+        [Range(.1f,.48f)] public float cloudOrbitSpeed=.23f;
         public Material silhouetteMaterial;
         [Tooltip("Rammer, Remora, Thief, Abductor, Stalker. Use vertex colours and two submeshes, pigment then eyes.")]
         public Mesh[] silhouetteMeshes = new Mesh[5];
 
-        [Header("Sound")]
-        [Range(0f,1f)] public float soundLevel = .8f;
-        [Range(0f,1f)] public float scoreLevel = .22f;
-        [Range(0f,1f)] public float swarmVolume = .42f;
-        [Range(1.3f,18f)] public float swarmCallInterval = 4.7f;
-        public AudioMixerGroup effectsOutput;
-        public AudioMixerGroup scoreOutput;
-        public AudioClip localRoar, distantRoar, score, fieldHum;
-        public AudioClip shieldImpact, shieldCritical, shieldBreak, shieldRestore;
-        public AudioClip[] darkCalls = new AudioClip[3];
-        public AudioClip[] creatureStrikes = new AudioClip[5];
-        public AudioClip[] creatureAbilities = new AudioClip[5];
     }
 }

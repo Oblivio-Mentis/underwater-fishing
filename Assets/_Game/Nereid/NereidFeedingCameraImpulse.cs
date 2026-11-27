@@ -143,15 +143,19 @@ namespace Raid.Nereid
             float shock=blastAge>=0 && blastAge<1f
                 ?blastStrength*Mathf.SmoothStep(0,1,blastAge/.036f)*Mathf.Exp(-5.1f*blastAge):0;
             if(hitAge>=.42f){hitMetres=hitDegrees=0;}
-            if(amplitude<.00001f && hit<=0 && shock<=0)return;
+            owner.RaidStrugglePose(out float brace,out float escape);
+            float grapple=(brace*.78f+escape)*shakeScale;
+            if(amplitude<.00001f && hit<=0 && shock<=0 && grapple<=0)return;
             float t=Time.time;Vector3 noise=new Vector3(Mathf.Sin(t*47)+.35f*Mathf.Sin(t*79+.3f),Mathf.Sin(t*61+.7f)+.3f*Mathf.Sin(t*97),Mathf.Sin(t*37)*.35f)/1.35f;
             // DiverMotor has already written the live eye pose for this frame. Apply it once here.
             var eyeRotation=transform.localRotation;
             CurrentOffset=noise*(amplitude+.077f*shock)
-                + eyeRotation * (Vector3.right*(hit*hitMetres*hitDirection) + Vector3.up*(hit*hitMetres*.35f));
+                + eyeRotation * (Vector3.right*(hit*hitMetres*hitDirection) + Vector3.up*(hit*hitMetres*.35f)
+                + new Vector3(Mathf.Sin(t*10.5f)*.02f,.028f*escape,-.062f*escape)*grapple);
             Vector3 angles=new Vector3(noise.y,-noise.x,noise.z)*(amplitude*17+shock*6.7f)
                 + new Vector3(-hit*hitDegrees,hit*hitDegrees*hitDirection,hit*hitDegrees*.4f*hitDirection)
-                + shock*new Vector3(-4.4f,blastSide*2.6f,blastSide*3.2f);
+                + shock*new Vector3(-4.4f,blastSide*2.6f,blastSide*3.2f)
+                + grapple*new Vector3(4.8f*brace-9*escape,2.4f*Mathf.Sin(t*7.8f),7.6f*Mathf.Sin(t*10.5f));
             var rotation=eyeRotation*Quaternion.Euler(angles);
             transform.SetLocalPositionAndRotation(transform.localPosition+CurrentOffset,rotation);
             AppliedThisFrame=true;

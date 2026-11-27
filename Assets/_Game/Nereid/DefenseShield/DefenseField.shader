@@ -57,6 +57,10 @@ Shader "RAID/Defense/Containment membrane"
                     * sin(p.y * 10.1 - p.z * 7.4 + _Time.y * 3.2);
                 float worn = 1 - smoothstep(.04,.68,_FieldState.x);
                 p *= 1 + interference * worn * .022;
+                float breakup = (1-step(.001,_FieldState.x)) * (1-_FieldState.z);
+                float scanId = floor(p.y*13+p.z*4.2);
+                float slip = sin(scanId*5.719+floor(_Time.y*19)*2.17);
+                p.xz += float2(slip,-slip*.54)*(.034*breakup) * step(.34,abs(slip));
                 o.unit = v.positionOS;
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.positionWS = TransformObjectToWorld(p);
@@ -125,7 +129,7 @@ Shader "RAID/Defense/Containment membrane"
                 float d2 = max(dot(fromCamera, fromCamera), .0001);
                 float3 direction = fromCamera * rsqrt(d2);
                 float3 n = normalize(i.normalWS);
-                float rim = pow(1 - abs(dot(n, direction)), 2.4);
+                float rim = pow(saturate(1 - abs(dot(n, direction))), 2.4);
                 float front = IS_FRONT_VFACE(face, 1.0, .64);
                 float3 facets = pow(abs(unit), 5);
                 facets /= max(.001, facets.x + facets.y + facets.z);
@@ -160,6 +164,14 @@ Shader "RAID/Defense/Containment membrane"
                 float assemblyEdge = (threshold - formation * 1.16 + .10) * 13;
                 float assembly = exp2(-assemblyEdge * assemblyEdge)
                     * (1 - smoothstep(.83,.99,formation)) * smoothstep(.015,.16,formation);
+                float breakup = (1-step(.001,integrity)) * (1-_FieldState.z);
+                float pulseTime=floor(travel*19);
+                float tear=HashCell(float3(floor(local.z*4.8),floor(local.y*12),pulseTime));
+                float block=HashCell(float3(floor(local.x*3),floor(local.z*3.8),floor(local.y*5)+pulseTime*.07));
+                float fracture=step(lerp(.20,.89,1-formation),lerp(tear,block,.46));
+                float fault=breakup*LinearTrace(local.y*7+travel*2.3+floor(local.z*1.6)*.023)
+                    * (.25+.75*tear)*(.2+.80*grid);
+                mask*=lerp(1,fracture,breakup);
                 float band=pow(saturate(.52+.48*sin(local.y*1.6-local.z*.49+local.x*.29+travel*1.13)),8);
                 float baseOpacity = _BodyOpacity + _RimOpacity * rim + grid * _CellOpacity * (.41 + .40 * flow + .49*band) + band*.012;
                 baseOpacity *= unstable * lerp(1,.72,critical);
@@ -170,7 +182,7 @@ Shader "RAID/Defense/Containment membrane"
                 float seal = PipeSeal(local) * lerp(1,.60,critical);
                 float joint = 1-smoothstep(1.0005,1.0105,abs(unit.z));
                 float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34
-                    + assembly * (.13 + grid * .22) + sillPower + seal*.39;
+                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + fault*.68;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * joint * front * contrast);
@@ -178,7 +190,7 @@ Shader "RAID/Defense/Containment membrane"
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
                 half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
                     + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 2.3 + hit.y * 1.18 + assembly * .68 + arc + sillPower * 2.4)
-                    + _PipeGlowTint.rgb*seal*1.3;
+                    + _PipeGlowTint.rgb*seal*1.3 + lerp(half3(.18,1,1.6),half3(1.4,.22,.54),tear)*fault*2.9;
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }

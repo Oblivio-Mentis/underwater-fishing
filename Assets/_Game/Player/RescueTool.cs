@@ -27,6 +27,10 @@ namespace Raid
             if (Application.isBatchMode && IsOwner && !UI.UiInputGate.Modal)
                 qaKeyUntil = Time.unscaledTime + Mathf.Clamp(seconds, 0, 10);
         }
+        internal void QaStruggle(float seconds)
+        {
+            if(IsOwner && motor.CanBreakRaidGrip)qaKeyUntil=Time.unscaledTime+seconds;
+        }
 #endif
         private void Update()
         {
@@ -45,6 +49,20 @@ namespace Raid
         {
             if(!IsServerInitialized) return;
             if(motor.IsHelpless || Time.unscaledTime-heldAt>.25f) { progress=0; target=null; PublishDisplay(); return; }
+            if(motor.CanBreakRaidGrip)
+            {
+                if(target!=motor){target=motor;progress=0;}
+                progress+=Time.fixedDeltaTime;
+                if(progress>=SoloEscapeSeconds)
+                {
+                    ThreatDirector.Instance?.BreakSoloGrip(motor);
+                    progress=0;
+                    target=null;
+                    heldAt=float.NegativeInfinity;
+                }
+                PublishDisplay();
+                return;
+            }
             DiverMotor nearest=null;
             float range=2.5f;
             foreach(var other in DiverMotor.ServerDivers)
@@ -59,7 +77,13 @@ namespace Raid
             if(progress>=motor.tuning.rescueSeconds) { nearest.Rescue(); progress=0; target=null; }
             PublishDisplay();
         }
-        private void PublishDisplay() { displayProgress.Value=target==null?0:Mathf.Clamp01(progress/Mathf.Max(.01f,motor.tuning.rescueSeconds));displayTarget.Value=target==null?-1:target.OwnerId; }
+        float SoloEscapeSeconds => ThreatDirector.Instance?.defenseTuning?.soloEscapeSeconds??.95f;
+        private void PublishDisplay()
+        {
+            float duration=target==motor?SoloEscapeSeconds:motor.tuning.rescueSeconds;
+            displayProgress.Value=target==null?0:Mathf.Clamp01(progress/Mathf.Max(.01f,duration));
+            displayTarget.Value=target==null?-1:target.OwnerId;
+        }
         private void OnGUI()
         {
             if(UI.UiInputGate.Active) return;
