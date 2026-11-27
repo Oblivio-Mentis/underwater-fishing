@@ -4,7 +4,7 @@ Shader "RAID/Defense/Impact shards"
     {
         _ShardTint("Displaced field fragments", Color) = (.46,.90,.96,1)
         [HideInInspector] _FieldState("Field state", Vector) = (1,1,0,0)
-        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
+        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.585,4.70,.885)
         [HideInInspector] _Impact0("Impact 0", Vector) = (0,0,0,3)
         [HideInInspector] _Impact1("Impact 1", Vector) = (0,0,0,3)
         [HideInInspector] _Impact2("Impact 2", Vector) = (0,0,0,3)

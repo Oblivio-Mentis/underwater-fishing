@@ -8,6 +8,9 @@ namespace Raid.Nereid.Editor
         const float StockBayAft = -6.70f;
         const float StockBayFore = 2.70f;
 
+        internal static Vector3 StockSeamPoint(bool fore,int side,float section) =>
+            Lower(side,fore?StockBayFore:StockBayAft,section);
+
         static void PressureBelly(OceanEnvelopeMesh belly, int side)
         {
             foreach (var band in new[] {(0f,.48f,carbon),(.48f,.52f,titanium),(.52f,.78f,teal),(.78f,1f,slate)})

@@ -1552,7 +1552,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4099dc7a489a5547a5b0a11b78127f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Raid.Nereid.DefenseFieldView
-  radii: {x: 7.13, y: 4.05, z: 4.7}
+  radii: {x: 7.13, y: 3.7, z: 4.7}
   rimHeight: 0.885
   surface: {fileID: 3687174727079881531}
   sparks: {fileID: 436626024132598179}

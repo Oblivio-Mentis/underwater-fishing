@@ -12,7 +12,7 @@ Shader "RAID/Defense/Containment membrane"
         [HDR] _PipeGlowTint("Pipe seal glow", Color) = (.15,1.05,1.28,1)
         _PipeBandWidth("Pipe seal width", Range(.018,.22)) = .065
         [HideInInspector] _FieldState("Integrity, formation, recovery", Vector) = (1,1,0,0)
-        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
+        [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.585,4.70,.885)
         [HideInInspector] _BreakAxis("Breach direction", Vector) = (0,-1,0,0)
         [HideInInspector] _Impact0("Impact 0", Vector) = (0,0,0,3)
         [HideInInspector] _Impact1("Impact 1", Vector) = (0,0,0,3)
@@ -164,10 +164,10 @@ Shader "RAID/Defense/Containment membrane"
                 float feed = .63 + .37 * pow(saturate(.55 + .45 * sin(local.z * 2.8 + local.x * .38 - _Time.y * 1.85)),3);
                 float sillPower = sill * feed * _SillCharge * lerp(1,.66,critical);
                 float seal = PipeSeal(local) * lerp(1,.60,critical);
-                float aftDistance = (unit.z+1.003)*_FieldRadii.z*17;
-                float aftSeal = exp2(-aftDistance*aftDistance);
+                float edgeDistance = (abs(unit.z)-1.003)*_FieldRadii.z*17;
+                float hullSeal = exp2(-edgeDistance*edgeDistance);
                 float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34
-                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + aftSeal*.18;
+                    + assembly * (.13 + grid * .22) + sillPower + seal*.39 + hullSeal*.18;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));
                 float alpha = saturate((baseOpacity + accent) * mask * front * contrast);
@@ -175,7 +175,7 @@ Shader "RAID/Defense/Containment membrane"
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
                 half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
                     + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 2.3 + hit.y * 1.18 + assembly * .68 + arc + sillPower * 2.4)
-                    + _PipeGlowTint.rgb*(seal*1.3+aftSeal*.31);
+                    + _PipeGlowTint.rgb*(seal*1.3+hullSeal*.31);
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);
             }
