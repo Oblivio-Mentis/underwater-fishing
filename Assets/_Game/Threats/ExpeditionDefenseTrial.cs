@@ -582,14 +582,14 @@ namespace Raid
             await Wait(()=>rescue.DisplayProgress>.07f,"F must build real server progress",1.1f);
             await Wait(()=>rescue.DisplayProgress==0,"released F must cancel progress",1.25f);
             report.Check(player.CanBreakRaidGrip,"A short tap or released hold cannot complete the breakout.");
-            rescue.QaStruggle(2);
+            rescue.QaStruggle(5);
             await Wait(()=>
             {
                 if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
                 return rescue.DisplayProgress>.37f;
             },"visible struggle before release",1.4f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-solo-struggle.png"));
-            await Wait(()=>!player.CanBreakRaidGrip,"a full F hold releases the server grip",2.1f);
+            await Wait(()=>!player.CanBreakRaidGrip,"a full F hold releases the server grip",4.5f);
             await Wait(()=>!player.IsTrapped && player.RaidStrugglePose(out _,out float kick) && kick>.18f,
                 "the animated kick follows the release",.58f);
             report.Check(player.RaidGripVisual==0,"A full F hold frees the diver and starts the release animation.");

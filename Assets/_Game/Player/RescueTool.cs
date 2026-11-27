@@ -48,7 +48,8 @@ namespace Raid
         private void FixedUpdate()
         {
             if(!IsServerInitialized) return;
-            if(motor.IsHelpless || Time.unscaledTime-heldAt>.25f) { progress=0; target=null; PublishDisplay(); return; }
+            float holdTimeout=motor.CanBreakRaidGrip?.45f:.25f;
+            if(motor.IsHelpless || Time.unscaledTime-heldAt>holdTimeout) { progress=0; target=null; PublishDisplay(); return; }
             if(motor.CanBreakRaidGrip)
             {
                 if(target!=motor){target=motor;progress=0;}
