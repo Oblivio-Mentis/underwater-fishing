@@ -260,8 +260,8 @@ namespace Raid
             ReportPhase("breach and real theft",report,folder);
             if(!d.DefenseFixtureBegin(1,team.RequiredFood(world.progression)*2))throw new InvalidOperationException("Failure fixture did not start");
             d.DefenseFixtureForceAssault();
-            if(!d.DefenseFixtureSpawn(DefenseSpecies.Thief,false,1,8.5f) ||
-                !d.DefenseFixtureSpawn(DefenseSpecies.Thief,false,4,14f))throw new InvalidOperationException("Could not stage fleeing carriers");
+            if(!d.DefenseFixtureThief(1,1,8.5f) || !d.DefenseFixtureThief(4,-1,14f))
+                throw new InvalidOperationException("Could not stage fleeing carriers at the two lateral approaches");
             d.DefenseFixtureSetIntegrity(0);
             report.Check(d.Defense.breached && team.ongoingDefense.lossLimit>0 && team.tank.Count==20,"A breach opens theft without instantly removing stock.");
             bool CarryVisible()
@@ -275,7 +275,7 @@ namespace Raid
                 var actor=d.DefenseActorAt(i);
                 if(actor.stolenId==0)continue;
                 await Shot(folder,host,d,actor.position,"05-carrier");
-                if(d.TryDefenseAnchor(actor.id,out var current))d.BlastDefense(current,.9f,180);
+                if(d.TryDefenseAnchor(actor.id,out var current))d.BlastDefense(current,.20f,180);
                 break;
             }
             await Wait(()=>d.Defense.returned>0,"a defeated carrier returns its held fish",10);

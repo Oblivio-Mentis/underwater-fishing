@@ -34,6 +34,24 @@ namespace Raid
             if(IsServerInitialized && DefenseActive)nextGroupAt=DefenseClock+90;
         }
 
+        internal bool DefenseFixtureThief(int group,float side,float distance)
+        {
+            var card=defenseTuning.For(DefenseSpecies.Thief);
+            if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault || card==null)return false;
+            var pickup=TheftPickup();
+            var broadside=(fieldAnchor?fieldAnchor.right:Vector3.right)*side;
+            for(int i=0;i<7;i++)
+            {
+                float yaw=((i+1)/2)*(i%2==0?-14:14);
+                var at=pickup+Quaternion.AngleAxis(yaw,Vector3.up)*broadside*distance;
+                if(!MarineSpawn.InOpenWater(depthTier,at,.55f) || !DefensePathClear(at,pickup))continue;
+                SpawnAttacker(card,at,-1,group,false);
+                PublishAttackers();
+                return true;
+            }
+            return false;
+        }
+
         internal bool DefenseFixtureCapture(DiverMotor victim)
         {
             if(!IsServerInitialized || !DefenseActive)return false;

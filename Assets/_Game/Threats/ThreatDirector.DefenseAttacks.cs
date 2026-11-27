@@ -22,6 +22,7 @@ namespace Raid
             public double until, nextRoute, captureUntil;
             public bool counter, attached, ramHit;
             public Vector3 goal, waypoint, exit;
+            public Vector3? stockApproach;
             public DiverMotor target;
             public CatchItem catchItem;
             public SphereCollider collider;
@@ -342,20 +343,51 @@ namespace Raid
             if(canCarry && a.catchItem==null && a.data.pose!=AttackerPose.Retreat &&
                 activeRaid.lost+activeRaid.inTransit.Count<activeRaid.lossLimit)
             {
-                float depth=fieldView?fieldView.DepthBelowCenter*.68f:.32f;
-                var at=DefenseCenter+Vector3.down*depth;
-                if(MarineSpawn.Floor(depthTier,at,out var floor))at.y=Mathf.Max(at.y,floor.point.y+.55f);
-                if(!Steer(a,at,a.card.speed,dt,true))return;
+                var pickup=TheftPickup();
+                if(a.stockApproach==null && !DefensePathClear(a.data.position,pickup) &&
+                    TryStockChannel(a.data.position,pickup,a.exit,false,out var opening))a.stockApproach=opening;
+                if(!Steer(a,a.stockApproach??pickup,a.card.speed,dt,true))return;
+                if(a.stockApproach.HasValue){a.stockApproach=null;a.nextRoute=0;return;}
                 a.catchItem=RaidWorld.Instance.TakeDefenseCatch();
                 if(a.catchItem!=null)
                 {
                     a.data.stolenId=a.catchItem.id;a.data.stolenSpecies=a.catchItem.species;
+                    if(TryStockChannel(a.data.position,pickup,a.exit,true,out var escape))a.exit=escape;
                     SetPose(a,AttackerPose.Carry,0);
                 }
                 else SetPose(a,AttackerPose.Retreat,0);
             }
             else if(a.catchItem==null)SetPose(a,AttackerPose.Retreat,0);
             if(Steer(a,a.exit,a.card.burstSpeed*.79f,dt,true))RemoveAttacker(index,false,true);
+        }
+
+        Vector3 TheftPickup()
+        {
+            float depth=fieldView?fieldView.DepthBelowCenter*.68f:.32f;
+            var pickup=DefenseCenter+Vector3.down*depth;
+            if(MarineSpawn.Floor(depthTier,pickup,out var floor))pickup.y=Mathf.Max(pickup.y,floor.point.y+.55f);
+            return pickup;
+        }
+
+        bool TryStockChannel(Vector3 from,Vector3 pickup,Vector3 preferred,bool escaping,out Vector3 point)
+        {
+            Vector3 broadside=fieldAnchor?fieldAnchor.right:Vector3.right;
+            float side=Vector3.Dot(preferred-pickup,broadside)<0?-1:1;
+            float halfWidth=fieldView?fieldView.radii.x:fieldRadii.x;
+            float distance=escaping?Mathf.Max(halfWidth+5,12):halfWidth+1.25f;
+            for(int i=0;i<2;i++)
+            for(int angle=0;angle<5;angle++)
+            {
+                float yaw=((angle+1)/2)*(angle%2==0?-20:20);
+                var lane=Quaternion.AngleAxis(yaw,Vector3.up)*(broadside*side*(i==0?1:-1));
+                var candidate=pickup+lane*distance;
+                if(!MarineSpawn.InOpenWater(depthTier,candidate,defenseTuning.sceneryClearance+.1f) ||
+                    !DefensePathClear(from,candidate) || !escaping && !DefensePathClear(candidate,pickup))continue;
+                point=candidate;
+                return true;
+            }
+            point=default;
+            return false;
         }
 
         void RemoveAttacker(int index,bool loot,bool fled,HarpoonTool catcher=null,Vector3? blastOrigin=null,float blastRadius=0)

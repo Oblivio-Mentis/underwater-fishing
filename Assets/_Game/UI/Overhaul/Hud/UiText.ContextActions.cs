@@ -262,7 +262,9 @@ namespace Raid.UI
                 HudWarnings.Signal.Oxygen=>("Мало воздуха · "+Mathf.CeilToInt(air*100)+"%","Возвращайтесь к шлюзу",Mark.Bottle,false),
                 HudWarnings.Signal.CriticalPressure=>("Опасное давление","Поднимитесь выше",Mark.Shield,true),
                 HudWarnings.Signal.Pressure=>("Давление растёт","Уменьшите глубину",Mark.Shield,false),
-                _=>("Атака на резервуар","Защитите улов гарпуном",Mark.Jaw,true)
+                _=>c.Threats && c.Threats.DefenseActive
+                    ?("Атака на щит","Защитите улов гарпуном",Mark.Shield,true)
+                    :("Атака на резервуар","Защитите улов гарпуном",Mark.Jaw,true)
             };
         }
     }
