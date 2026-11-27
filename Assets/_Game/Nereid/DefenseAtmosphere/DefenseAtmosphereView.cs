@@ -22,10 +22,9 @@ namespace Raid.Nereid
         [SerializeField] DefenseAtmosphereSettings settings;
         [SerializeField] Transform warningOrigin;
 
-        readonly Matrix4x4[][] matrices = new Matrix4x4[SpeciesCount][];
         readonly Mesh[] meshes = new Mesh[SpeciesCount];
+        readonly MeshRenderer[] swimmers = new MeshRenderer[MaxSlots];
         readonly MaterialPropertyBlock[,] blocks = new MaterialPropertyBlock[SpeciesCount,2];
-        readonly int[] counts = new int[SpeciesCount];
         Material material;
         int raidSeed, phase;
         float phaseAge, appliedAt, swarmAge, sampledAt, intensity, shade, impactAge = float.PositiveInfinity;
@@ -181,19 +180,35 @@ namespace Raid.Nereid
                     if (model && model.GetComponentInChildren<MeshFilter>() is MeshFilter filter)
                         meshes[i] = filter.sharedMesh;
                 }
-                matrices[i] = new Matrix4x4[MaxSlots];
                 blocks[i,0] = new MaterialPropertyBlock();
                 blocks[i,1] = new MaterialPropertyBlock();
+            }
+            if(!material)return;
+            var pigmentAndEyes=new[]{material,material};
+            var pigment=new[]{material};
+            for(int i=0;i<swimmers.Length;i++)
+            {
+                var mesh=meshes[i%SpeciesCount];
+                if(!mesh)continue;
+                var node=new GameObject("Incoming silhouette "+(i+1),typeof(MeshFilter),typeof(MeshRenderer));
+                node.layer=gameObject.layer;
+                node.transform.SetParent(transform,false);
+                node.GetComponent<MeshFilter>().sharedMesh=mesh;
+                var renderer=swimmers[i]=node.GetComponent<MeshRenderer>();
+                renderer.sharedMaterials=mesh.subMeshCount>1?pigmentAndEyes:pigment;
+                renderer.shadowCastingMode=ShadowCastingMode.Off;
+                renderer.receiveShadows=false;
+                renderer.lightProbeUsage=LightProbeUsage.Off;
+                renderer.enabled=false;
             }
         }
 
         void LateUpdate()
         {
-            VisibleCount = 0;
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null) return;
             var look = UnderwaterLook.Instance;
             Camera eye = look ? look.DiverCamera : Camera.main;
-            if (!eye || !eye.isActiveAndEnabled) return;
+            if (!eye || !eye.isActiveAndEnabled){HideSwarm();return;}
             var profile = Settings;
             Vector3 observer = eye.transform.position;
             float now = Time.time;
@@ -202,26 +217,40 @@ namespace Raid.Nereid
             float volumeInWater = look && !look.EyeSubmerged ? .64f : 1f;
             UpdateAudio(profile,elapsed,orbitAge,observer,volumeInWater);
 
-            if (phase == 0) return;
+            if (phase == 0){HideSwarm();return;}
             BindAssets();
             float reveal = phase == 1 ? warningReveal*.75f
                 : phase == 5 ? 1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.12f,4.4f,elapsed)) : 1;
-            if (!material || reveal < .02f) return;
+            if (!material || reveal < .02f){HideSwarm();return;}
             RenderSwarm(profile,eye,observer,orbitAge,reveal);
         }
 
         void RenderSwarm(DefenseAtmosphereSettings profile,Camera eye,Vector3 observer,float orbitAge,float reveal)
         {
-            System.Array.Clear(counts,0,counts.Length);
+            VisibleCount=0;
             float range = Mathf.Lerp(profile.clearDrawingDistance,profile.darkDrawingDistance,shade);
             int slots = Mathf.Clamp(profile.silhouetteCount,35,MaxSlots);
             float fleeRange = Mathf.Max(.01f,profile.giveWayDistance);
             var vessel=NereidVessel.Active;
+            Vector3 scale=transform.lossyScale;
+            var unit=new Vector3(1/scale.x,1/scale.y,1/scale.z);
             bool advancing=phase<=3 && (approachEnd-approachStart).sqrMagnitude>1;
             float spreadOut=phase==3?Mathf.SmoothStep(0,1,phaseAge/13f):0;
-            for (int i = 0; i < slots; i++)
+            for(int species=0;species<SpeciesCount;species++)
+            for(int surface=0;surface<2;surface++)
             {
-                if ((promoted & (1UL << i)) != 0) continue;
+                var block=blocks[species,surface];
+                block.SetFloat(EyePass,surface);
+                block.SetFloat(Fade,reveal);
+                block.SetFloat(Glow,profile.eyeGlow);
+                block.SetFloat(Range,range);
+                block.SetVector(Billow,new Vector4(SwimBeat[species],FinFlex[species],0,0));
+            }
+            for (int i = 0; i < swimmers.Length; i++)
+            {
+                var swimmer=swimmers[i];
+                if(!swimmer)continue;
+                if(i>=slots || (promoted & (1UL << i)) != 0){swimmer.enabled=false;continue;}
                 OrbitPose pose = SampleOrbit(raidSeed,i,orbitAge,anchor,profile);
                 Vector3 point = pose.Position;
                 Vector3 heading = pose.Forward;
@@ -233,7 +262,7 @@ namespace Raid.Nereid
                 }
                 Vector3 away = point-observer;
                 float distanceSquared = away.sqrMagnitude;
-                if (distanceSquared > range*range) continue;
+                if (distanceSquared > range*range){swimmer.enabled=false;continue;}
                 if (distanceSquared < fleeRange*fleeRange)
                 {
                     Vector3 swimOff = (away.normalized + pose.Forward*.44f).normalized;
@@ -242,43 +271,27 @@ namespace Raid.Nereid
                     heading = Vector3.Slerp(heading,swimOff,avoid);
                 }
                 Vector3 view = eye.WorldToViewportPoint(point);
-                if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f))) continue;
+                if (view.z <= .01f || (view.z > 5f && (view.x < -.14f || view.x > 1.14f || view.y < -.18f || view.y > 1.18f)))
+                {swimmer.enabled=false;continue;}
                 if (phase == 5) point += (pose.Position-anchor).normalized * (4.9f*(1-reveal));
                 if(vessel && !vessel.OutsideDefenseHull(point,heading,pose.Scale) ||
-                    Physics.CheckSphere(point,pose.Scale*.40f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))continue;
+                    Physics.CheckSphere(point,pose.Scale*.40f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                {swimmer.enabled=false;continue;}
                 float roll = Mathf.Sin(orbitAge*(1.5f+.17f*pose.Kind)+i*.73f) * (8+pose.Kind*2.2f);
                 Quaternion bank = Quaternion.LookRotation(heading) * Quaternion.AngleAxis(roll,Vector3.forward);
-                matrices[pose.Kind][counts[pose.Kind]++] = Matrix4x4.TRS(point,bank,Vector3.one*pose.Scale);
+                swimmer.transform.SetPositionAndRotation(point,bank);
+                swimmer.transform.localScale=unit*pose.Scale;
+                for(int surface=0;surface<Mathf.Min(meshes[pose.Kind].subMeshCount,2);surface++)
+                    swimmer.SetPropertyBlock(blocks[pose.Kind,surface],surface);
+                swimmer.enabled=true;
+                VisibleCount++;
             }
-            for (int kind = 0; kind < SpeciesCount; kind++)
-            {
-                int count = counts[kind];
-                Mesh mesh = meshes[kind];
-                if (count == 0 || !mesh) continue;
-                bool instanced = SystemInfo.supportsInstancing && material.enableInstancing;
-                int rendered = instanced ? count : Mathf.Min(count,4);
-                for (int surface = 0; surface < Mathf.Min(mesh.subMeshCount,2); surface++)
-                {
-                    var block = blocks[kind,surface];
-                    block.SetFloat(EyePass,surface);
-                    block.SetFloat(Fade,reveal);
-                    block.SetFloat(Glow,profile.eyeGlow);
-                    block.SetFloat(Range,range);
-                    block.SetVector(Billow,new Vector4(SwimBeat[kind],FinFlex[kind],0,0));
-                    var render = new RenderParams(material)
-                    {
-                        camera = eye,
-                        matProps = block,
-                        shadowCastingMode = ShadowCastingMode.Off,
-                        receiveShadows = false,
-                        lightProbeUsage = LightProbeUsage.Off,
-                        layer = gameObject.layer
-                    };
-                    if (instanced) Graphics.RenderMeshInstanced(render,mesh,surface,matrices[kind],rendered);
-                    else for (int i = 0; i < rendered; i++) Graphics.RenderMesh(render,mesh,surface,matrices[kind][i]);
-                }
-                VisibleCount += rendered;
-            }
+        }
+
+        void HideSwarm()
+        {
+            if(VisibleCount>0)foreach(var swimmer in swimmers)if(swimmer)swimmer.enabled=false;
+            VisibleCount=0;
         }
 
         void OnDisable()
@@ -288,7 +301,7 @@ namespace Raid.Nereid
             if (fieldLoop) fieldLoop.Stop();
             if (scoreLoop) scoreLoop.Stop();
             foreach (var voice in effects) if (voice) voice.Stop();
-            VisibleCount = 0;
+            HideSwarm();
             audioObserved = false;
         }
     }

@@ -164,7 +164,6 @@ namespace Raid
                 player.LookAtConsole(director.DefenseApproachFocus);
             } while(Time.realtimeSinceStartup<ready);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
-            ScreenCapture.CaptureScreenshot(Path.Combine(folder,"02-swarm-live-frame.png"));
             var eye=UnderwaterLook.Instance.DiverCamera;
             Debug.Log($"[DefenseSight] Camera {eye.transform.position:F2} focus {director.DefenseApproachFocus:F2} " +
                 $"viewport {eye.WorldToViewportPoint(director.DefenseApproachFocus):F2} silhouettes {director.VisibleDefenseSwarm} " +
@@ -231,8 +230,8 @@ namespace Raid
             float glassHaze=Shader.GetGlobalFloat("_RaidDryHaze");
             var look=UnderwaterLook.Instance;
             bool dryCamera=look && look.DiverCamera && !look.EyeSubmerged;
-            report.Check(dryCamera && glassHaze>.32f,
-                $"A dry observation deck camera sees the exterior haze. Dry={dryCamera}, haze={glassHaze:F2}.");
+            report.Check(dryCamera && glassHaze>.32f && d.VisibleDefenseSwarm>0,
+                $"A dry observation deck camera sees exterior haze and the swarm. Dry={dryCamera}, haze={glassHaze:F2}, silhouettes={d.VisibleDefenseSwarm}.");
             Vector3 focus=d.DefenseApproachFocus;
             Vector3 towardsShip=(d.DefenseCenter-focus).normalized;
             Vector3 flank=Vector3.Cross(towardsShip,Vector3.up).normalized;
@@ -247,7 +246,7 @@ namespace Raid
             await Awaitable.NextFrameAsync();
             host.LookAtConsole(d.DefenseApproachFocus);
             await Awaitable.WaitForSecondsAsync(.32f);
-            ScreenCapture.CaptureScreenshot(Path.Combine(folder,"02-encirclement.png"));
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-encirclement.png"));
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
