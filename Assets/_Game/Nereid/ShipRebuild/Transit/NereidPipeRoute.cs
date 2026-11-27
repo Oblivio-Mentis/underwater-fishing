@@ -36,6 +36,14 @@ namespace Raid.Nereid
         [Min(.05f)] public float valveSeconds=.32f;
         float valveOpening;
 
+        [Header("Water flowing through the pipe and out of it")]
+        public Material flowWaterMaterial;
+        public Transform waterReceiver;
+        [Range(.35f,.97f)] public float waterFillRadius=.9f;
+        [Range(.12f,1)] public float spillWidth=.29f;
+        [Range(.12f,1)] public float spillHeight=.45f;
+        [Min(.08f)] public float spillDuration=.42f;
+
         [NonSerialized] Mesh skin;
         readonly List<Vector3> samples = new();
         readonly List<float> distances = new();
@@ -131,7 +139,7 @@ namespace Raid.Nereid
             shell.sharedMaterials = build.Apply(skin);
             shell.shadowCastingMode = ShadowCastingMode.Off;
             PositionValve();
-            interiorWater?.Rebuild(samples,distances,radius);
+            interiorWater?.Rebuild(samples,distances,radius*waterFillRadius);
         }
 
         void PositionValve()
@@ -161,7 +169,7 @@ namespace Raid.Nereid
         internal bool PresentWater(float head,float tail,float boreSeconds,Vector3? receiver,out PipeSpill spill)
         {
             spill=default;
-            if(!isActiveAndEnabled || head<=.005f || tail>=boreSeconds+PipeSpill.TravelSeconds+.08f)
+            if(!isActiveAndEnabled || head<=.005f || tail>=boreSeconds+Mathf.Max(.08f,spillDuration)+.08f)
             {
                 interiorWater?.Hide();
                 return false;
@@ -170,15 +178,17 @@ namespace Raid.Nereid
             if(samples.Count<2)return false;
             var heading=transform.TransformVector(samples[^1]-samples[^2]).normalized;
             if(heading.sqrMagnitude<.01f)return false;
-            spill=new PipeSpill(transform.TransformPoint(samples[^1]),heading,receiver);
+            spill=new PipeSpill(transform.TransformPoint(samples[^1]),heading,waterReceiver?waterReceiver.position:receiver);
             if(interiorWater==null)
             {
-                interiorWater=new PipeInteriorWater(transform);
-                interiorWater.Rebuild(samples,distances,radius);
+                interiorWater=new PipeInteriorWater(this);
+                interiorWater.Rebuild(samples,distances,radius*waterFillRadius);
             }
             interiorWater.Present(head,tail,boreSeconds,spill);
             return true;
         }
+
+        internal void HideWater()=>interiorWater?.Hide();
 
         void OnDisable()
         {

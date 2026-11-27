@@ -15,6 +15,7 @@ namespace Raid
     {
         public static RaidWorld Instance {get; private set;}
         public WorldTuning tuning;
+        public Nereid.ExpeditionLayout expeditionLayout;
         public Vector3 CargoLoadingPosition
         {
             get

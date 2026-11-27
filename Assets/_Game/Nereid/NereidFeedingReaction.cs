@@ -102,8 +102,9 @@ namespace Raid.Nereid
                     if(throatSurface && materialShader)
                     {
                         originalThroatMaterial=throatSurface.sharedMaterial;
-                        deepThroatMaterial=new Material(materialShader);
-                        animatedThroat=KrakenGullet.Build();
+                        var layout=RaidWorld.Instance?RaidWorld.Instance.expeditionLayout:null;
+                        deepThroatMaterial=layout && layout.gulletMaterial?new Material(layout.gulletMaterial):new Material(materialShader);
+                        animatedThroat=layout && layout.gulletMesh?Instantiate(layout.gulletMesh):KrakenGullet.Build();
                     }
                     else animatedThroat=Instantiate(originalThroat);
                     animatedThroat.MarkDynamic();throatRest=animatedThroat.vertices;throatWork=new Vector3[throatRest.Length];

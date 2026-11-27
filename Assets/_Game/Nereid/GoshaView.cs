@@ -13,6 +13,10 @@ namespace Raid.Nereid
         Transform creature,body,ball,handBall;
         MeshRenderer worldBall;
         Material shell;
+        bool ownsShell;
+        Vector3 bodyRestPosition;
+        Quaternion bodyRestRotation;
+        readonly Quaternion[] legRest=new Quaternion[8], feelerRest=new Quaternion[2];
         bool presented;
         GoshaMode previousMode;
         float bank,perchBlend;
@@ -35,10 +39,38 @@ namespace Raid.Nereid
         }
         void Awake()
         {
+            var world=RaidWorld.Instance;
+            var model=world.expeditionLayout?world.expeditionLayout.goshaModel:null;
+            if(model && model.IsComplete)
+            {
+                model=Instantiate(model,transform,false);
+                creature=model.creature;body=model.body;
+                worldBall=model.ball;ball=worldBall.transform;
+                model.legs.CopyTo(legs,0);model.feelers.CopyTo(feelers,0);
+                shell=worldBall.sharedMaterial;
+            }
+            else BuildOriginalModel();
+
+            if(!shell)MakeShell();
+            body.localScale*=world.tuning.petScale;
+            bodyRestPosition=body.localPosition;
+            bodyRestRotation=body.localRotation;
+            for(int i=0;i<legs.Length;i++)legRest[i]=legs[i].localRotation;
+            for(int i=0;i<feelers.Length;i++)feelerRest[i]=feelers[i].localRotation;
+        }
+
+        void MakeShell()
+        {
             shell=new Material(Resources.Load<Shader>("NereidReef")){name="Gosha lacquer and woven ball"};
             shell.SetFloat("_PigmentLightCap",1.18f);
+            ownsShell=true;
+        }
+
+        void BuildOriginalModel()
+        {
+            MakeShell();
             creature=Node(transform,"Гоша",Vector3.zero);
-            body=Node(creature,"Shieldback",Vector3.zero);body.localScale=Vector3.one*RaidWorld.Instance.tuning.petScale;
+            body=Node(creature,"Shieldback",Vector3.zero);
             var g=new ReefGeometry();
             g.Tube(new[]{new Vector3(0,0,-1.52f),new(0,-.08f,-.94f),new(0,.03f,-.25f),new(0,.04f,.54f),new(0,-.17f,1.13f)},
                 new[]{.08f,.4f,.63f,.65f,.35f},rose,12,.7f);
@@ -81,6 +113,25 @@ namespace Raid.Nereid
             MeshPart(ball,ropeBall);
             worldBall=ball.GetComponent<MeshRenderer>();
         }
+#if UNITY_EDITOR
+        internal GoshaModel BuildAuthoringTemplate()
+        {
+            BuildOriginalModel();
+            var model=gameObject.AddComponent<GoshaModel>();
+            model.creature=creature;model.body=body;model.ball=worldBall;
+            legs.CopyTo(model.legs,0);feelers.CopyTo(model.feelers,0);
+            return model;
+        }
+
+        internal void ReleaseAuthoringTemplate()
+        {
+            foreach(var mesh in meshes)DestroyImmediate(mesh);
+            meshes.Clear();
+            if(ownsShell && shell)DestroyImmediate(shell);
+            ownsShell=false;
+        }
+#endif
+
         void LateUpdate()
         {
             var world=RaidWorld.Instance;
@@ -163,15 +214,15 @@ namespace Raid.Nereid
             bool happy=s.Mode==GoshaMode.Petted || s.Mode==GoshaMode.Cradled,swim=s.Mode==GoshaMode.Swimming || (s.Mode>=GoshaMode.Coming && !NereidVessel.Active.ContainsWalkingDeck(s.Position));
             bool idle=happy||s.Mode==GoshaMode.Riding||s.Mode==GoshaMode.Resting;
             float phase=idle||swim?t*(happy?5.5f:swim?6:2):gait;
-            body.localPosition=Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
+            body.localPosition=bodyRestPosition+Vector3.up*((happy?.039f:swim?.022f:.006f)*Mathf.Sin(phase));
             float placing=Mathf.Sin(s.DenPlacement/255f*Mathf.PI);
-            body.localRotation=Quaternion.Euler((happy?-12:swim?5*Mathf.Sin(phase*.6f):0)+placing*19,0,bank+(happy?10:2)*Mathf.Sin(phase));
+            body.localRotation=bodyRestRotation*Quaternion.Euler((happy?-12:swim?5*Mathf.Sin(phase*.6f):0)+placing*19,0,bank+(happy?10:2)*Mathf.Sin(phase));
             for(int i=0;i<legs.Length;i++)
             {
                 float cycle=Mathf.Sin(phase+i*1.72f);int sign=i<4?-1:1;
-                legs[i].localRotation=Quaternion.Euler((idle?4:16)*cycle,sign*(swim?19:8)*cycle,sign*(idle?3:11)*Mathf.Max(0,-cycle));
+                legs[i].localRotation=legRest[i]*Quaternion.Euler((idle?4:16)*cycle,sign*(swim?19:8)*cycle,sign*(idle?3:11)*Mathf.Max(0,-cycle));
             }
-            for(int j=0;j<2;j++)feelers[j].localRotation=Quaternion.Euler((happy?-26:0)+Mathf.Sin(phase*.73f+j)*8,(j==0?-1:1)*Mathf.Cos(phase*.7f)*8,0);
+            for(int j=0;j<2;j++)feelers[j].localRotation=feelerRest[j]*Quaternion.Euler((happy?-26:0)+Mathf.Sin(phase*.73f+j)*8,(j==0?-1:1)*Mathf.Cos(phase*.7f)*8,0);
             var ballAt=s.BallPosition;
             var world=RaidWorld.Instance;
             bool viewedHolder=eye!=null && eye.OwnerId==s.Holder && camera!=null;
@@ -229,6 +280,6 @@ namespace Raid.Nereid
             lastBall=ball.position;presented=true;
             PresentWork(s,swim,dt);
         }
-        void OnDestroy(){DisposeWork();if(handBall!=null)Destroy(handBall.gameObject);if(shell!=null)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
+        void OnDestroy(){DisposeWork();if(handBall!=null)Destroy(handBall.gameObject);if(ownsShell && shell)Destroy(shell);foreach(var mesh in meshes)Destroy(mesh);}
     }
 }

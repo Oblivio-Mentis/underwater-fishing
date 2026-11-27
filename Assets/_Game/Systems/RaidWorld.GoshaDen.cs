@@ -24,7 +24,7 @@ namespace Raid
         bool CanBuildDen => DeliveryRank>=3;
 
         // Loose finds belong to the current dive; placed pieces live in the campaign.
-        static readonly Vector2[] JunkSpots={
+        internal static readonly Vector2[] JunkSpots={
             new(14,-14),new(13,-9),new(16,-5),new(10,5),new(17,1),new(11,-3),new(13,-20),
             new(19,-18),new(19,-12),new(12,12),new(7,16),new(-8,13),new(-11,-1),new(24,-9),
             new(19,8),new(10,-24),new(16,-27),new(-10,-9),new(-13,4),new(-9,-17)
@@ -38,6 +38,11 @@ namespace Raid
             var vessel=NereidVessel.Active;
             if(!vessel || goshaJunk.Count>0 || Time.time<junkRetryAt)return;
             junkRetryAt=Time.time+2;
+            if(expeditionLayout && expeditionLayout.goshaJunkSites is {Length:>0} sites)
+            {
+                for(int i=0;i<sites.Length;i++)if(sites[i])AddJunkAt(sites[i].position,i);
+                return;
+            }
             var receiver=GoshaReceiver.Active;
             Vector3 lockExit=LockPoint(12.6f);
             Vector3 hullExit=receiver?receiver.TransferPosition:lockExit;

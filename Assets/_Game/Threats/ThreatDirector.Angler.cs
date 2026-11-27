@@ -45,8 +45,15 @@ namespace Raid
         }
 
         float Rand(float min, float max) => Mathf.Lerp(min, max, (float)anglerRandom.NextDouble());
-        Vector3 TerritoryCentre(int index) => tuning.predatorSpawn + (P.territoryOffsets == null || P.territoryOffsets.Length == 0 ? Vector3.zero : P.territoryOffsets[Mathf.Clamp(index, 0, P.territoryOffsets.Length - 1)]);
-        int TerritoryCount => P.territoryOffsets == null || P.territoryOffsets.Length == 0 ? 1 : P.territoryOffsets.Length;
+        Vector3 TerritoryCentre(int index)
+        {
+            var marker=Nereid.ExpeditionLayout.At(SpawnLayout?.anglerTerritories,index);
+            if(marker)return marker.position;
+            var offsets=P.territoryOffsets;
+            return tuning.predatorSpawn+(offsets is {Length:>0}?offsets[Mathf.Clamp(index,0,offsets.Length-1)]:Vector3.zero);
+        }
+        int TerritoryCount => SpawnLayout?.anglerTerritories is {Length:>0} points
+            ?points.Length:Mathf.Max(1,P.territoryOffsets?.Length??0);
 
         Vector3 Home(Vector3 from)
         {

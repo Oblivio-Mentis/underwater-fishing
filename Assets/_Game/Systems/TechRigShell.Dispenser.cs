@@ -15,7 +15,7 @@ namespace Raid
         {
             if(!samples.TryGetValue(kind,out var sample) || !sample)
             {
-                if(!library.TryGetValue(kind,out var parts) || !parts[0])library[kind]=parts=Design(kind);
+                if(!library.TryGetValue(kind,out var parts) || !parts[0])library[kind]=parts=AuthoredParts(kind);
                 var vertices=new List<Vector3>();var uv=new List<Vector2>();
                 var indices=new List<int>[colors.Length];for(int i=0;i<indices.Length;i++)indices[i]=new();
                 for(int i=0;i<3;i++)
@@ -58,7 +58,7 @@ namespace Raid
         }
 
         internal const float VendorGlassZ=.125f;
-        const float CellHalfWidth=.107f,CellHalfHeight=.111f;
+        internal const float CellHalfWidth=.107f,CellHalfHeight=.111f;
         static Vector3 Cell(int row,int column) => new(.255f-column*.235f,.465f-row*.253f,-.017f);
         internal static Vector3 VendorCell(int index)
         {
@@ -79,6 +79,12 @@ namespace Raid
             item=null;
             return false;
         }
+        internal static AudioClip VendorSound()
+        {
+            if(!click)click=Tone("Выдача · привод",190,.12f);
+            return click;
+        }
+
         internal static InventionVendorDisplay BuildDispenser(GameObject housing)
         {
             Materials();
@@ -152,7 +158,7 @@ namespace Raid
             var light=strip.AddComponent<Light>();light.type=LightType.Point;light.range=1.18f;light.intensity=1.45f;
             light.color=new Color(.78f,.92f,1);light.shadows=LightShadows.None;
             display.audioCue=housing.AddComponent<AudioSource>();display.audioCue.spatialBlend=1;display.audioCue.minDistance=1.2f;display.audioCue.maxDistance=12;display.audioCue.playOnAwake=false;
-            if(!click)click=Tone("Выдача · привод",190,.12f);display.sound=click;
+            display.sound=VendorSound();
             var tint=new Color(.70f,.98f,.92f);
             display.title=VendorLegend(housing.transform,InventionVendorDisplay.ReadyTitle,new(0,.913f,.124f),.63f,1.13f,tint);
             display.title.name="Название товара";
@@ -181,12 +187,13 @@ namespace Raid
                 var item=TechCatalog.Items[i];int row=i/4,col=i%4;
                 var anchor=new GameObject(item.title);anchor.transform.SetParent(housing.transform,false);
                 anchor.transform.localPosition=Cell(row,col);anchor.transform.localRotation=Quaternion.Euler(6,-24,0);
-                BuildSaleSample(anchor,item.id,.178f);display.products[item.id]=anchor.transform;
+                BuildSaleSample(anchor,item.id,.178f);
                 string code=((char)('A'+row)).ToString()+(col+1);
-                display.codes[item.id]=code;
+
                 var pos=VendorCell(i);
-                display.labels[item.id]=VendorLegend(housing.transform,code+" −",
+                var label=VendorLegend(housing.transform,code+" −",
                     new Vector3(pos.x,pos.y-.09f,pos.z+.009f),.30f,.19f,InventionVendorDisplay.Locked);
+                display.AddSlot(item.id,code,anchor.transform,label);
             }
             var selection=new GameObject("Контур выбранного товара");selection.transform.SetParent(housing.transform,false);
             var frame=selection.AddComponent<LineRenderer>();
@@ -200,98 +207,4 @@ namespace Raid
         }
     }
 
-    internal sealed class InventionVendorDisplay : MonoBehaviour
-    {
-        internal const string ReadyTitle="N E R E I D   /   С Н А Б Ж Е Н И Е";
-        internal const string ReadyHint="Наведитесь на товар";
-        internal static readonly Color Locked=new(.94f,.66f,.39f);
-        static readonly Color Available=new(.57f,1,.81f),Full=new(1,.54f,.43f);
-        internal readonly Dictionary<string,Transform> products=new();
-        internal readonly Dictionary<string,string> codes=new();
-        internal readonly Dictionary<string,TMP_Text> labels=new();
-        internal Transform flap;
-        internal TMP_Text code,title,purpose,status;
-        internal LineRenderer frame;
-        internal AudioSource audioCue;
-        internal AudioClip sound;
-        Transform moving;
-        Vector3 origin;
-        float until;
-        int lastRevision=-1, lastPurchaseCount=-1;
-        TechItem aimed,dispatching;
-        VendorAction action;
-
-        internal void RefreshLabels(TeamProgress team)
-        {
-            if(team==null || (team.teamRevision==lastRevision && team.techPurchases.Count==lastPurchaseCount))return;
-            lastRevision=team.teamRevision;
-            lastPurchaseCount=team.techPurchases.Count;
-            foreach(var entry in labels)
-            {
-                bool available=team.TechRank(entry.Key,"unlock")>0;
-                var label=entry.Value;
-                var color=available?Available:Locked;
-                if(label.color==color)continue;
-                label.color=color;
-                label.text=codes[entry.Key]+(available?" +":" −");
-            }
-        }
-
-        internal void PresentAim(TechItem product,VendorAction next)
-        {
-            if(aimed==product && action==next)return;
-            aimed=product;action=next;
-            frame.enabled=product!=null;
-            if(product!=null && products.TryGetValue(product.id,out var sample))
-            {
-                var p=sample.localPosition;
-                frame.transform.localPosition=new Vector3(p.x,p.y,TechRigShell.VendorGlassZ+.016f);
-                frame.startColor=frame.endColor=ActionColor();
-            }
-            RefreshReadout();
-        }
-
-        void RefreshReadout()
-        {
-            bool receipt=dispatching!=null && (aimed==null || aimed==dispatching);
-            var product=receipt?dispatching:aimed;
-            title.text=product?.title??ReadyTitle;
-            purpose.text=product?.purpose??"";
-            status.text=receipt?"Выдача началась":action switch {
-                VendorAction.Ready => "ЛКМ · Получить",
-                VendorAction.Locked => "Нужен чертёж",
-                VendorAction.Full => "Нет места",
-                VendorAction.TeamLimit => RaidWorld.VendorTeamLimitReason,
-                _ => product==null?ReadyHint:"Ожидание"
-            };
-            status.color=receipt?Available:ActionColor();
-            code.text=product!=null && codes.TryGetValue(product.id,out var cell)?cell:"ГОТОВ";
-        }
-        Color ActionColor() => action switch {
-            VendorAction.Ready => Available,
-            VendorAction.Full or VendorAction.TeamLimit => Full,
-            VendorAction.Locked => Locked,
-            _ => Color.white
-        };
-
-        internal void Dispense(string item)
-        {
-            if(moving)moving.localPosition=origin;
-            moving=products.TryGetValue(item,out var value)?value:null;
-            if(moving)origin=moving.localPosition;
-            dispatching=TechCatalog.Find(item);
-            RefreshReadout();
-            until=Time.unscaledTime+.8f;
-            if(audioCue && sound)audioCue.PlayOneShot(sound,.55f);
-        }
-        void Update()
-        {
-            float phase=Mathf.Clamp01((until-Time.unscaledTime)/.8f);
-            if(phase==0 && !moving)return;
-            float travel=Mathf.Sin(Mathf.PI*phase);
-            flap.localRotation=Quaternion.Euler(-63*travel,0,0);
-            if(moving)moving.localPosition=origin+Vector3.forward*(travel*.048f);
-            if(phase==0){moving=null;dispatching=null;RefreshReadout();}
-        }
-    }
 }

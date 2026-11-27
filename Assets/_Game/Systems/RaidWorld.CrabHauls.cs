@@ -16,8 +16,9 @@ namespace Raid
     public sealed partial class RaidWorld
     {
         internal const float CrabDig=1.32f, CrabPick=3.2f, CrabFinish=8.7f;
-        const int PileThreshold=5, ConcurrentHauls=4;
-        const float PileRadius=2.8f;
+        int PileThreshold=>expeditionLayout?Mathf.Max(1,expeditionLayout.crabFishPerPile):5;
+        int ConcurrentHauls=>expeditionLayout?Mathf.Max(1,expeditionLayout.concurrentCrabHauls):4;
+        float PileRadius=>expeditionLayout?Mathf.Max(.25f,expeditionLayout.crabPileRadius):2.8f;
         readonly SyncList<CrabHaul> crabHauls=new();
         readonly SyncList<Vector3> crabDens=new();
         readonly List<long> waitingCrabs=new();
@@ -63,7 +64,7 @@ namespace Raid
                 found=true;
                 if(pileLead==0 || (pileOrigin-item.position).sqrMagnitude>PileRadius*PileRadius)
                 {pileOrigin=item.position;pileAt=Time.time;pileLead=item.id;}
-                if(Time.time-pileAt<4f || !FindCrabDen(floor,out pileDen))break;
+                if(Time.time-pileAt<(expeditionLayout?expeditionLayout.crabAttractionSeconds:4f) || !FindCrabDen(floor,out pileDen))break;
                 waitingCrabs.AddRange(nearbyPile);
                 pileLead=0;
                 break;
@@ -77,22 +78,31 @@ namespace Raid
             foreach(var site in crabDens)
                 if((site-at).sqrMagnitude<54){den=site;return true;}
             if(crabDens.Count>=12)return false;
+            if(expeditionLayout && expeditionLayout.crabDens!=null)
+                foreach(var marker in expeditionLayout.crabDens)
+                    if(marker && (marker.position-at).sqrMagnitude<54 && CrabFloor(marker.position,out var floor))
+                        return RegisterCrabDen(floor,out den);
             for(int i=0;i<22;i++)
             {
                 float angle=i*2.4f;
                 var outward=new Vector3(Mathf.Sin(angle),0,Mathf.Cos(angle));
                 Vector3 probe=at+outward*(4.4f+(i%4)*.48f);
                 if(!CrabFloor(probe,out var floor) || Mathf.Abs(floor.y-at.y)>1.25f)continue;
-                den=floor;
-                crabDens.Add(den);
-                var backing=new GameObject("Rock backing · crab fissure");
-                backing.transform.SetParent(transform,false);
-                backing.transform.position=den+Vector3.up*.18f;
-                backing.AddComponent<BoxCollider>().size=new Vector3(.72f,.38f,.62f);
-                denBlocks.Add(backing);
-                return true;
+                return RegisterCrabDen(floor,out den);
             }
             return false;
+        }
+
+        bool RegisterCrabDen(Vector3 floor,out Vector3 den)
+        {
+            den=floor;
+            crabDens.Add(den);
+            var backing=new GameObject("Rock backing · crab fissure");
+            backing.transform.SetParent(transform,false);
+            backing.transform.position=den+Vector3.up*.18f;
+            backing.AddComponent<BoxCollider>().size=new Vector3(.72f,.38f,.62f);
+            denBlocks.Add(backing);
+            return true;
         }
 
         void TickCrabs()

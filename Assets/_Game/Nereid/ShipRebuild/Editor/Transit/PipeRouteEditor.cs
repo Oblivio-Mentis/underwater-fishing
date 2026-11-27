@@ -10,14 +10,25 @@ namespace Raid.Nereid.Editor
         NereidPipeRoute route;
         Vector2 scroll;
         int selected;
-        bool handles=true;
+        bool handles=true,showWater;
         List<string> issues;
 
         [MenuItem("NEREID/Pipe Route Editor")]
         public static void Open()=>GetWindow<PipeRouteEditor>("Pipe Route Editor");
 
+        internal static void Open(NereidPipeRoute target)
+        {
+            var window=GetWindow<PipeRouteEditor>("Pipe Route Editor");
+            window.SelectRoute(target);
+            window.Focus();
+        }
+
         void OnEnable(){SceneView.duringSceneGui+=SceneGUI;Undo.undoRedoPerformed+=AfterUndo;}
-        void OnDisable(){SceneView.duringSceneGui-=SceneGUI;Undo.undoRedoPerformed-=AfterUndo;}
+        void OnDisable()
+        {
+            if(route)route.HideWater();
+            SceneView.duringSceneGui-=SceneGUI;Undo.undoRedoPerformed-=AfterUndo;
+        }
         void AfterUndo(){if(route)route.Rebuild();Repaint();SceneView.RepaintAll();}
 
         void OnGUI()
@@ -34,7 +45,8 @@ namespace Raid.Nereid.Editor
             if(!route){EditorGUILayout.HelpBox("Select an installed line.",MessageType.Info);EditorGUILayout.EndScrollView();return;}
             var data=new SerializedObject(route);
             data.Update();
-            foreach(string field in new[]{"source","destination","radius","smoothing","curveSteps","circumference","sightGlass","metal","enamel"})
+            foreach(string field in new[]{"source","destination","radius","smoothing","curveSteps","circumference","sightGlass","metal","enamel","valveFrame","portLeaf","starboardLeaf","valveAt","valveSeconds",
+                "flowWaterMaterial","waterReceiver","waterFillRadius","spillWidth","spillHeight","spillDuration"})
                 EditorGUILayout.PropertyField(data.FindProperty(field));
             int count=route.knots.Count;
             selected=Mathf.Clamp(selected,0,Mathf.Max(0,count-1));
@@ -55,7 +67,12 @@ namespace Raid.Nereid.Editor
                 }
             }
             if(data.ApplyModifiedProperties())Changed();
-            handles=EditorGUILayout.Toggle("Scene handles",handles);
+            handles=EditorGUILayout.Toggle("Ручки в Scene",handles);
+            if(!Application.isPlaying)
+            {
+                showWater=EditorGUILayout.Toggle("Предпросмотр воды",showWater);
+                if(showWater)route.PresentWater(20,-1,5,null,out _);else route.HideWater();
+            }
             EditorGUILayout.BeginHorizontal();
             using(new EditorGUI.DisabledScope(count<2))
             {
@@ -77,6 +94,7 @@ namespace Raid.Nereid.Editor
 
         void SelectRoute(NereidPipeRoute target)
         {
+            if(route && !Application.isPlaying)route.HideWater();
             route=target;selected=0;issues=null;
             if(route)Selection.activeGameObject=route.gameObject;
             SceneView.RepaintAll();

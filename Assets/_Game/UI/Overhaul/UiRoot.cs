@@ -12,7 +12,9 @@ namespace Raid.UI
     public sealed class UiRoot : MonoBehaviour,IUiController
     {
         public static UiRoot Instance {get;private set;}
+        [Header("Appearance applied when the game starts")]
         public TMP_FontAsset font;
+        public UiPalette palette=new UiPalette();
         public UiContext Context {get;}=new UiContext();
         public UiSettings Settings {get;private set;}
         public UiPage Page {get;private set;}=UiPage.Main;

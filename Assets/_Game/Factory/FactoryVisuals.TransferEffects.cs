@@ -27,12 +27,13 @@ namespace Raid.Factory
 
             internal void Present(NereidPipeRoute pipe,float intake,float batchAge,float lastLaunch,Vector3? receiver)
             {
+                float spillTime=pipe?Mathf.Max(.08f,pipe.spillDuration):.42f;
                 if(batchAge>=0)
                 {
                     head=batchAge-WaterStartsAt;
                     tail=head-lastLaunch-1.32f;
                 }
-                else if(head>0 && tail<boreSeconds+PipeSpill.TravelSeconds+.16f)
+                else if(head>0 && tail<boreSeconds+spillTime+.16f)
                 {
                     head+=Time.deltaTime;
                     // Stop intake as soon as the batch ends, then let water already in the pipe drain out.
@@ -76,8 +77,8 @@ namespace Raid.Factory
                     }
                 }
                 if(!flowing)return;
-                float first=Mathf.Clamp01((tail-boreSeconds)/PipeSpill.TravelSeconds);
-                float last=Mathf.Clamp01((head-boreSeconds)/PipeSpill.TravelSeconds);
+                float first=Mathf.Clamp01((tail-boreSeconds)/spillTime);
+                float last=Mathf.Clamp01((head-boreSeconds)/spillTime);
                 if(last>first+.025f)
                 {
                     for(int index=0;index<6;index++)
@@ -89,7 +90,7 @@ namespace Raid.Factory
                             color,Range(.027f,.078f),Range(.12f,.28f));
                     }
                 }
-                if(head<boreSeconds+PipeSpill.TravelSeconds || tail>=boreSeconds+PipeSpill.TravelSeconds)return;
+                if(head<boreSeconds+spillTime || tail>=boreSeconds+spillTime)return;
                 for(int splash=0;splash<6;splash++)
                 {
                     var spread=new Vector3(Range(-1,1),0,Range(-1,1));

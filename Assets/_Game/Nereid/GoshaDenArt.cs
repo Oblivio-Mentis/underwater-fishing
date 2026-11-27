@@ -5,8 +5,8 @@ namespace Raid.Nereid
     internal static class GoshaDenLayout
     {
         // The existing mattress and reading light in the companion berth anchor the shelter.
-        static readonly Vector3 Bed=new(5.03f,.22f,3.03f);
-        static readonly (Vector3 at,Vector3 angle)[] Pieces={
+        internal static readonly Vector3 Bed=new(5.03f,.22f,3.03f);
+        internal static readonly (Vector3 at,Vector3 angle)[] Pieces={
             (new(.33f,.20f,.71f),new(-7,21,4)),(new(-.13f,.20f,-.74f),new(8,-25,13)),
             (new(-.50f,.20f,.57f),new(0,-15,-7)),(new(.43f,.20f,-.59f),new(27,16,-18)),
             (new(-.57f,.20f,-.59f),new(-12,23,-30)),(new(.22f,.20f,.37f),new(10,61,21)),
@@ -15,12 +15,15 @@ namespace Raid.Nereid
             (new(-.43f,.20f,.85f),new(-20,35,-42)),(new(.31f,.20f,-.85f),new(18,-25,47))
         };
 
-        internal static Vector3 Approach(NereidVessel vessel) => vessel.transform.TransformPoint(new Vector3(3.96f,.14f,3.02f));
-        internal static Vector3 Origin(NereidVessel vessel) => vessel.transform.TransformPoint(Bed);
+        internal static Vector3 Approach(NereidVessel vessel) => RaidWorld.Instance?.expeditionLayout?.goshaApproach is Transform mark && mark?mark.position:vessel.transform.TransformPoint(new Vector3(3.96f,.14f,3.02f));
+        internal static Vector3 Origin(NereidVessel vessel) => RaidWorld.Instance?.expeditionLayout?.goshaDen is Transform mark && mark?mark.position:vessel.transform.TransformPoint(Bed);
+        internal static Quaternion Rotation(NereidVessel vessel) => RaidWorld.Instance?.expeditionLayout?.goshaDen is Transform mark && mark?mark.rotation:vessel.transform.rotation;
         internal static Pose Piece(NereidVessel vessel,int index)
         {
+            var marker=ExpeditionLayout.At(RaidWorld.Instance?.expeditionLayout?.goshaDenSlots,index);
+            if(marker)return new Pose(marker.position,marker.rotation);
             var piece=Pieces[Mathf.Clamp(index,0,Pieces.Length-1)];
-            return new Pose(Origin(vessel)+vessel.transform.rotation*piece.at,vessel.transform.rotation*Quaternion.Euler(piece.angle));
+            return new Pose(Origin(vessel)+Rotation(vessel)*piece.at,Rotation(vessel)*Quaternion.Euler(piece.angle));
         }
     }
 

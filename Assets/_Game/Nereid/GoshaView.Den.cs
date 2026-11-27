@@ -23,7 +23,7 @@ namespace Raid.Nereid
             if(count>0)
             {
                 if(!den)den=Node(transform,"Гошин домик",Vector3.zero);
-                den.SetPositionAndRotation(GoshaDenLayout.Origin(vessel),vessel.transform.rotation);
+                den.SetPositionAndRotation(GoshaDenLayout.Origin(vessel),GoshaDenLayout.Rotation(vessel));
                 for(int i=builtJunk.Count;i<count;i++)
                 {
                     var piece=JunkModel(den,pieces[i],"Гошина находка");
@@ -35,7 +35,13 @@ namespace Raid.Nereid
                 {
                     if(shelterParts[stage] || count<3+stage*3)continue;
                     shelterParts[stage]=Node(den,stage==0?"Стойки из обломков":stage==1?"Полог из старого брезента":"Рыбацкая сетка и подвески",Vector3.zero);
-                    MeshPart(shelterParts[stage],GoshaDenArt.Shelter(stage));
+                    var mesh=ExpeditionLayout.At(world.expeditionLayout?.goshaShelterMeshes,stage);
+                    if(!mesh)MeshPart(shelterParts[stage],GoshaDenArt.Shelter(stage));
+                    else
+                    {
+                        shelterParts[stage].gameObject.AddComponent<MeshFilter>().sharedMesh=mesh;
+                        shelterParts[stage].gameObject.AddComponent<MeshRenderer>().sharedMaterial=shell;
+                    }
                 }
             }
             placeBlend=s.DenPlacement==0?0:Mathf.MoveTowards(placeBlend,s.DenPlacement/255f,Time.deltaTime*3.3f);
@@ -70,8 +76,9 @@ namespace Raid.Nereid
             int k=(int)kind;
             if(!junkShapes[k])
             {
-                junkShapes[k]=GoshaDenArt.Found(kind).Mesh(kind.ToString());
-                meshes.Add(junkShapes[k]);
+                var authored=ExpeditionLayout.At(RaidWorld.Instance?.expeditionLayout?.goshaJunkMeshes,k);
+                junkShapes[k]=authored?authored:GoshaDenArt.Found(kind).Mesh(kind.ToString());
+                if(!authored)meshes.Add(junkShapes[k]);
                 junkVertices[k]=junkShapes[k].vertices;
             }
             return junkShapes[k];

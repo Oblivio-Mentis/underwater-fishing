@@ -15,11 +15,16 @@ namespace Raid
             public Vector3 Eel,EelHeading,Sweep,Clam,Kraken;
             public byte EelPhase,KrakenPhase;
         }
-        static readonly Vector3 EelHome = new(41,-9,-29);
-        static readonly Vector3[] EelPatrol = {new(45,-8.5f,-36),new(48,-8.8f,-43),new(43,-8,-45),new(38,-8.3f,-34),EelHome};
+        internal static readonly Vector3[] DefaultEelPatrol = {new(45,-8.5f,-36),new(48,-8.8f,-43),new(43,-8,-45),new(38,-8.3f,-34),new(41,-9,-29)};
+        int EelPatrolCount=>SpawnLayout?.eelPatrol is {Length:>0} patrol?patrol.Length:DefaultEelPatrol.Length;
+        Vector3 EelPoint(int index)
+        {
+            var marker=ExpeditionLayout.At(SpawnLayout?.eelPatrol,index);
+            return marker?marker.position:DefaultEelPatrol[Mathf.Clamp(index,0,DefaultEelPatrol.Length-1)];
+        }
         readonly RaycastHit[] huntHits = new RaycastHit[16];
-        public static Vector3 ClamBed => Instance && Instance.Reef.HasClam ? Instance.Reef.Clam : Instance && Instance.tuning ? Instance.tuning.clamAnchor : new Vector3(29,-15.9f,-33);
-        public static Vector3 Rift => Instance && Instance.Reef.HasKraken ? Instance.Reef.Kraken : Instance && Instance.tuning ? Instance.tuning.krakenAnchor : new Vector3(48,-14,-50);
+        public static Vector3 ClamBed => Instance && Instance.Reef.HasClam ? Instance.Reef.Clam : Instance && Instance.tuning ? Instance.ClamArrival : new Vector3(29,-15.9f,-33);
+        public static Vector3 Rift => Instance && Instance.Reef.HasKraken ? Instance.Reef.Kraken : Instance && Instance.tuning ? Instance.KrakenArrival : new Vector3(48,-14,-50);
         readonly SyncVar<ReefSnapshot> reefState=new();
         public ReefSnapshot Reef => reefState.Value;
         const float ThinkPeriod=.12f;
@@ -53,12 +58,15 @@ namespace Raid
             var reef=reefState.Value;
             reef.Active = true;
             reef.Deep = depthTier > 1;
-            if (Time.time >= reefArrivalAt && (!reef.HasClam || reef.Deep && (!reef.HasEel || !reef.HasKraken)))
+            bool seekClam=SpawnLayout?.clamEnabled!=false && !reef.HasClam;
+            bool seekEel=(SpawnLayout?.eelEnabled??reef.Deep) && !reef.HasEel;
+            bool seekKraken=(SpawnLayout?.krakenEnabled??reef.Deep) && !reef.HasKraken;
+            if (Time.time >= reefArrivalAt && (seekClam || seekEel || seekKraken))
             {
                 reefArrivalAt = Time.time + 1;
-                if (!reef.HasClam) reef.HasClam = TryBottomSite(tuning.clamAnchor, tuning.clamArrivalRadius, 1.15f, out reef.Clam);
-                if (reef.Deep && !reef.HasKraken) reef.HasKraken = TryBottomSite(tuning.krakenAnchor, tuning.krakenArrivalRadius, 1.8f, out reef.Kraken);
-                if (reef.Deep && !reef.HasEel && Time.time >= nextCagedEelArrival) reef.HasEel = TryEelEntry(ref reef);
+                if (seekClam) reef.HasClam = TryBottomSite(ClamArrival, tuning.clamArrivalRadius, 1.15f, out reef.Clam);
+                if (seekKraken) reef.HasKraken = TryBottomSite(KrakenArrival, tuning.krakenArrivalRadius, 1.8f, out reef.Kraken);
+                if (seekEel && Time.time >= nextCagedEelArrival) reef.HasEel = TryEelEntry(ref reef);
             }
             bool winch=w.Team.hoistPhase==HoistPhase.Raising || w.Team.hoistPhase==HoistPhase.Returning;
             bool movingWinch=winch&&w.container!=null;
@@ -88,17 +96,17 @@ namespace Raid
 
         bool TryEelEntry(ref ReefSnapshot reef)
         {
-            int start = anglerRandom.Next(EelPatrol.Length);
+            int start = anglerRandom.Next(EelPatrolCount);
             for (int i = 0; i < 20; i++)
             {
-                int from = (start + i) % EelPatrol.Length;
-                int to = (from + 1) % EelPatrol.Length;
-                var point = Vector3.Lerp(EelPatrol[from], EelPatrol[to], Rand(.05f, .95f)) +
+                int from = (start + i) % EelPatrolCount;
+                int to = (from + 1) % EelPatrolCount;
+                var point = Vector3.Lerp(EelPoint(from), EelPoint(to), Rand(.05f, .95f)) +
                             MarineSpawn.Scatter(anglerRandom, tuning.eelArrivalRadius) + Vector3.up * Rand(-1.1f,1.1f);
                 if (!MarineSpawn.InOpenWater(depthTier, point, .65f) ||
-                    !ReefHabitats.CanArrive(point, 9, 14) || !MarineSpawn.ClearLeg(point, EelPatrol[to], .45f, 2.7f)) continue;
+                    !ReefHabitats.CanArrive(point, 9, 14) || !MarineSpawn.ClearLeg(point, EelPoint(to), .45f, 2.7f)) continue;
                 reef.Eel = point;
-                reef.EelHeading = (EelPatrol[to] - point).normalized;
+                reef.EelHeading = (EelPoint(to) - point).normalized;
                 eelWaypoint = to;
                 return true;
             }
@@ -155,7 +163,7 @@ namespace Raid
             if (eelTarget != null)
             {
                 if (!CanPursue(eelTarget))
-                    DistractEel(ref reef,EelPatrol[eelWaypoint],4);
+                    DistractEel(ref reef,EelPoint(eelWaypoint),4);
                 else if (!CarriesFish(eelTarget) && !(RaidWorld.Instance && RaidWorld.Instance.IsCageBait(eelTarget)))
                     DistractEel(ref reef,eelTarget.transform.position,5);
             }
@@ -167,11 +175,11 @@ namespace Raid
                     SwimEel(ref reef,eelDecoy,2.8f,dt);
                     return;
                 }
-                Vector3 goal = EelPatrol[eelWaypoint];
+                Vector3 goal = EelPoint(eelWaypoint);
                 if (Time.time >= eelRouteAt || (goal - reef.Eel).sqrMagnitude < 1.5f)
                 {
-                    if (eelRouteAt > 0) eelWaypoint = (eelWaypoint + 1) % EelPatrol.Length;
-                    goal = EelPatrol[eelWaypoint];
+                    if (eelRouteAt > 0) eelWaypoint = (eelWaypoint + 1) % EelPatrolCount;
+                    goal = EelPoint(eelWaypoint);
                     eelRouteAt = Time.time + 11;
                 }
                 SwimEel(ref reef,goal,2.2f,dt);
@@ -189,7 +197,7 @@ namespace Raid
             else eelBlindTime += dt;
             if (eelBlindTime > .65f || (point - reef.Eel).sqrMagnitude > 19 * 19)
             {
-                DistractEel(ref reef,EelPatrol[eelWaypoint],4.6f);
+                DistractEel(ref reef,EelPoint(eelWaypoint),4.6f);
                 return;
             }
 
@@ -202,7 +210,7 @@ namespace Raid
             }
             if (eelDelay <= 0)
             {
-                DistractEel(ref reef,EelPatrol[eelWaypoint],5);
+                DistractEel(ref reef,EelPoint(eelWaypoint),5);
                 return;
             }
 
@@ -263,7 +271,7 @@ namespace Raid
         {
             var reef=reefState.Value;
             if(!reef.Active)return false;
-            if(reef.HasEel&&Hits(origin,direction,reef.Eel)){DistractEel(ref reef,EelHome,6);reefState.Value=reef;return true;}
+            if(reef.HasEel&&Hits(origin,direction,reef.Eel)){DistractEel(ref reef,EelPoint(EelPatrolCount-1),6);reefState.Value=reef;return true;}
             return false;
         }
 

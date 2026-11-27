@@ -19,6 +19,14 @@ namespace Raid.Nereid.Editor
         [MenuItem("NEREID/Cargo Rail & Hatch Editor")]
         public static void Open()=>GetWindow<CargoRailEditor>("Cargo Rail & Hatch Editor");
 
+        internal static void Open(NereidCargoRail target)
+        {
+            var window=GetWindow<CargoRailEditor>("Cargo Rail & Hatch Editor");
+            window.StopPreview();
+            window.rail=target;window.selected=0;window.issues=null;
+            window.Focus();
+        }
+
         void OnEnable()
         {
             SceneView.duringSceneGui+=SceneGUI;

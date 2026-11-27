@@ -61,13 +61,17 @@ namespace Raid
             if(!bowFactory)bowFactory=FindAnyObjectByType<Factory.FactoryVisuals>();
             var mouth=bowFactory && bowFactory.upperJaw?bowFactory.upperJaw.parent:null;
             if(!mouth)return false;
-            var start=mouth.InverseTransformPoint(charge.position);
-            var end=mouth.InverseTransformPoint(charge.position+travel);
-            const float mouthPlane=-.84f;
+            var aperture=expeditionLayout?expeditionLayout.chargeAperture:null;
+            var outlet=expeditionLayout?expeditionLayout.flameOutlet:null;
+            var frame=aperture?aperture:mouth;
+            var start=frame.InverseTransformPoint(charge.position);
+            var end=frame.InverseTransformPoint(charge.position+travel);
+            float mouthPlane=aperture?0:-.84f;
             if(start.z>=mouthPlane || end.z<mouthPlane)return false;
             float fraction=(mouthPlane-start.z)/(end.z-start.z);
             var entry=Vector3.LerpUnclamped(start,end,fraction);
-            float x=entry.x/1.04f, y=(entry.y+.12f)/.49f;
+            float x=entry.x/Mathf.Max(.01f,expeditionLayout?expeditionLayout.apertureHalfWidth:1.04f);
+            float y=(entry.y+(aperture?0:.12f))/Mathf.Max(.01f,expeditionLayout?expeditionLayout.apertureHalfHeight:.49f);
             if(x*x+y*y>1)return false;
             if(obstacle.collider && obstacle.distance+.008f<travel.magnitude*fraction &&
                 (!obstacle.collider.transform.IsChildOf(mouth) || obstacle.distance+.16f<travel.magnitude*fraction))return false;
@@ -75,13 +79,13 @@ namespace Raid
             charge.mode="spent";
             if(!SaveTransaction()){charge.mode="fuse";return false;}
             charge.anchor=Vector3.zero;
-            charge.position=mouth.TransformPoint(entry);
+            charge.position=frame.TransformPoint(entry);
             singedDivers.Clear();
             krakenBreath.Value=new KrakenBreathState
             {
                 sequence=++breathSequence,startedAt=BreathClock,
-                origin=mouth.TransformPoint(new Vector3(0,-.12f,-1.03f)),
-                forward=(-mouth.forward-mouth.up*.25f).normalized
+                origin=outlet?outlet.position:mouth.TransformPoint(new Vector3(0,-.12f,-1.03f)),
+                forward=outlet?outlet.forward:(-mouth.forward-mouth.up*.25f).normalized
             };
             pendingKrakenRaid=true;
             return true;
@@ -108,7 +112,7 @@ namespace Raid
                         float exposure=Mathf.Max(BreathExposure(state,age,center+Vector3.up*.62f),
                             BreathExposure(state,age,center+Vector3.up*1.10f));
                         if(exposure<=0)continue;
-                        float damage=singedDivers.Add(diver)?86:24*dt;
+                        float damage=singedDivers.Add(diver)?(expeditionLayout?expeditionLayout.flameFirstDamage:86):(expeditionLayout?expeditionLayout.flameDamagePerSecond:24)*dt;
                         diver.TakeRigImpact(damage*exposure);
                     }
                 }

@@ -29,6 +29,14 @@ namespace Raid
         void EnsureInventionRack()
         {
             if(inventionRack)return;
+            var configured=expeditionLayout?expeditionLayout.dispenser:null;
+            if(configured && configured.TryGetComponent<InventionVendorDisplay>(out var baked) &&
+                configured.TryGetComponent<BoxCollider>(out var bakedCollider))
+            {
+                inventionRack=configured;rackContact=bakedCollider;rackDisplay=baked;
+                rackDisplay.RefreshLabels(view);
+                return;
+            }
             foreach(var station in ShipConsole.Stations)
             {
                 if(!station || station.kind!=ShipConsoleKind.SkillTree || !station.screenAnchor || station.gameObject.scene!=gameObject.scene)continue;
@@ -36,12 +44,13 @@ namespace Raid
                 var forward=Vector3.ProjectOnPlane(-screen.forward,Vector3.up).normalized;
                 if(forward.sqrMagnitude<.9f)continue;
                 var center=screen.position-screen.right*2+forward*.30f;
-                if(Physics.Raycast(center,Vector3.down,out var floor,3f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
+                var marker=expeditionLayout?expeditionLayout.dispenser:null;
+                if(!marker && Physics.Raycast(center,Vector3.down,out var floor,3f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore))
                     center.y=floor.point.y+1.2f;
                 var go=new GameObject("NEREID · Раздатчик снаряжения");
                 // The workshop is already mounted on the moving vessel. Preserve the cabinet's metre scale.
-                go.transform.SetPositionAndRotation(center,Quaternion.LookRotation(forward,Vector3.up));
-                go.transform.SetParent(station.transform.parent,true);
+                go.transform.SetPositionAndRotation(marker?marker.position:center,marker?marker.rotation:Quaternion.LookRotation(forward,Vector3.up));
+                go.transform.SetParent(marker?marker:station.transform.parent,true);
                 inventionRack=go.transform;
                 rackContact=go.AddComponent<BoxCollider>();
                 const float back=-.485f;
@@ -91,13 +100,18 @@ namespace Raid
             if(!Physics.Raycast(ray,out var hit,tuning.interactionRange,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore) ||
                 hit.collider!=rackContact)return false;
             if(Vector3.Dot(hit.normal,inventionRack.forward)>=.95f)
-                TechRigShell.TryVendorCell(inventionRack.InverseTransformPoint(hit.point),out product);
+            {
+                var local=inventionRack.InverseTransformPoint(hit.point);
+                if(rackDisplay)rackDisplay.TryProduct(local,out product);
+                else TechRigShell.TryVendorCell(local,out product);
+            }
             return true;
         }
         internal Vector3 RackProductPosition(string kind)
         {
             if(inventionRack)
             {
+                if(rackDisplay)return rackDisplay.ProductPosition(kind,rackContact.center.z+rackContact.size.z*.5f);
                 var items=TechCatalog.Items;
                 for(int i=0;i<items.Length;i++)
                     if(items[i].id==kind)return inventionRack.TransformPoint(TechRigShell.VendorCell(i));

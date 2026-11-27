@@ -8,6 +8,13 @@ namespace Raid
     public sealed partial class ThreatDirector : NetworkBehaviour
     {
         public ThreatTuning tuning;
+        public Nereid.ExpeditionLayout expeditionLayout;
+        Nereid.ExpeditionLayout.Depth SpawnLayout=>expeditionLayout?expeditionLayout.ForDepth(depthTier):null;
+        Vector3 AnglerArrival => SpawnLayout?.anglerTerritories is {Length:>0} points && points[0]
+            ?points[0].position:tuning.predatorSpawn;
+        Vector3 RaiderArrival => SpawnLayout?.raiderArrival is Transform marker && marker?marker.position:tuning.waveSpawn;
+        Vector3 ClamArrival => SpawnLayout?.clamSite is Transform marker && marker?marker.position:tuning.clamAnchor;
+        Vector3 KrakenArrival => SpawnLayout?.krakenSite is Transform marker && marker?marker.position:tuning.krakenAnchor;
         public Vector3[] factoryWaveRoute;
         public static ThreatDirector Instance { get; private set; }
         public event Action<float> StockAttacked;
@@ -83,7 +90,7 @@ namespace Raid
             primitiveHitbox.enabled = true;
             ResetReef();
             depthTier = 1; predatorCooldown = 0f; respawn = 0f; patrolTime = 0f;
-            state.Value = new ThreatSnapshot { PredatorPosition = tuning.predatorSpawn, PredatorHealth = Nereid.NereidVessel.Active ? 0 : tuning.predatorHealth, AnglerHeading = Vector3.forward };
+            state.Value = new ThreatSnapshot { PredatorPosition = AnglerArrival, PredatorHealth = Nereid.NereidVessel.Active || SpawnLayout?.anglerEnabled==false ? 0 : tuning.predatorHealth, AnglerHeading = Vector3.forward };
         }
 
         public override void OnStopClient() { if(reefView!=null)reefView.gameObject.SetActive(false); predatorView.gameObject.SetActive(false); waveView.gameObject.SetActive(false); }
@@ -94,8 +101,8 @@ namespace Raid
             depthTier = Mathf.Clamp(tier, 1, 2);
             ResetReef();
             ThreatSnapshot next = state.Value;
-            next.PredatorPosition = tuning.predatorSpawn;
-            next.PredatorHealth = Nereid.NereidVessel.Active ? 0 : tuning.predatorHealth * Strength;
+            next.PredatorPosition = AnglerArrival;
+            next.PredatorHealth = Nereid.NereidVessel.Active || SpawnLayout?.anglerEnabled==false ? 0 : tuning.predatorHealth * Strength;
             next.AnglerStage=HuntStage.Watching;next.AnglerHeading=Vector3.forward;
             respawn = 0f; predatorCooldown = 0f;
             state.Value = next;
@@ -105,12 +112,12 @@ namespace Raid
 
         public void StartWave(float deficit, int masteredDepth, bool provoked=false)
         {
-            if (!IsServerInitialized || WaveActive || !Finite(deficit) || deficit <= 0f) return;
+            if (!IsServerInitialized || SpawnLayout?.raiderEnabled==false || WaveActive || !Finite(deficit) || deficit <= 0f) return;
             ThreatSnapshot next = state.Value;
             waveDeficit = Mathf.Clamp01(deficit);
             next.WaveActive = true;
             next.WaveAwaitingEntry = Nereid.NereidVessel.Active != null;
-            next.WavePosition = tuning.waveSpawn;
+            next.WavePosition = RaiderArrival;
             waveArrivalAt = 0;
             next.WaveHeading = Vector3.forward;
             var vessel = Nereid.NereidVessel.Active;
@@ -130,7 +137,8 @@ namespace Raid
             if(Nereid.NereidVessel.Active!=null)
             {
                 TickReef(ref next,dt);
-                if(reefState.Value.Active)TickAngler(ref next,dt);
+                if(SpawnLayout?.anglerEnabled==false)next.PredatorHealth=0;
+                else if(reefState.Value.Active)TickAngler(ref next,dt);
             }
             else TickPredator(ref next, dt);
             if (next.WaveActive && next.WaveAwaitingEntry && Time.time >= waveArrivalAt)
@@ -185,7 +193,7 @@ namespace Raid
                        factoryWaveRoute != null && factoryWaveRoute.Length > 0 ? factoryWaveRoute[0] : tuning.airlockWaypoint;
             for (int i = 0; i < 24; i++)
             {
-                var point = tuning.waveSpawn + MarineSpawn.Scatter(anglerRandom, tuning.raiderArrivalRadius) + Vector3.up * Rand(-1.25f, 1.25f);
+                var point = RaiderArrival + MarineSpawn.Scatter(anglerRandom, tuning.raiderArrivalRadius) + Vector3.up * Rand(-1.25f, 1.25f);
                 if (!MarineSpawn.InOpenWater(depthTier, point, tuning.raiderBodyRadius + .1f) ||
                     !ReefHabitats.CanArrive(point, 4.5f, 0) ||
                     !MarineSpawn.ClearLeg(point, gate, tuning.raiderBodyRadius, float.PositiveInfinity)) continue;
@@ -210,10 +218,11 @@ namespace Raid
 
         private void TickPredator(ref ThreatSnapshot next, float dt)
         {
+            if(SpawnLayout?.anglerEnabled==false){next.PredatorHealth=0;return;}
             if (next.PredatorHealth <= 0f)
             {
                 respawn -= dt;
-                if (respawn <= 0f) { next.PredatorHealth = tuning.predatorHealth * Strength; next.PredatorPosition = tuning.predatorSpawn; }
+                if (respawn <= 0f) { next.PredatorHealth = tuning.predatorHealth * Strength; next.PredatorPosition = AnglerArrival; }
                 return;
             }
             predatorCooldown -= dt; patrolTime += dt;
@@ -225,7 +234,7 @@ namespace Raid
                 float distance = (diver.transform.position - next.PredatorPosition).sqrMagnitude;
                 if (distance < nearest) { nearest = distance; target = diver; }
             }
-            Vector3 goal = target != null ? target.transform.position : tuning.predatorSpawn +
+            Vector3 goal = target != null ? target.transform.position : AnglerArrival +
                 new Vector3(Mathf.Sin(patrolTime * tuning.patrolSpeed), 0f, Mathf.Cos(patrolTime * tuning.patrolSpeed)) * tuning.patrolRadius;
             Vector3 step = Vector3.MoveTowards(next.PredatorPosition, goal, tuning.predatorSpeed * Mathf.Sqrt(Strength) * dt);
             if (!Physics.Linecast(next.PredatorPosition, step, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)) next.PredatorPosition = step;

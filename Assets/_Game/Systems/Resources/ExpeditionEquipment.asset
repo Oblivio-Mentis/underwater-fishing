@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0b185377b39a5a479ae5360e0fd51ba, type: 3}
+  m_Name: ExpeditionEquipment
+  m_EditorClassIdentifier: Assembly-CSharp::Raid.ExpeditionEquipmentArt
+  materials:
+  - {fileID: 2100000, guid: dd50ad81825daff4f8f57a9b9a2adc02, type: 2}
+  - {fileID: 2100000, guid: 68f05107739602941b96134deb7c006f, type: 2}
+  - {fileID: 2100000, guid: 6156207cd92b1544bbe43eb9b31734fd, type: 2}
+  - {fileID: 2100000, guid: 6bb26b4ba9321cc4aa7c887a32600f05, type: 2}
+  - {fileID: 2100000, guid: 55a1c0eda4234e946b404e04e30cf2df, type: 2}
+  - {fileID: 2100000, guid: 92fb72ed2e064d54aa7b6a2132b1f995, type: 2}
+  models:
+  - id: charge
+    body: {fileID: 4300000, guid: 2d6329ce3add617439f15460904cd601, type: 2}
+    movablePart: {fileID: 4300000, guid: 9ede4c083b9f8ba49820f937cda8f818, type: 2}
+    signal: {fileID: 4300000, guid: 675aa8ec0d2be5e43869e5bfb296f93e, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: vacuum
+    body: {fileID: 4300000, guid: c35d15bb04a01d046940f9640dd3f2ad, type: 2}
+    movablePart: {fileID: 4300000, guid: 15e31cb6af3fca643ac1ac6b1fceede6, type: 2}
+    signal: {fileID: 4300000, guid: b9e57d3300e39294184c561a7affb1e3, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: net
+    body: {fileID: 4300000, guid: e0797178d1e08104ca0819b7031c672f, type: 2}
+    movablePart: {fileID: 4300000, guid: 771cc0112f51a2a46b5e2c008b650f41, type: 2}
+    signal: {fileID: 4300000, guid: 25dae5d9c921a604b83b688937b1ffab, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: trap
+    body: {fileID: 4300000, guid: 3a08d3fe0081df54a81a93d598884e0b, type: 2}
+    movablePart: {fileID: 4300000, guid: 7a91afdfa14045d4dae0f0bcbd20c868, type: 2}
+    signal: {fileID: 4300000, guid: e35f73b52a4dbe247919ced68b00026d, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: lure
+    body: {fileID: 4300000, guid: 2663ea5188d0ebb41ba04e97d22ee456, type: 2}
+    movablePart: {fileID: 4300000, guid: d53c64e31f076c04ca9a8a1f761cd192, type: 2}
+    signal: {fileID: 4300000, guid: 826e68fc6e66a5d43b2cf24c98260798, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: bubbles
+    body: {fileID: 4300000, guid: 76f99f2737440954ea11db6cf6abc33c, type: 2}
+    movablePart: {fileID: 4300000, guid: bf1d7cea195b3e144816f2a377318cc5, type: 2}
+    signal: {fileID: 4300000, guid: bfccce51aed3b79429d2ef44c4f30a22, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: farm
+    body: {fileID: 4300000, guid: c26558d857775574aa0db9e74356c3cf, type: 2}
+    movablePart: {fileID: 4300000, guid: ba6549c577c621e4fafe11b28159cbfa, type: 2}
+    signal: {fileID: 4300000, guid: 91eb99c8830535b4b9d14b0b795e5b1c, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: cage
+    body: {fileID: 4300000, guid: 237bac4659b0c6f408ccc0dea4c80cb3, type: 2}
+    movablePart: {fileID: 4300000, guid: 90809f0edcd1870499182e21caf2725f, type: 2}
+    signal: {fileID: 4300000, guid: 01a70f984718e844eaa3e14ce729946d, type: 2}
+    captive: {fileID: 4300000, guid: ed885bdea485f574f835ec2580af0ede, type: 2}
+    eelCaptive: {fileID: 4300000, guid: e31c24768449c914b97b5a59afe9dca4, type: 2}
+  - id: winch
+    body: {fileID: 4300000, guid: c99453b6025b8d240a3397ebccde05ff, type: 2}
+    movablePart: {fileID: 4300000, guid: c63a6fb2b68ddf14f8b3fcb42daf9268, type: 2}
+    signal: {fileID: 4300000, guid: 93a7db7248b9ea04ebf801b7c4b8ae21, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: magnet
+    body: {fileID: 4300000, guid: f8068b1974635754782f1400e46bfabc, type: 2}
+    movablePart: {fileID: 4300000, guid: ab26fd1ea0a73714e8c1f5afc33aa182, type: 2}
+    signal: {fileID: 4300000, guid: 6cae4c02e6ec6d14f8b9291e452a522c, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: oxygen
+    body: {fileID: 4300000, guid: 343f881c20bb6c241976ddd484b173d4, type: 2}
+    movablePart: {fileID: 4300000, guid: 7f757ce40530a3948a6e56f62e399ea9, type: 2}
+    signal: {fileID: 4300000, guid: d9623bb97eddf23458d8445fa76c8272, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: robot
+    body: {fileID: 4300000, guid: 798c8ccf308c3c743a57947e5494f5f4, type: 2}
+    movablePart: {fileID: 4300000, guid: c2aead377489c5d4e921009d9979fa16, type: 2}
+    signal: {fileID: 4300000, guid: eaed99bdbd711db458ee742ab3a0815f, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: mail
+    body: {fileID: 4300000, guid: 43f095a195b7be1499cf35c1dc1eae40, type: 2}
+    movablePart: {fileID: 4300000, guid: 48b17c08abbf0d94e9cf03e1073bd1b6, type: 2}
+    signal: {fileID: 4300000, guid: 2c7968d0ecdacef40ad16ac00e3a0c21, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}
+  - id: basket
+    body: {fileID: 4300000, guid: a25b54d6012b88a49a59dc220e6da644, type: 2}
+    movablePart: {fileID: 4300000, guid: 139114c8a560b4f4d9442fa865c1eec5, type: 2}
+    signal: {fileID: 4300000, guid: 6405335ee96112347a607fe3ece0007d, type: 2}
+    captive: {fileID: 0}
+    eelCaptive: {fileID: 0}

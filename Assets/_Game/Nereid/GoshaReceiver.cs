@@ -30,10 +30,12 @@ namespace Raid.Nereid
         public Transform PipeEnd => pipeEnd;
         public NereidPipeRoute Pipe => pipe != null ? pipe : pipe = GetComponentInChildren<NereidPipeRoute>();
 
-        NereidPipeRoute pipe, service;
+        NereidPipeRoute pipe;
+        [SerializeField] NereidPipeRoute service;
+        public NereidPipeRoute ServicePipe=>service;
         Vector3 serviceAnchor;
 
-        internal NereidPipeRoute ServiceRoute(Vector3 deckEntrance)
+        public NereidPipeRoute ServiceRoute(Vector3 deckEntrance)
         {
             if(service)return service;
             var rail=NereidVessel.Active?.authoredRail;
@@ -94,7 +96,12 @@ namespace Raid.Nereid
                     ?waypoints[5].position:NereidVessel.Active.transform.TransformPoint(GoshaDeck.DefaultMarks[5]);
                 ServiceRoute(entrance);
             }
-            if(service)service.SetFlow(world!=null && world.Gosha.ServiceHatchActive?1:0);
+            if(service)
+            {
+                int serverRank=world!=null && world.IsServerInitialized?(world.Team?.TeamRank(SkillLine.GoshaDelivery)??0):0;
+                service.gameObject.SetActive(Mathf.Max(delivery,serverRank)>=5);
+                if(service.isActiveAndEnabled)service.SetFlow(world!=null && world.Gosha.ServiceHatchActive?1:0);
+            }
             if (readyLamp != null)
             {
                 lampBlock ??= new MaterialPropertyBlock();

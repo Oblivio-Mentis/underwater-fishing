@@ -1,17 +1,33 @@
 using UnityEngine;
 namespace Raid.UI
 {
+    [System.Serializable]
+    public sealed class UiPalette
+    {
+        public Color steel = UiTheme.Hex("122024");
+        public Color panel = UiTheme.Hex("223438");
+        public Color edge = UiTheme.Hex("58706C");
+        public Color text = UiTheme.Hex("F0F3E9");
+        public Color muted = UiTheme.Hex("A8BEB5");
+        public Color cyan = UiTheme.Hex("9BD6C4");
+        public Color green = UiTheme.Hex("82D283");
+        public Color amber = UiTheme.Hex("F0BC68");
+        public Color red = UiTheme.Hex("F48065");
+    }
+
     public static class UiTheme
     {
-        public static readonly Color Steel = Hex("122024");
-        public static readonly Color Panel = Hex("223438");
-        public static readonly Color Edge = Hex("58706C");
-        public static readonly Color Text = Hex("F0F3E9");
-        public static readonly Color Muted = Hex("A8BEB5");
-        public static readonly Color Cyan = Hex("9BD6C4");
-        public static readonly Color Green = Hex("82D283");
-        public static readonly Color Amber = Hex("F0BC68");
-        public static readonly Color Red = Hex("F48065");
+        static readonly UiPalette Defaults = new UiPalette();
+        static UiPalette Palette => UiRoot.Instance && UiRoot.Instance.palette != null ? UiRoot.Instance.palette : Defaults;
+        public static Color Steel => Palette.steel;
+        public static Color Panel => Palette.panel;
+        public static Color Edge => Palette.edge;
+        public static Color Text => Palette.text;
+        public static Color Muted => Palette.muted;
+        public static Color Cyan => Palette.cyan;
+        public static Color Green => Palette.green;
+        public static Color Amber => Palette.amber;
+        public static Color Red => Palette.red;
         internal static Color Hex(string value) { Color c; ColorUtility.TryParseHtmlString("#"+value,out c); return c; }
     }
     // Local presentation state only. The server continues validating every action.

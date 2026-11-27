@@ -8,7 +8,6 @@ namespace Raid.Nereid
 {
     internal readonly struct PipeSpill
     {
-        internal const float TravelSeconds=.42f;
         readonly Vector3 start, launch, approach;
         internal readonly Vector3 Impact;
 
@@ -40,6 +39,8 @@ namespace Raid.Nereid
         const int BodyFacets=8,SurfaceFacets=5,RingSize=BodyFacets+SurfaceFacets+2,SpillRings=18;
         static readonly int Flow=Shader.PropertyToID("_Window");
         readonly Transform route;
+        readonly NereidPipeRoute settings;
+        readonly bool ownsMaterial;
         readonly Mesh mesh;
         readonly MeshRenderer draw;
         readonly Material material;
@@ -52,10 +53,12 @@ namespace Raid.Nereid
         float radius,boreLength;
         bool spillInitialized;
 
-        internal PipeInteriorWater(Transform route)
+        internal PipeInteriorWater(NereidPipeRoute settings)
         {
-            this.route=route;
+            this.settings=settings;
+            route=settings.transform;
             var node=new GameObject("Continuous pipe flow",typeof(MeshFilter),typeof(MeshRenderer));
+            node.hideFlags=HideFlags.DontSave;
             node.transform.SetParent(route,false);
             mesh=new Mesh{name="Pipe water and outflow",indexFormat=IndexFormat.UInt32};
             mesh.MarkDynamic();
@@ -64,11 +67,9 @@ namespace Raid.Nereid
             draw.shadowCastingMode=ShadowCastingMode.Off;
             draw.receiveShadows=false;
             var shader=Resources.Load<Shader>("RaidPipeWater");
-            if(shader)
-            {
-                material=new Material(shader);
-                draw.sharedMaterial=material;
-            }
+            if(settings.flowWaterMaterial)material=settings.flowWaterMaterial;
+            else if(shader){material=new Material(shader);ownsMaterial=true;}
+            draw.sharedMaterial=material;
             Hide();
         }
 
@@ -80,7 +81,7 @@ namespace Raid.Nereid
             if(samples.Count<2 || distance[^1]<.001f)return;
             boreRings=samples.Count;
             boreLength=distance[^1];
-            radius=boreRadius*.9f;
+            radius=boreRadius;
             int rings=boreRings+SpillRings;
             vertices=new Vector3[rings*RingSize];
             uv=new Vector2[vertices.Length];
@@ -158,7 +159,7 @@ namespace Raid.Nereid
                 distance+=route.InverseTransformVector(center-last).magnitude;
                 float taper=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.05f,.73f,t));
                 WriteRing(boreRings+ring-1,route.InverseTransformPoint(center),up,tangent,distance,1+t,
-                    Mathf.Lerp(1,.29f,taper),Mathf.Lerp(1,.45f,taper),
+                    Mathf.Lerp(1,settings.spillWidth,taper),Mathf.Lerp(1,settings.spillHeight,taper),
                     1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.85f,1,t)));
                 previous=tangent;last=center;
             }
@@ -178,17 +179,22 @@ namespace Raid.Nereid
         {
             if(!material || boreRings==0)return;
             ShapeSpill(spill);
-            block.SetVector(Flow,new Vector4(head,tail,boreSeconds,PipeSpill.TravelSeconds));
+            block.SetVector(Flow,new Vector4(head,tail,boreSeconds,Mathf.Max(.08f,settings.spillDuration)));
             draw.SetPropertyBlock(block);
             draw.enabled=true;
+        }
+
+        static void Release(Object asset)
+        {
+            if(Application.isPlaying)Object.Destroy(asset);else Object.DestroyImmediate(asset);
         }
 
         internal void Hide(){if(draw)draw.enabled=false;}
         public void Dispose()
         {
-            if(draw)Object.Destroy(draw.gameObject);
-            if(mesh)Object.Destroy(mesh);
-            if(material)Object.Destroy(material);
+            if(draw)Release(draw.gameObject);
+            if(mesh)Release(mesh);
+            if(ownsMaterial && material)Release(material);
         }
     }
 }

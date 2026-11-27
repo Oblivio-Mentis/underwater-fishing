@@ -116,6 +116,10 @@ namespace Raid
         static void Materials()
         {
             if(palette!=null && palette[0])return;
+            var configured=ExpeditionEquipmentArt.Current;
+            if(configured && configured.materials?.Length==colors.Length &&
+                System.Array.TrueForAll(configured.materials,m=>m))
+            {palette=configured.materials;return;}
             palette=new Material[colors.Length];
             var shader=Shader.Find("Universal Render Pipeline/Lit")??Shader.Find("Standard");
             var grain=PaintGrain();
@@ -167,7 +171,10 @@ namespace Raid
             }
             p.Box(new(0,-h,0),new(2*x,.065f,2*z),0);
         }
-        static Mesh[] Design(string kind)
+        internal static Material[] ArtPalette {get{Materials();return palette;}}
+        internal static Mesh[] AuthoredParts(string kind)=>ExpeditionEquipmentArt.Current?.Find(kind)??Design(kind);
+
+        internal static Mesh[] Design(string kind)
         {
             var p=new Press();var d=new Press();var l=new Press();
             switch(kind)
@@ -293,7 +300,7 @@ namespace Raid
         public void Build(string kind)
         {
             model=kind;Materials();
-            if(!library.TryGetValue(kind,out var meshes) || !meshes[0])library[kind]=meshes=Design(kind);
+            if(!library.TryGetValue(kind,out var meshes) || !meshes[0])library[kind]=meshes=AuthoredParts(kind);
             for(int i=0;i<(kind=="cage"?4:3);i++)
             {
                 var child=new GameObject(new[]{"Корпус","Привод","Маяк","Хищник"}[i]);child.transform.SetParent(transform,false);
