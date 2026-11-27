@@ -137,7 +137,7 @@ namespace Raid.Nereid.Editor
             return Asset(name, new Material(shader) { name = name });
         }
 
-        static T Asset<T>(string name, T value) where T : Object
+        static T Asset<T>(string name, T value, bool refreshContents = false) where T : Object
         {
             const string folder = AssetRoot + "/Models";
             Directory.CreateDirectory(folder);
@@ -147,6 +147,7 @@ namespace Raid.Nereid.Editor
             var existing = AssetDatabase.LoadAssetAtPath<T>(path);
             if (existing)
             {
+                if (refreshContents) EditorUtility.CopySerialized(value, existing);
                 Object.DestroyImmediate(value);
                 return existing;
             }

@@ -342,7 +342,9 @@ namespace Raid
             if(canCarry && a.catchItem==null && a.data.pose!=AttackerPose.Retreat &&
                 activeRaid.lost+activeRaid.inTransit.Count<activeRaid.lossLimit)
             {
-                var at=DefenseCenter+Vector3.down*.32f;
+                float depth=fieldView?fieldView.DepthBelowCenter*.68f:.32f;
+                var at=DefenseCenter+Vector3.down*depth;
+                if(MarineSpawn.Floor(depthTier,at,out var floor))at.y=Mathf.Max(at.y,floor.point.y+.55f);
                 if(!Steer(a,at,a.card.speed,dt,true))return;
                 a.catchItem=RaidWorld.Instance.TakeDefenseCatch();
                 if(a.catchItem!=null)

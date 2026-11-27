@@ -5,10 +5,10 @@ Shader "RAID/Defense/Containment membrane"
         _FieldTint("Stable field", Color) = (.18,.72,.81,1)
         _WarningTint("Critical field", Color) = (.98,.32,.10,1)
         _GridScale("Cells per metre", Range(.5,3)) = 1.4
-        _BodyOpacity("Surface opacity", Range(0,.24)) = .045
-        _RimOpacity("Rim opacity", Range(0,.65)) = .32
+        _BodyOpacity("Surface opacity", Range(0,.24)) = .055
+        _RimOpacity("Rim opacity", Range(0,.65)) = .43
         _SillCharge("Sill illumination", Range(0,.45)) = .24
-        _CellOpacity("Lattice opacity", Range(0,.4)) = .054
+        _CellOpacity("Lattice opacity", Range(0,.4)) = .125
         [HideInInspector] _FieldState("Integrity, formation, recovery", Vector) = (1,1,0,0)
         [HideInInspector] _FieldRadii("Semi-axes", Vector) = (7.13,4.935,4.70,.885)
         [HideInInspector] _BreakAxis("Breach direction", Vector) = (0,-1,0,0)
@@ -105,7 +105,7 @@ Shader "RAID/Defense/Containment membrane"
                 float3 direction = fromCamera * rsqrt(d2);
                 float3 n = normalize(i.normalWS);
                 float rim = pow(1 - abs(dot(n, direction)), 2.4);
-                float front = IS_FRONT_VFACE(face, 1.0, .38);
+                float front = IS_FRONT_VFACE(face, 1.0, .64);
                 float3 facets = pow(abs(unit), 5);
                 facets /= max(.001, facets.x + facets.y + facets.z);
                 float3 panels = local * _GridScale;
@@ -148,7 +148,7 @@ Shader "RAID/Defense/Containment membrane"
                 float alpha = saturate((baseOpacity + accent) * mask * front * contrast);
 
                 half3 pigment = lerp(_FieldTint.rgb, _WarningTint.rgb, worn * .48 + critical * .42);
-                half3 radiance = pigment * (.43 + rim * .38 + grid * .22 + flow * .15)
+                half3 radiance = pigment * (.52 + rim * .45 + grid * .36 + flow * .15)
                     + lerp(pigment,half3(.82,1,1),.75) * (hit.x * 1.48 + hit.y * .65 + assembly * .68 + arc + sillPower * 2.4);
                 half3 color = NereidWaterFade(radiance, direction, d2 * .53, extinction);
                 return half4(color * alpha, alpha);

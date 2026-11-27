@@ -28,21 +28,15 @@ namespace Raid.Nereid.Editor
                 var field = root.GetComponent<DefenseFieldView>();
                 var fittings = root.transform.Find("Hull induction generators");
                 var material = fittings.GetComponentInChildren<MeshRenderer>().sharedMaterial;
-                field.radii = new Vector3(7.13f,4.05f,4.70f);
-                field.rimHeight = .885f;
-                if (Fit(field, fittings, material))
-                {
-                    PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-                    AssetDatabase.SaveAssets();
-                }
+                Fit(field, fittings, material);
+                PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
+                AssetDatabase.SaveAssets();
             }
             finally { PrefabUtility.UnloadPrefabContents(root); }
         }
 
-        static bool Fit(DefenseFieldView view, Transform generators, Material housingMaterial)
+        static void Fit(DefenseFieldView view, Transform generators, Material housingMaterial)
         {
-            if (generators.Find("Hull retaining rails")) return false;
-
             var lensMaterial = view.generatorLenses[0].sharedMaterial;
             var saddle = Asset("Aquarium retaining saddle", RetainingSaddle());
             var arm = Asset("Aquarium field brace", Brace());
@@ -52,15 +46,17 @@ namespace Raid.Nereid.Editor
             view.surface.transform.localPosition = Vector3.up * view.RimHeight;
             view.surface.transform.localScale = view.EnvelopeScale;
 
-            var rails = Node(generators, "Hull retaining rails", Vector3.zero);
-            MakeMesh(rails, "Machined reservoir opening", Asset("Aquarium aperture lip", ApertureLip(view)), housingMaterial);
+            var rails = MountPoint(generators, "Hull retaining rails", Vector3.zero);
+            var lip = FitMesh(rails, "Machined reservoir opening",
+                Asset("Aquarium aperture lip", ApertureLip(view), true), housingMaterial);
+            lip.transform.localPosition = Vector3.zero;
             foreach (int side in new[] {-1, 1})
             {
-                var rail = Node(rails, side < 0 ? "Port sill" : "Starboard sill",
+                var rail = MountPoint(rails, side < 0 ? "Port sill" : "Starboard sill",
                     new Vector3(side * (view.radii.x - .12f), view.RimHeight - 1.10f, 0));
                 rail.localRotation = Quaternion.Euler(0, side < 0 ? 180 : 0, 0);
                 rail.localScale = new Vector3(1, 1, view.radii.z / 4.70f);
-                MakeMesh(rail, "Bolted induction carrier rail", saddle, housingMaterial);
+                FitMesh(rail, "Bolted induction carrier rail", saddle, housingMaterial);
             }
 
             view.contactLenses = new MeshRenderer[view.generatorLenses.Length];
@@ -78,16 +74,31 @@ namespace Raid.Nereid.Editor
                 mounting.localPosition = new Vector3(side*(width-.145f), view.RimHeight + .07f, z);
                 mounting.localRotation = Quaternion.Euler(0, side < 0 ? 180 : 0, 0);
 
-                var strap = MakeMesh(mounting, "Pressure-sill suspension strap", arm, housingMaterial);
+                var strap = FitMesh(mounting, "Pressure-sill suspension strap", arm, housingMaterial);
                 strap.transform.localPosition = new Vector3(.077f, -.045f, 0);
                 strap.transform.localScale = new Vector3(.38f, 1, 1);
 
-                var contact = MakeMesh(mounting, "Induction contact collar", lens, lensMaterial);
+                var contact = FitMesh(mounting, "Induction contact collar", lens, lensMaterial);
                 contact.transform.localPosition = new Vector3(.145f,-.26f,0);
                 contact.transform.localRotation = Quaternion.Euler(0,0,-24);
                 view.contactLenses[i] = contact;
             }
-            return true;
+        }
+
+        static Transform MountPoint(Transform parent, string name, Vector3 position)
+        {
+            var child = parent.Find(name);
+            if (!child) return Node(parent, name, position);
+            child.localPosition = position;
+            return child;
+        }
+
+        static MeshRenderer FitMesh(Transform parent, string name, Mesh mesh, Material material)
+        {
+            var child = parent.Find(name);
+            if (!child) return MakeMesh(parent, name, mesh, material);
+            child.GetComponent<MeshFilter>().sharedMesh = mesh;
+            return child.GetComponent<MeshRenderer>();
         }
 
         static Mesh ApertureLip(DefenseFieldView view)

@@ -25,10 +25,10 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _BodyOpacity: 0.045
-    - _CellOpacity: 0.054
+    - _BodyOpacity: 0.055
+    - _CellOpacity: 0.125
     - _GridScale: 1.4
-    - _RimOpacity: 0.32
+    - _RimOpacity: 0.43
     - _SillCharge: 0.24
     m_Colors:
     - _BreakAxis: {r: 0, g: -1, b: 0, a: 0}
