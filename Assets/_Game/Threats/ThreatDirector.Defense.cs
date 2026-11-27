@@ -19,7 +19,7 @@ namespace Raid
             public float integrity, maximum, severity;
             public double phaseAt, beginsAt, impactAt;
             public Vector3 impactPoint;
-            public bool breached;
+            public bool breached, provoked;
             public float Ratio => maximum>0?Mathf.Clamp01(integrity/maximum):1;
         }
 
@@ -99,10 +99,10 @@ namespace Raid
             if(budget<=0)return false;
             var record=new DefenseRecord{
                 seed=UnityEngine.Random.Range(1,int.MaxValue),budget=budget,appetite=report.required,deficit=report.deficit,
-                mitigation=report.mitigation,integrity=defenseTuning.maximumIntegrity
+                mitigation=report.mitigation,integrity=defenseTuning.maximumIntegrity,provoked=provoked
             };
             world.Team.ongoingDefense=record;
-            StartDefense(record,provoked);
+            StartDefense(record);
             world.ArchiveDefense();
             return true;
         }
@@ -112,7 +112,7 @@ namespace Raid
             if(record==null || DefenseActive || !NereidVessel.Active)return;
             var world=RaidWorld.Instance;
             for(int i=record.inTransit.Count-1;i>=0;i--)world.RecoverDefenseCatch(record.inTransit[i],false);
-            StartDefense(record,false);
+            StartDefense(record);
             if(record.breached && !record.resolutionComplete)
             {
                 var thief=defenseTuning.For(DefenseSpecies.Thief);
@@ -126,7 +126,7 @@ namespace Raid
             world.ArchiveDefense();
         }
 
-        void StartDefense(DefenseRecord record,bool provoked)
+        void StartDefense(DefenseRecord record)
         {
             activeRaid=record;
             raidRandom=new System.Random(record.seed ^ record.spent);
@@ -135,13 +135,13 @@ namespace Raid
                 seed=record.seed, budget=record.budget, spent=record.spent, lost=record.lost,
                 integrity=Mathf.Clamp(record.integrity,0,defenseTuning.maximumIntegrity),maximum=defenseTuning.maximumIntegrity,
                 severity=record.deficit, phase=record.resolutionComplete?DefensePhase.Recovery:record.breached?DefensePhase.Resolution:DefensePhase.Warning,
-                breached=record.breached, beginsAt=now,phaseAt=now,
+                breached=record.breached, provoked=record.provoked, beginsAt=now,phaseAt=now,
                 condition=record.breached?FieldCondition.Broken:FieldCondition.Normal
             };
             nextActorSnapshot=0;
             groupSerial=0;
             if(!record.breached && !record.resolutionComplete)FishActor.ScatterFromDefense(DefenseCenter,19f,3.5f,depthTier);
-            SetDefenseMessage(provoked?"Рёв кракена. Стая идёт к подлодке!":"Кракен голоден. Возвращайтесь к подлодке!");
+            SetDefenseMessage(record.provoked?"Рёв кракена. Стая идёт к подлодке!":"Кракен голоден. Возвращайтесь к подлодке!");
         }
 
         void SetDefenseMessage(string text)

@@ -8,7 +8,7 @@ namespace Raid
     {
         public int seed, budget, spent, lost, lossLimit, appetite;
         public float deficit, mitigation, integrity;
-        public bool breached, resolutionComplete;
+        public bool breached, resolutionComplete, provoked;
         public int remainingCarriers;
         public List<CatchItem> inTransit=new();
     }

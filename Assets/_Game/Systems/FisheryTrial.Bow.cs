@@ -50,7 +50,7 @@ namespace Raid
                     Check(true,"Both independent players suffered server-authoritative flame damage");
                 }
                 yield return Wait("new raid after the angry roar",()=>world.threats.WaveActive,6);
-                Check(world.threats.Message.Contains("рев") || world.threats.Message.Contains("рёв"),
+                Check(world.threats.DefenseActive && world.threats.Defense.provoked,
                     "The active new ship raid was provoked by the kraken");
 
                 Vector3 tank=factory.processRoute.WorldPoint(0);
