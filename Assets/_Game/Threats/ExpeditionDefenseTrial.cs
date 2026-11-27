@@ -446,7 +446,18 @@ namespace Raid
             d.DefenseFixtureForceAssault();d.DefenseFixturePauseGroups();
             ReportPhase("latch and harpoon",report,folder);
             if(!d.DefenseFixtureSpawn(DefenseSpecies.Remora,false,1,8))throw new InvalidOperationException("No remora entry");
-            await Wait(()=>d.DefenseActorCount==1 && d.DefenseActorAt(0).pose==AttackerPose.Latch,"remora attached",14);
+            float nextMotionLog=0;
+            await Wait(()=>
+            {
+                if(d.DefenseActorCount!=1)return false;
+                var state=d.DefenseActorAt(0);
+                if(Time.realtimeSinceStartup>=nextMotionLog)
+                {
+                    nextMotionLog=Time.realtimeSinceStartup+1.2f;
+                    Debug.Log("[RemoraContact] "+d.DefenseFixtureMotion(state.id));
+                }
+                return state.pose==AttackerPose.Latch;
+            },"remora attached",14);
             var remora=d.DefenseActorAt(0);
             await Wait(()=>d.DefenseFixtureContact(remora.id,out _,out _),"remora jaw centered on a lit shield cell",3);
             d.DefenseFixtureContact(remora.id,out _,out var firstAnchor);
@@ -703,16 +714,18 @@ namespace Raid
             Debug.Log($"[SoloGrip] diver scene {player.gameObject.scene.name}, director scene {d.gameObject.scene.name}, diver {player.transform.position:F2}, predator {actor.position:F2}.");
             AttackerPose? lastPose=null;
             bool sawTongue=false;
+            float nextMotionLog=0;
             await Wait(()=>
             {
                 if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
                 for(int i=0;i<d.DefenseActorCount;i++)
                 {
                     var sample=d.DefenseActorAt(i);
-                    if(sample.id!=attacker || lastPose==sample.pose)continue;
+                    if(sample.id!=attacker || lastPose==sample.pose && Time.realtimeSinceStartup<nextMotionLog)continue;
+                    nextMotionLog=Time.realtimeSinceStartup+1.1f;
                     lastPose=sample.pose;
                     sawTongue|=sample.pose==AttackerPose.Tongue;
-                    Debug.Log($"[SoloGrip] {sample.pose} at {sample.position:F2}, diver {player.transform.position:F2}, dry {player.IsInside}, captive {player.RaidGripVisual}.");
+                    Debug.Log("[SoloGrip] "+d.DefenseFixtureMotion(attacker,player));
                 }
                 return player.RaidGripVisual==attacker && player.CanBreakRaidGrip;
             },"natural abductor windup, strike and grip",14);

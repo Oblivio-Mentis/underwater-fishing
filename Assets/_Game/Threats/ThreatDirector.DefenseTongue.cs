@@ -22,7 +22,10 @@ namespace Raid
 
         void BeginTongueWindup(DefenseAttacker a,Vector3 chest,float dt)
         {
-            Vector3 mouth=SquidMouth(a.data);
+            var aiming=a.data;
+            Vector3 toward=chest-aiming.position;
+            if(toward.sqrMagnitude>.015f)aiming.forward=toward.normalized;
+            Vector3 mouth=SquidMouth(aiming);
             float distance=Vector3.Distance(mouth,chest);
             if(!a.target.CanBeRaidCaptive)
             {
@@ -53,7 +56,9 @@ namespace Raid
                 var aim=CaptiveChest(prey);
                 if(now<a.until-.19)
                     a.data.tongueAim=Vector3.Lerp(a.data.tongueAim,aim,1-Mathf.Exp(-dt*10));
-                a.data.forward=Vector3.RotateTowards(a.data.forward,(a.data.tongueAim-a.data.position).normalized,dt*7,1);
+                Vector3 facing=Vector3.RotateTowards(a.data.forward,(a.data.tongueAim-a.data.position).normalized,dt*7,0);
+                SetAttackerPosition(a,a.data.position,facing);
+                a.data.velocity=Vector3.MoveTowards(a.data.velocity,Vector3.zero,dt*14);
                 if(now<a.until)return;
                 Vector3 origin=SquidMouth(a.data);
                 a.data.tongueAim=origin+Vector3.ClampMagnitude(a.data.tongueAim-origin,defenseTuning.squidTongueRange);

@@ -197,7 +197,7 @@ namespace Raid
                 Vector3 heading=Quaternion.AngleAxis(angle,Vector3.up)*broadside*(i<9?1:-1);
                 Vector3 altitude=higher+Vector3.up*(height*2.7f);
                 Vector3 near=altitude+heading*finishDistance-Vector3.up*.12f;
-                Vector3 far=altitude+heading*(finishDistance+defenseTuning.schoolTravelDistance-height*4f)+Vector3.up*1.25f;
+                Vector3 far=altitude+heading*(startDistance-height*4f)+Vector3.up*1.25f;
                 if(!Valid(far,near))continue;
                 start=far;end=near;return;
             }

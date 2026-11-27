@@ -112,6 +112,26 @@ namespace Raid
                 view.tongue.TrialWrap(out span,out center);
         }
 
+        internal string DefenseFixtureMotion(int id,DiverMotor victim=null)
+        {
+            foreach(var a in attackers)
+            {
+                if(a.data.id!=id)continue;
+                Vector3 contact=FieldContact(a.data.position);
+                Vector3 fit=ContactPosition(a.data,contact,out var normal);
+                string state=$"{a.data.pose} position {a.data.position:F2} velocity {a.data.velocity:F2} " +
+                    $"goal {a.goal:F2} waypoint {a.waypoint:F2} prospective {fit:F2} " +
+                    $"fit {FitsOutsideShield(a.data,fit,Quaternion.LookRotation(-normal))} " +
+                    $"hull {Nereid.NereidVessel.Active.OutsideDefenseHull(fit,-normal,a.data.scale)}";
+                if(victim)state+=$" target {a.target?.OwnerId} eligible {EligibleVictim(victim)} " +
+                    $"mouth range {Vector3.Distance(SquidMouth(a.data),CaptiveChest(victim)):F2} " +
+                    $"line {TonguePathClear(SquidMouth(a.data),CaptiveChest(victim),victim)} " +
+                    $"diver {victim.transform.position:F2}";
+                return state;
+            }
+            return "actor unavailable";
+        }
+
         internal bool DefenseFixtureContact(int id,out float gap,out Vector3 anchor)
         {
             gap=float.PositiveInfinity;

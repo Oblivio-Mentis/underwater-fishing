@@ -231,7 +231,7 @@ namespace Raid
         }
 
         bool Steer(DefenseAttacker a,Vector3 goal,float speed,float dt,bool mayCrossShield=false,
-            DiverMotor prey=null,float arrival=.62f)
+            DiverMotor prey=null,float arrival=.62f,Vector3 contactFacing=default)
         {
             if(DefenseClock>=a.nextRoute || (a.data.position-a.waypoint).sqrMagnitude<.5f ||
                 (a.pathGoal-goal).sqrMagnitude>2.25f)
@@ -275,7 +275,10 @@ namespace Raid
                 a.nextRoute=0;
             }
             Vector3 candidate=previous+heading*span;
-            Vector3 facing=Vector3.RotateTowards(a.data.forward,heading,5.1f*dt,0).normalized;
+            float alignContact=contactFacing.sqrMagnitude>.1f?
+                1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.25f,1.85f,Vector3.Distance(goal,previous))):0;
+            Vector3 facing=Vector3.RotateTowards(a.data.forward,Vector3.Slerp(heading,contactFacing,alignContact),
+                Mathf.Lerp(5.1f,8.4f,alignContact)*dt,0).normalized;
             var rotation=Quaternion.LookRotation(facing);
             var vessel=NereidVessel.Active;
             float hullScale=a.data.scale*(a.data.kind==DefenseSpecies.Abductor?1.30f:1f);
@@ -375,6 +378,7 @@ namespace Raid
 
         Vector3 FreeLatchPoint(DefenseAttacker a)
         {
+            if(a.data.shieldContact!=Vector3.zero)return a.data.shieldContact;
             var along=a.data.position-DefenseCenter;
             const float spacing=1.30f;
             for(int i=0;i<7;i++)
@@ -388,14 +392,21 @@ namespace Raid
                     if(other.attached || other.data.pose is AttackerPose.Windup or AttackerPose.Strike)
                         if((other.data.shieldContact-at).sqrMagnitude<spacing*spacing){taken=true;break;}
                 }
-                if(!taken)return at;
+                if(taken)continue;
+                Vector3 pose=ContactPosition(a.data,at,out var normal);
+                var ship=NereidVessel.Active;
+                if((ship && !ship.OutsideDefenseHull(pose,-normal,a.data.scale)) ||
+                    !FitsOutsideShield(a.data,pose,Quaternion.LookRotation(-normal)) ||
+                    !DefensePathClear(pose+normal*.85f,pose))continue;
+                if(a.data.pose==AttackerPose.Approach)a.data.shieldContact=at;
+                return at;
             }
             return FieldContact(a.data.position);
         }
 
-        void PrepareAttackStroke(DefenseAttacker a,Vector3 look,float dt)
+        void PrepareAttackStroke(DefenseAttacker a,Vector3 look,float dt,Vector3 contactFacing=default)
         {
-            Vector3 desired=(look-a.data.position).normalized;
+            Vector3 desired=contactFacing.sqrMagnitude>.1f?contactFacing:(look-a.data.position).normalized;
             if(desired.sqrMagnitude<.01f)desired=a.data.forward;
             var facing=Vector3.RotateTowards(a.data.forward,desired,dt*7.2f,0).normalized;
             float age=(float)(DefenseClock-a.data.poseAt);
@@ -438,8 +449,9 @@ namespace Raid
                         return;
                     }
                 }
+                Vector3 normal=Vector3.zero;
                 Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:
-                    ContactPosition(a.data,contact,out _);
+                    ContactPosition(a.data,contact,out normal);
                 if(a.data.kind==DefenseSpecies.Abductor && a.target)
                 {
                     BeginTongueWindup(a,destination,dt);
@@ -455,7 +467,7 @@ namespace Raid
                         approach+=side*((a.data.id%2==0?1:-1)*Mathf.Min(2.35f,
                             Vector3.Distance(destination,a.data.position)*.28f));
                     }
-                    Steer(a,approach,a.card.speed,dt,prey:a.target);
+                    Steer(a,approach,a.card.speed,dt,prey:a.target,contactFacing:-normal);
                     return;
                 }
                 a.goal=destination;
@@ -475,7 +487,13 @@ namespace Raid
                 if(now<a.until)
                 {
                     if(a.target && a.windAim<1)a.goal=Vector3.Lerp(a.goal,a.target.transform.position+Vector3.up*.55f,dt*3f);
-                    PrepareAttackStroke(a,a.goal,dt);
+                    Vector3 faced=default;
+                    if(!a.target && a.data.shieldContact!=Vector3.zero)
+                    {
+                        ContactPosition(a.data,a.data.shieldContact,out var outer);
+                        faced=-outer;
+                    }
+                    PrepareAttackStroke(a,a.goal,dt,faced);
                     return;
                 }
                 SetPose(a,AttackerPose.Strike,1.1f);
@@ -485,7 +503,8 @@ namespace Raid
             Vector3 normal=outwards;
             Vector3 destinationAtImpact=strikingField?ContactPosition(a.data,a.data.shieldContact,out normal):a.goal;
             float speed=strikingField && a.data.kind==DefenseSpecies.Remora?a.card.burstSpeed*.7f:a.card.burstSpeed;
-            bool close=Steer(a,destinationAtImpact,speed,dt,prey:a.target,arrival:strikingField?.24f:.62f);
+            bool close=Steer(a,destinationAtImpact,speed,dt,prey:a.target,arrival:strikingField?.24f:.62f,
+                contactFacing:strikingField?-normal:default);
             if(a.data.kind==DefenseSpecies.Rammer && a.target==null && !a.ramHit)
             {
                 var sweep=a.data.position-prior;
