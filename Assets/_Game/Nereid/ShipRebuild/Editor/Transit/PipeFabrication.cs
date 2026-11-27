@@ -387,33 +387,60 @@ namespace Raid.Nereid.Editor
 
         static void FitExteriorMount(Transform hull,NereidPipeRoute route)
         {
-            if(!route.source || route.transform.Find("Hull-mounted Gosha service casing"))return;
-            var shell=new GameObject("Hull-mounted Gosha service casing").transform;
+            const string housing="Hull-mounted Gosha service casing";
+            const string yoke="Service mouth yoke";
+            if(!route.source)return;
+            var previous=route.transform.Find(housing);
+            if(previous && previous.Find(yoke))return;
+            if(previous)Undo.DestroyObjectImmediate(previous.gameObject);
+            var shell=new GameObject(housing).transform;
             Undo.RegisterCreatedObjectUndo(shell.gameObject,"Fit exterior service housing");
             shell.SetParent(route.transform,false);
             var point=hull.InverseTransformPoint(route.source.transform.position);
-            // A saddle and two braces carry the service mouth on the outer pressure sill.
-            var saddle=point+new Vector3(-.41f,.375f,0);
-            Box("Service mouth saddle",saddle-Vector3.forward*.49f,saddle+Vector3.forward*.49f,.27f,.22f,route.metal);
+            var throat=point-Vector3.right*.41f;
+            float hullScale=hull.TransformVector(Vector3.right).magnitude;
+            float bore=route.radius*route.transform.TransformVector(Vector3.one.normalized).magnitude/hullScale;
+            var frame=new GameObject(yoke).transform;
+            frame.SetParent(shell,false);
+            const int faces=4;
+
+            for(int segment=0;segment<faces;segment++)
+                Box("Service collar saddle",Seat(segment),Seat(segment+1),.29f,.105f,route.metal,frame,.035f);
             for(int side=-1;side<=1;side+=2)
             {
-                var at=saddle+Vector3.forward*(side*.355f);
-                var bulkhead=new Vector3(Mathf.Min(point.x-.53f,7.035f),-.27f,at.z);
-                Box(side<0?"Aft sill bracket":"Forward sill bracket",at,bulkhead,.28f,.24f,route.metal);
-                Box("Sill bearing plate",bulkhead-Vector3.right*.19f,bulkhead+Vector3.right*.19f,.4f,.105f,route.enamel);
+                var at=Seat(side<0?0:faces)+Vector3.up*.054f;
+                var sill=new Vector3(Mathf.Min(point.x-.53f,7.035f),-.27f,at.z);
+                Box(side<0?"Aft sill bracket":"Forward sill bracket",at,sill,.19f,.16f,route.metal,shell,.07f);
+                Box("Sill bearing plate",sill-Vector3.right*.19f,sill+Vector3.right*.19f,.37f,.105f,route.enamel,shell,.10f);
+                foreach(float z in new[]{-.112f,.112f})
+                    Part(PrimitiveType.Cylinder,"Bearing plate bolt",sill+new Vector3(.105f,-.067f,z),
+                        hull.rotation,new Vector3(.082f,.035f,.082f),route.metal,shell);
             }
 
-            void Box(string name,Vector3 a,Vector3 b,float width,float height,Material material)
+            Vector3 Seat(int side)
             {
-                var leg=GameObject.CreatePrimitive(PrimitiveType.Cube);
-                Object.DestroyImmediate(leg.GetComponent<Collider>());
-                leg.name=name;
-                var box=leg.transform;
-                box.SetParent(shell,false);
-                var delta=hull.TransformVector(b-a);
-                box.SetPositionAndRotation(hull.TransformPoint((a+b)*.5f),Quaternion.LookRotation(delta,hull.up));
-                box.localScale=new Vector3(width,height,Vector3.Distance(a,b)+.10f);
-                leg.GetComponent<MeshRenderer>().sharedMaterial=material;
+                float angle=Mathf.Lerp(-47f,47f,(float)side/faces)*Mathf.Deg2Rad;
+                return throat+(bore+.055f)*(Vector3.up*Mathf.Cos(angle)+Vector3.forward*Mathf.Sin(angle));
+            }
+
+            void Box(string name,Vector3 a,Vector3 b,float width,float height,Material material,Transform parent,float overlap) =>
+                Part(PrimitiveType.Cube,name,(a+b)*.5f,Quaternion.LookRotation(hull.TransformVector(b-a),hull.up),
+                    new Vector3(width,height,Vector3.Distance(a,b)+overlap),material,parent);
+
+            void Part(PrimitiveType primitive,string name,Vector3 centre,Quaternion rotation,Vector3 size,Material material,Transform parent)
+            {
+                var part=GameObject.CreatePrimitive(primitive);
+                if(primitive!=PrimitiveType.Cube)Object.DestroyImmediate(part.GetComponent<Collider>());
+                part.name=name;
+                var basis=part.transform;
+                basis.SetParent(parent,false);
+                basis.SetPositionAndRotation(hull.TransformPoint(centre),rotation);
+                var local=basis.localRotation;
+                basis.localScale=new Vector3(
+                    size.x*hullScale/parent.TransformVector(local*Vector3.right).magnitude,
+                    size.y*hullScale/parent.TransformVector(local*Vector3.up).magnitude,
+                    size.z*hullScale/parent.TransformVector(local*Vector3.forward).magnitude);
+                part.GetComponent<MeshRenderer>().sharedMaterial=material;
             }
         }
 
