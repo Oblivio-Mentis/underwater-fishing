@@ -414,6 +414,7 @@ namespace Raid
             a.captureDistance=Vector3.Distance(SquidMouth(a.data),a.data.tongueAim);
             float carry=solo?defenseTuning.soloCarrySeconds:defenseTuning.carrySeconds;
             a.captureStarted=DefenseClock;
+            a.data.tongueGripAt=a.captureStarted;
             a.captureUntil=a.captureStarted+carry;
             a.rescuePull=0;
             a.gripObstruction=0;

@@ -75,17 +75,22 @@ namespace Raid
             return pass;
         }
 
-        internal void Present(bool active,bool rescue=false)
+        internal void Present(bool active,bool rescue=false,RemoraStretch stretch=default)
         {
             if(!active && !showing)return;
             showing=active;
             float beat=.5f+.5f*Mathf.Sin(Time.time*(rescue?9.5f:5f));
             ink.SetFloat(Opacity,Mathf.Lerp(rescue?.71f:.58f,1,beat));
+            stretch.Apply(ink);
             foreach(var part in surfaces)
             {
                 bool enabled=active && part.skin && part.skin.enabled;
                 part.mask.enabled=part.edge.enabled=enabled;
-                if(enabled)part.edge.SetPropertyBlock(ink);
+                if(enabled)
+                {
+                    part.mask.SetPropertyBlock(ink);
+                    part.edge.SetPropertyBlock(ink);
+                }
             }
         }
 

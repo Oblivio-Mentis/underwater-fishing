@@ -29,10 +29,10 @@ namespace Raid
             public DefenseSpecies kind;
             public AttackerPose pose;
             public DefenseUrgency urgency;
-            public Vector3 position, forward, impactOffset, snatchPoint, tongueAim;
-            public float scale, effort, stretch, fightRemaining;
+            public Vector3 position, forward, impactOffset, snatchPoint, tongueAim, remoraPull;
+            public float scale, effort, fightRemaining;
             public byte hookCount;
-            public double poseAt, stolenAt, tongueReleasedAt;
+            public double poseAt, stolenAt, tongueGripAt, tongueReleasedAt;
             public string stolenSpecies;
             public long stolenId;
         }
@@ -412,8 +412,6 @@ namespace Raid
             {
                 var actor=attackers[i];
                 var data=actor.data;
-                data.stretch=actor.attached && actor.hooks.Count>0
-                    ?Mathf.Clamp01(actor.progress/Mathf.Max(.1f,actor.card.fightSeconds)):0;
                 data.hookCount=(byte)actor.hooks.Count;
                 data.fightRemaining=1-Mathf.Clamp01(actor.progress/FightWork(actor));
                 data.urgency=actor.data.victim>=0?DefenseUrgency.Rescue:

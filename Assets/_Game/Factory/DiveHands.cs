@@ -239,12 +239,6 @@ namespace Raid
                     wrist=Vector3.Lerp(wrist,new Vector3(-.059f,-.084f,.46f),push);
                     angles=Quaternion.Slerp(Quaternion.Euler(angles),Quaternion.Euler(-12,1,12),push).eulerAngles;
                 }
-                if(arm.Clavicle)
-                {
-                    var back=avatar.shoulderReturn;
-                    back.x*=s;
-                    arm.Clavicle.position=root.TransformPoint(back);
-                }
                 bool support=ranged && s<0;
                 // Keep the support elbow tucked even between steps and while sighting.
                 float carry=support ? Mathf.Lerp(.85f,1f,stride.Weight)*(1f-push)*(1f-keyReach) : 0f;
@@ -286,6 +280,12 @@ namespace Raid
 
         void BendArm(Arm arm,int side,Vector3 target,bool support,float carry)
         {
+            if(arm.Clavicle)
+            {
+                var back=avatar.shoulderReturn;
+                back.x*=side;
+                arm.Clavicle.position=root.TransformPoint(back);
+            }
             Vector3 shoulder=avatar.shoulderOrigin;
             shoulder.x*=side;
             shoulder+=avatar.movingSupportShoulder*carry;

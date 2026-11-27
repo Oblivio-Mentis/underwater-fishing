@@ -155,8 +155,9 @@ namespace Raid
                 invention.Present(null,Vector3.zero,Quaternion.identity);
                 UpdateFish(null,0);
                 float strain=Mathf.Sin(Time.time*10.9f);
-                body.localPosition=V(0,.08f*brace,.12f*escape);
-                body.localRotation=Quaternion.Euler(13-27*escape+strain*6,5*strain,17*strain*(.65f+.33f*brace));
+                DiverMotor.RaidStruggleTorso(brace,escape,out var offset,out var torso);
+                body.localPosition=offset;
+                body.localRotation=torso;
                 head.localRotation=Quaternion.Euler(-8+12*escape,0,-6*strain);
                 for(int i=0;i<2;i++)
                 {

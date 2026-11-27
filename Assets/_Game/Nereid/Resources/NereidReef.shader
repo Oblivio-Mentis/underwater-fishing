@@ -14,6 +14,9 @@ Shader "RAID/Nereid Reef"
         _WreckLampOrigin("First worklight",Vector)=(0,0,0,0)
         _PigmentLightCap("Matte pigment light cap",Float)=0
         [HideInInspector] _EncounterClearance("First-person clearance",Float)=0
+        [HideInInspector] _RemoraJaw("Remora jaw and length",Vector)=(0,0,0,0)
+        [HideInInspector] _RemoraForward("Remora body direction",Vector)=(0,0,0,0)
+        [HideInInspector] _RemoraPull("Remora pull displacement",Vector)=(0,0,0,0)
     }
     SubShader
     {
@@ -29,10 +32,12 @@ Shader "RAID/Nereid Reef"
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Assets/_Game/Materials/FacetNormal.hlsl"
+            #include "Assets/_Game/Threats/Resources/RemoraStretch.hlsl"
             CBUFFER_START(UnityPerMaterial)
             float4 _Tint;
             float _Glow, _Hide, _BasaltLayers, _Sand, _Rift, _PigmentLightCap, _StoneArch, _Wreck, _EncounterClearance;
             float4 _WreckDirection, _WreckLampOrigin;
+            float4 _RemoraJaw, _RemoraForward, _RemoraPull;
             CBUFFER_END
             #include "NereidDiveLamp.hlsl"
             #include "NereidWaterColumn.hlsl"
@@ -62,7 +67,8 @@ Shader "RAID/Nereid Reef"
             struct Vary {float4 clip:SV_POSITION;float3 pos:TEXCOORD0;half3 norm:TEXCOORD1;half4 color:COLOR;half fog:TEXCOORD2;};
             Vary vert(Input v)
             {
-                Vary o;o.pos=TransformObjectToWorld(v.pos);o.clip=TransformWorldToHClip(o.pos);
+                Vary o;o.pos=StretchRemora(TransformObjectToWorld(v.pos),_RemoraJaw,_RemoraForward.xyz,_RemoraPull.xyz);
+                o.clip=TransformWorldToHClip(o.pos);
                 o.norm=TransformObjectToWorldNormal(v.norm);o.color=v.color;o.fog=ComputeFogFactor(o.clip.z);return o;
             }
             float2 jitter(float2 v)

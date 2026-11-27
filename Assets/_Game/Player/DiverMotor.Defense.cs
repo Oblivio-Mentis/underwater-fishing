@@ -69,5 +69,12 @@ namespace Raid
             push=t<1?Mathf.SmoothStep(0,1,t/.18f)*(1-Mathf.SmoothStep(0,1,(t-.20f)/.8f)):0;
             return caught || push>.001f;
         }
+
+        internal static void RaidStruggleTorso(float brace,float kick,out Vector3 offset,out Quaternion pose)
+        {
+            float strain=Mathf.Sin(Time.time*10.9f);
+            offset=new Vector3(0,.08f*brace,.12f*kick);
+            pose=Quaternion.Euler(13-27*kick+strain*6,5*strain,17*strain*(.65f+.33f*brace));
+        }
     }
 }

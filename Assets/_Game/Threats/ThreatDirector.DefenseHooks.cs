@@ -48,6 +48,7 @@ namespace Raid
         void OnDefenseEscape(DefenseAttacker a,DiverMotor diver)
         {
             a.progress*=.56f;
+            a.data.remoraPull=Vector3.zero;
             if(a.data.victim>=0)
             {
                 SetPose(a,AttackerPose.Carry,Mathf.Max(0,(float)(a.captureUntil-DefenseClock)));
@@ -68,7 +69,7 @@ namespace Raid
         {
             HarpoonTool strongest=null;
             DiverMotor escapedFrom=null;
-            float nearest=float.MaxValue,totalWinding=0;
+            float nearest=float.MaxValue,totalWinding=0,loadedTension=0;
             int engaged=0;
             Vector3 pull=Vector3.zero;
             // A short readable strain window twice per fight. Slack or a partner makes it safe to wind.
@@ -119,6 +120,7 @@ namespace Raid
                 }
                 float strength=reel*teamwork*(1+world.SkillFactor(tool.Motor,SkillLine.Tip)*.55f);
                 totalWinding+=strength;
+                loadedTension+=hook.tension*strength;
                 pull+=(position-a.data.position).normalized*strength;
                 engaged++;
                 if(distance<nearest){nearest=distance;strongest=tool;}
@@ -130,6 +132,16 @@ namespace Raid
             }
             a.data.pose=AttackerPose.Fight;
             a.data.effort=surge;
+            if(a.attached)
+            {
+                Vector3 stretch=Vector3.zero;
+                if(totalWinding>.01f && pull.sqrMagnitude>.01f)
+                {
+                    float strain=Mathf.Clamp01(.28f+.46f*(loadedTension/totalWinding)+.55f*a.progress/FightWork(a));
+                    stretch=(pull/totalWinding)*(strain*1.24f*a.data.scale);
+                }
+                a.data.remoraPull=Vector3.MoveTowards(a.data.remoraPull,stretch,dt*5.5f);
+            }
             if(!strongest)
             {
                 if(!a.attached && a.data.victim<0)

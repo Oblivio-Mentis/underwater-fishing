@@ -30,6 +30,7 @@ namespace Raid
             {
                 if(!target.TryGetComponent<ThreatDirector>(out var raid) || !raid.TryDefenseSurface(defenseId,out surface))return false;
                 ResolveOn(surface,out point,out normal,out direction);
+                point=raid.DeformDefenseContact(defenseId,point);
                 return true;
             }
             if(ball)

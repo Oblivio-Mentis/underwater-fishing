@@ -73,9 +73,12 @@ def run(executable, destination, crew, combat=False, solo=False):
                 raise RuntimeError(report["error"])
             if report.get("status") == "passed":
                 for path in guests:
-                    if combat:
-                        continue
                     state = read_report(path)
+                    if combat:
+                        catch_id = report.get("deliveredPredator")
+                        if not catch_id or state.get("cagedPredator") != catch_id or state.get("deliveredPredator") != catch_id:
+                            raise RuntimeError(f"Client did not see the same predator in the cage and tank: {path.name}: {state}")
+                        continue
                     if state.get("phases", 0) & 62 != 62 or state.get("hits", 0) == 0 or state.get("species") != 31:
                         raise RuntimeError(f"Client did not observe the phases, live hits and all species: {path.name}: {state}")
                     if state.get("losses", 0) != report["losses"]:

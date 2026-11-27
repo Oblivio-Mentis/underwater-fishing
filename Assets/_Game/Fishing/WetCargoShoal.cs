@@ -4,13 +4,14 @@ using UnityEngine;
 
 namespace Raid
 {
-    // A cargo ID owns one model while it swims in the cage, passes the loading pipe and joins the tank.
+    // A cargo ID owns one model in the cage, through the loading pipe and in the tank.
     [DefaultExecutionOrder(510)]
     public sealed class WetCargoShoal : MonoBehaviour
     {
         sealed class Swimmer
         {
             internal Transform Model;
+            internal WetPredatorRagdoll Corpse;
             internal float Phase, Ring, Depth, Speed, Size, Delay;
             internal bool InCage, Arriving, Routing;
             internal int DeliveryRank;
@@ -103,16 +104,21 @@ namespace Raid
             PresentSalvage(deliveryProgress);
             int unloadingCount=unloading?state.HoistFishCount(world.progression):0;
             var route=world.FishRoute;
+            float dt=Mathf.Min(Time.deltaTime,.04f);
             foreach(var entry in swimmers)
             {
                 var fish=entry.Value;
                 if(fish.InCage)
                 {
-                    if(unloading && fish.DeliveryRank<unloadingCount)FollowDelivery(fish,deliveryProgress);
-                    else SwimInCage(fish);
+                    if(unloading && fish.DeliveryRank<unloadingCount)FollowDelivery(fish,deliveryProgress,dt);
+                    else PresentInCage(fish,dt);
                 }
-                else if(fish.HatchStartedAt>=0 && FollowHatch(fish)) {}
-                else if(!FollowRoute(entry.Key,fish,route)) SwimInTank(fish);
+                else if((fish.HatchStartedAt>=0 && FollowHatch(fish)) || FollowRoute(entry.Key,fish,route))
+                {
+                    fish.Corpse?.InTransit(dt);
+                }
+                else if(fish.Corpse!=null)DriftInTank(fish,dt);
+                else SwimInTank(fish);
             }
         }
 
@@ -242,6 +248,7 @@ namespace Raid
                 Size=large?1.07f:.65f,
                 Delay=.29f+seed*.20f
             };
+            if(specimen)fish.Corpse=new WetPredatorRagdoll(model,seed);
             swimmers.Add(item.id,fish);
             return fish;
         }
@@ -255,10 +262,24 @@ namespace Raid
             return ((bits^(bits>>16)) & 0x00ffffffU)/16777216f;
         }
 
-        void SwimInCage(Swimmer fish)
+        void PresentInCage(Swimmer fish,float dt)
         {
             if(fish.Model.parent!=transform)fish.Model.SetParent(transform,false);
             bool upgraded=vessel!=null;
+            if(fish.Corpse!=null)
+            {
+                // Leave room between the longest appendages and the loading grille.
+                fish.Model.localScale=Vector3.one*(upgraded?.54f:.28f);
+                float span=upgraded?.64f:.32f;
+                float floor=upgraded?CargoBasket.Floor+.47f:-.24f;
+                var berth=new Vector3(Mathf.Cos(fish.Phase)*span*fish.Depth,
+                    floor+.26f+.34f*fish.Ring,Mathf.Sin(fish.Phase)*span*fish.Depth);
+                fish.Corpse.Drift(transform,berth,new Vector3(-span,floor,-span),
+                    new Vector3(span,upgraded?.55f:.25f,span),Time.time,dt,false);
+                fish.Arriving=false;
+                return;
+            }
+
             float a=Time.time*fish.Speed+fish.Phase;
             float radius=upgraded?.43f+.54f*fish.Ring:.32f+.20f*fish.Ring;
             float y=upgraded ? -.45f+.9f*fish.Depth : -.25f+.52f*fish.Depth;
@@ -268,14 +289,14 @@ namespace Raid
             fish.Arriving=false;
         }
 
-        void FollowDelivery(Swimmer fish,float elapsed)
+        void FollowDelivery(Swimmer fish,float elapsed,float dt)
         {
             var pipe=vessel.authoredRail ? vessel.authoredRail.inlet : null;
             bool authored=pipe && pipe.IsConnected;
             float start=authored ? .13f+.32f*fish.DeliveryRank/Mathf.Max(1,cageCount-1) : fish.Delay;
             float finish=authored ? start+.52f : .91f;
-            if(elapsed<start){SwimInCage(fish);return;}
-            // Keep the tail animation and material instance from the cage as the fish enters the water.
+            if(elapsed<start){PresentInCage(fish,dt);return;}
+            // Keep the same model and joint state as the fish enters the water.
             if(!fish.Arriving)
             {
                 fish.Arriving=true;
@@ -290,6 +311,7 @@ namespace Raid
                 else if(t<.84f) routePoint=pipe.WorldPoint(Mathf.InverseLerp(.24f,.84f,t));
                 else routePoint=Vector3.Lerp(pipe.WorldPoint(1),TankPoint(fish,Time.time),CargoBasket.Ease(Mathf.InverseLerp(.84f,1,t)));
                 Move(fish.Model,routePoint,25);
+                fish.Corpse?.InTransit(dt);
                 return;
             }
             Vector3 center=vessel.transform.TransformPoint(new Vector3(0,4.16f,-3));
@@ -300,6 +322,7 @@ namespace Raid
             Vector3 point=t<.27f?entry:t<.79f?outlet:Vector3.Lerp(exit,target,CargoBasket.Ease(Mathf.InverseLerp(.79f,1,t)));
             if(t>.27f && t<.79f)point+=new Vector3(Mathf.Sin(t*8+fish.Phase),0,Mathf.Cos(t*6+fish.Phase))*.13f;
             Move(fish.Model,point,25);
+            fish.Corpse?.InTransit(dt);
         }
 
         // The pet hatch: mouth, a beat inside the collar, the glass line, then the tank.
@@ -360,6 +383,7 @@ namespace Raid
 
         Vector3 TankPoint(Swimmer fish,float time)
         {
+            if(fish.Corpse!=null)return reservoir.TransformPoint(CorpseBerth(fish,CorpseTankRadii()));
             float a=time*(fish.Speed*.49f)+fish.Phase;
             if(containment)
             {
@@ -381,6 +405,33 @@ namespace Raid
             float radius=1.08f+1.10f*fish.Ring;
             Quaternion hull=vessel.transform.rotation;
             return reservoir.position+hull*new Vector3(radius*Mathf.Cos(a),(fish.Depth-.5f)*2.72f+Mathf.Sin(a*1.7f)*.24f,radius*Mathf.Sin(a));
+        }
+
+        Vector3 CorpseTankRadii()
+        {
+            if(containment)return new Vector3(containment.radii.x,containment.DepthBelowCenter,containment.radii.z);
+            var rail=vessel.authoredRail;
+            return rail && rail.aquarium?rail.aquariumSwimRadii:new Vector3(2.18f,1.30f,2.18f);
+        }
+
+        static Vector3 CorpseBerth(Swimmer fish,Vector3 radii)
+        {
+            float offset=Mathf.Lerp(.15f,.43f,fish.Ring);
+            return new Vector3(radii.x*Mathf.Cos(fish.Phase)*offset,-radii.y*Mathf.Lerp(.39f,.64f,fish.Depth),
+                radii.z*Mathf.Sin(fish.Phase)*offset);
+        }
+
+        void DriftInTank(Swimmer fish,float dt)
+        {
+            var radii=CorpseTankRadii();
+            float lateral=containment?.54f:.48f;
+            var limit=new Vector3(radii.x*lateral,radii.y*.17f,radii.z*lateral);
+            var floor=new Vector3(-limit.x,-radii.y*.72f,-limit.z);
+            var berth=CorpseBerth(fish,radii);
+            var scale=Vector3.one*(fish.Size*.82f/Mathf.Max(.01f,reservoir.lossyScale.x));
+            fish.Model.localScale=Vector3.Lerp(fish.Model.localScale,scale,dt*3);
+            fish.Corpse.Drift(reservoir,berth,floor,limit,Time.time,dt,fish.Arriving || fish.Routing);
+            fish.Arriving=false;
         }
 
         void SwimInTank(Swimmer fish)

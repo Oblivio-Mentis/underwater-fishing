@@ -173,6 +173,8 @@ namespace Raid
             return item.kind == DroppedKind.Harpoon || item.Fish != null && (item.Fish.RequiresPartner || FreePocket() >= 0);
         }
 
+        internal string CargoSpeciesForLoad => HoldingHeavyCatch?HeavySpecies?.SpeciesId:CatchSpeciesInSlot(FirstOccupiedPocket());
+
         public bool FishLoadTarget(out FishActor fish,out long cargoId)
         {
             fish=null;cargoId=0;
@@ -312,6 +314,13 @@ namespace Raid
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal bool TrialLoadSelectedCatch()
+        {
+            if(!FishLoadTarget(out _,out long id) || !CargoDispatch.TryLoadAim(RaidWorld.Instance,Motor,out var direction))return false;
+            LoadSelectedServer(DroppedKind.Catch,id,direction);
+            return true;
+        }
+
         internal void StageLiftedForTrial(FishActor fish,long id) => _liftedHeavy.Value=new PocketItem{species=fish.NetworkObject,id=id};
         internal void StagePocketForTrial(FishActor fish,long id,int slot=2) => SetPocket(slot,new PocketItem {species=fish.NetworkObject,id=id});
 #endif

@@ -11,6 +11,9 @@ Shader "Raid/Fish Proximity Outline"
         [HideInInspector] _StencilPass ("Stencil operation", Float) = 0
         [HideInInspector] _StencilWrite ("Stencil write mask", Float) = 0
         [HideInInspector] _StencilBit ("Stencil bit", Float) = 8
+        [HideInInspector] _RemoraJaw("Remora jaw and length",Vector)=(0,0,0,0)
+        [HideInInspector] _RemoraForward("Remora body direction",Vector)=(0,0,0,0)
+        [HideInInspector] _RemoraPull("Remora pull displacement",Vector)=(0,0,0,0)
     }
     SubShader
     {
@@ -34,14 +37,16 @@ Shader "Raid/Fish Proximity Outline"
             #pragma vertex Vert
             #pragma fragment Frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Assets/_Game/Threats/Resources/RemoraStretch.hlsl"
             CBUFFER_START(UnityPerMaterial)
             half4 _Ink;
             float _Opacity, _Width;
+            float4 _RemoraJaw, _RemoraForward, _RemoraPull;
             CBUFFER_END
 
             float4 Vert(float3 position : POSITION,float3 normal : NORMAL) : SV_POSITION
             {
-                float3 world=TransformObjectToWorld(position);
+                float3 world=StretchRemora(TransformObjectToWorld(position),_RemoraJaw,_RemoraForward.xyz,_RemoraPull.xyz);
                 float4 clip=TransformWorldToHClip(world);
                 float4 tip=TransformWorldToHClip(world+TransformObjectToWorldNormal(normal)*.06);
                 float2 screen=max(_ScaledScreenParams.xy,1);

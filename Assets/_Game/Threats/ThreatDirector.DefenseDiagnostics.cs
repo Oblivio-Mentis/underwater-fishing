@@ -103,6 +103,26 @@ namespace Raid
             return true;
         }
 
+        internal bool DefenseFixtureTongueWrap(int id,out float span,out Vector3 center)
+        {
+            span=0;
+            center=default;
+            return visibleAttackers.TryGetValue(id,out var view) && view.tongue &&
+                view.tongue.TrialWrap(out span,out center);
+        }
+
+        internal bool DefenseFixtureStretch(int id,Vector3 towards,out float extension)
+        {
+            extension=0;
+            if(!visibleAttackers.TryGetValue(id,out var view) || view.remora.inverseLength<=0)return false;
+            var s=view.remora;
+            Vector3 tail=s.mouth-s.direction/s.inverseLength;
+            Vector3 delta=s.Point(tail)-tail;
+            extension=delta.magnitude;
+            return extension>.32f && Vector3.Dot(delta.normalized,(towards-view.root.position).normalized)>.85f &&
+                (s.Point(s.mouth)-s.mouth).sqrMagnitude<.00001f;
+        }
+
         internal void DefenseFixtureSetIntegrity(float integrity)
         {
             if(!IsServerInitialized || Defense.phase!=DefensePhase.Assault)return;

@@ -17,8 +17,12 @@ namespace Raid
             public ParticleSystem thrust;
             public DefenseSignal signal;
             public SquidTongueView tongue;
+            public DiverMotor tongueVictim;
             public SkinnedMeshRenderer squidSkin;
             public bool captiveCamera;
+            public Renderer[] remoraSkin;
+            public MaterialPropertyBlock remoraMaterial;
+            public RemoraStretch remora;
             public readonly List<(Transform joint,Quaternion rest,float side,int index)> arms=new();
             public long stolen;
             public AttackerPose lastPose;
@@ -142,6 +146,17 @@ namespace Raid
                         AddArms(visual,visual.left,-1);
                         AddArms(visual,visual.right,1);
                     }
+                    if(current.kind==DefenseSpecies.Remora)
+                    {
+                        visual.remoraSkin=root.GetComponentsInChildren<Renderer>();
+                        visual.remoraMaterial=new MaterialPropertyBlock();
+                        if(root.TryGetComponent<SkinnedMeshRenderer>(out var skin))
+                        {
+                            var bounds=skin.localBounds;
+                            bounds.Expand(2.6f);
+                            skin.localBounds=bounds;
+                        }
+                    }
                     visibleAttackers.Add(current.id,visual);
                 }
                 if(visual.lastPose!=current.pose)
@@ -155,7 +170,7 @@ namespace Raid
                 var local=UI.UiRoot.Instance?.Context?.Player;
                 if(local && current.victim==local.OwnerId)danger=false;
                 if(danger && !visual.signal)visual.signal=DefenseSignal.Attach(visual.root);
-                if(visual.signal)visual.signal.Present(danger,current.urgency==DefenseUrgency.Rescue);
+                if(visual.signal)visual.signal.Present(danger,current.urgency==DefenseUrgency.Rescue,visual.remora);
             }
             retiredViews.Clear();
             foreach(var pair in visibleAttackers)
@@ -239,7 +254,7 @@ namespace Raid
             float compression=snapshot.pose==AttackerPose.Windup?Mathf.SmoothStep(0,.15f,poseAge/.95f):
                 snapshot.pose==AttackerPose.Strike?-.17f*Mathf.Exp(-poseAge*2.9f):0;
             if(view.body)view.body.localScale=Vector3.Scale(view.bodyRest,new Vector3(
-                1-snapshot.stretch*.13f+compression*.5f,1-snapshot.stretch*.13f+compression*.5f,1+snapshot.stretch*.28f-compression));
+                1+compression*.5f,1+compression*.5f,1-compression));
             if(view.tail)view.tail.localRotation=view.tailRest*Quaternion.Euler(4*tipWave,tailWave*31+view.turn*.47f,0);
             if(view.tip)view.tip.localRotation=view.tipRest*Quaternion.Euler(0,tipWave*25-tailWave*9,0);
             if(view.left)view.left.localRotation=view.leftRest*Quaternion.Euler(0,view.turn*.22f,finWave*34);
@@ -256,6 +271,7 @@ namespace Raid
             };
             if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(jawAngle,0,0);
             if(view.tongue)PresentSquid(snapshot,view,poseAge,tipWave);
+            if(view.remoraSkin!=null)PresentRemoraStretch(snapshot,view,blend);
             PresentRaiderWake(view,snapshot,pace);
 
             if(snapshot.stolenId!=view.stolen)
@@ -304,19 +320,25 @@ namespace Raid
             float charge=s.pose==AttackerPose.Windup && s.tongueAim!=Vector3.zero?Mathf.SmoothStep(0,1,poseAge/.58f):0;
             bool gripping=s.victim>=0;
             bool firing=s.pose==AttackerPose.Tongue;
-            float reach=firing?TongueTravel(poseAge/defenseTuning.squidTongueSeconds):0;
-            if(s.tongueReleasedAt>0)
-                reach=Mathf.Max(reach,1-Mathf.SmoothStep(0,1,(float)(DefenseClock-s.tongueReleasedAt)/.32f));
-            Vector3 target=s.tongueAim;
+            float sinceRelease=s.tongueReleasedAt>0?(float)(DefenseClock-s.tongueReleasedAt):1;
+            float reach=gripping?1:firing?TongueTravel(poseAge/defenseTuning.squidTongueSeconds):
+                1-Mathf.SmoothStep(0,1,sinceRelease/.38f);
             var crew=UI.UiRoot.Instance?.Context?.Players;
             if(gripping && crew!=null)
                 foreach(var diver in crew)
                 {
                     if(!diver || diver.OwnerId!=s.victim)continue;
-                    target=diver.transform.position+Vector3.up*.32f+diver.transform.right*.10f;
-                    reach=1;
+                    view.tongueVictim=diver;
                     break;
                 }
+            var captive=view.tongueVictim;
+            if(captive && (captive.IsDead || gripping && captive.OwnerId!=s.victim))captive=null;
+            float wrap=0;
+            if(captive)
+                wrap=gripping?Mathf.SmoothStep(0,1,(float)(DefenseClock-s.tongueGripAt)/.35f):
+                    1-Mathf.SmoothStep(0,1,sinceRelease/.23f);
+            if(!gripping && reach<=0)view.tongueVictim=null;
+            Vector3 target=captive?captive.transform.position+Vector3.up*.36f:s.tongueAim;
             var mouth=view.mouth?view.mouth.position:view.root.TransformPoint(SquidBeak);
             var player=UI.UiRoot.Instance?.Context?.Player;
             bool firstPerson=gripping && player && player.OwnerId==s.victim;
@@ -328,7 +350,7 @@ namespace Raid
                 properties.SetFloat("_EncounterClearance",firstPerson?.91f:0);
                 view.squidSkin.SetPropertyBlock(properties);
             }
-            view.tongue.Present(mouth,Vector3.Lerp(mouth,target,reach),reach,gripping,charge,view.phase,firstPerson);
+            view.tongue.Present(mouth,Vector3.Lerp(mouth,target,reach),captive,wrap,view.phase,firstPerson);
             if(view.jaw)
                 view.jaw.localRotation=view.jawRest*Quaternion.Euler(gripping?29+wave*4:firing?38:8+charge*34,0,0);
             foreach(var arm in view.arms)
@@ -340,11 +362,31 @@ namespace Raid
             }
         }
 
+        static void PresentRemoraStretch(AttackerSnapshot actor,VisibleAttacker view,float blend)
+        {
+            var stretch=view.remora;
+            stretch.displacement=Vector3.Lerp(stretch.displacement,actor.remoraPull,blend);
+            if(stretch.displacement.sqrMagnitude<.00001f && actor.remoraPull.sqrMagnitude<.00001f)stretch.displacement=Vector3.zero;
+            stretch.direction=view.root.forward;
+            stretch.inverseLength=stretch.displacement.sqrMagnitude>0?1/Mathf.Max(.2f,1.68f*actor.scale):0;
+            stretch.mouth=view.mouth?view.mouth.position:view.root.TransformPoint(new Vector3(0,0,.86f));
+            stretch.Apply(view.remoraMaterial);
+            foreach(var part in view.remoraSkin)if(part)part.SetPropertyBlock(view.remoraMaterial);
+            view.remora=stretch;
+        }
+
+        internal Vector3 DeformDefenseContact(int id,Vector3 world) =>
+            visibleAttackers.TryGetValue(id,out var visual)?visual.remora.Point(world):world;
+
         public bool TryDefenseVisualAnchor(int id,out Vector3 position)
         {
             if(visibleAttackers.TryGetValue(id,out var seen))
                 foreach(var actor in defenseActors)
-                    if(actor.id==id){position=seen.root.position+seen.root.rotation*actor.impactOffset;return true;}
+                    if(actor.id==id)
+                    {
+                        position=seen.remora.Point(seen.root.position+seen.root.rotation*actor.impactOffset);
+                        return true;
+                    }
             return TryDefenseAnchor(id,out position);
         }
 

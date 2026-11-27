@@ -624,8 +624,7 @@ namespace Raid
         {
             if (_line == null) return;
             bool attached = _impact.Value.Resolve(out _,out var contact,out _,out _)
-                && (OwnsFriendTether || HasBallLine || HasFishingLine(this));
-            if(HasDefenseLine && ThreatDirector.Instance)attached=ThreatDirector.Instance.TryDefenseVisualAnchor(defenseHook.Value,out contact);
+                && (OwnsFriendTether || HasBallLine || HasDefenseLine || HasFishingLine(this));
             _line.enabled=attached;
             if(!attached)return;
             _line.SetPosition(0,transform.position+Vector3.up*.6f+transform.right*.2f);

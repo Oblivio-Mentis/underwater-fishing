@@ -74,7 +74,7 @@ namespace Raid.UI
             if(c.View!=null && c.Tuning && CargoDispatch.CanLoad(world,player))
             {
                 if(kind==DroppedKind.Salvage)return Load(c,1,true,kind,tool.CarriedSalvage.DisplayName);
-                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind,ReelReadout.Species(fish.SpeciesId));
+                if(tool.FishLoadTarget(out var fish,out _))return Load(c,fish.cargoSize,false,kind,ReelReadout.Species(tool.CargoSpeciesForLoad));
                 if(kind!=DroppedKind.None)return new HudHint(Mark.Crate,note:"Этот предмет нельзя поместить в клеть"){caution=true};
             }
             if(ui && ui.AimedPad!=null)

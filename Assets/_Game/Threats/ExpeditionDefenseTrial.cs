@@ -13,6 +13,7 @@ namespace Raid
         {
             public string status="running", phase="", error="";
             public int peers, species, phases, hits, losses, recovered;
+            public long cagedPredator, deliveredPredator;
             public float minimumIntegrity=100, assaultMeanFrameMs, assaultP95FrameMs;
             public List<string> checks=new();
             public void Check(bool valid,string description)
@@ -72,6 +73,7 @@ namespace Raid
         static async Awaitable Observe(string path)
         {
             var report=new Report();
+            WetCargoShoal shoal=null;
             float expires=Time.realtimeSinceStartup+260;
             while(Time.realtimeSinceStartup<expires)
             {
@@ -85,6 +87,16 @@ namespace Raid
                     report.recovered=Mathf.Max(report.recovered,s.returned);
                     report.minimumIntegrity=Mathf.Min(report.minimumIntegrity,s.integrity);
                     for(int i=0;i<d.DefenseActorCount;i++)report.species|=1<<(int)d.DefenseActorAt(i).kind;
+                    if(!shoal && world.container)shoal=world.container.GetComponentInChildren<WetCargoShoal>();
+                    var view=world.View;
+                    if(shoal && view!=null)
+                    {
+                        foreach(var item in view.cargo)
+                            if(DefenseCreatureAssets.ReadKey(item.species,out _) && shoal.ModelFor(item.id))
+                                report.cagedPredator=item.id;
+                        foreach(var item in view.tank)
+                            if(item.id==report.cagedPredator && shoal.ModelFor(item.id))report.deliveredPredator=item.id;
+                    }
                     Write(path,report);
                 }
                 await Awaitable.WaitForSecondsAsync(.24f);
@@ -453,6 +465,26 @@ namespace Raid
             report.Check(flight.MaxTipError<.035f && flight.MaxKnotError<.035f,
                 "The moving harpoon bolt stays in the creature with its cable attached.");
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-predator-harpoon.png"));
+            var pullSide=Vector3.Cross(Vector3.up,outward).normalized;
+            for(int sign=-1;sign<=1;sign+=2)
+            {
+                var position=host.transform.position+pullSide*(1.65f*sign);
+                if(!MarineSpawn.InOpenWater(world.CurrentDepth,position+Vector3.up*.56f,.55f))continue;
+                host.Teleport(position);
+                host.LookAtConsole(remora.position);
+                break;
+            }
+            float stretchDeadline=Time.realtimeSinceStartup+2;
+            float extension=0;
+            while(!d.DefenseFixtureStretch(remora.id,tool.FishingAnchor,out extension) &&
+                Time.realtimeSinceStartup<stretchDeadline && tool.HasDefenseLine)
+            {
+                tool.DefenseFixtureWind(true);
+                await Awaitable.NextFrameAsync();
+            }
+            report.Check(d.DefenseFixtureStretch(remora.id,tool.FishingAnchor,out extension),
+                $"The remora stretches {extension:F2} metres toward the pulling line while its jaw stays anchored.");
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-stretched.png"));
             float deadline=Time.realtimeSinceStartup+15;
             float peakTension=0;
             bool winding=true;
@@ -467,6 +499,7 @@ namespace Raid
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
                 $"Reeling tears the attached remora, releases the line and creates one catch and local ink. Line={tool.HasDefenseLine}, catch={tool.CatchCount}, ink={d.DefenseInkAt(remora.position)}, peak={peakTension:0.00}, actors={d.DefenseActorCount}");
+            long remoraCatch=tool.CatchIdInSlot(2);
             await Awaitable.WaitForSecondsAsync(.36f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));
             await LandHunter(folder,report,d,host,tool);
@@ -515,6 +548,11 @@ namespace Raid
             report.Check(guest.IsTrapped,"The diver remains captive before the teammate reels. "+sightline);
             await Wait(()=>d.TryDefenseFight(actor.id,out var held) && held.urgency==DefenseUrgency.Rescue,
                 "the rescue contact is visible to the crew",1);
+            await Wait(()=>d.DefenseFixtureTongueWrap(actor.id,out _,out var center) &&
+                Vector3.Distance(center,guest.transform.position)<.25f,"the other diver is visibly wrapped by the tongue",1);
+            report.Check(true,"The observer sees the tongue physically wrap the captive diver.");
+            host.LookAtConsole(guest.transform.position+Vector3.up*.23f);
+            await Awaitable.NextFrameAsync();
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-squid-rescue.png"));
             deadline=Time.realtimeSinceStartup+4;
             while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)
@@ -526,7 +564,56 @@ namespace Raid
             report.Check(!guest.IsTrapped,"Winding a friendly line releases the other diver.");
             d.DefenseFixtureEnd();
             await Wait(()=>!d.DefenseActive && !guest.IsTrapped,"defense and all transport cleanup",13);
+            await CarryDeadPredator(folder,report,world,host,tool,remoraCatch);
             report.phase="done";
+        }
+
+        static async Awaitable CarryDeadPredator(string folder,Report report,RaidWorld world,DiverMotor host,
+            HarpoonTool tool,long catchId)
+        {
+            ReportPhase("corpse in the cage and aquarium",report,folder);
+            var shoal=world.container.GetComponentInChildren<WetCargoShoal>();
+            var cage=world.container.position;
+            string species=DefenseCreatureAssets.Key(DefenseSpecies.Remora);
+            report.Check(catchId>0 && shoal && tool.CatchSpeciesInSlot(2)==species,
+                "The detached remora is stored as its own species in the pocket.");
+            host.Teleport(cage+new Vector3(2.14f,-.18f,-.40f));
+            host.LookAtConsole(cage);
+            tool.DefenseFixtureSelect(2);
+            await Wait(()=>tool.ActiveSlot==2 && CargoDispatch.CanLoad(world,host),"owner aiming into the cage opening",3);
+            report.Check(tool.TrialLoadSelectedCatch(),"The owner can place the remora through the actual cage opening.");
+            await Wait(()=>world.Team.cargo.Exists(item=>item.id==catchId && item.species==species) &&
+                shoal.ModelFor(catchId)!=null,"the caught remora reaches the shared cage manifest",3);
+            var model=shoal.ModelFor(catchId);
+            var tail=model.Find("Tail");
+            report.Check(tail!=null,"The cage uses the original articulated predator mesh.");
+            var firstPose=tail.localRotation;
+            await Wait(()=>Quaternion.Angle(firstPose,tail.localRotation)>3 && Mathf.Abs(model.localRotation.eulerAngles.z)>53,
+                "the limp tail moves while the corpse lies on its side in the cage",3);
+            report.Check(true,"Water moves the dead remora's joints and rolls the body in the cage.");
+            host.LookAtConsole(model.position);
+            await Awaitable.NextFrameAsync();
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"10-remora-cage.png"));
+
+            var button=world.container.GetComponentInChildren<CargoDispatch>();
+            host.Teleport(cage+new Vector3(3.33f,.19f,1.32f));
+            host.LookAtConsole(button.transform.position);
+            await Wait(()=>CargoDispatch.CanUse(host),"owner aiming at the hoist button",3);
+            world.Command(WorldAction.Hoist,0);
+            await Wait(()=>world.Team.tank.Exists(item=>item.id==catchId && item.species==species) &&
+                shoal.TankCount>0,"normal lift sequence deposits the same catch in the aquarium",42);
+            report.Check(shoal.ModelFor(catchId)==model &&
+                world.Team.tank.FindAll(item=>item.id==catchId).Count==1,"The lift preserves the catch ID, species and exact view without duplication.");
+            report.cagedPredator=report.deliveredPredator=catchId;
+            var entryPose=tail.localRotation;
+            var field=Nereid.NereidVessel.Active.GetComponentInChildren<Nereid.DefenseFieldView>();
+            await Wait(()=>Quaternion.Angle(entryPose,tail.localRotation)>5 && field.ContainsWorld(model.position),
+                "the dead remora settles within the aquarium and the tail responds",4);
+            report.Check(true,"The rig stays limp and articulates inside the reservoir after delivery.");
+            host.Teleport(model.position+new Vector3(2.1f,.32f,-1.8f));
+            host.LookAtConsole(model.position);
+            await Awaitable.WaitForSecondsAsync(.35f);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"11-remora-aquarium.png"));
         }
 
         static async Awaitable LandHunter(string folder,Report report,ThreatDirector d,DiverMotor host,HarpoonTool tool)
@@ -607,6 +694,16 @@ namespace Raid
                 return Vector3.Distance(grabbedAt,player.transform.position)>.65f;
             },"captured diver actively dragged in the current",2);
             report.Check(player.CanBreakRaidGrip,"The diver remained in the grip while being physically dragged.");
+            await Wait(()=>d.DefenseFixtureTongueWrap(attacker,out _,out var center) &&
+                Vector3.Distance(center,player.transform.position)<.25f,"the player's own torso is wrapped by the tongue",1);
+            if(d.TryDefenseAnchor(attacker,out var squid))
+            {
+                Vector3 front=Vector3.ProjectOnPlane(squid-player.transform.position,Vector3.up).normalized;
+                var oblique=Quaternion.AngleAxis(42,Vector3.up)*front;
+                player.LookAtConsole(player.transform.position+oblique*.64f+Vector3.up*.18f);
+                await Awaitable.NextFrameAsync();
+                UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-first-person-tongue-wrap.png"));
+            }
             var rescue=player.GetComponent<RescueTool>();
             rescue.QaStruggle(.37f);
             await Wait(()=>rescue.DisplayProgress>.07f,"F must build real server progress",1.1f);
