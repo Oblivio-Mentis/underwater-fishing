@@ -10,6 +10,7 @@ Shader "Raid/Fish Proximity Outline"
         [HideInInspector] _StencilCompare ("Stencil comparison", Float) = 6
         [HideInInspector] _StencilPass ("Stencil operation", Float) = 0
         [HideInInspector] _StencilWrite ("Stencil write mask", Float) = 0
+        [HideInInspector] _StencilBit ("Stencil bit", Float) = 8
     }
     SubShader
     {
@@ -23,8 +24,8 @@ Shader "Raid/Fish Proximity Outline"
             Blend SrcAlpha OneMinusSrcAlpha
             Stencil
             {
-                Ref 8
-                ReadMask 8
+                Ref [_StencilBit]
+                ReadMask [_StencilBit]
                 WriteMask [_StencilWrite]
                 Comp [_StencilCompare]
                 Pass [_StencilPass]

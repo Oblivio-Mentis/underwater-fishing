@@ -35,7 +35,28 @@ namespace Raid.Nereid
 
         [Header("Bow creature")]
         public Transform chargeAperture, flameOutlet;
+        [Tooltip("Radius of the projectile entrance in world metres. Marker scale is ignored.")]
         [Min(.01f)] public float apertureHalfWidth=1.04f, apertureHalfHeight=.49f;
+        [Min(.16f)] public float apertureDepth=.85f;
+
+        void OnDrawGizmosSelected()
+        {
+            if(!chargeAperture)return;
+            var saved=Gizmos.matrix;
+            Gizmos.matrix=Matrix4x4.TRS(chargeAperture.position,chargeAperture.rotation,Vector3.one);
+            Gizmos.color=new Color(1,.51f,.23f,.9f);
+            for(int i=0;i<24;i++)
+            {
+                float a=i*Mathf.PI/12, b=(i+1)*Mathf.PI/12;
+                var p=new Vector3(Mathf.Cos(a)*apertureHalfWidth,Mathf.Sin(a)*apertureHalfHeight,-.16f);
+                var q=new Vector3(Mathf.Cos(b)*apertureHalfWidth,Mathf.Sin(b)*apertureHalfHeight,-.16f);
+                Gizmos.DrawLine(p,q);
+                Vector3 depth=Vector3.forward*apertureDepth;
+                Gizmos.DrawLine(p+depth,q+depth);
+                if(i%6==0)Gizmos.DrawLine(p,p+depth);
+            }
+            Gizmos.matrix=saved;
+        }
         [Min(0)] public float flameFirstDamage=86, flameDamagePerSecond=24;
         public Mesh gulletMesh;
         [Header("Seabed scavengers")]

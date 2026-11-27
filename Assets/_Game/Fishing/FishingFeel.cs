@@ -13,6 +13,7 @@ namespace Raid
         ThreatDirector threats;
         FishActor fish;
         int hookSequence, tugSequence, biteSequence;
+        int defenseTarget;
         int carriedCount;
         Camera eye;
         float nextLookup;
@@ -66,6 +67,22 @@ namespace Raid
                 wasCoordinated = fish != null && fish.Coordinated;
             }
             bool controlling = ui.Page == UI.UiPage.None && !UI.UiInputGate.Modal && !owner.IsHelpless && !owner.IsDead;
+            if(tool && tool.TryHookedDefense(out var predator) && controlling)
+            {
+                Vector3 toward=predator.position-owner.transform.position;
+                Vector3 local=eye?eye.transform.InverseTransformDirection(toward.normalized):Vector3.forward;
+                float strain=Mathf.Clamp01(tool.LineTension*.9f+predator.effort*.68f);
+                ui.PullEdge(new Vector2(local.x,local.y).normalized,strain*.62f);
+                if(defenseTarget!=predator.id)
+                {
+                    ui.HitMark(UI.UiTheme.Cyan,1.15f);
+                    ui.PushFishingPunch(6.5f*Setting(s=>s.hitImpulse));
+                }
+                if(camera)camera.SetStrain(strain*Setting(s=>s.cameraShake));
+                defenseTarget=predator.id;
+                return;
+            }
+            defenseTarget=0;
 
             bool fighting = fish != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
             if (fighting && controlling && camera != null)

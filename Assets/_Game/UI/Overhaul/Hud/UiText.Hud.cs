@@ -53,7 +53,6 @@ namespace Raid.UI
         public static string HudStress(float stress,bool inside) => "Нагрузка  "+stress.ToString("0")+"%"+(inside && stress>1?" · снижается":"");
         public static string HudDepthState(bool inside) => inside?"НА БОРТУ":"ПОД ВОДОЙ";
         public static string HudFood(int amount,int required) => "Пища  "+amount+" / "+required;
-        public static string HudHungerTime(float seconds) => Time(seconds);
         public static string HudConsolePrompt(ShipConsole console) => console.IsMonitor?console.Caption:"ЛКМ — "+console.Caption;
         public static string HudConsoleAction(ShipConsoleKind kind) => kind==ShipConsoleKind.CargoControl?"Начать подъём клети":kind==ShipConsoleKind.Process?"Запустить линию переработки":kind==ShipConsoleKind.Feed?"Запустить линию кормления":kind==ShipConsoleKind.SkillTree?"Прокачка":kind==ShipConsoleKind.Reservoir?"Улов и состояние кормления":"Глубина и возвращение";
         public static string HudTetherActor(DiverMotor other,bool pulled) => (pulled?"ТРОС ОТ ":"ТРОС К ")+(other==null?(pulled?"НАПАРНИКА":"НАПАРНИКУ"):"ВОДОЛАЗ"+(pulled?"А ":"У ")+(other.OwnerId+1).ToString("00"));

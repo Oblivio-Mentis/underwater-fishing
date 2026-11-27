@@ -22,6 +22,7 @@ namespace Raid.UI
         readonly HudSafeArea safe;
         readonly HudEdgePanel prompts;
         readonly HudWarnings warnings;
+        readonly HudDefenseSignals defenseSignals;
         int lastSlot=-1;
         bool lastInside;
         ShipConsole lastMonitor;
@@ -44,6 +45,7 @@ namespace Raid.UI
 
             RectTransform content;
             instruments=new DiveInstruments(Root);
+            defenseSignals=new HudDefenseSignals(Root);
 
             safe=new HudSafeArea(Root);
             reel=new ReelReadout(Root,safe.root);
@@ -122,6 +124,7 @@ namespace Raid.UI
 
         public void UpdateScan()
         {
+            defenseSignals.Present(app.Context);
             var diver=app.Context.Player;
             bool active=diver!=null && diver.MarkerActive && !diver.IsDead;
             scanMarker.gameObject.SetActive(active);

@@ -57,29 +57,32 @@ namespace Raid
 
         bool TrySwallowCharge(TechRig charge,Vector3 travel,RaycastHit obstacle)
         {
-            if(!Nereid.NereidVessel.Active || transitionRemaining>0 || pendingKrakenRaid || BowBreath.sequence!=0)return false;
+            if(!Nereid.NereidVessel.Active || transitionRemaining>0)return false;
             if(!bowFactory)bowFactory=FindAnyObjectByType<Factory.FactoryVisuals>();
             var mouth=bowFactory && bowFactory.upperJaw?bowFactory.upperJaw.parent:null;
             if(!mouth)return false;
             var aperture=expeditionLayout?expeditionLayout.chargeAperture:null;
             var outlet=expeditionLayout?expeditionLayout.flameOutlet:null;
-            var frame=aperture?aperture:mouth;
-            var start=frame.InverseTransformPoint(charge.position);
-            var end=frame.InverseTransformPoint(charge.position+travel);
-            float mouthPlane=aperture?0:-.84f;
-            if(start.z>=mouthPlane || end.z<mouthPlane)return false;
-            float fraction=(mouthPlane-start.z)/(end.z-start.z);
-            var entry=Vector3.LerpUnclamped(start,end,fraction);
-            float x=entry.x/Mathf.Max(.01f,expeditionLayout?expeditionLayout.apertureHalfWidth:1.04f);
-            float y=(entry.y+(aperture?0:.12f))/Mathf.Max(.01f,expeditionLayout?expeditionLayout.apertureHalfHeight:.49f);
-            if(x*x+y*y>1)return false;
-            if(obstacle.collider && obstacle.distance+.008f<travel.magnitude*fraction &&
-                (!obstacle.collider.transform.IsChildOf(mouth) || obstacle.distance+.16f<travel.magnitude*fraction))return false;
+            Quaternion rotation=aperture?aperture.rotation:mouth.rotation;
+            Vector3 entrance=aperture?aperture.position:mouth.TransformPoint(new Vector3(0,-.12f,-.84f));
+            var inverse=Quaternion.Inverse(rotation);
+            Vector3 localStart=inverse*(charge.position-entrance);
+            Vector3 localTravel=inverse*travel;
+            float margin=ThrownChargeRadius*.40f;
+            float width=(expeditionLayout?expeditionLayout.apertureHalfWidth:1.04f)+margin;
+            float height=(expeditionLayout?expeditionLayout.apertureHalfHeight:.49f)+margin;
+            float depth=expeditionLayout?expeditionLayout.apertureDepth:.85f;
+            if(!SweptMouthEntry(localStart,localTravel,width,height,depth,out float fraction))return false;
+            float contactDistance=travel.magnitude*fraction;
+            if(obstacle.collider && obstacle.distance+.008f<contactDistance &&
+                (!obstacle.collider.transform.IsChildOf(mouth) || obstacle.distance+ThrownChargeRadius*1.45f<contactDistance))
+                return false;
 
             charge.mode="spent";
             if(!SaveTransaction()){charge.mode="fuse";return false;}
             charge.anchor=Vector3.zero;
-            charge.position=frame.TransformPoint(entry);
+            charge.position+=travel*fraction;
+            if(pendingKrakenRaid || BowBreath.sequence!=0)return true;
             singedDivers.Clear();
             krakenBreath.Value=new KrakenBreathState
             {
@@ -89,6 +92,26 @@ namespace Raid
             };
             pendingKrakenRaid=true;
             return true;
+        }
+
+        internal static bool SweptMouthEntry(Vector3 start,Vector3 travel,float halfWidth,float halfHeight,float depth,out float entry)
+        {
+            entry=0;
+            if(travel.z<=.00001f)return false;
+            // A finite capture space starts just behind the lips and continues into the throat.
+            float first=Mathf.Max(0,(-.16f-start.z)/travel.z);
+            float last=Mathf.Min(1,(depth-.16f-start.z)/travel.z);
+            if(first>last)return false;
+            var point=start+travel*first;
+            var radial=new Vector2(point.x/halfWidth,point.y/halfHeight);
+            float c=radial.sqrMagnitude-1;
+            if(c<=0){entry=first;return true;}
+            var step=new Vector2(travel.x/halfWidth,travel.y/halfHeight);
+            float a=step.sqrMagnitude, b=Vector2.Dot(radial,step);
+            float determinant=b*b-a*c;
+            if(a<.0000001f || b>=0 || determinant<0)return false;
+            entry=first+c/(-b+Mathf.Sqrt(determinant));
+            return entry<=last;
         }
 
         float BreathExposure(KrakenBreathState state,float age,Vector3 target)

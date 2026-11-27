@@ -12,6 +12,14 @@ namespace Raid
     {
         IEnumerator BowAndPipeTrial()
         {
+            Check(RaidWorld.SweptMouthEntry(new Vector3(.36f,.16f,.04f),new Vector3(0,-.004f,.025f),
+                1.04f,.49f,.85f,out float inside) && inside==0,"A slow charge already between the lips is accepted");
+            Check(RaidWorld.SweptMouthEntry(new Vector3(1.32f,.32f,-.26f),new Vector3(-.62f,-.16f,.73f),
+                1.04f,.49f,.85f,out float diagonal) && diagonal>.3f && diagonal<.95f,
+                "A diagonal charge can cross the aperture after it crosses the old plane");
+            Check(!RaidWorld.SweptMouthEntry(new Vector3(1.35f,.35f,-.8f),Vector3.forward*2,1.04f,.49f,.85f,out _) &&
+                !RaidWorld.SweptMouthEntry(Vector3.zero,Vector3.back,1.04f,.49f,.85f,out _),
+                "The thick entrance still rejects the rim and outward-bound throws");
             var factory=FindAnyObjectByType<FactoryVisuals>();
             Check(factory && factory.upperJaw && factory.feedThroat && factory.feedRoute && factory.processRoute,
                 "The authored mouth and both physical pipe routes are present");

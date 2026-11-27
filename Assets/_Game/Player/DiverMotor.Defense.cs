@@ -48,6 +48,11 @@ namespace Raid
             raidBreakSequence.Value++;
         }
 
+        internal void ConsumeBySquid()
+        {
+            if(IsServerInitialized && !IsDead)BeginDeath(true);
+        }
+
         internal bool RaidStrugglePose(out float brace,out float push)
         {
             if(seenRaidBreak!=raidBreakSequence.Value)

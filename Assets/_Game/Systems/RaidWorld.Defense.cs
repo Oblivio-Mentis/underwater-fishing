@@ -120,7 +120,7 @@ namespace Raid
         }
         public static string Name(DefenseSpecies kind)=>kind switch {
             DefenseSpecies.Rammer=>"Таранщик",DefenseSpecies.Remora=>"Прилипала",DefenseSpecies.Thief=>"Вор",
-            DefenseSpecies.Abductor=>"Похититель",_=>"Сталкер"
+            DefenseSpecies.Abductor=>"Кальмар",_=>"Сталкер"
         };
         public static GameObject Model(DefenseSpecies kind,Transform parent)
         {

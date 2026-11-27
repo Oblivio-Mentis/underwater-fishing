@@ -56,14 +56,16 @@ namespace Raid
         public int expeditionDepth = 1;
         public int highestDepth => TeamRank(SkillLine.Hull)>0 ? 2 : 1;
         public int rationCyclesUntilReady;
-        public float hungerRemaining = 180f;
+        public float hungerRemaining = 300f;
+        [UnityEngine.SerializeField] float hungerWindowRoll = .5f;
+        [UnityEngine.SerializeField] bool hungerTimingAssigned;
         public List<CatchItem> tank = new List<CatchItem>();
         public List<CatchItem> cargo = new List<CatchItem>();
         public List<long> deliveredIds = new List<long>();
         public HoistPhase hoistPhase;
         public float hoistRemaining;
         public TeamProgress() { }
-        public TeamProgress(ProgressionTuning tuning) { hungerRemaining = Math.Max(1f, tuning.hungerInterval); }
+        public TeamProgress(ProgressionTuning tuning) { ScheduleHunger(tuning); }
         public int CargoUsed { get { int used = 0; foreach (CatchItem fish in cargo) used = checked(used + fish.cargoSize); return used; } }
 
         public int Capacity(ProgressionTuning tuning) => checked(tuning.cargoCapacity + TeamValue(SkillLine.Cage));
@@ -72,6 +74,18 @@ namespace Raid
         public bool CanVisitDepth(int depth) => depth >= 1 && depth <= highestDepth;
 
         public float HungerInterval(ProgressionTuning tuning) => Math.Max(1f, tuning.hungerInterval*(1+TeamFactor(SkillLine.Satiety)));
+
+        public float HungerWindowSeconds(ProgressionTuning tuning) => HungerInterval(tuning)*UnityEngine.Mathf.Clamp(tuning.hungerWindow,0,.5f);
+        public float HungerUntilRisk(ProgressionTuning tuning) =>
+            hungerRemaining-HungerWindowSeconds(tuning)*(hungerTimingAssigned?hungerWindowRoll:.5f);
+        public float HungerLatest(ProgressionTuning tuning) => HungerInterval(tuning)+HungerWindowSeconds(tuning)*.5f;
+
+        void ScheduleHunger(ProgressionTuning tuning)
+        {
+            hungerWindowRoll=UnityEngine.Random.value;
+            hungerTimingAssigned=true;
+            hungerRemaining=HungerLatest(tuning)-HungerWindowSeconds(tuning)*(1-hungerWindowRoll);
+        }
 
         public int StockLossLimit(ProgressionTuning tuning) => Math.Min(Math.Max(0,tuning.maximumStockLossCount),
             (int)Math.Floor(tank.Count * Math.Max(0f,Math.Min(1f,tuning.maximumStockLossFraction)) * (1-TeamFactor(SkillLine.CargoDefense))));
@@ -257,7 +271,7 @@ namespace Raid
             }
             long retained=(long)Math.Max(0,offeringPoints-required)*TeamValue(SkillLine.Carryover)/100;
             offeringPoints=(int)Math.Min((long)Math.Max(0,tuning.maximumFoodCarry)*FoodScale,retained);
-            hungerRemaining=HungerInterval(tuning);
+            ScheduleHunger(tuning);
             if(feedingCycle<int.MaxValue)feedingCycle++;
             return report;
         }
@@ -279,6 +293,7 @@ namespace Raid
                 !Enum.IsDefined(typeof(HoistPhase), hoistPhase) ||
                 float.IsNaN(hoistRemaining) || float.IsInfinity(hoistRemaining) || hoistRemaining < 0 ||
                 float.IsNaN(hungerRemaining) || float.IsInfinity(hungerRemaining) || hungerRemaining < 0 ||
+                !float.IsFinite(hungerWindowRoll) || hungerWindowRoll<0 || hungerWindowRoll>1 ||
                 tank == null || cargo == null || deliveredIds == null)
                 throw new InvalidOperationException("Invalid team progress data.");
             ValidateSkills();

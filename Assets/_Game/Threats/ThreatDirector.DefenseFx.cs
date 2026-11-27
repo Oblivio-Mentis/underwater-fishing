@@ -9,7 +9,7 @@ namespace Raid
 
         void PresentRaiderWake(VisibleAttacker view,AttackerSnapshot actor,float pace)
         {
-            bool rushing=actor.pose is AttackerPose.Strike or AttackerPose.Snatch ||
+            bool rushing=actor.pose is AttackerPose.Strike or AttackerPose.Snatch or AttackerPose.Tongue ||
                 actor.pose==AttackerPose.Carry && (actor.stolenId>0 || actor.victim>=0) ||
                 actor.pose==AttackerPose.Retreat && Defense.phase==DefensePhase.Resolution;
             if(view.wake==null && rushing)
@@ -73,10 +73,11 @@ namespace Raid
                 renderer.sharedMaterial=material;
                 renderer.renderMode=ParticleSystemRenderMode.Billboard;
             }
-            bool connected=actor.pose==AttackerPose.Latch;
-            view.thrust.transform.localPosition=new Vector3(0,0,connected?.75f:-.80f);
-            view.thrust.transform.localRotation=Quaternion.Euler(connected?-64:18,connected?0:180,0);
-            view.thrust.Emit(connected?27:actor.kind==DefenseSpecies.Rammer?35:21);
+            bool contact=actor.pose is AttackerPose.Latch or AttackerPose.Tongue;
+            Vector3 origin=contact && view.mouth?view.mouth.localPosition:new Vector3(0,0,-.80f);
+            view.thrust.transform.localPosition=origin;
+            view.thrust.transform.localRotation=Quaternion.Euler(contact?-55:18,contact?0:180,0);
+            view.thrust.Emit(actor.pose==AttackerPose.Tongue?13:contact?27:actor.kind==DefenseSpecies.Rammer?35:21);
         }
     }
 }

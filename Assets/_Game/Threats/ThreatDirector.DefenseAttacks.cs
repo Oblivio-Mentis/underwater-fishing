@@ -21,14 +21,17 @@ namespace Raid
             public DefenseTuning.Species card;
             public int cost;
             public float vitality, progress, windAim, latchTick, life, rescuePull, gripObstruction;
-            public double until, nextRoute, captureUntil, recoilUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
+            public float captureDistance;
+            public double until, nextRoute, captureUntil, captureStarted, recoilUntil, nextFleeSearch, nextSightTest, unseenSince=-1;
             public bool hasFleeRoute;
-            public bool counter, attached, ramHit, breachPursuit, breachPursuitUsed;
+            public bool counter, attached, ramHit, breachPursuit, breachPursuitUsed,seekingStock;
             public Vector3 goal, waypoint, exit, fleeGoal;
             public Vector3? stockApproach;
             public DiverMotor target;
             public CatchItem catchItem;
             public CapsuleCollider collider;
+            public Collider[] hitShapes;
+            public CharacterController captiveController;
             public readonly List<DefenseHook> hooks=new(4);
         }
 
@@ -45,8 +48,9 @@ namespace Raid
             go.layer=Mathf.Max(0,RaiderLayer);
             var hit=go.AddComponent<CapsuleCollider>();
             hit.direction=2;
-            hit.radius=card.kind==DefenseSpecies.Rammer?.60f:.47f;
-            hit.height=card.kind switch {DefenseSpecies.Remora=>2.47f,DefenseSpecies.Stalker=>2.86f,_=>2.56f};
+            hit.radius=card.kind switch {DefenseSpecies.Rammer=>.60f,DefenseSpecies.Abductor=>.72f,_=>.47f};
+            hit.height=card.kind switch {DefenseSpecies.Remora=>2.47f,DefenseSpecies.Stalker=>2.86f,DefenseSpecies.Abductor=>3.75f,_=>2.56f};
+            if(card.kind==DefenseSpecies.Abductor)hit.center=new Vector3(0,.10f,-.46f);
             if(card.kind is DefenseSpecies.Abductor or DefenseSpecies.Rammer)
             {
                 var fins=go.AddComponent<CapsuleCollider>();
@@ -60,7 +64,8 @@ namespace Raid
                     forward=slot>=0?swimmer.Forward:(DefenseCenter-point).normalized,
                     scale=slot>=0?swimmer.Scale:size*card.silhouetteScale,
                     slot=slot,victim=-1,group=group},
-                card=card,cost=cost,vitality=card.health*size,collider=hit,exit=point
+                card=card,cost=cost,vitality=card.health*size,collider=hit,exit=point,
+                hitShapes=card.kind==DefenseSpecies.Abductor?go.GetComponents<Collider>():null
             };
             go.transform.localScale=Vector3.one*a.data.scale;
             go.transform.rotation=Quaternion.LookRotation(a.data.forward);
@@ -73,6 +78,7 @@ namespace Raid
             a.data.pose=pose;
             a.data.poseAt=DefenseClock;
             if(pose==AttackerPose.Strike)a.ramHit=false;
+            if(pose==AttackerPose.Approach)a.data.tongueAim=default;
             a.until=DefenseClock+seconds;
             a.nextRoute=0;
         }
@@ -191,7 +197,8 @@ namespace Raid
                 }
                 var facing=Vector3.RotateTowards(a.data.forward,direction,dt*5.2f,1);
                 var vessel=NereidVessel.Active;
-                if((vessel && !vessel.OutsideDefenseHull(candidate,facing,a.data.scale)) ||
+                float hullScale=a.data.scale*(a.data.kind==DefenseSpecies.Abductor?1.30f:1f);
+                if((vessel && !vessel.OutsideDefenseHull(candidate,facing,hullScale)) ||
                     DefenseOccupied(candidate,prey))
                 {a.nextRoute=0;return false;}
                 a.data.position=candidate;
@@ -205,6 +212,7 @@ namespace Raid
         {
             var a=attackers[index];
             a.life+=dt;
+            a.seekingStock=false;
             if(Defense.breached && a.attached)
             {
                 a.attached=false;
@@ -213,7 +221,11 @@ namespace Raid
             }
             if(Defense.phase==DefensePhase.Assault && ((int)(a.life/.45f)!=(int)((a.life-dt)/.45f)))
                 FishActor.ScatterFromDefense(a.data.position,3.8f,1.1f,depthTier);
-            if(a.hooks.Count>0 && TickDefenseHooks(index,a,dt))return;
+            if(a.hooks.Count>0 && TickDefenseHooks(index,a,dt))
+            {
+                if(a.data.victim>=0)TickCapture(a,dt);
+                return;
+            }
             if(a.data.victim>=0){TickCapture(a,dt);return;}
             if(DefenseClock<a.recoilUntil)
             {
@@ -312,6 +324,11 @@ namespace Raid
                     }
                 }
                 Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:FieldContact(contact,.70f*a.data.scale);
+                if(a.data.kind==DefenseSpecies.Abductor && a.target)
+                {
+                    BeginTongueWindup(a,destination,dt);
+                    return;
+                }
                 float trigger=a.data.kind==DefenseSpecies.Rammer?4.8f:a.data.kind==DefenseSpecies.Stalker?3.1f:a.target?3.1f:1.65f;
                 if((destination-a.data.position).sqrMagnitude>trigger*trigger)
                 {Steer(a,destination,a.card.speed,dt,prey:a.target);return;}
@@ -319,6 +336,12 @@ namespace Raid
                 a.windAim=a.data.kind==DefenseSpecies.Rammer?1:.62f;
                 a.data.forward=(a.goal-a.data.position).normalized;
                 SetPose(a,AttackerPose.Windup,a.card.windup);
+                return;
+            }
+            if(a.data.kind==DefenseSpecies.Abductor && (a.data.pose==AttackerPose.Tongue ||
+                a.data.pose==AttackerPose.Windup && a.target))
+            {
+                TickTongue(a,dt);
                 return;
             }
             if(a.data.pose==AttackerPose.Windup)
@@ -331,20 +354,7 @@ namespace Raid
                 SetPose(a,AttackerPose.Strike,1.1f);
             }
             var prior=a.data.position;
-            if(a.data.kind==DefenseSpecies.Abductor && EligibleVictim(a.target))
-            {
-                var chest=a.target.transform.position+Vector3.up*.58f;
-                a.goal=Vector3.MoveTowards(a.goal,chest,dt*6f);
-            }
             bool close=Steer(a,a.goal,a.card.burstSpeed,dt,prey:a.target);
-            if(a.data.kind==DefenseSpecies.Abductor && EligibleVictim(a.target))
-            {
-                var chest=a.target.transform.position+Vector3.up*.58f;
-                var leg=a.data.position-prior;
-                float t=Mathf.Clamp01(Vector3.Dot(chest-prior,leg)/Mathf.Max(.0001f,leg.sqrMagnitude));
-                if((chest-prior-leg*t).sqrMagnitude<2.20f && ClearDefenseLine(a.data.position,chest,a.target) &&
-                    TryCapture(a,a.target))return;
-            }
             if(a.data.kind==DefenseSpecies.Rammer && a.target==null && !a.ramHit)
             {
                 var sweep=a.data.position-prior;
@@ -366,7 +376,6 @@ namespace Raid
             {
                 if(EligibleVictim(a.target) && (a.target.transform.position+Vector3.up*.55f-a.data.position).sqrMagnitude<2.8f && ClearDefenseLine(a.data.position,a.target.transform.position+Vector3.up*.55f,a.target))
                 {
-                    if(a.data.kind==DefenseSpecies.Abductor && TryCapture(a,a.target))return;
                     a.target.DamageFromCreature(a.card.diverDamage*a.data.scale);
                     a.target.ApplyTetherMotion(a.data.forward*.52f);
                 }
@@ -398,12 +407,14 @@ namespace Raid
             if(held>=Mathf.Clamp(able/2,1,2) || !victim.BeginRaidCarry(a.data.id,solo))return false;
             a.data.victim=victim.OwnerId;
             a.target=victim;
-            Vector3 outward=Vector3.ProjectOnPlane(a.data.position-DefenseCenter,Vector3.up).normalized;
-            if(outward.sqrMagnitude<.01f)outward=a.data.forward;
-            Vector3 toward=a.data.position+outward*17+Vector3.up*1.4f;
-            a.goal=FindPath(a.data.position,toward,out var leg,victim) && (leg-a.data.position).sqrMagnitude>4?leg:a.exit;
+            a.captiveController=victim.GetComponent<CharacterController>();
+            SetCaptiveCollisions(a,true);
+            a.data.tongueAim=CaptiveChest(victim);
+            a.data.tongueReleasedAt=0;
+            a.captureDistance=Vector3.Distance(SquidMouth(a.data),a.data.tongueAim);
             float carry=solo?defenseTuning.soloCarrySeconds:defenseTuning.carrySeconds;
-            a.captureUntil=DefenseClock+carry;
+            a.captureStarted=DefenseClock;
+            a.captureUntil=a.captureStarted+carry;
             a.rescuePull=0;
             a.gripObstruction=0;
             SetPose(a,AttackerPose.Carry,carry);
@@ -420,35 +431,53 @@ namespace Raid
                 a.goal=a.exit;SetPose(a,AttackerPose.Retreat,a.card.cooldown);
                 return;
             }
-            Vector3 chest=victim.transform.position+Vector3.up*.55f;
-            bool linked=ClearDefenseLine(a.data.position,chest,victim);
+            Vector3 chest=CaptiveChest(victim);
+            Vector3 mouth=SquidMouth(a.data);
+            bool linked=TonguePathClear(mouth,chest,victim);
             a.gripObstruction=linked?Mathf.Max(0,a.gripObstruction-dt*2):a.gripObstruction+dt;
-            if(a.gripObstruction>=1.05f || (a.data.position-chest).sqrMagnitude>23)
+            if(a.gripObstruction>=.95f || (mouth-chest).sqrMagnitude>Mathf.Pow(defenseTuning.squidTongueRange+2,2))
             {ReleaseVictim(a);SetPose(a,AttackerPose.Stagger,.8f);return;}
             if(!linked)return;
-            float speed=defenseTuning.captiveCarrySpeed;
+            float age=(float)(DefenseClock-a.captureStarted);
+            float speed=defenseTuning.captiveCarrySpeed*Mathf.SmoothStep(.44f,1.20f,age/2);
             if(victim.TryGetComponent<HarpoonTool>(out var harpoon) && harpoon.TeammateReelsThisDiver)
                 speed*=.27f;
+            else if(a.rescuePull>0 && a.hooks.Count>0)
+                speed*=.48f;
             else if(victim.CanBreakRaidGrip && victim.TryGetComponent<RescueTool>(out var rescue) &&
                 rescue.DisplayTargetOwnerId==victim.OwnerId)
                 speed*=Mathf.Lerp(1,.39f,rescue.DisplayProgress);
-            if(Steer(a,a.goal,speed,dt,prey:victim))
+            var delta=mouth-chest;
+            float remaining=delta.magnitude;
+            if(remaining<=.37f && age>=defenseTuning.squidMinimumPullSeconds)
             {
-                Vector3 outward=Vector3.ProjectOnPlane(a.data.position-DefenseCenter,Vector3.up).normalized;
-                if(FindPath(a.data.position,a.data.position+outward*11+Vector3.up,out var next,victim))
-                    a.goal=next;
+                ReleaseVictim(a);
+                victim.ConsumeBySquid();
+                EndTonguePass(a);
+                return;
             }
-            var at=a.data.position+a.data.forward*(.57f*a.data.scale)-Vector3.up*(1.12f*a.data.scale);
-            var delta=at-victim.transform.position;
-            victim.ApplyTetherMotion(Vector3.ClampMagnitude(delta,dt*(defenseTuning.captiveCarrySpeed+3f)));
-            victim.DamageFromCreature(a.card.diverDamage*.085f*dt);
+            float approach=Mathf.SmoothStep(0,1,Mathf.Clamp01(age/defenseTuning.squidMinimumPullSeconds));
+            float clearance=Mathf.Lerp(a.captureDistance,.28f,approach);
+            float movement=Mathf.Min(dt*speed,remaining-clearance);
+            if(movement>0)victim.ApplyTetherMotion(delta*(movement/remaining));
         }
 
         void ReleaseVictim(DefenseAttacker a)
         {
             if(a.data.victim<0)return;
+            SetCaptiveCollisions(a,false);
+            a.captiveController=null;
             if(a.target)a.target.EndRaidCarry(a.data.id);
+            if(a.target)a.data.tongueAim=CaptiveChest(a.target);
+            a.data.tongueReleasedAt=DefenseClock;
             a.target=null;a.data.victim=-1;a.rescuePull=0;
+        }
+
+        static void SetCaptiveCollisions(DefenseAttacker a,bool ignore)
+        {
+            if(!a.captiveController || !a.captiveController.enabled || a.hitShapes==null)return;
+            foreach(var shape in a.hitShapes)
+                if(shape && shape.enabled)Physics.IgnoreCollision(a.captiveController,shape,ignore);
         }
 
         internal bool RescueDefenseVictim(DiverMotor victim)
@@ -490,6 +519,7 @@ namespace Raid
                 (DefenseAge<defenseTuning.theftSeconds || a.data.pose==AttackerPose.Snatch) &&
                 activeRaid.lost+activeRaid.inTransit.Count<activeRaid.lossLimit)
             {
+                a.seekingStock=true;
                 var pickup=TheftPickup();
                 if(a.data.pose==AttackerPose.Snatch)
                 {

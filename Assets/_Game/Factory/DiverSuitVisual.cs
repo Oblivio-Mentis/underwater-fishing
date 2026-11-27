@@ -31,6 +31,7 @@ namespace Raid
         uint lastBallLaunch;
         readonly DiverStride gait=new();
         Renderer legacyVisor,legacyCapsule;
+        DefenseSignal raidSignal;
 
         static Vector3 V(float x,float y,float z)=>new Vector3(x,y,z);
 
@@ -95,6 +96,9 @@ namespace Raid
                 displaySlot=targetSlot=tool.ActiveSlot;
                 return;
             }
+            bool captive=diver.RaidGripVisual!=0 && !diver.IsDead;
+            if(captive && !raidSignal)raidSignal=DefenseSignal.Attach(avatar.transform);
+            if(raidSignal)raidSignal.Present(captive,true);
             if(tool.ActiveSlot!=targetSlot){draw=GoshaBallGrip.SwapDuration;targetSlot=tool.ActiveSlot;}
             if(!weaponBuilt && equipment!=null && equipment.MakeWorldModel(gun,weaponMeshes,out var bolt,out var drum,out var muzzle,out shuttle))
             {

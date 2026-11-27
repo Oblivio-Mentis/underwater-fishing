@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 288853707027493290}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.065, z: 0.4942}
+  m_LocalPosition: {x: 0, y: -0.11, z: 0.4611}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -56,7 +56,7 @@ Transform:
   m_GameObject: {fileID: 919477698424179061}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.018, z: -0.4456}
+  m_LocalPosition: {x: 0, y: -0.018, z: -0.4898}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -88,7 +88,7 @@ Transform:
   m_GameObject: {fileID: 1798828745781531309}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.162, y: -0.0553, z: 0.037}
+  m_LocalPosition: {x: -0.1416, y: -0.0686, z: -0.0015}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -150,7 +150,7 @@ Transform:
   m_GameObject: {fileID: 2758848866358096879}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.065, z: 1.053}
+  m_LocalPosition: {x: 0, y: -0.11, z: 1.0265}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -181,7 +181,7 @@ Transform:
   m_GameObject: {fileID: 3517042637472347051}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.162, y: -0.0553, z: 0.037}
+  m_LocalPosition: {x: 0.1416, y: -0.0686, z: -0.0015}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -289,8 +289,8 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 2381134548823676454}
   m_AABB:
-    m_Center: {x: -0.0006250143, y: -0.017110005, z: -0.089980006}
-    m_Extent: {x: 1.099375, y: 0.83764, z: 1.6949799}
+    m_Center: {x: 0.00036001205, y: -0.0033800006, z: -0.129085}
+    m_Extent: {x: 1.01536, y: 0.91789, z: 1.709085}
   m_DirtyAABB: 0
 --- !u!1 &6416245474794275638
 GameObject:
@@ -317,7 +317,7 @@ Transform:
   m_GameObject: {fileID: 6416245474794275638}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.012, z: -0.60959995}
+  m_LocalPosition: {x: 0, y: -0.012, z: -0.61680007}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

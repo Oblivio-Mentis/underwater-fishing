@@ -39,7 +39,9 @@ namespace Raid
         public AnimationCurve foodGrowthCurve = new();
         [Min(12)] public int foodHardCap = 2500;
         [Min(0)] public int maximumFoodCarry = 3;
-        [Min(1f)] public float hungerInterval = 180f;
+        [Min(1f)] public float hungerInterval = 300f;
+        [Tooltip("Fraction of the feeding interval during which the deadline may occur.")]
+        [Range(0f,.5f)] public float hungerWindow = .16f;
         [Range(0f, 1f)] public float maximumStockLossFraction = .35f;
         [Min(0)] public int maximumStockLossCount = 4;
         [Header("Personal active skills")]

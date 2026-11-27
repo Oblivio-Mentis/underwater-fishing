@@ -40,7 +40,7 @@ namespace Raid.Nereid
                     heading = feed ? "КОРМЛЕНИЕ" : "ПЕРЕРАБОТКА";
                     value = flowing ? $"Поток   {route.completed} / {route.total}" : $"Назначено   {count}";
                     detail = feed
-                        ? $"Рацион   {TeamProgress.FoodText(team.offeringPoints)} / {TeamProgress.FoodText(team.RequiredFood(world.progression))}\nДо кормления   {Mathf.CeilToInt(team.hungerRemaining)} с"
+                        ? $"Рацион   {TeamProgress.FoodText(team.offeringPoints)} / {TeamProgress.FoodText(team.RequiredFood(world.progression))}\n{Raid.UI.UiText.HungerForecast(team.HungerUntilRisk(world.progression))}"
                         : "Линия разделки";
                     detail += flowing ? (route.stopping ? "\nКлапан закрыт" : "\nТрубопровод открыт") :
                         (route.active ? "\nДругая линия занята" : count > 0 ? "\nГотово к пуску" : "\nОжидание назначения");

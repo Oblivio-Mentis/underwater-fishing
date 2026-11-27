@@ -48,6 +48,9 @@ MonoBehaviour:
   inkSeconds: 5
   inkRadius: 4
   captiveCarrySpeed: 4.15
+  squidTongueRange: 7.4
+  squidTongueSeconds: 0.28
+  squidMinimumPullSeconds: 2.8
   harpoonRangeMargin: 1.4
   rescuePullSeconds: 0.74
   small: 0.85

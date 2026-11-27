@@ -53,6 +53,13 @@ namespace Raid.UI
             var assist=tool.AssistTarget;
             var owner=assist?assist.GetComponent<HarpoonTool>():tool;
             var hooked=owner?owner.HookedFish:null;
+            if(owner && owner.TryHookedDefense(out var predator))
+            {
+                if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Стабилизировать напарника"));
+                bool release=owner.LineTension>=LineTensionArc.Danger || predator.effort>.66f;
+                string pull=release?"Отпустить на рывке":predator.victim>=0?"Освободить напарника":"Подтягивать хищника";
+                return new HudHint(Mark.Spear,new(release?Key.LiftLeft:Key.Left,pull),new(Key.R,"Освободить трос")){caution=release};
+            }
             if(hooked && hooked.Mode>=FishMode.Hooked && hooked.Mode<=FishMode.Tired)
             {
                 if(assist)return new(Mark.Glove,new(tool.ActiveSlot==1?Key.Left:Key.E,"Стабилизировать напарника"),note:"Хват не заменяет второй гарпун");

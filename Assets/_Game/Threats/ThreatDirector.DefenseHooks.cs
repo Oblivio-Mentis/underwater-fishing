@@ -71,7 +71,6 @@ namespace Raid
             float nearest=float.MaxValue,totalWinding=0;
             int engaged=0;
             Vector3 pull=Vector3.zero;
-            if(a.data.victim>=0 && DefenseClock>=a.captureUntil)ReleaseVictim(a);
             // A short readable strain window twice per fight. Slack or a partner makes it safe to wind.
             float agitation=Mathf.Max(0,Mathf.Sin((a.life+a.data.id*.57f)*3.3f));
             float surge=agitation>.65f?Mathf.InverseLerp(.65f,1,agitation):0;
@@ -151,7 +150,7 @@ namespace Raid
                 if(a.rescuePull>=defenseTuning.rescuePullSeconds)ReleaseVictim(a);
                 else return true;
             }
-            float needed=a.card.fightSeconds*Mathf.Lerp(.41f,.59f,Mathf.InverseLerp(.78f,1.34f,a.data.scale));
+            float needed=FightWork(a);
             a.progress+=dt*combined*Mathf.Lerp(1,.71f,surge);
             float reach=Mathf.Max(2.45f,strongest.tuning.captureRange);
             if(!a.attached && nearest>1.55f)
@@ -180,5 +179,8 @@ namespace Raid
                 return false;
             }
         }
+
+        static float FightWork(DefenseAttacker a) =>
+            a.card.fightSeconds*Mathf.Lerp(.41f,.59f,Mathf.InverseLerp(.78f,1.34f,a.data.scale));
     }
 }

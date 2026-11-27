@@ -25,7 +25,7 @@ Transform:
   m_GameObject: {fileID: 3339343883279244630}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.012, z: -0.62880003}
+  m_LocalPosition: {x: 0, y: -0.012, z: -0.6528}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -56,7 +56,7 @@ Transform:
   m_GameObject: {fileID: 4163566768279154239}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.13, z: 0.979}
+  m_LocalPosition: {x: 0, y: -0.15, z: 1.024}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -87,7 +87,7 @@ Transform:
   m_GameObject: {fileID: 6649670788500568436}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.13, z: 0.3502}
+  m_LocalPosition: {x: 0, y: -0.15, z: 0.3712}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -118,7 +118,7 @@ Transform:
   m_GameObject: {fileID: 7169374406305682937}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.2136, y: -0.0749, z: -0.069}
+  m_LocalPosition: {x: 0.2208, y: -0.0812, z: -0.064}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -180,7 +180,7 @@ Transform:
   m_GameObject: {fileID: 9059191133498561946}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.2136, y: -0.0749, z: -0.069}
+  m_LocalPosition: {x: -0.2208, y: -0.0812, z: -0.064}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -211,7 +211,7 @@ Transform:
   m_GameObject: {fileID: 9118743871742664901}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.018, z: -0.5668}
+  m_LocalPosition: {x: 0, y: -0.018, z: -0.5808}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -320,6 +320,6 @@ SkinnedMeshRenderer:
   m_BlendShapeWeights: []
   m_RootBone: {fileID: 184938875688278262}
   m_AABB:
-    m_Center: {x: -0.00014999509, y: -0.00051501393, z: -0.20012498}
-    m_Extent: {x: 1.31515, y: 0.96040505, z: 1.734875}
+    m_Center: {x: 0, y: -0.0028049946, z: -0.20223504}
+    m_Extent: {x: 1.345, y: 1.000615, z: 1.787235}
   m_DirtyAABB: 0

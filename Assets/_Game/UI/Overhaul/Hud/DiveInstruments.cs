@@ -30,14 +30,13 @@ namespace Raid.UI
         readonly TMP_Text[] crewName=new TMP_Text[5], keys=new TMP_Text[HarpoonTool.MaximumSlots];
         readonly TMP_Text[] pocketAmounts=new TMP_Text[HarpoonTool.MaximumSlots];
         readonly RectTransform[] crewRows=new RectTransform[5];
-        readonly TMP_Text depth,stock,food,timer,oxygen,pressure,route;
-        readonly RectTransform defensePanel;
-        readonly Image defenseMeter;
-        readonly TMP_Text defenseCaption, defenseValue;
+        readonly TMP_Text depth,stock,food,oxygen,pressure,route;
+        readonly Image phaseMeter, feedingRisk, riskElapsed, phaseIndex;
+        readonly TMP_Text phaseCaption, phaseValue;
         readonly Image oxygenBar,pressureBar,healthBar,submarine;
         readonly TMP_Text healthText;
-        readonly RectTransform navigation,depthTicks,hotbar,expedition;
-        readonly Image[] depthMarks=new Image[13];
+        readonly RectTransform navigation,hotbar,expedition;
+        const int PhaseTrackWidth=278;
 
         public DiveInstruments(RectTransform root)
         {
@@ -55,28 +54,23 @@ namespace Raid.UI
             expedition=At(root,"HUD Expedition",new Vector2(.5f,1),new Vector2(.5f,1),0,-13,394,126);
             depth=Caption(expedition,"Depth Value",0,0,394,43,36,TextAlignmentOptions.Center);
             depth.fontStyle=FontStyles.Bold;
-            depthTicks=At(expedition,"Depth Scale",new Vector2(.5f,1),new Vector2(.5f,1),0,-48,276,16);
-            for(int i=0;i<depthMarks.Length;i++)
-            {
-                depthMarks[i]=Box(depthTicks,"Depth Tick",i*23,0,2,i%3==0?11:5,Ivory);
-            }
-            Box(depthTicks,"Baseline",0,-5,276,1,new Color(.82f,.89f,.88f,.8f));
-            Box(depthTicks,"Index",137,4,3,18,Gold);
-            var stockStrip=Back(expedition,"Reservoir telemetry",40,-70,306,32);
+            var phaseStrip=Back(expedition,"Expedition phase",43,-43,308,43);
+            phaseCaption=Caption(phaseStrip,"Phase",15,-2,212,20,17,TextAlignmentOptions.Left);
+            phaseValue=Caption(phaseStrip,"Phase value",226,-2,67,20,16,TextAlignmentOptions.Right);
+            var phaseTrack=Box(phaseStrip,"Phase track",15,-26,PhaseTrackWidth,10,new Color(.20f,.35f,.39f,.88f)).rectTransform;
+            phaseMeter=UiKit.Panel(phaseTrack,"Phase fill",Blue);
+            UiKit.Fill(phaseMeter.rectTransform);
+            feedingRisk=Box(phaseTrack,"Feeding window",0,0,1,10,new Color(.55f,.13f,.18f,.96f));
+            riskElapsed=UiKit.Panel(feedingRisk.transform,"Time in feeding window",UiTheme.Red);
+            UiKit.Fill(riskElapsed.rectTransform);
+            phaseIndex=Box(phaseTrack,"Phase pointer",0,3,2,16,Ivory);
+            var stockStrip=Back(expedition,"Reservoir telemetry",95,-95,204,32);
             Icon(stockStrip,"Fish",Mark.Lantern,7,-1,30,30,Ivory);
             stock=Caption(stockStrip,"Stock Count",40,0,43,32,19,TextAlignmentOptions.Left);
             Box(stockStrip,"Divider",81,-7,1,17,Rim);
             Icon(stockStrip,"Feeding",Mark.Jaw,89,-1,32,30,Ivory);
             food=Caption(stockStrip,"Food Amount",123,0,75,32,18,TextAlignmentOptions.Left);
-            Box(stockStrip,"Clock divider",202,-7,1,17,Rim);
-            timer=Caption(stockStrip,"Hunger Timer",208,0,88,32,19,TextAlignmentOptions.Center);
-            route=Caption(expedition,"Stock Detail",0,-105,394,24,16,TextAlignmentOptions.Center);
-            defensePanel=Back(expedition,"Shield telemetry",12,-136,370,48);
-            Icon(defensePanel,"Shield",Mark.Shield,7,-8,30,30,Blue);
-            defenseCaption=Caption(defensePanel,"Shield status",42,-1,273,23,16,TextAlignmentOptions.Left);
-            defenseMeter=Meter(defensePanel,"Shield integrity",42,-28,258,9,Blue,9);
-            defenseValue=Caption(defensePanel,"Shield remaining",307,-5,58,30,17,TextAlignmentOptions.Center);
-            defensePanel.gameObject.SetActive(false);
+            route=Caption(expedition,"Stock Detail",0,-129,394,24,16,TextAlignmentOptions.Center);
 
             var vitals=At(root,"HUD Vitals",Vector2.zero,Vector2.zero,33,29,264,111);
             Icon(vitals,"Air Bottle",Mark.Bottle,0,-2,35,35,Ivory);
@@ -138,15 +132,6 @@ namespace Raid.UI
             }
             int depthMetres=Mathf.RoundToInt(metres);
             UiKit.Set(depth,depthMetres>0?"↓  −"+depthMetres+" м":"↓  0 м");
-            // A graduation passes the center index for each metre of real depth.
-            float offset=Mathf.Repeat(metres,3)*23;
-            for(int i=0;i<depthMarks.Length;i++)
-            {
-                var tick=depthMarks[i].rectTransform;
-                float x=Mathf.Repeat(i*23-offset,299);
-                tick.anchoredPosition=new Vector2(x,0);
-                depthMarks[i].enabled=x<=276;
-            }
             var v=c.View;
             expedition.gameObject.SetActive(v!=null);
             if(v!=null)
@@ -154,8 +139,6 @@ namespace Raid.UI
                 int n=0;foreach(var item in v.tank)if(item!=null&&(item.offering>0||item.biomass>0||item.chitin>0))n++;
                 UiKit.Set(stock,n.ToString());
                 UiKit.Set(food,TeamProgress.FoodText(v.offeringPoints)+" / "+TeamProgress.FoodText(c.FoodRequired));
-                UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
-                timer.color=c.DefendingReservoir?UiTheme.Red:v.offeringPoints==0&&v.hungerRemaining<=30?Gold:Ivory;
                 food.color=v.offeringPoints>0?Green:Ivory;
                 var flow=c.World.FishRoute;
                 UiKit.Set(route,flow.active?(flow.stopping?"Клапан закрыт":flow.feeding?"Кормление":"Переработка")+"   "+flow.completed+" / "+flow.total:"");
@@ -203,7 +186,7 @@ namespace Raid.UI
             }
             var threats=c.Threats;
             bool defense=threats && threats.DefenseActive;
-            defensePanel.gameObject.SetActive(defense);
+            feedingRisk.gameObject.SetActive(!defense && v!=null);
             if(defense)
             {
                 var field=threats.Defense;
@@ -216,12 +199,31 @@ namespace Raid.UI
                     DefensePhase.Resolution=>field.breached?"ПОЛЕ РАЗРУШЕНО · КРАЖА":"СТАЯ ОТСТУПАЕТ",
                     _=>"ПОЛЕ ВОССТАНАВЛИВАЕТСЯ"
                 };
-                UiKit.Set(defenseCaption,phase);
+                UiKit.Set(phaseCaption,phase);
                 int countdown=Mathf.CeilToInt(threats.DefenseCountdown);
-                UiKit.Set(defenseValue,approaching?$"{countdown/60:00}:{countdown%60:00}":Mathf.CeilToInt(field.Ratio*100)+"%");
-                defenseCaption.color=defenseValue.color=defenseMeter.color=threats.DefenseAlarm&&approaching?UiTheme.Red:color;
+                UiKit.Set(phaseValue,approaching?$"{countdown/60:00}:{countdown%60:00}":Mathf.CeilToInt(field.Ratio*100)+"%");
                 float duration=(float)(field.assaultAt-field.beginsAt);
-                UiKit.Fraction(defenseMeter,approaching?threats.DefenseCountdown/Mathf.Max(1,duration):field.Ratio);
+                PresentPhase(approaching?threats.DefenseCountdown/Mathf.Max(1,duration):field.Ratio,
+                    threats.DefenseAlarm&&approaching?UiTheme.Red:color);
+                if(!approaching && field.impact>0)
+                {
+                    float flash=Mathf.Clamp01(1-(float)(threats.DefenseClock-field.impactAt)/.44f);
+                    phaseMeter.color=Color.Lerp(phaseMeter.color,new Color(1,.33f,.23f),flash);
+                }
+            }
+            else if(v!=null && c.Tuning)
+            {
+                float window=v.HungerWindowSeconds(c.Tuning);
+                float safe=v.HungerUntilRisk(c.Tuning);
+                float latest=v.HungerLatest(c.Tuning);
+                float start=1-window/latest;
+                float elapsed=Mathf.Clamp01(start-safe/latest);
+                feedingRisk.rectTransform.anchoredPosition=new Vector2(start*PhaseTrackWidth,0);
+                feedingRisk.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,(1-start)*PhaseTrackWidth);
+                UiKit.Fraction(riskElapsed,window>0?Mathf.Clamp01(-safe/window):0);
+                UiKit.Set(phaseCaption,safe>0?"ДО КОРМЛЕНИЯ":"ОКНО КОРМЛЕНИЯ");
+                UiKit.Set(phaseValue,"");
+                PresentPhase(elapsed,safe>0?Blue:UiTheme.Red,Mathf.Min(elapsed,start));
             }
             bool showNav=unobstructed&&!diver.IsInside&&!diver.IsDead&&(!defense || threats.DefenseConcealment<.32f);
             navigation.gameObject.SetActive(showNav);
@@ -234,6 +236,14 @@ namespace Raid.UI
                 Plot(contacts[j++],diver,player.transform.position,false);
             }
             for(;j<contacts.Length;j++)contacts[j].enabled=false;
+        }
+
+        void PresentPhase(float amount,Color color,float fill=-1)
+        {
+            phaseCaption.color=phaseValue.color=phaseIndex.color=color;
+            phaseMeter.color=fill<0?color:Blue;
+            UiKit.Fraction(phaseMeter,fill<0?amount:fill);
+            phaseIndex.rectTransform.anchoredPosition=new Vector2(Mathf.Clamp01(amount)*PhaseTrackWidth,3);
         }
 
         static void Plot(Image image,DiverMotor diver,Vector3 point,bool clampToRim)

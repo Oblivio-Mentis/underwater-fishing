@@ -27,7 +27,7 @@ namespace Raid.Editor
         sealed class Specimen
         {
             public string species;
-            public float[] pivots;
+            public float[] pivots,armPivots;
             public Geometry main,shoal;
         }
 
@@ -86,16 +86,25 @@ namespace Raid.Editor
             var go=new GameObject(model.species);
             try
             {
-                var bones=new Transform[6];
-                var bindPoses=new Matrix4x4[6];
+                int armCount=(model.armPivots?.Length??0)/3;
+                var bones=new Transform[6+armCount];
+                var bindPoses=new Matrix4x4[bones.Length];
                 for(int i=0;i<ModelNames.Length;i++)
                 {
                     var joint=new GameObject(ModelNames[i]).transform;
                     joint.SetParent(i==2?bones[1]:go.transform,false);
                     joint.position=Point(model.pivots,i);
-                    if(i==bones.Length)break;
+                    if(i==ModelNames.Length-1)continue;
                     bones[i]=joint;
                     bindPoses[i]=joint.worldToLocalMatrix*go.transform.localToWorldMatrix;
+                }
+                for(int i=0;i<armCount;i++)
+                {
+                    var arm=new GameObject("Arm "+(i%4+1)).transform;
+                    arm.SetParent(bones[i<4?3:4],false);
+                    arm.position=Point(model.armPivots,i);
+                    bones[6+i]=arm;
+                    bindPoses[6+i]=arm.worldToLocalMatrix*go.transform.localToWorldMatrix;
                 }
                 var mesh=MakeMesh(model.main);
                 var weights=new BoneWeight[mesh.vertexCount];

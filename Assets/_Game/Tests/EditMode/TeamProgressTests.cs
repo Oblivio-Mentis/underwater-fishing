@@ -134,8 +134,22 @@ namespace Raid.Tests
             Assert.That(team.TickHunger(.5f, tuning), Is.True);
             Assert.That(team.EvaluateHunger(tuning).Attack, Is.False);
             Assert.That(team.RequiredFood(tuning),Is.GreaterThan(TeamProgress.FoodScale));
-            Assert.That(team.TickHunger(tuning.hungerInterval, tuning), Is.True);
+            Assert.That(team.TickHunger(team.HungerLatest(tuning), tuning), Is.True);
             Assert.That(team.EvaluateHunger(tuning).Attack, Is.True);
+        }
+
+        [Test]
+        public void FeedingForecastEntersTheRiskWindowBeforeTheHiddenDeadline()
+        {
+            for(int i=0;i<12;i++)
+            {
+                var expedition=new TeamProgress(tuning);
+                float safe=expedition.HungerUntilRisk(tuning);
+                Assert.That(safe,Is.EqualTo(expedition.HungerLatest(tuning)-expedition.HungerWindowSeconds(tuning)).Within(.001f));
+                Assert.That(expedition.hungerRemaining,Is.InRange(safe,expedition.HungerLatest(tuning)));
+                var restored=JsonUtility.FromJson<TeamProgress>(JsonUtility.ToJson(expedition));
+                Assert.That(restored.HungerUntilRisk(tuning),Is.EqualTo(safe).Within(.001f));
+            }
         }
 
         [Test]

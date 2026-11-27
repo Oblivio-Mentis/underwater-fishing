@@ -275,8 +275,9 @@ namespace Raid.UI
             if(feedingSummary==null || app.Context.View==null)return;var ctx=app.Context;var view=ctx.View;
             UiKit.Set(feedingSummary,TeamProgress.FoodText(view.offeringPoints)+" / "+TeamProgress.FoodText(ctx.FoodRequired)+" ед. питания");UiKit.Fraction(feedingBar,(float)view.offeringPoints/Mathf.Max(1,ctx.FoodRequired));
             bool wave=ctx.DefendingReservoir;
-            UiKit.Set(feedingTime,wave?"Срок кормления истёк":UiText.HungerCountdown(view.hungerRemaining));
-            feedingTime.color=!wave&&view.offeringPoints==0&&view.hungerRemaining<=30?UiTheme.Amber:UiTheme.Muted;
+            float untilRisk=view.HungerUntilRisk(ctx.Tuning);
+            UiKit.Set(feedingTime,wave?"Срок кормления истёк":UiText.HungerForecast(untilRisk));
+            feedingTime.color=!wave&&untilRisk<=0?UiTheme.Red:UiTheme.Muted;
             UiKit.Set(feedingState,wave?"Следующий срок начнётся после обороны":UiText.FoodProjection(view.offeringPoints,ctx.FoodRequired));
             feedingState.color=wave?UiTheme.Muted:view.offeringPoints>0?UiTheme.Green:UiTheme.Amber;
             UiKit.Set(feedingThreat,wave?UiText.WaveActiveTitle:"");

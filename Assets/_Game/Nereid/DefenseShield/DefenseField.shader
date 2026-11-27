@@ -154,6 +154,10 @@ Shader "RAID/Defense/Containment membrane"
                     * smoothstep(.78, .96, flutter) * step(.81, patch);
                 float2 hit = saturate(Hit(unit,_Impact0,_ImpactPower.x) + Hit(unit,_Impact1,_ImpactPower.y)
                     + Hit(unit,_Impact2,_ImpactPower.z));
+                // The interference follows the same travelling shock as the visible pressure front.
+                float crack=LinearTrace(local.x*6.4-local.y*8.2+local.z*4.3+floor(local.y*18)*.061)
+                    + .56*LinearTrace(local.x*10.9+local.y*3.5-local.z*7.8+floor(local.z*22)*.077);
+                float surge=saturate(crack)*pow(hit.y,.68)*(.55+.45*step(.43,patch));
 
                 // Assembly sweeps out from the hull. On breach the lattice fragments from the impact.
                 float relativeHeight = -unit.y;
@@ -181,7 +185,7 @@ Shader "RAID/Defense/Containment membrane"
                 float sillPower = sill * feed * _SillCharge * lerp(1,.66,critical);
                 float seal = PipeSeal(local) * lerp(1,.60,critical);
                 float joint = 1-smoothstep(1.0005,1.0105,abs(unit.z));
-                float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34
+                float accent = hit.x * .55 + hit.y * (.17 + grid * .43) + arc * .34 + surge*.26
                     + assembly * (.13 + grid * .22) + sillPower + seal*.39 + fault*.68;
                 float extinction = _NereidReefClarity.x;
                 float contrast = exp2(-d2 * max(extinction * .42, .0008));

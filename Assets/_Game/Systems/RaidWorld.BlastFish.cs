@@ -176,7 +176,7 @@ namespace Raid
             }
         }
 
-        static Material OutlinePass(Shader shader,float width,Color ink,int queue,bool mask)
+        internal static Material OutlinePass(Shader shader,float width,Color ink,int queue,bool mask,int bit=8)
         {
             var material=new Material(shader){name="Catch · silhouette",hideFlags=HideFlags.DontSave,renderQueue=queue};
             material.SetFloat("_Width",width);
@@ -185,11 +185,12 @@ namespace Raid
             material.SetFloat("_Channels",mask?0:15);
             material.SetFloat("_StencilCompare",(int)(mask?CompareFunction.Always:CompareFunction.NotEqual));
             material.SetFloat("_StencilPass",(int)(mask?StencilOp.Replace:StencilOp.Keep));
-            material.SetFloat("_StencilWrite",mask?8:0);
+            material.SetFloat("_StencilWrite",mask?bit:0);
+            material.SetFloat("_StencilBit",bit);
             return material;
         }
 
-        static MeshRenderer OutlinePart(Transform skin,Mesh mesh,Material ink)
+        internal static MeshRenderer OutlinePart(Transform skin,Mesh mesh,Material ink)
         {
             var part=new GameObject("Proximity outline");
             part.transform.SetParent(skin,false);
@@ -202,7 +203,7 @@ namespace Raid
             return draw;
         }
 
-        static Mesh CreateOutlineHull(Mesh source)
+        internal static Mesh CreateOutlineHull(Mesh source)
         {
             var vertices=source.vertices;
             var normals=source.normals;

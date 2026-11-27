@@ -15,6 +15,9 @@ namespace Raid
             public float phase, stroke, turn;
             public TrailRenderer[] wake;
             public ParticleSystem thrust;
+            public DefenseSignal signal;
+            public SquidTongueView tongue;
+            public readonly List<(Transform joint,Quaternion rest,float side,int index)> arms=new();
             public long stolen;
             public AttackerPose lastPose;
         }
@@ -27,8 +30,8 @@ namespace Raid
         WetCargoShoal raidCargoShoal;
         sealed class InkView
         {
-            public Transform vapor, front, rear;
-            public Renderer fog;
+            public Transform root, front, rear;
+            public Renderer[] lobes;
         }
         readonly Dictionary<int,InkView> inkViews=new();
         readonly List<int> retiredInk=new();
@@ -41,6 +44,7 @@ namespace Raid
         internal int VisibleDefenseSwarm => atmosphere?atmosphere.VisibleCount:0;
         internal int DefenseCloudCount => atmosphere?atmosphere.CloudCount:0;
         static readonly int InkDensity=Shader.PropertyToID("_Density");
+        static readonly int InkSeed=Shader.PropertyToID("_FlowSeed");
 
         DefenseFieldView LocateDefenseField()
         {
@@ -129,21 +133,42 @@ namespace Raid
                     visual.leftRest=visual.left?visual.left.localRotation:Quaternion.identity;
                     visual.rightRest=visual.right?visual.right.localRotation:Quaternion.identity;
                     visual.jawRest=visual.jaw?visual.jaw.localRotation:Quaternion.identity;
+                    if(current.kind==DefenseSpecies.Abductor)
+                    {
+                        visual.tongue=SquidTongueView.Attach(root);
+                        AddArms(visual,visual.left,-1);
+                        AddArms(visual,visual.right,1);
+                    }
                     visibleAttackers.Add(current.id,visual);
                 }
                 if(visual.lastPose!=current.pose)
                 {
-                    if(current.pose is AttackerPose.Strike or AttackerPose.Latch or AttackerPose.Snatch)
+                    if(current.pose is AttackerPose.Strike or AttackerPose.Latch or AttackerPose.Snatch or AttackerPose.Tongue)
                         BurstRaider(visual,current);
                     visual.lastPose=current.pose;
                 }
                 UpdateAttackModel(current,visual);
+                bool danger=current.urgency!=DefenseUrgency.None;
+                var local=UI.UiRoot.Instance?.Context?.Player;
+                if(local && current.victim==local.OwnerId)danger=false;
+                if(danger && !visual.signal)visual.signal=DefenseSignal.Attach(visual.root);
+                if(visual.signal)visual.signal.Present(danger,current.urgency==DefenseUrgency.Rescue);
             }
             retiredViews.Clear();
             foreach(var pair in visibleAttackers)
                 if(!visibleIds.Contains(pair.Key)){Destroy(pair.Value.root.gameObject);retiredViews.Add(pair.Key);}
             foreach(int id in retiredViews)visibleAttackers.Remove(id);
             PresentDefenseAtmosphere(snapshot);
+        }
+
+        static void AddArms(VisibleAttacker view,Transform group,float side)
+        {
+            if(!group)return;
+            for(int i=0;i<group.childCount;i++)
+            {
+                var arm=group.GetChild(i);
+                view.arms.Add((arm,arm.localRotation,side,i));
+            }
         }
 
         void PresentDefenseAtmosphere(DefenseSnapshot snapshot)
@@ -174,7 +199,8 @@ namespace Raid
             float blend=1-Mathf.Exp(-Time.deltaTime*14);
             Vector3 next=Vector3.Lerp(root.position,snapshot.position,blend);
             var vessel=NereidVessel.Active;
-            root.position=vessel && !vessel.OutsideDefenseHull(next,snapshot.forward,snapshot.scale)?snapshot.position:next;
+            float hullScale=snapshot.scale*(snapshot.kind==DefenseSpecies.Abductor?1.30f:1f);
+            root.position=vessel && !vessel.OutsideDefenseHull(next,snapshot.forward,hullScale)?snapshot.position:next;
             float frame=Mathf.Max(.0001f,Time.deltaTime);
             float pace=Mathf.InverseLerp(.15f,8f,Vector3.Distance(root.position,view.previousPosition)/frame);
             view.previousPosition=root.position;
@@ -226,6 +252,7 @@ namespace Raid
                 _=>tipWave*4
             };
             if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(jawAngle,0,0);
+            if(view.tongue)PresentSquid(snapshot,view,poseAge,tipWave);
             PresentRaiderWake(view,snapshot,pace);
 
             if(snapshot.stolenId!=view.stolen)
@@ -269,6 +296,39 @@ namespace Raid
             }
         }
 
+        void PresentSquid(AttackerSnapshot s,VisibleAttacker view,float poseAge,float wave)
+        {
+            float charge=s.pose==AttackerPose.Windup && s.tongueAim!=Vector3.zero?Mathf.SmoothStep(0,1,poseAge/.58f):0;
+            bool gripping=s.victim>=0;
+            bool firing=s.pose==AttackerPose.Tongue;
+            float reach=firing?TongueTravel(poseAge/defenseTuning.squidTongueSeconds):0;
+            if(s.tongueReleasedAt>0)
+                reach=Mathf.Max(reach,1-Mathf.SmoothStep(0,1,(float)(DefenseClock-s.tongueReleasedAt)/.32f));
+            Vector3 target=s.tongueAim;
+            var crew=UI.UiRoot.Instance?.Context?.Players;
+            if(gripping && crew!=null)
+                foreach(var diver in crew)
+                {
+                    if(!diver || diver.OwnerId!=s.victim)continue;
+                    target=diver.transform.position+Vector3.up*.32f+diver.transform.right*.10f;
+                    reach=1;
+                    break;
+                }
+            var mouth=view.mouth?view.mouth.position:view.root.TransformPoint(SquidBeak);
+            var player=UI.UiRoot.Instance?.Context?.Player;
+            bool firstPerson=gripping && player && player.OwnerId==s.victim;
+            view.tongue.Present(mouth,Vector3.Lerp(mouth,target,reach),reach,gripping,charge,view.phase,firstPerson);
+            if(view.jaw)
+                view.jaw.localRotation=view.jawRest*Quaternion.Euler(gripping?29+wave*4:firing?38:8+charge*34,0,0);
+            foreach(var arm in view.arms)
+            {
+                float beat=Mathf.Sin(view.phase*.72f+arm.index*.81f+arm.side*.3f);
+                float fan=gripping?-9:firing?12:charge*17;
+                arm.joint.localRotation=arm.rest*Quaternion.Euler(beat*(gripping?6:16)+arm.index*fan*.53f,
+                    -arm.side*(fan+beat*6),arm.side*(beat*11+fan*.61f));
+            }
+        }
+
         public bool TryDefenseVisualAnchor(int id,out Vector3 position)
         {
             if(visibleAttackers.TryGetValue(id,out var seen))
@@ -294,7 +354,7 @@ namespace Raid
                 float age=(float)(DefenseClock-cloud.at);
                 if(age<0 || age>=defenseTuning.inkSeconds)continue;
                 float spread=Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
-                float distance=Vector3.Distance(cloud.center+Vector3.up*age*.11f,point);
+                float distance=Vector3.Distance(cloud.center-cloud.forward*age*.26f+Vector3.up*age*.14f,point);
                 float fog=Mathf.SmoothStep(1,0,Mathf.InverseLerp(defenseTuning.inkRadius*.20f*spread,
                     defenseTuning.inkRadius*spread,distance))*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.4f);
                 density=Mathf.Max(density,fog);
@@ -312,12 +372,20 @@ namespace Raid
                 inkMaterial=new Material(shader){name="Remora ink"};
                 inkProperties=new MaterialPropertyBlock();
             }
-            var bubble=GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            bubble.name="Remora ink · water cloud";
-            var collider=bubble.GetComponent<Collider>();collider.enabled=false;Destroy(collider);
-            bubble.transform.SetParent(transform,false);
-            var fog=bubble.GetComponent<MeshRenderer>();fog.sharedMaterial=inkMaterial;
-            var ink=new InkView{vapor=bubble.transform,fog=fog};
+            var cloudRoot=new GameObject("Remora ink plume");
+            cloudRoot.transform.SetParent(transform,false);
+            var ink=new InkView{root=cloudRoot.transform,lobes=new Renderer[3]};
+            for(int i=0;i<ink.lobes.Length;i++)
+            {
+                var bubble=GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                bubble.name="Suspended ink";
+                var collider=bubble.GetComponent<Collider>();collider.enabled=false;Destroy(collider);
+                bubble.transform.SetParent(ink.root,false);
+                var fog=ink.lobes[i]=bubble.GetComponent<MeshRenderer>();
+                fog.sharedMaterial=inkMaterial;
+                fog.shadowCastingMode=ShadowCastingMode.Off;
+                fog.receiveShadows=false;
+            }
             inkViews.Add(cloud.id,ink);
             var front=DefenseCreatureAssets.RemoraFragment(true,transform);
             var rear=DefenseCreatureAssets.RemoraFragment(false,transform);
@@ -338,11 +406,23 @@ namespace Raid
                 var ink=FindInk(cloud);
                 if(ink==null)continue;
                 liveInk.Add(cloud.id);
-                ink.vapor.position=cloud.center+Vector3.up*age*.11f;
-                float radius=defenseTuning.inkRadius*Mathf.Lerp(.32f,1,Mathf.SmoothStep(0,1,age/1.1f));
-                ink.vapor.localScale=Vector3.Scale(Vector3.one*radius*2,new Vector3(1,.81f,.94f));
-                inkProperties.SetFloat(InkDensity,Mathf.Clamp01(age*4)*Mathf.Clamp01((defenseTuning.inkSeconds-age)/1.5f));
-                ink.fog.SetPropertyBlock(inkProperties);
+                var direction=cloud.forward.sqrMagnitude>.01f?-cloud.forward:Vector3.forward;
+                ink.root.SetPositionAndRotation(cloud.center,Quaternion.LookRotation(direction));
+                float fade=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(defenseTuning.inkSeconds-2,defenseTuning.inkSeconds,age));
+                for(int i=0;i<ink.lobes.Length;i++)
+                {
+                    var lobe=ink.lobes[i];
+                    float time=Mathf.Max(0,age-i*.085f);
+                    float spread=Mathf.Lerp(.16f,1,1-Mathf.Exp(-time*1.8f));
+                    float radius=defenseTuning.inkRadius*spread*(i==0?.95f:.57f);
+                    lobe.transform.localPosition=new Vector3((i==1?-.56f:i==2?.64f:0)*spread,-.28f*spread+i*.41f*spread,
+                        time*(i==0?.28f:.48f)+i*.16f*spread);
+                    lobe.transform.localRotation=Quaternion.Euler(-18+i*17,6+i*34,time*(i==1?-21:15));
+                    lobe.transform.localScale=new Vector3(radius*.83f,radius*.65f,radius*1.40f);
+                    inkProperties.SetFloat(InkDensity,Mathf.SmoothStep(0,1,time/.23f)*fade*(i==0?1:.71f));
+                    inkProperties.SetFloat(InkSeed,cloud.id*.79f+i*2.17f);
+                    lobe.SetPropertyBlock(inkProperties);
+                }
                 if(ink.front && ink.rear)
                 {
                     float debris=Mathf.Clamp01(age/1.4f);
@@ -352,7 +432,7 @@ namespace Raid
                         rotation*Quaternion.Euler(debris*55,0,debris*38));
                     ink.rear.SetPositionAndRotation(cloud.center-forward*debris*1.4f-Vector3.up*debris*.38f,
                         rotation*Quaternion.Euler(-debris*42,0,-debris*60));
-                    ink.front.localScale=ink.rear.localScale=Vector3.one*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.62f,1,debris)));
+                    ink.front.localScale=ink.rear.localScale=Vector3.one*.68f*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(.50f,1,debris)));
                 }
             }
             retiredInk.Clear();
@@ -362,7 +442,7 @@ namespace Raid
 
         void RemoveInk(InkView ink)
         {
-            if(ink.vapor)Destroy(ink.vapor.gameObject);
+            if(ink.root)Destroy(ink.root.gameObject);
             if(ink.front)Destroy(ink.front.gameObject);
             if(ink.rear)Destroy(ink.rear.gameObject);
         }
@@ -374,6 +454,7 @@ namespace Raid
             if(fieldView)fieldView.Apply(1,1,0,default,100);
             foreach(var ink in inkViews.Values)RemoveInk(ink);
             inkViews.Clear();
+            if(inkMaterial){Destroy(inkMaterial);inkMaterial=null;}
             if(atmosphere){Destroy(atmosphere.gameObject);atmosphere=null;}
             if(raidWakeMaterial){Destroy(raidWakeMaterial);raidWakeMaterial=null;}
         }

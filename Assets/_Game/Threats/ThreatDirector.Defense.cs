@@ -28,9 +28,11 @@ namespace Raid
             public int id, victim, group, slot;
             public DefenseSpecies kind;
             public AttackerPose pose;
-            public Vector3 position, forward, impactOffset, snatchPoint;
-            public float scale, effort, stretch;
-            public double poseAt, stolenAt;
+            public DefenseUrgency urgency;
+            public Vector3 position, forward, impactOffset, snatchPoint, tongueAim;
+            public float scale, effort, stretch, fightRemaining;
+            public byte hookCount;
+            public double poseAt, stolenAt, tongueReleasedAt;
             public string stolenSpecies;
             public long stolenId;
         }
@@ -412,10 +414,25 @@ namespace Raid
                 var data=actor.data;
                 data.stretch=actor.attached && actor.hooks.Count>0
                     ?Mathf.Clamp01(actor.progress/Mathf.Max(.1f,actor.card.fightSeconds)):0;
+                data.hookCount=(byte)actor.hooks.Count;
+                data.fightRemaining=1-Mathf.Clamp01(actor.progress/FightWork(actor));
+                data.urgency=actor.data.victim>=0?DefenseUrgency.Rescue:
+                    actor.catchItem!=null || actor.seekingStock?DefenseUrgency.Stock:
+                    actor.attached || Defense.phase==DefensePhase.Assault && !actor.target && data.hookCount==0 &&
+                    data.pose is AttackerPose.Approach or AttackerPose.Windup or AttackerPose.Strike
+                        ?DefenseUrgency.Shield:DefenseUrgency.None;
                 if(i<defenseActors.Count)defenseActors[i]=data;
                 else defenseActors.Add(data);
             }
             while(defenseActors.Count>attackers.Count)defenseActors.RemoveAt(defenseActors.Count-1);
+        }
+
+        internal bool TryDefenseFight(int id,out AttackerSnapshot target)
+        {
+            if(id>0)foreach(var actor in defenseActors)
+                if(actor.id==id){target=actor;return true;}
+            target=default;
+            return false;
         }
 
         public bool TryDefenseAnchor(int id,out Vector3 position)

@@ -2,6 +2,7 @@
 
 import json
 import math
+import sys
 from pathlib import Path
 
 import bmesh
@@ -12,16 +13,16 @@ from mathutils import Vector
 # Width, length, height, longitudinal center, and reference points along the nose.
 # The neutral swim pose is +Y in Blender and +Z in Unity.
 PROFILES = {
-    "Rammer": (True, 1.78, 2.62, 1.07, -.20, .86, .11, .71, -.13,
-               "43565B 9A784A 7D8B80 B8C1A5 353837 FFB64F"),
-    "Remora": (False, .91, 2.47, .73, -.24, .88, .042, .77, -.11,
-               "372B55 71517D 917B92 AE83A8 261E37 ED8FD2"),
-    "Thief": (False, 1.35, 2.54, .79, -.09, .87, .063, .73, -.065,
-               "204746 528B77 9DBF97 677C5D 203436 A9FFBD"),
-    "Abductor": (True, 2.24, 2.52, .93, -.02, .84, .083, .73, .023,
-                 "33444E 507987 92A8A3 946B62 2B3139 75E6E3"),
-    "Stalker": (False, 1.40, 2.86, .98, -.21, .89, .076, .69, -.063,
-                "292837 58455D A397A6 84475A 2D2031 FF8D98"),
+    "Rammer": ("y", 1.84, 2.72, 1.16, -.20, .82, .14, .71, -.15,
+               "39484E 896945 6E7773 B29B70 3F2D2A FFB34F"),
+    "Remora": ("x", 1.28, 2.49, 1.04, -.22, .80, .13, .78, -.08,
+               "33334E 634567 766983 634777 4D2F52 FF89AF"),
+    "Thief": ("y", 1.18, 2.57, .98, -.13, .77, .16, .73, -.11,
+               "234747 527D6B 879A79 A0A36F 41523A B6FFD0"),
+    "Abductor": ("squid", 2.72, 3.89, 1.70, -.09, .45, .145, .57, -.12,
+                 "462C48 8A515F 654053 AB7583 2B1A35 FFC06F"),
+    "Stalker": ("x", 1.48, 3.03, 1.32, -.24, .82, .19, .66, -.13,
+                "303445 55576C 877B80 585E75 392638 6EEDFF"),
 }
 
 
@@ -54,7 +55,7 @@ def material(name, glow=False):
 
 
 def import_geometry(name, source, profile, originals):
-    along_x, width, length, height, center, *_ = profile
+    axis, width, length, height, center, *_ = profile
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.import_scene.gltf(filepath=str(source))
     raw, = (obj for obj in bpy.context.selected_objects if obj.type == "MESH")
@@ -66,7 +67,14 @@ def import_geometry(name, source, profile, originals):
     bpy.context.view_layer.update()
     obj = bpy.data.objects.new(name + " · skin", raw.data.copy())
     coords = [(raw.matrix_world @ v.co) for v in raw.data.vertices]
-    adjusted = [Vector((-y, x, z) if along_x else (-x, -y, z)) for x, y, z in coords]
+    if axis == "squid":
+        # The generated squid is upright. Rotate its pointed mantle back into a neutral hunting pose.
+        forward = Vector((.48, .04, -.875)).normalized()
+        right = forward.cross(Vector((1, 0, 0))).normalized()
+        up = right.cross(forward)
+        adjusted = [Vector((v.dot(right),v.dot(forward),v.dot(up))) for v in coords]
+    else:
+        adjusted = [Vector((-y,x,z) if axis=="x" else (x,y,z)) for x,y,z in coords]
     low = Vector(tuple(min(p[i] for p in adjusted) for i in range(3)))
     high = Vector(tuple(max(p[i] for p in adjusted) for i in range(3)))
     size = high - low
@@ -78,12 +86,12 @@ def import_geometry(name, source, profile, originals):
         z *= height / size.z
         u = (y - center) / length + .5
         if name in {"Stalker", "Thief"}:
-            # Maintain the fork while returning the peduncle to the swim axis.
-            z -= (.090 if name == "Thief" else .045) * (1 - ease(.02, .31, u))
-        if name == "Abductor":
-            z -= (u - .5) * .43
+            z -= (.10 if name=="Thief" else .17)*(1-ease(.02,.42,u))
         if name == "Remora" and z < -.22:
             z = -.22 + (z + .22) * .55
+        if name == "Abductor":
+            x += .14
+            z -= .29
         vert.co = (x, y, z)
     obj.data.update()
     return obj, len(raw.data.polygons)
@@ -96,6 +104,10 @@ def simplify(obj, ratio):
     bpy.ops.object.modifier_apply(modifier=mod.name)
     bm = bmesh.new()
     bm.from_mesh(obj.data)
+    bmesh.ops.remove_doubles(bm,verts=list(bm.verts),dist=.00012)
+    boundary=[edge for edge in bm.edges if edge.is_boundary]
+    if boundary:
+        bmesh.ops.holes_fill(bm,edges=boundary,sides=7)
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
     stats = (sum(not edge.is_manifold for edge in bm.edges), len(bm.faces))
     bm.to_mesh(obj.data)
@@ -136,12 +148,19 @@ def add_eyes(skin, profile, body_mat, glow_mat, parent):
     result = []
     for side in (-1, 1):
         along = center + (fraction - .5) * length
-        place = Vector((side * width, along, elevation))
-        hit, point, normal, _ = skin.ray_cast(place, Vector((-side, 0, 0)))
-        if not hit:
+        candidates=[]
+        for height_offset in (0,-.04,.04,-.10,.10,-.18,.18):
+            for travel in (0,.06,-.06,.14,-.14,.23,-.23):
+                place=Vector((side*width,along+travel,elevation+height_offset))
+                hit,point,normal,_=skin.ray_cast(place,Vector((-side,0,0)))
+                if hit:
+                    score=abs(travel)*1.5+abs(height_offset)-max(-.1,normal.x*side)*.095
+                    candidates.append((score,point,normal))
+        if not candidates:
             raise ValueError(skin.name + " eye alignment missed the mesh")
+        _,point,normal=min(candidates,key=lambda value:value[0])
         normal = Vector((side * .91, max(.12, normal.y) * .60, max(.09, normal.z) * .35)).normalized()
-        lens = (.064 if width > 1 else .045)
+        lens = .123 if profile[0]=="squid" else .067 if width>1.35 else .051
         for is_eye in (False, True):
             bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=1, radius=1)
             obj = bpy.context.object
@@ -164,28 +183,40 @@ def add_eyes(skin, profile, body_mat, glow_mat, parent):
 
 
 def pivots(profile):
-    _, width, length, height, center, _, _, hinge, mouth_z, _ = profile
+    axis, width, length, height, center, _, _, hinge, mouth_z, _ = profile
     point = lambda fraction: center + (fraction - .5) * length
     return [Vector(vector) for vector in (
         (0, 0, 0), (0, point(.36), -.018), (0, point(.12), -.03),
         (-width * .12, point(.55), -height * .07), (width * .12, point(.55), -height * .07),
-        (0, point(hinge), mouth_z), (0, point(.95), mouth_z),
+        (0, point(hinge), mouth_z), (0, .54 if axis=="squid" else point(.95), mouth_z),
     )]
 
 
 BONES = ("Body", "Tail", "TailTip", "FinLeft", "FinRight", "Jaw", "MouthSocket")
 
 
+def squid_arms(profile):
+    if profile[0]!="squid":
+        return []
+    return [Vector((side*.24,.30-.04*i,.10-.13*i)) for side in (-1,1) for i in range(4)]
+
+
 def influences(position, profile):
-    _, width, length, height, center, _, _, hinge, mouth_z, _ = profile
+    axis, width, length, height, center, _, _, hinge, mouth_z, _ = profile
     x, y, z = position
     u = (y - center) / length + .5
     tail = 1 - ease(.23, .55, u)
     tip = 1 - ease(.043, .23, u)
     fin = ease(width * .17, width * .37, abs(x)) * ease(.23, .39, u) * (1 - ease(.65, .79, u))
     jaw = ease(hinge - .12, hinge + .13, u) * (1 - ease(mouth_z + .030, mouth_z + .105, z))
-    return (max(0, 1-tail-fin-jaw), tail*(1-tip), tail*tip,
-            fin if x < 0 else 0, fin if x >= 0 else 0, jaw)
+    regular=(max(0, 1-tail-fin-jaw), tail*(1-tip), tail*tip,fin if x<0 else 0,fin if x>=0 else 0,jaw)
+    if axis!="squid":
+        return regular
+    opened=ease(.42,.73,u)*max(ease(.19,.72,abs(x)),ease(.61,.86,u))
+    layer=max(0,min(3,(.25-z)/.24))
+    left=1-ease(-.16,.16,x)
+    arm=[max(0,1-abs(i-layer))*opened*side for side in (left,1-left) for i in range(4)]
+    return (*[weight*(1-opened) for weight in regular],*arm)
 
 
 def rig(name, parent, skin, profile):
@@ -196,14 +227,18 @@ def rig(name, parent, skin, profile):
     obj.show_in_front = True
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.mode_set(mode="EDIT")
-    for index, (label, pivot) in enumerate(zip(BONES, pivots(profile))):
+    bindings=list(zip(BONES[:-1],pivots(profile)[:-1]))
+    bindings.extend((f"Tentacle {i+1}",p) for i,p in enumerate(squid_arms(profile)))
+    for index, (label, pivot) in enumerate(bindings):
         bone = armature.edit_bones.new(label)
         bone.head = pivot
         bone.tail = pivot + Vector((0, -.31 if index in (1, 2) else .26, 0))
         if index == 2:
             bone.parent = armature.edit_bones["Tail"]
+        if index>=6:
+            bone.parent=armature.edit_bones["FinLeft" if index<10 else "FinRight"]
     bpy.ops.object.mode_set(mode="OBJECT")
-    groups = [skin.vertex_groups.new(name=label) for label in BONES[:-1]]
+    groups = [skin.vertex_groups.new(name=label) for label,_ in bindings]
     for v in skin.data.vertices:
         weights = influences(v.co, profile)
         for group, weight in zip(groups, weights):
@@ -267,7 +302,7 @@ def prepare(input_dir, source_blend):
         skin, raw_faces = import_geometry(name, input_dir / (name + "-decoded.glb"), profile, originals)
         skin.parent = root
         edited.objects.link(skin)
-        defects, faces = simplify(skin, .34 if name in {"Remora", "Thief"} else .42)
+        defects, faces = simplify(skin, .64 if name in {"Remora", "Thief"} else .73)
         paint(skin, profile, name)
         skin.data.materials.append(skin_mat)
         eyes = add_eyes(skin, profile, skin_mat, glow_mat, root)
@@ -287,6 +322,7 @@ def prepare(input_dir, source_blend):
             edited.objects.link(eye)
         (input_dir / (name + "-unity.json")).write_text(json.dumps({
             "species": name, "pivots": [value for p in pivots(profile) for value in unity(p)],
+            "armPivots": [value for p in squid_arms(profile) for value in unity(p)],
             "main": full, "shoal": distant,
         }, separators=(",", ":")), encoding="utf-8")
         print(f"{name}: {raw_faces} original triangles, {faces} body, "
@@ -295,3 +331,9 @@ def prepare(input_dir, source_blend):
     originals.hide_viewport = originals.hide_render = True
     bpy.ops.object.select_all(action="DESELECT")
     bpy.ops.wm.save_as_mainfile(filepath=str(source_blend))
+
+
+if __name__ == "__main__":
+    input_dir=Path(sys.argv[sys.argv.index("--")+1])
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    prepare(input_dir,input_dir/"TripoPredators.blend")

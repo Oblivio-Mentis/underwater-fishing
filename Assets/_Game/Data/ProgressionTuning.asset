@@ -22,6 +22,7 @@ MonoBehaviour:
   foodGrowthPerCycle: 1.17
   foodHardCap: 2500
   maximumFoodCarry: 3
-  hungerInterval: 180
+  hungerInterval: 300
+  hungerWindow: 0.16
   maximumStockLossFraction: 0.35
   maximumStockLossCount: 4

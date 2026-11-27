@@ -83,7 +83,7 @@ namespace Raid.UI
         public const string CargoRaisingHint="Контейнер поднимается. Новая загрузка временно закрыта.";
         public const string CargoUnloadingHint="Улов передаётся в резервуар после завершения разгрузки.";
         public const string CargoReturningHint="Улов уже в резервуаре. Дождитесь возвращения пустой корзины.";
-        public static string TerminalSummary(TeamProgress view,ProgressionTuning tuning,int required,bool defending) => "Улов "+view.tank.Count+" / "+view.ReservoirCapacity(tuning)+"   •   Пища: "+TeamProgress.FoodText(view.offeringPoints)+" / "+TeamProgress.FoodText(required)+"   •   "+(defending?"Оборона резервуара":"До кормления "+Time(view.hungerRemaining));
+        public static string TerminalSummary(TeamProgress view,ProgressionTuning tuning,int required,bool defending) => "Улов "+view.tank.Count+" / "+view.ReservoirCapacity(tuning)+"   •   Пища: "+TeamProgress.FoodText(view.offeringPoints)+" / "+TeamProgress.FoodText(required)+"   •   "+(defending?"Оборона резервуара":HungerForecast(view.HungerUntilRisk(tuning)));
         public static string CargoSummary(TeamProgress view,ProgressionTuning tuning) => "Контейнер "+view.CargoUsed+" / "+view.Capacity(tuning)+"   •   "+Phase(view.hoistPhase)+(view.hoistPhase==HoistPhase.Loading?"":"   "+Time(view.hoistRemaining));
         public static string YieldLabel(CatchItem item) => Materials(item.biomass,item.chitin,item.scrap,item.electronics);
         public static string ItemTitle(int index,CatchItem item) => (index+1).ToString("00")+"  /  "+ItemName(item);
@@ -104,7 +104,8 @@ namespace Raid.UI
             : "Переносится "+rate+"% избытка, до "+cap+" пищи.";
         public static string FoodProjection(int offering,int required) => offering==0?"Чудовище ждёт первую порцию":offering<required?"Часть рациона получена":offering==required?"Полный рацион получен":"Получено сверх рациона";
         public static string FeedingAmount(int paid,int required) => "Получено пищи: "+paid+" / "+required;
-        public static string HungerCountdown(float time) => "До конца срока кормления "+Time(time);
+        public static string HungerForecast(float untilRisk) => untilRisk<=0?"Кормление в любой момент":
+            untilRisk<60?"Меньше минуты до окна кормления":"Окно кормления примерно через "+Mathf.CeilToInt(untilRisk/60)+" мин";
         public static string CargoCapacity(int used,int total) => used+" / "+total;
         public static string DeliveredStock(int count) => "Доставлено в резервуар: "+count+" ед. улова";
         public static string SessionStockLoss(int count) => "Потеряно улова за эту сессию: "+count;

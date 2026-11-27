@@ -250,6 +250,7 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.75f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"01-field-pattern-motion.png"));
             await Broadside(folder,host,d);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"00-feeding-window.png"));
             ReportPhase("underfed cycle",report,folder);
             team.offeringPoints=team.RequiredFood(world.progression)/3;
             team.hungerRemaining=.05f;
@@ -436,6 +437,9 @@ namespace Raid
             await Awaitable.WaitForSecondsAsync(.16f);
             tool.DefenseFixtureFire();
             await Wait(()=>tool.HasDefenseLine && tool.AttachedContact.defenseId==remora.id,"server validated the shot into the remora",3);
+            await Wait(()=>GameObject.Find("Line tension") && tool.TryHookedDefense(out var fight) &&
+                fight.hookCount==1 && fight.fightRemaining>.8f,"reused line gauge while the predator fights",2);
+            report.Check(true,"Predator line reuses the real tension gauge and shows the replicated struggle.");
             report.Check(host.GetComponentInChildren<AudioSource>()==null &&
                 Resources.LoadAll<AudioClip>("FishingAudio").Length==0,"The real harpoon shot loads no fishing audio and creates no emitter.");
             report.Check(d.DefenseActorCount==1,"A harpoon strike does not remove an attached remora on impact.");
@@ -463,6 +467,7 @@ namespace Raid
             tool.DefenseFixtureWind(false);
             report.Check(!tool.HasDefenseLine && d.DefenseInkAt(remora.position)>.1f && tool.CatchCount==1,
                 $"Reeling tears the attached remora, releases the line and creates one catch and local ink. Line={tool.HasDefenseLine}, catch={tool.CatchCount}, ink={d.DefenseInkAt(remora.position)}, peak={peakTension:0.00}, actors={d.DefenseActorCount}");
+            await Awaitable.WaitForSecondsAsync(.36f);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"07-remora-ink.png"));
             await LandHunter(folder,report,d,host,tool);
 
@@ -508,6 +513,9 @@ namespace Raid
             report.Check(tool.OwnsFriendTether,"Existing friendly line attaches to captive. First contact: "+sightline);
 
             report.Check(guest.IsTrapped,"The diver remains captive before the teammate reels. "+sightline);
+            await Wait(()=>d.TryDefenseFight(actor.id,out var held) && held.urgency==DefenseUrgency.Rescue,
+                "the rescue contact is visible to the crew",1);
+            UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"08-squid-rescue.png"));
             deadline=Time.realtimeSinceStartup+4;
             while(guest.IsTrapped && Time.realtimeSinceStartup<deadline)
             {
@@ -576,6 +584,7 @@ namespace Raid
             player.CameraImpulse.BeginBackgroundQa(30);
             Debug.Log($"[SoloGrip] diver scene {player.gameObject.scene.name}, director scene {d.gameObject.scene.name}, diver {player.transform.position:F2}, predator {actor.position:F2}.");
             AttackerPose? lastPose=null;
+            bool sawTongue=false;
             await Wait(()=>
             {
                 if(d.TryDefenseAnchor(attacker,out var point))player.LookAtConsole(point);
@@ -584,11 +593,13 @@ namespace Raid
                     var sample=d.DefenseActorAt(i);
                     if(sample.id!=attacker || lastPose==sample.pose)continue;
                     lastPose=sample.pose;
+                    sawTongue|=sample.pose==AttackerPose.Tongue;
                     Debug.Log($"[SoloGrip] {sample.pose} at {sample.position:F2}, diver {player.transform.position:F2}, dry {player.IsInside}, captive {player.RaidGripVisual}.");
                 }
                 return player.RaidGripVisual==attacker && player.CanBreakRaidGrip;
             },"natural abductor windup, strike and grip",14);
             report.Check(player.IsTrapped,"The ordinary attack grabbed a solo diver.");
+            report.Check(sawTongue,"The natural windup launched the squid's tongue before the grip.");
             Vector3 grabbedAt=player.transform.position;
             await Wait(()=>
             {
@@ -613,6 +624,16 @@ namespace Raid
                 "the animated kick follows the release",.58f);
             report.Check(player.RaidGripVisual==0,"A full F hold frees the diver and starts the release animation.");
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"09-solo-breakout.png"));
+            ReportPhase("unrescued squid pull",report,folder);
+            d.DefenseFixtureEnd();
+            await Wait(()=>!d.DefenseActive && player.CanBeRaidCaptive,"next legitimate squid attempt",15);
+            if(!d.DefenseFixtureBegin(.75f,6000))throw new InvalidOperationException("Cannot begin another squid attack");
+            d.DefenseFixtureForceAssault();d.DefenseFixturePauseGroups();
+            if(!d.DefenseFixtureOpenWaterDuel(DefenseSpecies.Abductor,player,4,out int next))
+                throw new InvalidOperationException("The next squid needs an open approach");
+            await Wait(()=>player.RaidGripVisual==next,"squid catches the unresisting diver",12);
+            await Wait(()=>player.IsDead && player.IsConsumed,"the squid pulls a captive into its mouth",9);
+            report.Check(true,"Arrival at the beak is lethal when nobody breaks the tongue grip.");
             report.phase="done";
         }
 

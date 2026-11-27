@@ -8,6 +8,14 @@ namespace Raid
         readonly SyncVar<int> defenseHook=new();
         public bool HasDefenseLine => defenseHook.Value>0;
 
+        internal bool TryHookedDefense(out ThreatDirector.AttackerSnapshot target)
+        {
+            var director=ThreatDirector.Instance;
+            if(director)return director.TryDefenseFight(defenseHook.Value,out target);
+            target=default;
+            return false;
+        }
+
         internal void AttachDefenseLine(int target)
         {
             defenseHook.Value=target;

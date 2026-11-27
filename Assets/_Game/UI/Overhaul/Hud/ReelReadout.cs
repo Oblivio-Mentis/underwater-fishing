@@ -11,6 +11,7 @@ namespace Raid.UI
         readonly TMP_Text species, range, hookCount;
         readonly Image stamina, speciesIcon;
         FishActor lastFish;
+        int lastDefense;
         HarpoonTool lineOwner;
         float shownLoad, targetStamina, shownStamina;
         public bool Visible => root.gameObject.activeSelf;
@@ -88,15 +89,19 @@ namespace Raid.UI
             HarpoonTool tool = ctx.Harpoon;
             if (tool != null && tool.AssistTarget != null) tool = tool.AssistTarget.GetComponent<HarpoonTool>();
             FishActor fish = tool != null ? tool.HookedFish : null;
-            bool active = !ctx.Player.IsDead && !UiInputGate.Modal && fish != null &&
-                fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired;
-            bool entering = active && (!Visible || lastFish != fish);
+            ThreatDirector.AttackerSnapshot predator=default;
+            bool defense=tool && tool.TryHookedDefense(out predator);
+            bool active = !ctx.Player.IsDead && !UiInputGate.Modal &&
+                (defense || fish != null && fish.Mode >= FishMode.Hooked && fish.Mode <= FishMode.Tired);
+            bool entering = active && (!Visible || lastFish != fish || lastDefense!=predator.id);
             if (Visible != active) SetVisible(active);
             lastFish = active ? fish : null;
+            lastDefense=active?predator.id:0;
             lineOwner = active ? tool : null;
             if (!active) return;
 
-            targetStamina = Mathf.Clamp01(fish.Stamina / Mathf.Max(.01f, fish.tuning.initialStamina * fish.power));
+            targetStamina=defense?predator.fightRemaining:
+                Mathf.Clamp01(fish.Stamina/Mathf.Max(.01f,fish.tuning.initialStamina*fish.power));
             if (entering)
             {
                 shownLoad = Mathf.Clamp01(LoadOf(tool, fish));
@@ -105,22 +110,33 @@ namespace Raid.UI
                 UiKit.Fraction(stamina, shownStamina);
             }
 
-            speciesIcon.sprite = DiveInstruments.Art(DiveInstruments.CatchMark(fish.SpeciesId));
-            UiKit.Set(species, Species(fish.SpeciesId));
-            UiKit.Set(range, Mathf.RoundToInt(Vector3.Distance(tool.transform.position, fish.transform.position)) + " м");
-            UiKit.Set(hookCount, fish.HookCount + "/" + (fish.RequiresPartner ? 2 : 1));
-            hookCount.color = fish.RequiresPartner && fish.HookCount < 2 ? UiTheme.Amber : UiTheme.Text;
+            string id=defense?DefenseCreatureAssets.Key(predator.kind):fish.SpeciesId;
+            Vector3 point=defense?predator.position:fish.transform.position;
+            speciesIcon.sprite=DiveInstruments.Art(defense?DiveInstruments.Mark.Jaw:DiveInstruments.CatchMark(id));
+            speciesIcon.color=defense?UiTheme.Red:Color.white;
+            stamina.color=defense?new Color(.88f,.53f,.40f):UiTheme.Cyan;
+            UiKit.Set(species,Species(id));
+            UiKit.Set(range,Mathf.RoundToInt(Vector3.Distance(tool.transform.position,point))+" м");
+            UiKit.Set(hookCount,defense?"×"+Mathf.Max(1,predator.hookCount):fish.HookCount+"/"+(fish.RequiresPartner?2:1));
+            hookCount.color=!defense && fish.RequiresPartner && fish.HookCount<2?UiTheme.Amber:UiTheme.Text;
         }
 
         internal void Animate()
         {
             if (!root.gameObject.activeInHierarchy) return;
-            if (!lineOwner || !lastFish || lineOwner.HookedFish != lastFish || UiInputGate.Modal ||
-                lastFish.Mode < FishMode.Hooked || lastFish.Mode > FishMode.Tired)
+            if(!lineOwner || UiInputGate.Modal)
             {
                 SetVisible(false);
                 return;
             }
+            if(lastDefense>0)
+            {
+                if(!lineOwner.TryHookedDefense(out var predator) || predator.id!=lastDefense)
+                {SetVisible(false);return;}
+                targetStamina=predator.fightRemaining;
+            }
+            else if(!lastFish || lineOwner.HookedFish!=lastFish || lastFish.Mode<FishMode.Hooked || lastFish.Mode>FishMode.Tired)
+            {SetVisible(false);return;}
             float targetLoad = Mathf.Clamp01(LoadOf(lineOwner, lastFish));
             float blend = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 24f);
             // Show danger on the first confirmed snapshot, even during a fast surge.
