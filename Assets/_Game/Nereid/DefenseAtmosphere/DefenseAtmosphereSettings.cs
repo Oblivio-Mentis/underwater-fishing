@@ -7,8 +7,8 @@ namespace Raid.Nereid
     {
         [Header("Swarm")]
         [Range(35,60)] public int silhouetteCount = 53;
-        [Min(6f)] public float orbitRadius = 17f;
-        [Min(0f)] public float radiusVariation = 8f;
+        [Min(6f)] public float orbitRadius = 51f;
+        [Min(0f)] public float radiusVariation = 24f;
         [Range(0f,9f)] public float heightVariation = 5.7f;
         [Range(.25f,3f)] public float swimSpeed = 1f;
         [Range(0f,.5f)] public float sizeVariation = .29f;
