@@ -43,7 +43,7 @@ namespace Raid
                 int save=Array.IndexOf(args,"-raid-save");
                 if(save<0 || save+1>=args.Length || Path.GetFullPath(args[save+1])!=campaign || File.Exists(campaign) ||
                     !int.TryParse(args[at+2],out int peers))throw new InvalidOperationException("A new isolated campaign and the crew size are required.");
-                await Wait(()=>RaidWorld.Instance && RaidWorld.Instance.IsServerInitialized && RaidWorld.Instance.Team!=null &&
+                await Wait(()=>RaidWorld.Instance && RaidWorld.Instance.NetworkObject && RaidWorld.Instance.IsServerInitialized && RaidWorld.Instance.Team!=null &&
                     RaidWorld.Instance.TravelRemaining<=0 && DiverMotor.ServerDivers.Count==peers && UI.UiRoot.Instance &&
                     UI.UiRoot.Instance.Context.Player!=null,"LAN crew",90);
                 await Play(report,folder,peers);
@@ -74,7 +74,7 @@ namespace Raid
             while(Time.realtimeSinceStartup<expires)
             {
                 var world=RaidWorld.Instance;
-                if(world && world.IsClientInitialized && world.threats)
+                if(world && world.NetworkObject && world.IsClientInitialized && world.threats)
                 {
                     var d=world.threats;var s=d.Defense;
                     report.phases|=1<<(int)s.phase;

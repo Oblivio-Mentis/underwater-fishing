@@ -153,7 +153,7 @@ namespace Raid.UI
             {
                 int n=0;foreach(var item in v.tank)if(item!=null&&(item.offering>0||item.biomass>0||item.chitin>0))n++;
                 UiKit.Set(stock,n.ToString());
-                UiKit.Set(food,TeamProgress.FoodText(v.offeringPoints)+" / "+c.FoodRequired);
+                UiKit.Set(food,TeamProgress.FoodText(v.offeringPoints)+" / "+TeamProgress.FoodText(c.FoodRequired));
                 UiKit.Set(timer,c.DefendingReservoir?"Оборона":UiText.HudHungerTime(v.hungerRemaining));
                 timer.color=c.DefendingReservoir?UiTheme.Red:v.offeringPoints==0&&v.hungerRemaining<=30?Gold:Ivory;
                 food.color=v.offeringPoints>0?Green:Ivory;

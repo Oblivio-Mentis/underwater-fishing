@@ -62,7 +62,7 @@ namespace Raid
         public float SwarmAge => Mathf.Max(0,(float)(DefenseClock-Defense.beginsAt));
         public Vector3 DefenseCenter => fieldAnchor?fieldAnchor.position:
             NereidVessel.Active?NereidVessel.Active.transform.TransformPoint(new Vector3(0,-1.195f,-2)):tuning.reservoirPoint;
-        public double DefenseClock => TimeManager==null?Time.timeAsDouble:
+        public double DefenseClock => !NetworkObject || TimeManager==null?Time.timeAsDouble:
             TimeManager.TicksToTime(TimeManager.Tick)+TimeManager.GetTickElapsedAsDouble();
         public float DefenseConcealment
         {

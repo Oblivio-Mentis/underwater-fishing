@@ -48,7 +48,7 @@ def run(executable, destination, crew):
                     encoding="utf-8", errors="replace"):
                 break
             if processes[0].poll() is not None:
-                raise RuntimeError("Host closed before opening LAN transport")
+                raise RuntimeError(read_report(output / "defense.json").get("error") or "Host closed before opening LAN transport")
             time.sleep(.2)
         else:
             raise TimeoutError("LAN transport did not open")

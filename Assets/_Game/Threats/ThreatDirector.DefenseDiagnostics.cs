@@ -60,7 +60,7 @@ namespace Raid
 
         void OnGUI()
         {
-            if(!IsServerInitialized || RaidWorld.Instance?.Team==null || !Nereid.NereidVessel.Active)return;
+            if(!NetworkObject || !IsServerInitialized || RaidWorld.Instance?.Team==null || !Nereid.NereidVessel.Active)return;
             if(Event.current.type==EventType.KeyDown && Event.current.keyCode==KeyCode.F9)
             {
                 defenseTools=!defenseTools;
