@@ -503,10 +503,12 @@ def stalker():
 
     def lowered(point):
         x, y, z = point
-        progress = max(0, min(1, (-z + base_z) / .65))
-        angle = -52*pi/180 * progress*progress*(3-2*progress)
+        progress = max(0, min(1, (-z + base_z) / .44))
+        ease = progress*progress*(3-2*progress)
+        angle = -57*pi/180 * ease
         height, length = y-base_y, z-base_z
-        return (x, base_y+cos(angle)*height-sin(angle)*length,
+        vertical = (cos(angle)*height-sin(angle)*length)*(1-.28*ease)-.075*ease
+        return (x, base_y+vertical,
                 base_z+sin(angle)*height+cos(angle)*length)
 
     for part in [*c.parts(), c.school]:
