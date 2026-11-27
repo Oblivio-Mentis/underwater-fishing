@@ -5,6 +5,7 @@ namespace Raid.Nereid
     public sealed partial class NereidFeedingReaction
     {
         KrakenFlameFx fire;
+        [SerializeField] bool playFieryBurpAudio;
         AudioSource throatAudio;
         AudioClip fireBelch, angryRoar;
         int fireSequence, firePhase;
@@ -22,7 +23,7 @@ namespace Raid.Nereid
                 firePhase=0;
                 if(age<.43f)
                 {
-                    PlaySwallow();
+                    if(playFieryBurpAudio)PlaySwallow();
                     if(creature)creature.PrepareBurp(KrakenBreathState.Ignite-age);
                     CameraImpulse?.Anticipate(mouth.position,KrakenBreathState.Ignite-age);
                 }
@@ -64,6 +65,7 @@ namespace Raid.Nereid
 
         void PlayThroatSound(bool roar,float offset)
         {
+            if(!playFieryBurpAudio)return;
             if(!throatAudio)
             {
                 throatAudio=mouth.gameObject.AddComponent<AudioSource>();

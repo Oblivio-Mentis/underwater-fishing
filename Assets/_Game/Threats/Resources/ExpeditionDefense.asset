@@ -40,6 +40,9 @@ MonoBehaviour:
   schoolTravelDistance: 19
   schoolHeight: 3.7
   concealment: 0.85
+  snatchSeconds: 0.44
+  escapeSpeedMultiplier: 1.42
+  escapeSightDistance: 42
   carrySeconds: 8
   inkSeconds: 5
   inkRadius: 4

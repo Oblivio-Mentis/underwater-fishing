@@ -28,8 +28,9 @@ namespace Raid
             public int id, victim, group, slot;
             public DefenseSpecies kind;
             public AttackerPose pose;
-            public Vector3 position, forward, impactOffset;
+            public Vector3 position, forward, impactOffset, snatchPoint;
             public float scale, effort, stretch;
+            public double poseAt, stolenAt;
             public string stolenSpecies;
             public long stolenId;
         }
@@ -269,9 +270,11 @@ namespace Raid
                     }
                     break;
                 case DefensePhase.Resolution:
-                    if(age>=(snapshot.breached?defenseTuning.theftSeconds:defenseTuning.retreatSeconds) || attackers.Count==0)
+                    if(age>=(snapshot.breached?defenseTuning.theftSeconds:defenseTuning.retreatSeconds))
+                        for(int i=attackers.Count-1;i>=0;i--)
+                            if(attackers[i].catchItem==null)RemoveAttacker(i,false,false);
+                    if(attackers.Count==0)
                     {
-                        for(int i=attackers.Count-1;i>=0;i--)RemoveAttacker(i,false,false);
                         activeRaid.resolutionComplete=true;
                         AdvanceDefense(DefensePhase.Recovery,snapshot.breached?"Генераторы восстанавливают поле.":"Улов защищён. Стая рассеивается.");
                         RaidWorld.Instance?.ArchiveDefense();

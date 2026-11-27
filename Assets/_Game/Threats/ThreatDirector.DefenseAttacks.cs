@@ -19,9 +19,10 @@ namespace Raid
             public DefenseTuning.Species card;
             public int cost, slot;
             public float vitality, progress, windAim, latchTick, life, rescuePull;
-            public double until, nextRoute, captureUntil;
+            public double until, nextRoute, captureUntil, nextSightTest, unseenSince=-1;
+            public bool hasFleeRoute;
             public bool counter, attached, ramHit;
-            public Vector3 goal, waypoint, exit;
+            public Vector3 goal, waypoint, exit, fleeGoal;
             public Vector3? stockApproach;
             public DiverMotor target;
             public CatchItem catchItem;
@@ -65,6 +66,7 @@ namespace Raid
         void SetPose(DefenseAttacker a,AttackerPose pose,float seconds)
         {
             a.data.pose=pose;
+            a.data.poseAt=DefenseClock;
             if(pose==AttackerPose.Strike)a.ramHit=false;
             a.until=DefenseClock+seconds;
             a.nextRoute=0;
@@ -361,25 +363,46 @@ namespace Raid
 
         void TickWithdrawal(int index,DefenseAttacker a,float dt)
         {
+            if(a.catchItem!=null)
+            {
+                TickStockEscape(index,a,dt);
+                return;
+            }
             bool canCarry=Defense.breached && a.data.kind is DefenseSpecies.Thief or DefenseSpecies.Stalker or DefenseSpecies.Abductor;
-            if(canCarry && a.catchItem==null && a.data.pose!=AttackerPose.Retreat &&
+            if(canCarry && a.data.pose!=AttackerPose.Retreat &&
                 activeRaid.lost+activeRaid.inTransit.Count<activeRaid.lossLimit)
             {
                 var pickup=TheftPickup();
-                if(a.stockApproach==null && !DefensePathClear(a.data.position,pickup) &&
-                    TryStockChannel(a.data.position,pickup,a.exit,false,out var opening))a.stockApproach=opening;
-                if(!Steer(a,a.stockApproach??pickup,a.card.speed,dt,true))return;
-                if(a.stockApproach.HasValue){a.stockApproach=null;a.nextRoute=0;return;}
-                a.catchItem=RaidWorld.Instance.TakeDefenseCatch();
-                if(a.catchItem!=null)
+                if(a.data.pose==AttackerPose.Snatch)
                 {
-                    a.data.stolenId=a.catchItem.id;a.data.stolenSpecies=a.catchItem.species;
-                    if(TryStockChannel(a.data.position,pickup,a.exit,true,out var escape))a.exit=escape;
+                    float age=(float)(DefenseClock-a.data.poseAt);
+                    if(age<defenseTuning.snatchSeconds)
+                    {
+                        if(age>=defenseTuning.snatchSeconds*.4f)
+                            Steer(a,a.goal,a.card.burstSpeed*.55f,dt,true);
+                        return;
+                    }
+                    a.catchItem=RaidWorld.Instance.TakeDefenseCatch();
+                    if(a.catchItem==null){SetPose(a,AttackerPose.Retreat,0);return;}
+                    a.data.stolenId=a.catchItem.id;
+                    a.data.stolenSpecies=a.catchItem.species;
+                    a.data.stolenAt=DefenseClock;
                     SetPose(a,AttackerPose.Carry,0);
+                    return;
                 }
-                else SetPose(a,AttackerPose.Retreat,0);
+                if(a.stockApproach==null && !DefensePathClear(a.data.position,pickup) &&
+                    TryStockChannel(a.data.position,pickup,a.exit,out var opening))a.stockApproach=opening;
+                Vector3 facing=(pickup-a.data.position).normalized;
+                float mouthReach=.8f*a.data.scale;
+                Vector3 poised=pickup-facing*(mouthReach+.53f);
+                if(!Steer(a,a.stockApproach??poised,a.card.speed,dt,true))return;
+                if(a.stockApproach.HasValue){a.stockApproach=null;a.nextRoute=0;return;}
+                a.data.snatchPoint=pickup;
+                a.goal=pickup-facing*mouthReach;
+                SetPose(a,AttackerPose.Snatch,defenseTuning.snatchSeconds);
+                return;
             }
-            else if(a.catchItem==null)SetPose(a,AttackerPose.Retreat,0);
+            if(a.data.pose!=AttackerPose.Retreat)SetPose(a,AttackerPose.Retreat,0);
             if(Steer(a,a.exit,a.card.burstSpeed*.79f,dt,true))RemoveAttacker(index,false,true);
         }
 
@@ -391,12 +414,12 @@ namespace Raid
             return pickup;
         }
 
-        bool TryStockChannel(Vector3 from,Vector3 pickup,Vector3 preferred,bool escaping,out Vector3 point)
+        bool TryStockChannel(Vector3 from,Vector3 pickup,Vector3 preferred,out Vector3 point)
         {
             Vector3 broadside=fieldAnchor?fieldAnchor.right:Vector3.right;
             float side=Vector3.Dot(preferred-pickup,broadside)<0?-1:1;
             float halfWidth=fieldView?fieldView.radii.x:fieldRadii.x;
-            float distance=escaping?Mathf.Max(halfWidth+5,12):halfWidth+1.25f;
+            float distance=halfWidth+1.25f;
             for(int i=0;i<2;i++)
             for(int angle=0;angle<5;angle++)
             {
@@ -404,7 +427,7 @@ namespace Raid
                 var lane=Quaternion.AngleAxis(yaw,Vector3.up)*(broadside*side*(i==0?1:-1));
                 var candidate=pickup+lane*distance;
                 if(!MarineSpawn.InOpenWater(depthTier,candidate,defenseTuning.sceneryClearance+.1f) ||
-                    !DefensePathClear(from,candidate) || !escaping && !DefensePathClear(candidate,pickup))continue;
+                    !DefensePathClear(from,candidate) || !DefensePathClear(candidate,pickup))continue;
                 point=candidate;
                 return true;
             }

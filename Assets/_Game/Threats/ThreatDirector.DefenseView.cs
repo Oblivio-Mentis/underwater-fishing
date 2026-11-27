@@ -10,8 +10,8 @@ namespace Raid
         sealed class VisibleAttacker
         {
             public Transform root, body, tail, tip, left, right, jaw, mouth, cargo;
-            public Quaternion tailRest,tipRest,leftRest,rightRest,jawRest;
-            public Vector3 bodyRest, previousPosition, currentHeading;
+            public Quaternion tailRest,tipRest,leftRest,rightRest,jawRest,cargoRotation;
+            public Vector3 bodyRest, previousPosition, currentHeading,cargoOrigin;
             public float phase, stroke, turn;
             public long stolen;
             public AttackerPose lastPose;
@@ -22,6 +22,7 @@ namespace Raid
         readonly List<int> retiredViews=new();
         DefenseFieldView fieldView;
         NereidDefenseLighting defenseLighting;
+        WetCargoShoal raidCargoShoal;
         sealed class InkView
         {
             public Transform vapor, front, rear;
@@ -170,15 +171,21 @@ namespace Raid
             float frame=Mathf.Max(.0001f,Time.deltaTime);
             float pace=Mathf.InverseLerp(.15f,8f,Vector3.Distance(root.position,view.previousPosition)/frame);
             view.previousPosition=root.position;
+            bool carrying=snapshot.stolenId>0;
+            float bite=snapshot.pose==AttackerPose.Snatch
+                ?Mathf.Clamp01((float)(DefenseClock-snapshot.poseAt)/defenseTuning.snatchSeconds):0;
             float strength=snapshot.pose switch {
                 AttackerPose.Latch=>.10f,
                 AttackerPose.Windup=>.43f,
                 AttackerPose.Strike=>1f,
+                AttackerPose.Snatch=>Mathf.Lerp(.24f,1,bite),
+                AttackerPose.Carry when carrying=>1,
                 AttackerPose.Fight=>.62f+snapshot.effort*.38f,
                 _=>Mathf.Lerp(.20f,.84f,pace)
             };
             view.stroke=Mathf.MoveTowards(view.stroke,strength,frame*4f);
-            float frequency=snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?Mathf.Lerp(7,13,view.stroke):Mathf.Lerp(3.6f,9,pace);
+            float frequency=carrying?Mathf.Lerp(9,15,pace):
+                snapshot.pose is AttackerPose.Strike or AttackerPose.Fight?Mathf.Lerp(7,13,view.stroke):Mathf.Lerp(3.6f,9,pace);
             view.phase=Mathf.Repeat(view.phase+frame*frequency,Mathf.PI*2);
             float tailWave=CatchFishModel.SwimWave(view.phase,.79f,view.stroke);
             float tipWave=CatchFishModel.SwimWave(view.phase,1,view.stroke);
@@ -197,22 +204,55 @@ namespace Raid
             if(view.tip)view.tip.localRotation=view.tipRest*Quaternion.Euler(0,tipWave*25-tailWave*9,0);
             if(view.left)view.left.localRotation=view.leftRest*Quaternion.Euler(0,view.turn*.22f,finWave*34);
             if(view.right)view.right.localRotation=view.rightRest*Quaternion.Euler(0,-view.turn*.22f,-finWave*34);
-            if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(snapshot.pose is AttackerPose.Windup or AttackerPose.Strike?19+tipWave*9:
-                snapshot.pose==AttackerPose.Carry?8:tipWave*4,0,0);
+            float gripAge=carrying?Mathf.Max(0,(float)(DefenseClock-snapshot.stolenAt)):0;
+            float jawAngle=snapshot.pose switch {
+                AttackerPose.Snatch=>Mathf.SmoothStep(0,35,Mathf.InverseLerp(0,.48f,bite))*
+                    (1-Mathf.SmoothStep(0,.75f,Mathf.InverseLerp(.72f,1,bite))),
+                _ when carrying=>Mathf.Lerp(13,7,Mathf.Clamp01(gripAge/.27f))+tipWave*1.8f,
+                AttackerPose.Windup or AttackerPose.Strike=>19+tipWave*9,
+                AttackerPose.Carry=>8,
+                _=>tipWave*4
+            };
+            if(view.jaw)view.jaw.localRotation=view.jawRest*Quaternion.Euler(jawAngle,0,0);
 
             if(snapshot.stolenId!=view.stolen)
             {
                 view.stolen=snapshot.stolenId;
                 if(view.cargo)Destroy(view.cargo.gameObject);
-                if(snapshot.stolenId>0)
+                if(carrying)
                 {
                     var mouth=view.mouth?view.mouth:root;
-                    var stored=DefenseCreatureAssets.ReadKey(snapshot.stolenSpecies,out var kind)?DefenseCreatureAssets.Model(kind,mouth):null;
-                    view.cargo=(stored?stored:CatchFishModel.Create(mouth,snapshot.stolenSpecies,snapshot.stolenId)).transform;
-                    view.cargo.localPosition=new Vector3(0,-.11f,view.mouth?.05f:.73f);
-                    view.cargo.localRotation=Quaternion.Euler(0,84,9);
-                    view.cargo.localScale=Vector3.one*.84f;
+                    if(!raidCargoShoal)
+                    {
+                        var world=RaidWorld.Instance;
+                        if(world && world.container)raidCargoShoal=world.container.GetComponentInChildren<WetCargoShoal>();
+                    }
+                    view.cargo=raidCargoShoal?raidCargoShoal.DetachRaidCatch(snapshot.stolenId):null;
+                    view.cargoOrigin=snapshot.snatchPoint;
+                    view.cargoRotation=mouth.rotation*Quaternion.Euler(31,64,52);
+                    if(view.cargo)
+                    {
+                        view.cargoOrigin=Vector3.MoveTowards(mouth.position,view.cargo.position,2.3f*root.lossyScale.x);
+                        view.cargoRotation=view.cargo.rotation;
+                        view.cargo.SetParent(mouth,true);
+                    }
+                    else
+                    {
+                        var stored=DefenseCreatureAssets.ReadKey(snapshot.stolenSpecies,out var kind)?DefenseCreatureAssets.Model(kind,mouth):null;
+                        view.cargo=(stored?stored:CatchFishModel.Create(mouth,snapshot.stolenSpecies,snapshot.stolenId)).transform;
+                        view.cargo.localScale=Vector3.one*.84f;
+                    }
                 }
+            }
+            if(carrying && view.cargo)
+            {
+                var mouth=view.mouth?view.mouth:root;
+                float t=Mathf.SmoothStep(0,1,gripAge/.32f);
+                float wriggle=Mathf.Sin(gripAge*39)*Mathf.Exp(-gripAge*2.7f);
+                Vector3 hold=mouth.TransformPoint(new Vector3(.015f,-.055f,view.mouth?.045f:.76f));
+                Vector3 grab=Vector3.Lerp(view.cargoOrigin,hold,t)+Vector3.up*(Mathf.Sin(t*Mathf.PI)*.17f);
+                var orientation=mouth.rotation*Quaternion.Euler(wriggle*15,83+wriggle*12,13+wriggle*21+tipWave*4);
+                view.cargo.SetPositionAndRotation(grab,Quaternion.Slerp(view.cargoRotation,orientation,t));
             }
         }
 
@@ -266,16 +306,11 @@ namespace Raid
             var fog=bubble.GetComponent<MeshRenderer>();fog.sharedMaterial=inkMaterial;
             var ink=new InkView{vapor=bubble.transform,fog=fog};
             inkViews.Add(cloud.id,ink);
-            var front=DefenseCreatureAssets.Model(DefenseSpecies.Remora,transform);
-            var rear=DefenseCreatureAssets.Model(DefenseSpecies.Remora,transform);
+            var front=DefenseCreatureAssets.RemoraFragment(true,transform);
+            var rear=DefenseCreatureAssets.RemoraFragment(false,transform);
             if(front && rear)
             {
                 ink.front=front.transform;ink.rear=rear.transform;
-                foreach(string piece in new[]{"Body","Tail","FinLeft","FinRight"})
-                {
-                    var node=ink.front.Find(piece);if(node)node.gameObject.SetActive(false);
-                }
-                var jaw=ink.rear.Find("Jaw");if(jaw)jaw.gameObject.SetActive(false);
             }
             return ink;
         }

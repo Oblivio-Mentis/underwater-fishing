@@ -45,6 +45,13 @@ namespace Raid
         public int TankCount => swimmers.Count-cageCount;
         public Transform ModelFor(long id) => swimmers.TryGetValue(id,out var fish)?fish.Model:null;
 
+        internal Transform DetachRaidCatch(long id)
+        {
+            if(!swimmers.TryGetValue(id,out var fish) || fish.InCage || fish.Routing)return null;
+            swimmers.Remove(id);
+            return fish.Model;
+        }
+
         public static void Attach(RaidWorld world)
         {
             if(world.container==null)return;

@@ -111,7 +111,14 @@ namespace Raid
         };
         public static GameObject Model(DefenseSpecies kind,Transform parent)
         {
-            var model=Resources.Load<GameObject>("DefenseCreatures/"+kind);
+            var model=Resources.Load<GameObject>("DefensePredators/"+kind);
+            if(!model)model=Resources.Load<GameObject>("DefenseCreatures/"+kind);
+            return model?UnityEngine.Object.Instantiate(model,parent,false):null;
+        }
+
+        internal static GameObject RemoraFragment(bool head,Transform parent)
+        {
+            var model=Resources.Load<GameObject>(head?"DefensePredators/RemoraInkHead":"DefensePredators/RemoraInkTail");
             return model?UnityEngine.Object.Instantiate(model,parent,false):null;
         }
     }

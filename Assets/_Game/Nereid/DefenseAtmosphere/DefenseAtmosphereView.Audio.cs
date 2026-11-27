@@ -31,6 +31,7 @@ namespace Raid.Nereid
         {
             if (!isActiveAndEnabled || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) return;
             var profile = Settings;
+            if(profile.soundLevel<=0)return;
             EnsureAudio(profile);
             AudioClip clip = null;
             float gain = .60f;
@@ -64,6 +65,7 @@ namespace Raid.Nereid
 
         void UpdateAudio(DefenseAtmosphereSettings profile,float elapsed,float orbitAge,Vector3 observer,float wet)
         {
+            if(profile.soundLevel<=0 && profile.scoreLevel<=0 && !roarWorld)return;
             EnsureAudio(profile);
             bool eventChanged = !audioObserved || heardSeed != raidSeed;
             bool phaseChanged = eventChanged || heardPhase != phase;

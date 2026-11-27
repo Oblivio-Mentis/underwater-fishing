@@ -6,7 +6,7 @@ namespace Raid
     public enum DefensePhase : byte { Idle, Warning, Encirclement, Assault, Resolution, Recovery }
     public enum FieldCondition : byte { Normal, UnderAttack, Damaged, Critical, Broken, Restoring }
     public enum DefenseSpecies : byte { Rammer, Remora, Thief, Abductor, Stalker }
-    public enum AttackerPose : byte { Approach, Windup, Strike, Latch, Fight, Carry, Retreat, Stagger }
+    public enum AttackerPose : byte { Approach, Windup, Strike, Latch, Fight, Carry, Retreat, Stagger, Snatch }
 
     [CreateAssetMenu(menuName="RAID/Оборона подлодки")]
     public sealed class DefenseTuning : ScriptableObject
@@ -41,6 +41,9 @@ namespace Raid
         [Min(0)] public float schoolHeight=3.7f;
         [Range(0,1)] public float concealment=.85f;
         [Header("Captures")]
+        [Min(.2f)] public float snatchSeconds=.44f;
+        [Min(1)] public float escapeSpeedMultiplier=1.42f;
+        [Min(10)] public float escapeSightDistance=42f;
         [Min(1)] public float carrySeconds=8, inkSeconds=5;
         [Min(.25f)] public float inkRadius=4;
         [Min(.5f)] public float captiveCarrySpeed=2.5f, harpoonRangeMargin=1.4f;
