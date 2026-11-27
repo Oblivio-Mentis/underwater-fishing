@@ -33,6 +33,7 @@ namespace Raid
         Material inkMaterial;
         MaterialPropertyBlock inkProperties;
         DefenseAtmosphereView atmosphere;
+        internal int VisibleDefenseSwarm => atmosphere?atmosphere.VisibleCount:0;
         static readonly int InkDensity=Shader.PropertyToID("_Density");
 
         DefenseFieldView LocateDefenseField()

@@ -155,12 +155,20 @@ namespace Raid
             float side=Vector3.Dot(director.Defense.approachEnd-center,vessel.transform.right)<0?-1:1;
             var observation=vessel.ObservationRoom();
             if(!observation)throw new InvalidOperationException("The observation hall is absent.");
-            var at=observation.TransformPoint(new Vector3(side<0?-4.68f:3.24f,side<0?1.55f:.06f,-.35f));
+            var at=observation.TransformPoint(new Vector3(side<0?-4.68f:3.24f,side<0?1.55f:.22f,.55f));
             player.Teleport(at);
-            await Awaitable.NextFrameAsync();
-            player.LookAtConsole(director.DefenseApproachFocus);
-            await Awaitable.WaitForSecondsAsync(.60f);
+            float ready=Time.realtimeSinceStartup+.68f;
+            do
+            {
+                await Awaitable.NextFrameAsync();
+                player.LookAtConsole(director.DefenseApproachFocus);
+            } while(Time.realtimeSinceStartup<ready);
             UI.UiQaProbe.CapturePeerCamera(Path.Combine(folder,"02-swarm-through-glass.png"));
+            ScreenCapture.CaptureScreenshot(Path.Combine(folder,"02-swarm-live-frame.png"));
+            var eye=UnderwaterLook.Instance.DiverCamera;
+            Debug.Log($"[DefenseSight] Camera {eye.transform.position:F2} focus {director.DefenseApproachFocus:F2} " +
+                $"viewport {eye.WorldToViewportPoint(director.DefenseApproachFocus):F2} silhouettes {director.VisibleDefenseSwarm} " +
+                $"start {director.Defense.approachStart:F2} arrival {director.Defense.approachEnd:F2}.");
         }
 
         static async Awaitable RecordFrameTime(Report report)
@@ -225,7 +233,21 @@ namespace Raid
             bool dryCamera=look && look.DiverCamera && !look.EyeSubmerged;
             report.Check(dryCamera && glassHaze>.32f,
                 $"A dry observation deck camera sees the exterior haze. Dry={dryCamera}, haze={glassHaze:F2}.");
-            await Shot(folder,host,d,d.DefenseApproachFocus,"02-encirclement");
+            Vector3 focus=d.DefenseApproachFocus;
+            Vector3 towardsShip=(d.DefenseCenter-focus).normalized;
+            Vector3 flank=Vector3.Cross(towardsShip,Vector3.up).normalized;
+            for(int i=0;i<8;i++)
+            {
+                var exterior=focus+flank*(i%2==0?1:-1)*(4+i/2*2)+towardsShip*7+Vector3.down*.65f;
+                if(!MarineSpawn.InOpenWater(world.CurrentDepth,exterior,.55f) ||
+                    !MarineSpawn.ClearLeg(exterior,focus,.20f,Vector3.Distance(exterior,focus)))continue;
+                host.Teleport(exterior);
+                break;
+            }
+            await Awaitable.NextFrameAsync();
+            host.LookAtConsole(d.DefenseApproachFocus);
+            await Awaitable.WaitForSecondsAsync(.32f);
+            ScreenCapture.CaptureScreenshot(Path.Combine(folder,"02-encirclement.png"));
             await Wait(()=>d.Defense.phase==DefensePhase.Assault && d.DefenseActorCount>0,"a naturally promoted attacker",30);
             report.Check(team.hungerRemaining==interval,"The next meal timer stays parked during the event.");
             ReportPhase("natural shield strike",report,folder);
