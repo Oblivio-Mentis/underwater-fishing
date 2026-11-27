@@ -449,9 +449,9 @@ namespace Raid
                         return;
                     }
                 }
-                Vector3 normal=Vector3.zero;
+                Vector3 approachNormal=Vector3.zero;
                 Vector3 destination=a.target?a.target.transform.position+Vector3.up*.55f:
-                    ContactPosition(a.data,contact,out normal);
+                    ContactPosition(a.data,contact,out approachNormal);
                 if(a.data.kind==DefenseSpecies.Abductor && a.target)
                 {
                     BeginTongueWindup(a,destination,dt);
@@ -467,7 +467,7 @@ namespace Raid
                         approach+=side*((a.data.id%2==0?1:-1)*Mathf.Min(2.35f,
                             Vector3.Distance(destination,a.data.position)*.28f));
                     }
-                    Steer(a,approach,a.card.speed,dt,prey:a.target,contactFacing:-normal);
+                    Steer(a,approach,a.card.speed,dt,prey:a.target,contactFacing:-approachNormal);
                     return;
                 }
                 a.goal=destination;
